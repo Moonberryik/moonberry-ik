@@ -5081,8 +5081,6 @@ function renderShiftTable(shift, docId) {
     // personelShifts'te olmayan isimleri çıkar
     personelNames = personelNames.filter(name => personelShifts[name]);
     
-    const specialRequests = shift.specialRequests || [];
-    
     if (personelNames.length === 0) {
         container.innerHTML = `
             <div style="text-align:center;padding:40px">
@@ -5132,29 +5130,31 @@ function renderShiftTable(shift, docId) {
             const displayVal = isEmpty ? '' : cleanVal;
             const colors = isEmpty ? {bg:'#fff',border:'#ddd',text:'#999'} : getShiftColorExcel(cleanVal);
             
-            html += `<td style="padding:4px;text-align:center;border:1px solid #ddd;min-width:100px">
-                <div style="display:flex;flex-direction:column;gap:2px">
-                    <select onchange="updateShiftCell('${docId}','${name}',${dayIdx},this.value, document.getElementById('star_${docId}_${name}_${dayIdx}').checked)" 
-                        style="width:100%;padding:6px 2px;border:2px solid ${colors.border};background:${colors.bg};color:${colors.text};border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;text-align:center">
-                        <option value="" ${isEmpty ? 'selected' : ''} style="background:#fff;color:#999"></option>
-                        <optgroup label="Shift Tipleri">
-                            ${SHIFT_TYPES.map(t => `<option value="${t}" ${displayVal === t ? 'selected' : ''} style="background:${SHIFT_COLORS[t]?.bg || '#fff'};color:${SHIFT_COLORS[t]?.text || '#333'}">${t}</option>`).join('')}
-                        </optgroup>
-                        <optgroup label="Tam Gün">
-                            ${COMMON_TIMES.map(t => `<option value="${t}" ${cleanVal === t ? 'selected' : ''}>${t}</option>`).join('')}
-                        </optgroup>
-                        ${cleanVal && !SHIFT_TYPES.includes(displayVal) && !COMMON_TIMES.includes(cleanVal) ? `<option value="${cleanVal}" selected style="background:${colors.bg};color:${colors.text};font-weight:700">${displayVal}</option>` : ''}
-                        <optgroup label="Part-time">
-                            <option value="parttime">⏰ Saat Seç...</option>
-                        </optgroup>
-                    </select>
-                    <label style="display:flex;align-items:center;justify-content:center;gap:3px;font-size:.65rem;color:#666;cursor:pointer">
-                        <input type="checkbox" id="star_${docId}_${name}_${dayIdx}" ${hasStar ? 'checked' : ''} 
-                            onchange="toggleStar('${docId}','${name}',${dayIdx},this.checked)"
-                            style="width:12px;height:12px;cursor:pointer">
-                        <span style="color:${hasStar ? '#e07b39' : '#999'}">⭐ Özel</span>
-                    </label>
-                </div>
+            // Yıldızlı değer için border
+            const borderStyle = hasStar ? `3px solid #e07b39` : `2px solid ${colors.border}`;
+            const starIndicator = hasStar ? '⭐' : '';
+            
+            html += `<td style="padding:4px;text-align:center;border:1px solid #ddd;min-width:90px">
+                <select onchange="updateShiftCell('${docId}','${name}',${dayIdx},this.value)" 
+                    style="width:100%;padding:8px 2px;border:${borderStyle};background:${colors.bg};color:${colors.text};border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;text-align:center">
+                    <option value="" ${isEmpty ? 'selected' : ''} style="background:#fff;color:#999"></option>
+                    <optgroup label="── Shift Türleri ──">
+                        ${SHIFT_TYPES.map(t => `<option value="${t}" ${displayVal === t && !hasStar ? 'selected' : ''} style="background:${SHIFT_COLORS[t]?.bg || '#fff'};color:${SHIFT_COLORS[t]?.text || '#333'}">${t}</option>`).join('')}
+                    </optgroup>
+                    <optgroup label="── ⭐ Özel İstek ──">
+                        ${SHIFT_TYPES.map(t => `<option value="*${t}" ${displayVal === t && hasStar ? 'selected' : ''} style="background:${SHIFT_COLORS[t]?.bg || '#fff'};color:${SHIFT_COLORS[t]?.text || '#333'}">⭐ ${t}</option>`).join('')}
+                    </optgroup>
+                    <optgroup label="── Saatler ──">
+                        ${COMMON_TIMES.map(t => `<option value="${t}" ${cleanVal === t && !hasStar ? 'selected' : ''}>${t}</option>`).join('')}
+                    </optgroup>
+                    <optgroup label="── ⭐ Özel Saat ──">
+                        ${COMMON_TIMES.map(t => `<option value="*${t}" ${cleanVal === t && hasStar ? 'selected' : ''}>⭐ ${t}</option>`).join('')}
+                    </optgroup>
+                    ${cleanVal && !SHIFT_TYPES.includes(displayVal) && !COMMON_TIMES.includes(cleanVal) ? `<option value="${val}" selected style="background:${colors.bg};color:${colors.text};font-weight:700">${starIndicator}${displayVal}</option>` : ''}
+                    <optgroup label="── Diğer ──">
+                        <option value="parttime">⏰ Özel Saat Gir...</option>
+                    </optgroup>
+                </select>
             </td>`;
         });
         html += '</tr>';
@@ -5259,7 +5259,7 @@ function formatShiftValue(val) {
     return val;
 }
 
-async function updateShiftCell(docId, name, dayIdx, value, hasStar = false) {
+async function updateShiftCell(docId, name, dayIdx, value) {
     if (value === 'parttime') { 
         // Part-time saat seçici modal
         const startOpts = PARTTIME_START.map(t => `<option value="${t}">${t}</option>`).join('');
@@ -5277,8 +5277,11 @@ async function updateShiftCell(docId, name, dayIdx, value, hasStar = false) {
                         <select id="parttimeEnd" class="form-select" style="font-size:1rem">${endOpts}</select>
                     </div>
                 </div>
-                <div style="margin-top:16px;padding:12px;background:#E3F2FD;border-radius:8px;font-size:.85rem;color:#1565C0">
-                    💡 Part-time personel için 4-5 saatlik çalışma aralığı seçin
+                <div style="margin-top:12px">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                        <input type="checkbox" id="parttimeStar" style="width:18px;height:18px">
+                        <span>⭐ Özel istek olarak işaretle</span>
+                    </label>
                 </div>
             </div>
         `, `<button class="btn btn-ghost" onclick="closeModal();loadShiftWeek()">İptal</button>
@@ -5290,35 +5293,10 @@ async function updateShiftCell(docId, name, dayIdx, value, hasStar = false) {
         const data = doc.data();
         if (!data.personelShifts) data.personelShifts = {};
         if (!data.personelShifts[name]) data.personelShifts[name] = {};
-        // Yıldız varsa başa ekle
-        const finalValue = hasStar && value ? '*' + value : value;
-        data.personelShifts[name][dayIdx] = finalValue;
+        data.personelShifts[name][dayIdx] = value;
         await db.collection('shifts').doc(docId).update({ personelShifts: data.personelShifts });
         toast('✓ Kaydedildi', 'success');
-    } catch (e) { 
-        console.error(e); 
-        toast('Güncelleme hatası!', 'error'); 
-        loadShiftWeek();
-    }
-}
-
-// Yıldız toggle fonksiyonu
-async function toggleStar(docId, name, dayIdx, isChecked) {
-    try {
-        const doc = await db.collection('shifts').doc(docId).get();
-        const data = doc.data();
-        if (!data.personelShifts || !data.personelShifts[name]) return;
-        
-        let val = data.personelShifts[name][dayIdx] || '';
-        // Mevcut yıldızları temizle
-        const cleanVal = val.replace(/\*/g, '').trim();
-        
-        // Yeni değeri oluştur
-        const finalValue = isChecked && cleanVal ? '*' + cleanVal : cleanVal;
-        data.personelShifts[name][dayIdx] = finalValue;
-        
-        await db.collection('shifts').doc(docId).update({ personelShifts: data.personelShifts });
-        toast(isChecked ? '⭐ Özel istek işaretlendi' : 'Özel istek kaldırıldı', 'success');
+        loadShiftWeek(); // Tabloyu yenile
     } catch (e) { 
         console.error(e); 
         toast('Güncelleme hatası!', 'error'); 
@@ -5329,8 +5307,10 @@ async function toggleStar(docId, name, dayIdx, isChecked) {
 async function confirmParttime(docId, name, dayIdx) {
     const start = document.getElementById('parttimeStart').value;
     const end = document.getElementById('parttimeEnd').value;
+    const hasStar = document.getElementById('parttimeStar')?.checked;
     if (!start || !end) { toast('Saat seçin', 'error'); return; }
-    const value = `${start}/${end}`;
+    let value = `${start}/${end}`;
+    if (hasStar) value = '*' + value;
     closeModal();
     try {
         const doc = await db.collection('shifts').doc(docId).get();
@@ -5557,10 +5537,10 @@ function showNewShiftModal() {
     const selectedSube = document.getElementById('shiftSube').value || branches[0] || '';
     const opts = branches.map(s => `<option value="${s}" ${s === selectedSube ? 'selected' : ''}>${s}</option>`).join('');
     
-    // Hafta seçenekleri (son 8 hafta + bu hafta + gelecek 4 hafta)
+    // Hafta seçenekleri (sadece bu hafta + gelecek 8 hafta)
     const weekOpts = [];
     const today = new Date();
-    for (let i = -8; i <= 4; i++) {
+    for (let i = 0; i <= 8; i++) {
         const monday = new Date(today);
         // Pazartesi'yi bul (getDay: 0=Pazar, 1=Pazartesi...)
         const dayOfWeek = monday.getDay();
@@ -5574,8 +5554,9 @@ function showNewShiftModal() {
         const monStr = monday.toISOString().split('T')[0];
         const sunStr = sunday.toISOString().split('T')[0];
         const isCurrent = i === 0;
+        const isNext = i === 1;
         
-        weekOpts.push(`<option value="${monStr}|${sunStr}" ${isCurrent ? 'selected' : ''}>${label}${isCurrent ? ' ✓ Bu Hafta' : ''}</option>`);
+        weekOpts.push(`<option value="${monStr}|${sunStr}" ${isNext ? 'selected' : ''}>${label}${isCurrent ? ' (Bu Hafta)' : ''}${isNext ? ' ✓ Gelecek Hafta' : ''}</option>`);
     }
     
     showModal('Yeni Shift Haftası', `
@@ -5623,6 +5604,7 @@ async function createNewShift() {
         }
         
         let ps = {};
+        let personelOrder = [];
         
         // Önceki haftadan kopyala
         if (copy) {
@@ -5634,16 +5616,30 @@ async function createNewShift() {
             allShifts.sort((a, b) => (b.weekStart || '').localeCompare(a.weekStart || ''));
             
             if (allShifts.length > 0) {
-                Object.keys(allShifts[0].personelShifts || {}).forEach(n => ps[n] = {});
+                // personelOrder'ı da kopyala
+                personelOrder = allShifts[0].personelOrder || Object.keys(allShifts[0].personelShifts || {});
+                personelOrder.forEach(n => ps[n] = {});
             }
         }
         
-        // Personel yoksa mağazadaki personelden al
+        // Personel yoksa mağazadaki personelden al (rütbeye göre sırala)
         if (Object.keys(ps).length === 0) {
             const pSnap = await db.collection('personel').get();
+            const personelList = [];
             pSnap.forEach(d => {
                 const p = d.data();
-                if (p.branch === sube) ps[p.name] = {};
+                if (p.branch === sube) personelList.push(p);
+            });
+            // Rütbeye göre sırala
+            const roleOrder = ['bolge_muduru', 'magaza_muduru', 'kidemli_barista', 'barista', 'part_time'];
+            personelList.sort((a, b) => {
+                const aIdx = roleOrder.indexOf(a.role) === -1 ? 99 : roleOrder.indexOf(a.role);
+                const bIdx = roleOrder.indexOf(b.role) === -1 ? 99 : roleOrder.indexOf(b.role);
+                return aIdx - bIdx;
+            });
+            personelList.forEach(p => {
+                ps[p.name] = {};
+                personelOrder.push(p.name);
             });
         }
         
@@ -5654,6 +5650,7 @@ async function createNewShift() {
             weekStart: start, 
             weekEnd: end, 
             weekLabel: label, 
+            personelOrder: personelOrder,
             personelShifts: ps, 
             createdAt: firebase.firestore.FieldValue.serverTimestamp(), 
             createdBy: currentUser?.username || 'admin' 
