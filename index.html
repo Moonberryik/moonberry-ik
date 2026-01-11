@@ -5081,6 +5081,8 @@ function renderShiftTable(shift, docId) {
     // personelShifts'te olmayan isimleri çıkar
     personelNames = personelNames.filter(name => personelShifts[name]);
     
+    const specialRequests = shift.specialRequests || [];
+    
     if (personelNames.length === 0) {
         container.innerHTML = `
             <div style="text-align:center;padding:40px">
