@@ -5076,6 +5076,12 @@ function renderShiftTable(shift, docId) {
     const daysShort = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
     const personelShifts = shift.personelShifts || {};
     
+    // Şube bazlı saat kuralları
+    const isTuzla = (shift.branch || '').toLowerCase().includes('tuzla');
+    const saatKurali = isTuzla 
+        ? 'AÇILIŞ: 09:50-18:50 | Pzt-Per-Paz KAPANIŞ: 16:00-01:00 | Cum-Cmt KAPANIŞ: 16:30-01:30'
+        : 'AÇILIŞ: 09:50-18:50 | KAPANIŞ: 16:30-01:30';
+    
     // Sıralama: personelOrder varsa kullan, yoksa Object.keys
     let personelNames = shift.personelOrder || Object.keys(personelShifts);
     // personelOrder'da olmayan ama personelShifts'te olan isimleri de ekle
@@ -5188,7 +5194,7 @@ function renderShiftTable(shift, docId) {
             `).join('')}
         </div>
         <div style="margin-top:12px;padding:10px 14px;background:#E3F2FD;color:#1565C0;border-radius:8px;font-size:.8rem">
-            <strong>Saat Bilgisi:</strong> AÇILIŞ: 09:50-18:50 | KAPANIŞ: 16:30-01:30 | *YEMEK: 45DK, MOLA: 1x15DK
+            <strong>Saat Bilgisi:</strong> ${saatKurali} | *YEMEK: 45DK, MOLA: 1x15DK
         </div>
     </div>`;
     
@@ -5789,9 +5795,15 @@ async function exportShiftPDF(branch, weekLabel) {
     
     const personelShifts = shiftData.personelShifts || {};
     const personelOrder = shiftData.personelOrder || Object.keys(personelShifts);
-    const specialRequests = shiftData.specialRequests || []; // Kullanıcının girdiği özel istekler
+    const specialRequests = shiftData.specialRequests || [];
     const days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
     const daysLong = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+    
+    // Şube bazlı saat kuralları
+    const isTuzla = branch.toLowerCase().includes('tuzla');
+    const saatKurali = isTuzla 
+        ? 'AÇILIŞ: 09:50-18:50 | Pzt-Per-Paz KAPANIŞ: 16:00-01:00 | Cum-Cmt KAPANIŞ: 16:30-01:30'
+        : 'AÇILIŞ: 09:50-18:50 | KAPANIŞ: 16:30-01:30';
     
     // Tablo verilerini hazırla
     const data = [];
@@ -5817,7 +5829,7 @@ async function exportShiftPDF(branch, weekLabel) {
         data.push(rowData);
     });
     
-    // Özel istekleri formatla (kullanıcının girdiği reason ile)
+    // Özel istekleri formatla
     const specialRequestsHtml = specialRequests.length > 0 
         ? specialRequests.map(r => {
             const dayName = r.day !== null && r.day !== undefined ? daysLong[r.day] : 'Tüm Hafta';
@@ -5825,41 +5837,41 @@ async function exportShiftPDF(branch, weekLabel) {
         }).join('')
         : '<span style="color:#9E9E9E;font-style:italic;font-size:10px">Bu hafta için özel istek yok</span>';
     
-    // PDF için element oluştur - GÖRÜNÜR KONUMDA
+    // PDF için element oluştur - VIEWPORT İÇİNDE GÖRÜNÜR
     const pdfContent = document.createElement('div');
     pdfContent.id = 'pdfTempContent';
-    pdfContent.style.cssText = 'position:absolute;left:-9999px;top:0;width:1000px;padding:24px;background:#fff;font-family:Arial,sans-serif;';
+    pdfContent.style.cssText = 'position:fixed;top:0;left:0;width:297mm;min-height:210mm;padding:20px;background:#fff;font-family:Arial,sans-serif;z-index:99999;overflow:auto;';
     
     pdfContent.innerHTML = `
-        <div style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #e07b39">
-            <h1 style="color:#e07b39;margin:0 0 8px 0;font-size:22px;font-weight:700">☕ Moonberry Coffee - ${branch}</h1>
-            <p style="color:#555;margin:0;font-size:14px">Shift Planı: ${weekLabel}</p>
+        <div style="text-align:center;margin-bottom:20px;padding-bottom:12px;border-bottom:3px solid #e07b39">
+            <h1 style="color:#e07b39;margin:0 0 6px 0;font-size:20px;font-weight:700">☕ Moonberry Coffee - ${branch}</h1>
+            <p style="color:#555;margin:0;font-size:12px">Shift Planı: ${weekLabel}</p>
         </div>
-        <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <table style="width:100%;border-collapse:collapse;font-size:10px">
             <thead>
                 <tr>
-                    <th style="padding:10px;background:#00B050;color:#fff;border:1px solid #ddd;text-align:left;font-weight:600">SHIFT<br>${weekLabel}</th>
-                    ${days.map(d => `<th style="padding:10px;background:#FFFF00;color:#000;border:1px solid #ddd;text-align:center;font-weight:600">${d}</th>`).join('')}
+                    <th style="padding:8px;background:#00B050;color:#fff;border:1px solid #ddd;text-align:left;font-weight:600">SHIFT<br>${weekLabel}</th>
+                    ${days.map(d => `<th style="padding:8px;background:#FFFF00;color:#000;border:1px solid #ddd;text-align:center;font-weight:600">${d}</th>`).join('')}
                 </tr>
             </thead>
             <tbody>
                 ${data.map((row, i) => `
                     <tr style="background:${i % 2 === 0 ? '#fff' : '#f9f9f9'}">
-                        ${row.map((cell, idx) => `<td style="padding:8px;${idx === 0 ? 'text-align:left;' : 'text-align:center;'}border:1px solid #ddd;background:${cell.bg};color:${cell.color};font-weight:600;font-size:10px;${cell.hasStar ? 'border:2px solid #e07b39;' : ''}">${cell.text}</td>`).join('')}
+                        ${row.map((cell, idx) => `<td style="padding:6px;${idx === 0 ? 'text-align:left;' : 'text-align:center;'}border:1px solid #ddd;background:${cell.bg};color:${cell.color};font-weight:600;font-size:9px;${cell.hasStar ? 'border:2px solid #e07b39;' : ''}">${cell.text}</td>`).join('')}
                     </tr>
                 `).join('')}
             </tbody>
         </table>
         
-        <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px">
-            <div style="padding:8px 12px;background:#C6EFCE;color:#2E7D32;border-radius:6px;font-size:10px;font-weight:500">AÇILIŞ PERSONELİ İŞE GEÇ KALMAMALIDIR!</div>
-            <div style="padding:8px 12px;background:#FFEB9C;color:#9C5700;border-radius:6px;font-size:10px;font-weight:500">⭐ SEMBOLÜ ÖZEL İSTEK GÜNLERİDİR</div>
-            <div style="padding:8px 12px;background:#BDE0FE;color:#1565C0;border-radius:6px;font-size:10px;font-weight:500">AÇILIŞ: 09:50-18:50 | KAPANIŞ: 16:30-01:30</div>
-            <div style="padding:8px 12px;background:#E8F4FD;color:#1976D2;border-radius:6px;font-size:10px;font-weight:500">*YEMEK: 45DK, MOLA: 1x15DK</div>
+        <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px">
+            <div style="padding:6px 10px;background:#C6EFCE;color:#2E7D32;border-radius:4px;font-size:9px;font-weight:500">AÇILIŞ PERSONELİ İŞE GEÇ KALMAMALIDIR!</div>
+            <div style="padding:6px 10px;background:#FFEB9C;color:#9C5700;border-radius:4px;font-size:9px;font-weight:500">⭐ SEMBOLÜ ÖZEL İSTEK GÜNLERİDİR</div>
+            <div style="padding:6px 10px;background:#BDE0FE;color:#1565C0;border-radius:4px;font-size:9px;font-weight:500">${saatKurali}</div>
+            <div style="padding:6px 10px;background:#E8F4FD;color:#1976D2;border-radius:4px;font-size:9px;font-weight:500">*YEMEK: 45DK, MOLA: 1x15DK</div>
         </div>
         
-        <div style="margin-top:16px;padding:14px;background:#FFF8E1;border-radius:8px;border:1px solid #FFE082">
-            <div style="font-weight:600;color:#F57C00;font-size:11px;margin-bottom:10px">📌 Özel İstek Günleri</div>
+        <div style="margin-top:12px;padding:10px;background:#FFF8E1;border-radius:6px;border:1px solid #FFE082">
+            <div style="font-weight:600;color:#F57C00;font-size:10px;margin-bottom:8px">📌 Özel İstek Günleri</div>
             <div>${specialRequestsHtml}</div>
         </div>
     `;
@@ -5868,17 +5880,21 @@ async function exportShiftPDF(branch, weekLabel) {
     
     const filename = `Shift_${branch.replace(/\s/g, '_')}_${weekLabel.replace(/\s/g, '_').replace(/[^\w-]/g, '')}.pdf`;
     
-    // PDF oluştur - element görünür olduktan sonra
+    // Kısa gecikme ile PDF oluştur (DOM'un render olması için)
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     try {
         await html2pdf().set({
-            margin: [10, 10, 10, 10],
+            margin: 5,
             filename: filename,
-            image: { type: 'jpeg', quality: 0.95 },
+            image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { 
-                scale: 2, 
+                scale: 2,
                 useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff'
+                logging: true,
+                backgroundColor: '#ffffff',
+                windowWidth: pdfContent.scrollWidth,
+                windowHeight: pdfContent.scrollHeight
             },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
         }).from(pdfContent).save();
@@ -5923,6 +5939,12 @@ async function printShift() {
     const specialRequests = shiftData.specialRequests || []; // Kullanıcının girdiği özel istekler
     const days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
     const daysLong = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+    
+    // Şube bazlı saat kuralları
+    const isTuzla = branch.toLowerCase().includes('tuzla');
+    const saatKurali = isTuzla 
+        ? 'AÇILIŞ: 09:50-18:50 | Pzt-Per-Paz KAPANIŞ: 16:00-01:00 | Cum-Cmt KAPANIŞ: 16:30-01:30'
+        : 'AÇILIŞ: 09:50-18:50 | KAPANIŞ: 16:30-01:30';
     
     // Tablo verisi
     const data = [];
@@ -6008,7 +6030,7 @@ async function printShift() {
             <div class="rules-box">
                 <div class="rule rule1">AÇILIŞ PERSONELİ İŞE GEÇ KALMAMALIDIR!</div>
                 <div class="rule rule2">⭐ SEMBOLÜ ÖZEL İSTEK GÜNLERİDİR</div>
-                <div class="rule rule3">AÇILIŞ: 09:50-18:50 | KAPANIŞ: 16:30-01:30</div>
+                <div class="rule rule3">${saatKurali}</div>
                 <div class="rule rule4">*YEMEK: 45DK, MOLA: 1x15DK</div>
             </div>
             
