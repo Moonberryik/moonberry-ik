@@ -5761,21 +5761,25 @@ function triggerPdfDownload() {
 }
 
 async function exportShiftPDF(branch, weekLabel) {
-    const table = document.getElementById('shiftMainTable');
-    if (!table) { toast('Önce bir shift seçin', 'error'); return; }
-    
-    toast('PDF oluşturuluyor...', 'info');
-    
-    // Mevcut shift verisini Firebase'den al
     const haftaSelect = document.getElementById('shiftHafta');
     const docId = haftaSelect?.value;
     
+    if (!docId) { 
+        toast('Önce bir shift seçin', 'error'); 
+        return; 
+    }
+    
+    toast('PDF oluşturuluyor...', 'info');
+    
+    // Firebase'den veri al
     let shiftData = null;
-    if (docId) {
-        try {
-            const doc = await db.collection('shifts').doc(docId).get();
-            shiftData = doc.data();
-        } catch (e) { console.error(e); }
+    try {
+        const doc = await db.collection('shifts').doc(docId).get();
+        shiftData = doc.data();
+    } catch (e) { 
+        console.error(e);
+        toast('Shift verisi alınamadı', 'error');
+        return;
     }
     
     if (!shiftData) {
@@ -5785,7 +5789,9 @@ async function exportShiftPDF(branch, weekLabel) {
     
     const personelShifts = shiftData.personelShifts || {};
     const personelOrder = shiftData.personelOrder || Object.keys(personelShifts);
+    const specialRequests = shiftData.specialRequests || []; // Kullanıcının girdiği özel istekler
     const days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+    const daysLong = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
     
     // Tablo verilerini hazırla
     const data = [];
@@ -5801,7 +5807,7 @@ async function exportShiftPDF(branch, weekLabel) {
             const isEmpty = !val || /^\*+$/.test(val.trim());
             
             if (isEmpty) {
-                rowData.push({ text: '-', bg: '#fff', color: '#999' });
+                rowData.push({ text: '-', bg: '#fff', color: '#999', hasStar: false });
             } else {
                 const colors = getShiftColorExcel(cleanVal);
                 const displayText = hasStar ? '⭐' + cleanVal : cleanVal;
@@ -5811,10 +5817,18 @@ async function exportShiftPDF(branch, weekLabel) {
         data.push(rowData);
     });
     
-    // PDF için element oluştur
+    // Özel istekleri formatla (kullanıcının girdiği reason ile)
+    const specialRequestsHtml = specialRequests.length > 0 
+        ? specialRequests.map(r => {
+            const dayName = r.day !== null && r.day !== undefined ? daysLong[r.day] : 'Tüm Hafta';
+            return `<span style="background:#FFECB3;color:#E65100;padding:5px 10px;border-radius:4px;font-size:10px;font-weight:500;display:inline-block;margin:2px">${r.personel} - ${dayName}: ${r.reason}</span>`;
+        }).join('')
+        : '<span style="color:#9E9E9E;font-style:italic;font-size:10px">Bu hafta için özel istek yok</span>';
+    
+    // PDF için element oluştur - GÖRÜNÜR KONUMDA
     const pdfContent = document.createElement('div');
     pdfContent.id = 'pdfTempContent';
-    pdfContent.style.cssText = 'position:fixed;top:0;left:0;width:1000px;padding:24px;background:#fff;font-family:Inter,Arial,sans-serif;z-index:-9999;';
+    pdfContent.style.cssText = 'position:absolute;left:-9999px;top:0;width:1000px;padding:24px;background:#fff;font-family:Arial,sans-serif;';
     
     pdfContent.innerHTML = `
         <div style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #e07b39">
@@ -5837,12 +5851,16 @@ async function exportShiftPDF(branch, weekLabel) {
             </tbody>
         </table>
         
-        <!-- Kurallar -->
         <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px">
             <div style="padding:8px 12px;background:#C6EFCE;color:#2E7D32;border-radius:6px;font-size:10px;font-weight:500">AÇILIŞ PERSONELİ İŞE GEÇ KALMAMALIDIR!</div>
             <div style="padding:8px 12px;background:#FFEB9C;color:#9C5700;border-radius:6px;font-size:10px;font-weight:500">⭐ SEMBOLÜ ÖZEL İSTEK GÜNLERİDİR</div>
             <div style="padding:8px 12px;background:#BDE0FE;color:#1565C0;border-radius:6px;font-size:10px;font-weight:500">AÇILIŞ: 09:50-18:50 | KAPANIŞ: 16:30-01:30</div>
             <div style="padding:8px 12px;background:#E8F4FD;color:#1976D2;border-radius:6px;font-size:10px;font-weight:500">*YEMEK: 45DK, MOLA: 1x15DK</div>
+        </div>
+        
+        <div style="margin-top:16px;padding:14px;background:#FFF8E1;border-radius:8px;border:1px solid #FFE082">
+            <div style="font-weight:600;color:#F57C00;font-size:11px;margin-bottom:10px">📌 Özel İstek Günleri</div>
+            <div>${specialRequestsHtml}</div>
         </div>
     `;
     
@@ -5850,30 +5868,30 @@ async function exportShiftPDF(branch, weekLabel) {
     
     const filename = `Shift_${branch.replace(/\s/g, '_')}_${weekLabel.replace(/\s/g, '_').replace(/[^\w-]/g, '')}.pdf`;
     
-    // PDF oluştur
-    setTimeout(() => {
-        html2pdf().set({
+    // PDF oluştur - element görünür olduktan sonra
+    try {
+        await html2pdf().set({
             margin: [10, 10, 10, 10],
             filename: filename,
-            image: { type: 'jpeg', quality: 0.98 },
+            image: { type: 'jpeg', quality: 0.95 },
             html2canvas: { 
                 scale: 2, 
                 useCORS: true,
-                logging: true,
-                backgroundColor: '#ffffff',
-                width: 1000,
-                windowWidth: 1000
+                logging: false,
+                backgroundColor: '#ffffff'
             },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-        }).from(pdfContent).save().then(() => {
+        }).from(pdfContent).save();
+        
+        toast('PDF indirildi! ✓', 'success');
+    } catch (err) {
+        console.error('PDF hatası:', err);
+        toast('PDF hatası: ' + err.message, 'error');
+    } finally {
+        if (pdfContent.parentNode) {
             document.body.removeChild(pdfContent);
-            toast('PDF indirildi! ✓', 'success');
-        }).catch(err => {
-            console.error('PDF hatası:', err);
-            document.body.removeChild(pdfContent);
-            toast('PDF hatası: ' + err.message, 'error');
-        });
-    }, 100);
+        }
+    }
 }
 
 // Yazdır fonksiyonu
@@ -5902,12 +5920,12 @@ async function printShift() {
     
     const personelShifts = shiftData.personelShifts || {};
     const personelOrder = shiftData.personelOrder || Object.keys(personelShifts);
+    const specialRequests = shiftData.specialRequests || []; // Kullanıcının girdiği özel istekler
     const days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
     const daysLong = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
     
-    // Tablo verisi + yıldızlı günleri topla
+    // Tablo verisi
     const data = [];
-    const starDays = []; // Yıldızlı günler listesi
     
     personelOrder.forEach(name => {
         if (!personelShifts[name]) return;
@@ -5920,11 +5938,6 @@ async function printShift() {
             const cleanVal = val.replace(/\*/g, '').trim();
             const isEmpty = !val || /^\*+$/.test(val.trim());
             
-            // Yıldızlı günü kaydet
-            if (hasStar && cleanVal) {
-                starDays.push(`${name} - ${daysLong[dayIdx]}: ${cleanVal}`);
-            }
-            
             if (isEmpty) {
                 rowData.push({ text: '-', bg: '#fff', color: '#999', hasStar: false });
             } else {
@@ -5935,6 +5948,14 @@ async function printShift() {
         }
         data.push(rowData);
     });
+    
+    // Özel istekleri formatla (kullanıcının girdiği reason ile)
+    const specialRequestsHtml = specialRequests.length > 0 
+        ? specialRequests.map(r => {
+            const dayName = r.day !== null && r.day !== undefined ? daysLong[r.day] : 'Tüm Hafta';
+            return `<span class="request-item">${r.personel} - ${dayName}: ${r.reason}</span>`;
+        }).join('') 
+        : '<span class="empty-requests">Bu hafta için özel istek yok</span>';
     
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
@@ -5992,11 +6013,8 @@ async function printShift() {
             </div>
             
             <div class="requests-box">
-                <div class="requests-title">📌 Özel İstek Günleri (⭐)</div>
-                ${starDays.length > 0 
-                    ? starDays.map(r => `<span class="request-item">${r}</span>`).join('') 
-                    : '<span class="empty-requests">Bu hafta için özel istek yok</span>'
-                }
+                <div class="requests-title">📌 Özel İstek Günleri</div>
+                ${specialRequestsHtml}
             </div>
             
             <script>window.onload = function() { window.print(); }<\/script>
