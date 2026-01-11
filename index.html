@@ -6,9 +6,9 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Moonberry Coffee | Yönetim Paneli</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <!-- jsPDF + autoTable - Direkt PDF indirme -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
+    <!-- pdfmake - Türkçe karakter desteği -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -443,7 +443,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
             <!-- Dashboard -->
             <div class="page active" id="page-dashboard">
                 <div class="page-header" style="margin-bottom:24px">
-                    <div class="page-title">🏠 Yönetim Paneli</div>
+                    <div class="page-title" style="display:flex;align-items:center;gap:10px">
+                        <div style="width:36px;height:36px;background:linear-gradient(135deg,#11998e,#38ef7d);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                            <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        </div>
+                        Yönetim Paneli
+                    </div>
                     <div class="page-subtitle" id="companyName">Yükleniyor...</div>
                 </div>
                 
@@ -592,7 +597,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <div class="type-cards" id="sozlesmePozisyonlar"></div>
                 </div>
                 <div class="form-section">
-                    <div class="form-section-title">📋 Personel Bilgileri</div>
+                    <div class="form-section-title" style="display:flex;align-items:center;gap:8px"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Personel Bilgileri</div>
                     <div class="form-grid">
                         <div class="form-group"><label class="form-label">Ad Soyad</label><input type="text" id="soz_ad" class="form-input" placeholder="Personel adı"></div>
                         <div class="form-group"><label class="form-label">TC Kimlik</label><input type="text" id="soz_tc" class="form-input" placeholder="11 hane" maxlength="11"></div>
@@ -617,7 +622,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <div class="page-title">Tutanak Oluştur</div>
                 </div>
                 <div class="form-section">
-                    <div class="form-section-title">📋 Tutanak Türü</div>
+                    <div class="form-section-title" style="display:flex;align-items:center;gap:8px"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Tutanak Türü</div>
                     <div class="type-cards">
                         <div class="type-card" data-type="olay" onclick="selectType('tutanak','olay',this)"><div class="type-card-icon">📝</div><div class="type-card-title">Olay Tespit</div></div>
                         <div class="type-card" data-type="devamsizlik" onclick="selectType('tutanak','devamsizlik',this)"><div class="type-card-icon">📅</div><div class="type-card-title">Devamsızlık</div></div>
@@ -767,7 +772,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
                 <div class="alert alert-info"><span class="alert-icon">ℹ️</span><div>TBK Md. 390 ve 462: İşçi, işverenin mallarını özenle korumakla yükümlüdür. Zimmet tutanağı ile teslim edilen eşyalar için personel mali sorumluluk taşır.</div></div>
                 <div class="form-section">
-                    <div class="form-section-title">📋 Personel Bilgileri</div>
+                    <div class="form-section-title" style="display:flex;align-items:center;gap:8px"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Personel Bilgileri</div>
                     <div class="form-grid">
                         <div class="form-group"><label class="form-label">Personel Adı Soyadı</label><input type="text" id="zimmet_personel" class="form-input"></div>
                         <div class="form-group"><label class="form-label">TC Kimlik No</label><input type="text" id="zimmet_tc" class="form-input" maxlength="11"></div>
@@ -810,7 +815,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
             <div class="page" id="page-personel">
                 <div class="back-link" onclick="goTo('dashboard')">← Ana Sayfa</div>
                 <div class="page-header">
-                    <div class="page-title">👥 Personel Listesi</div>
+                    <div class="page-title" style="display:flex;align-items:center;gap:10px">
+                        <div style="width:36px;height:36px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                            <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                        </div>
+                        Personel Listesi
+                    </div>
                     <div class="page-subtitle">Tüm personeli görüntüle ve yönet</div>
                 </div>
                 <div class="form-section">
@@ -831,11 +841,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
             <div class="page" id="page-shift">
                 <div class="back-link" onclick="goTo('dashboard')">← Ana Sayfa</div>
                 <div class="page-header">
-                    <div class="page-title">📅 Shift Planı</div>
+                    <div class="page-title" style="display:flex;align-items:center;gap:10px">
+                        <div style="width:36px;height:36px;background:linear-gradient(135deg,#4facfe,#00f2fe);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                            <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        </div>
+                        Shift Planı
+                    </div>
                     <div class="page-subtitle">Haftalık vardiya planlaması</div>
                 </div>
                 <div class="form-section">
-                    <div class="form-section-title">📍 Mağaza ve Dönem Seçimi</div>
+                    <div class="form-section-title" style="display:flex;align-items:center;gap:8px">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        Mağaza ve Dönem Seçimi
+                    </div>
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label">Mağaza</label>
@@ -848,29 +866,33 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             </select>
                         </div>
                     </div>
-                    <!-- Aksiyon Butonları - Tek Satır -->
-                    <div id="shiftActionButtons" style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
-                        <button class="btn btn-primary" onclick="showNewShiftModal()" style="flex:1;min-width:120px;display:flex;align-items:center;justify-content:center;gap:6px">
+                    <!-- Aksiyon Butonları - Modern Minimalist -->
+                    <div id="shiftActionButtons" style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+                        <button class="btn" onclick="showNewShiftModal()" style="padding:10px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:500;cursor:pointer">
                             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
                             Yeni Hafta
                         </button>
-                        <button class="btn btn-ghost" onclick="printShift()" style="flex:1;min-width:100px;display:flex;align-items:center;justify-content:center;gap:6px">
+                        <button class="btn" onclick="printShift()" style="padding:10px 16px;background:var(--bg3);color:var(--tx);border:1px solid var(--bg4);border-radius:8px;display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:500;cursor:pointer">
                             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
                             Yazdır
                         </button>
-                        <button class="btn btn-accent" onclick="downloadShiftPDF()" style="flex:1;min-width:100px;display:flex;align-items:center;justify-content:center;gap:6px;background:#e07b39;color:#fff">
+                        <button class="btn" onclick="downloadShiftPDF()" style="padding:10px 16px;background:#e07b39;color:#fff;border:none;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:500;cursor:pointer">
                             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                             PDF İndir
                         </button>
-                        <button class="btn btn-ghost" onclick="deleteCurrentShift()" style="min-width:40px;padding:8px;color:#dc3545" title="Bu Haftayı Sil">
+                        <button id="deleteShiftBtn" class="btn" onclick="deleteCurrentShift()" style="padding:10px 16px;background:#fff0f0;color:#dc3545;border:1px solid #ffcdd2;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:500;cursor:pointer" title="Bu Haftayı Sil">
                             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                            Sil
                         </button>
                     </div>
                 </div>
                 
                 <!-- Shift Tablosu -->
                 <div class="form-section">
-                    <div class="form-section-title">📋 Shift Tablosu</div>
+                    <div class="form-section-title" style="display:flex;align-items:center;gap:8px">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        Shift Tablosu
+                    </div>
                     <div id="shiftTableContainer">
                         <p style="color:var(--tx2);text-align:center;padding:40px">⬆️ Yukarıdan mağaza ve hafta seçerek shift planını görüntüleyin.</p>
                     </div>
@@ -878,7 +900,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 
                 <!-- Geçmiş Shiftler -->
                 <div class="form-section">
-                    <div class="form-section-title">📚 Geçmiş Shiftler</div>
+                    <div class="form-section-title" style="display:flex;align-items:center;gap:8px">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Geçmiş Shiftler
+                    </div>
                     <div id="shiftHistoryContainer">
                         <p style="color:var(--tx2);text-align:center;padding:20px">Mağaza seçerek geçmiş shiftleri görüntüleyin.</p>
                     </div>
@@ -889,7 +914,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
             <div class="page" id="page-puantaj">
                 <div class="back-link" onclick="goTo('dashboard')">← Ana Sayfa</div>
                 <div class="page-header">
-                    <div class="page-title">⭐ Puantaj Sistemi</div>
+                    <div class="page-title" style="display:flex;align-items:center;gap:10px">
+                        <div style="width:36px;height:36px;background:linear-gradient(135deg,#f093fb,#f5576c);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                            <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        </div>
+                        Puantaj Sistemi
+                    </div>
                     <div class="page-subtitle">Personel performans değerlendirme</div>
                 </div>
                 <div class="form-section">
@@ -5835,26 +5865,19 @@ async function downloadShiftPDF() {
         ? 'AÇILIŞ: 09:50-18:50 | Pzt-Per-Paz: 16:00-01:00 | Cum-Cmt: 16:30-01:30'
         : 'AÇILIŞ: 09:50-18:50 | KAPANIŞ: 16:30-01:30';
     
-    // jsPDF oluştur (landscape A4)
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF('l', 'mm', 'a4'); // landscape
-    
-    // Başlık
-    pdf.setFontSize(18);
-    pdf.setTextColor(224, 123, 57); // #e07b39
-    pdf.text('Moonberry Coffee - ' + branch, 14, 15);
-    
-    pdf.setFontSize(11);
-    pdf.setTextColor(100);
-    pdf.text('Shift Planı: ' + weekLabel, 14, 22);
-    
-    // Tablo verileri
-    const tableHead = [['Personel', ...days]];
+    // Tablo verileri hazırla
     const tableBody = [];
     
-    personelOrder.forEach(name => {
+    // Header satırı
+    tableBody.push([
+        { text: 'Personel', style: 'headerGreen' },
+        ...days.map(d => ({ text: d, style: 'headerYellow' }))
+    ]);
+    
+    // Personel satırları
+    personelOrder.forEach((name, idx) => {
         if (!personelShifts[name]) return;
-        const row = [name];
+        const row = [{ text: name, style: 'nameCell' }];
         
         for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
             let val = personelShifts[name][dayIdx] || '';
@@ -5862,94 +5885,92 @@ async function downloadShiftPDF() {
             const cleanVal = val.replace(/\*/g, '').trim();
             const isEmpty = !val || /^\*+$/.test(val.trim());
             const isOff = cleanVal.toUpperCase() === 'OFF' || cleanVal.toUpperCase().includes('İZİN');
+            const showStar = hasStar || isOff;
             
             if (isEmpty) {
-                row.push('-');
+                row.push({ text: '-', style: 'emptyCell' });
             } else {
-                row.push((hasStar || isOff) ? '⭐' + cleanVal : cleanVal);
+                const cellStyle = showStar ? 'starCell' : (idx % 2 === 0 ? 'dataCell' : 'dataCellAlt');
+                row.push({ text: (showStar ? '★ ' : '') + cleanVal, style: cellStyle });
             }
         }
         tableBody.push(row);
     });
     
-    // autoTable ile tablo çiz
-    pdf.autoTable({
-        head: tableHead,
-        body: tableBody,
-        startY: 28,
-        theme: 'grid',
-        styles: {
-            fontSize: 9,
-            cellPadding: 3,
-            halign: 'center',
-            valign: 'middle',
-            font: 'helvetica'
-        },
-        headStyles: {
-            fillColor: [255, 255, 0], // Sarı
-            textColor: [0, 0, 0],
-            fontStyle: 'bold'
-        },
-        columnStyles: {
-            0: { halign: 'left', fillColor: [255, 255, 0], fontStyle: 'bold' }
-        },
-        alternateRowStyles: {
-            fillColor: [250, 250, 250]
-        },
-        didParseCell: function(data) {
-            // İlk sütun başlığı yeşil
-            if (data.section === 'head' && data.column.index === 0) {
-                data.cell.styles.fillColor = [0, 176, 80]; // Yeşil
-                data.cell.styles.textColor = [255, 255, 255];
-            }
-            // Yıldızlı hücreler turuncu border
-            if (data.section === 'body' && data.cell.text[0]?.includes('⭐')) {
-                data.cell.styles.lineColor = [224, 123, 57];
-                data.cell.styles.lineWidth = 0.5;
-            }
-        }
-    });
-    
-    // Kurallar
-    const finalY = pdf.lastAutoTable.finalY + 8;
-    pdf.setFontSize(8);
-    
-    pdf.setFillColor(198, 239, 206); // Yeşil arka plan
-    pdf.setTextColor(46, 125, 50);
-    pdf.roundedRect(14, finalY, 85, 6, 1, 1, 'F');
-    pdf.text('AÇILIŞ PERSONELİ İŞE GEÇ KALMAMALIDIR!', 16, finalY + 4);
-    
-    pdf.setFillColor(255, 235, 156); // Sarı arka plan
-    pdf.setTextColor(156, 87, 0);
-    pdf.roundedRect(102, finalY, 55, 6, 1, 1, 'F');
-    pdf.text('⭐ ÖZEL İSTEK GÜNLERİ', 104, finalY + 4);
-    
-    pdf.setFillColor(189, 224, 254); // Mavi arka plan
-    pdf.setTextColor(21, 101, 192);
-    pdf.roundedRect(160, finalY, 90, 6, 1, 1, 'F');
-    pdf.text(saatKurali, 162, finalY + 4);
-    
-    // Özel İstekler
-    if (specialRequests.length > 0) {
-        const reqY = finalY + 12;
-        pdf.setFillColor(255, 248, 225);
-        pdf.roundedRect(14, reqY, 270, 8 + (specialRequests.length * 5), 2, 2, 'F');
-        
-        pdf.setFontSize(9);
-        pdf.setTextColor(245, 124, 0);
-        pdf.text('Özel İstek Günleri:', 16, reqY + 5);
-        
-        pdf.setFontSize(8);
-        pdf.setTextColor(230, 81, 0);
-        specialRequests.forEach((r, i) => {
+    // Özel istekler metni
+    const ozelIstekler = specialRequests.length > 0 
+        ? specialRequests.map(r => {
             const dayName = r.day !== null && r.day !== undefined ? daysLong[r.day] : 'Tüm Hafta';
-            pdf.text(`• ${r.personel} - ${dayName}: ${r.reason}`, 16, reqY + 10 + (i * 5));
-        });
-    }
+            return `• ${r.personel} - ${dayName}: ${r.reason}`;
+        }).join('\n')
+        : 'Bu hafta için özel istek yok';
     
-    // PDF'i indir
+    // pdfmake döküman tanımı
+    const docDefinition = {
+        pageSize: 'A4',
+        pageOrientation: 'landscape',
+        pageMargins: [20, 20, 20, 20],
+        content: [
+            // Başlık
+            { text: 'Moonberry Coffee - ' + branch, style: 'title' },
+            { text: 'Shift Planı: ' + weekLabel, style: 'subtitle', margin: [0, 0, 0, 15] },
+            
+            // Tablo
+            {
+                table: {
+                    headerRows: 1,
+                    widths: ['auto', '*', '*', '*', '*', '*', '*', '*'],
+                    body: tableBody
+                },
+                layout: {
+                    hLineWidth: () => 1,
+                    vLineWidth: () => 1,
+                    hLineColor: () => '#cccccc',
+                    vLineColor: () => '#cccccc',
+                    paddingLeft: () => 6,
+                    paddingRight: () => 6,
+                    paddingTop: () => 4,
+                    paddingBottom: () => 4
+                }
+            },
+            
+            // Kurallar
+            { text: '', margin: [0, 10, 0, 0] },
+            {
+                columns: [
+                    { text: 'AÇILIŞ PERSONELİ İŞE GEÇ KALMAMALIDIR!', style: 'ruleGreen', width: 'auto' },
+                    { text: '★ ÖZEL İSTEK GÜNLERİ', style: 'ruleOrange', width: 'auto' },
+                    { text: saatKurali, style: 'ruleBlue', width: 'auto' }
+                ],
+                columnGap: 10
+            },
+            
+            // Özel İstekler
+            { text: '', margin: [0, 10, 0, 0] },
+            { text: 'Özel İstek Günleri:', style: 'requestTitle' },
+            { text: ozelIstekler, style: 'requestText' }
+        ],
+        styles: {
+            title: { fontSize: 18, bold: true, color: '#e07b39' },
+            subtitle: { fontSize: 11, color: '#666666' },
+            headerGreen: { fillColor: '#00B050', color: '#ffffff', bold: true, alignment: 'center', fontSize: 9 },
+            headerYellow: { fillColor: '#FFFF00', color: '#000000', bold: true, alignment: 'center', fontSize: 9 },
+            nameCell: { fillColor: '#FFFF00', color: '#000000', bold: true, fontSize: 9 },
+            dataCell: { alignment: 'center', fontSize: 9 },
+            dataCellAlt: { alignment: 'center', fontSize: 9, fillColor: '#f9f9f9' },
+            emptyCell: { alignment: 'center', fontSize: 9, color: '#999999' },
+            starCell: { alignment: 'center', fontSize: 9, bold: true, color: '#e07b39' },
+            ruleGreen: { fontSize: 8, color: '#2E7D32', background: '#C6EFCE', margin: [4, 2, 4, 2] },
+            ruleOrange: { fontSize: 8, color: '#9C5700', background: '#FFEB9C', margin: [4, 2, 4, 2] },
+            ruleBlue: { fontSize: 8, color: '#1565C0', background: '#BDE0FE', margin: [4, 2, 4, 2] },
+            requestTitle: { fontSize: 10, bold: true, color: '#F57C00' },
+            requestText: { fontSize: 9, color: '#E65100' }
+        }
+    };
+    
+    // PDF oluştur ve indir
     const filename = `Shift_${branch.replace(/\s/g, '_')}_${weekLabel.replace(/\s/g, '_').replace(/[^\w-]/g, '')}.pdf`;
-    pdf.save(filename);
+    pdfMake.createPdf(docDefinition).download(filename);
     
     toast('PDF indirildi! ✓', 'success');
 }
@@ -5957,7 +5978,9 @@ async function downloadShiftPDF() {
 // Bu haftayı sil fonksiyonu
 async function deleteCurrentShift() {
     const haftaSelect = document.getElementById('shiftHafta');
+    const subeSelect = document.getElementById('shiftSube');
     const docId = haftaSelect?.value;
+    const branch = subeSelect?.value;
     
     if (!docId) {
         toast('Önce bir shift seçin', 'error');
@@ -5970,19 +5993,46 @@ async function deleteCurrentShift() {
         return;
     }
     
+    // Sadece en yeni shift silinebilir - kontrol et
+    try {
+        const shiftsSnap = await db.collection('shifts')
+            .where('branch', '==', branch)
+            .orderBy('weekStart', 'desc')
+            .limit(1)
+            .get();
+        
+        if (shiftsSnap.empty) {
+            toast('Silinecek shift bulunamadı', 'error');
+            return;
+        }
+        
+        const newestShiftId = shiftsSnap.docs[0].id;
+        
+        if (docId !== newestShiftId) {
+            toast('Sadece en son oluşturulan hafta silinebilir!', 'error');
+            return;
+        }
+    } catch (e) {
+        console.error('Kontrol hatası:', e);
+    }
+    
     const weekLabel = haftaSelect.selectedOptions[0]?.textContent || '';
     
-    confirmModal('Shift Sil', `"${weekLabel}" shift'ini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`, async () => {
-        try {
-            await db.collection('shifts').doc(docId).delete();
-            toast('Shift silindi', 'success');
-            haftaSelect.value = '';
-            loadShiftList();
-        } catch (e) {
-            console.error(e);
-            toast('Silme hatası!', 'error');
-        }
-    });
+    // Onay iste
+    if (!confirm(`"${weekLabel}" shift'ini silmek istediğinize emin misiniz?\n\nBu işlem geri alınamaz!`)) {
+        return;
+    }
+    
+    try {
+        await db.collection('shifts').doc(docId).delete();
+        toast('Shift silindi', 'success');
+        haftaSelect.value = '';
+        document.getElementById('shiftTableContainer').innerHTML = '<p style="color:var(--tx2);text-align:center;padding:40px">⬆️ Yukarıdan hafta seçin.</p>';
+        loadShiftList();
+    } catch (e) {
+        console.error('Silme hatası:', e);
+        toast('Silme hatası: ' + e.message, 'error');
+    }
 }
 
 // Yazdır fonksiyonu
