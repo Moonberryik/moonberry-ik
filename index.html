@@ -825,16 +825,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                                 <option value="">-- Önce Mağaza Seçin --</option>
                             </select>
                         </div>
-                        <div class="form-group" style="display:flex;align-items:flex-end;gap:8px">
-                            <button class="btn btn-primary" onclick="showNewShiftModal()">+ Yeni Hafta</button>
-                        </div>
                     </div>
-                    <!-- Yönetici için Excel Yükleme (gizli) -->
-                    <div id="adminExcelUpload" style="display:none;margin-top:16px;padding:12px;background:var(--bg3);border-radius:8px;border:1px dashed var(--bg4)">
-                        <div style="display:flex;align-items:center;justify-content:space-between">
-                            <span style="font-size:.8rem;color:var(--tx2)">🔧 Yönetici: Excel verilerini içe aktar</span>
-                            <button class="btn btn-ghost btn-sm" onclick="uploadExcelToFirebase()" style="font-size:.75rem">📥 Excel Yükle</button>
-                        </div>
+                    <!-- Aksiyon Butonları - Tek Satır -->
+                    <div id="shiftActionButtons" style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+                        <button class="btn btn-primary" onclick="showNewShiftModal()" style="flex:1;min-width:120px">+ Yeni Hafta</button>
+                        <button class="btn btn-ghost" onclick="printShift()" style="flex:1;min-width:100px">🖨️ Yazdır</button>
+                        <button class="btn btn-ghost" onclick="triggerPdfDownload()" style="flex:1;min-width:100px">📥 PDF</button>
                     </div>
                 </div>
                 
@@ -3995,6 +3991,7 @@ function showAddPersonelModal(editId = null) {
         <input type="hidden" id="personelEditId" value="${editId || ''}">
         <div class="form-grid">
             <div class="form-group"><label class="form-label">Ad Soyad *</label><input type="text" id="personelName" class="form-input" required></div>
+            <div class="form-group"><label class="form-label">Shift Kod Adı</label><input type="text" id="personelCodeName" class="form-input" placeholder="Örn: Esin İ."><small style="color:var(--tx2);font-size:.7rem">Boş bırakılırsa Ad S. formatı kullanılır</small></div>
             <div class="form-group"><label class="form-label">T.C. Kimlik No *</label><input type="text" id="personelTC" class="form-input" maxlength="11"></div>
             <div class="form-group"><label class="form-label">Telefon</label><input type="tel" id="personelPhone" class="form-input"></div>
             <div class="form-group"><label class="form-label">E-posta</label><input type="email" id="personelEmail" class="form-input"></div>
@@ -4025,6 +4022,7 @@ async function loadPersonelForEdit(id) {
         if (doc.exists) {
             const p = doc.data();
             document.getElementById('personelName').value = p.name || '';
+            document.getElementById('personelCodeName').value = p.codeName || '';
             document.getElementById('personelTC').value = p.tc || '';
             document.getElementById('personelPhone').value = p.phone || '';
             document.getElementById('personelEmail').value = p.email || '';
@@ -4044,14 +4042,26 @@ async function savePersonel() {
     const editId = document.getElementById('personelEditId').value;
     const name = document.getElementById('personelName').value.trim();
     const tc = document.getElementById('personelTC').value.trim();
+    let codeName = document.getElementById('personelCodeName').value.trim();
     
     if (!name) {
         toast('Ad soyad zorunludur', 'error');
         return;
     }
     
+    // Kod adı boşsa otomatik oluştur: "Ad S."
+    if (!codeName) {
+        const parts = name.split(' ');
+        if (parts.length >= 2) {
+            codeName = parts[0] + ' ' + parts[parts.length - 1].charAt(0) + '.';
+        } else {
+            codeName = name;
+        }
+    }
+    
     const data = {
         name,
+        codeName,
         tc,
         phone: document.getElementById('personelPhone').value.trim(),
         email: document.getElementById('personelEmail').value.trim(),
@@ -4961,7 +4971,7 @@ async function loadShiftList() {
     }
 }
 
-function renderShiftHistory(weeks, branch) {
+function renderShiftHistory(weeks, branch, showAll = false) {
     const container = document.getElementById('shiftHistoryContainer');
     if (!container) return;
     
@@ -4975,65 +4985,59 @@ function renderShiftHistory(weeks, branch) {
         return;
     }
     
-    // Yıllara göre grupla
-    const byYear = {};
-    weeks.forEach(w => {
-        const year = w.weekStart ? w.weekStart.split('-')[0] : 'Bilinmiyor';
-        if (!byYear[year]) byYear[year] = [];
-        byYear[year].push(w);
-    });
+    // Gösterilecek hafta sayısı
+    const displayWeeks = showAll ? weeks : weeks.slice(0, 3);
+    const hasMore = weeks.length > 3 && !showAll;
     
-    // Yılları sırala (en yeni önce)
-    const years = Object.keys(byYear).sort((a, b) => b.localeCompare(a));
+    // Global'e kaydet (Daha Fazla için)
+    window._allShiftWeeks = weeks;
+    window._shiftBranch = branch;
     
     let html = `
         <div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
             <span style="font-size:.85rem;color:var(--tx2)">${branch}</span>
-            <span style="font-size:.75rem;color:var(--tx2)">${weeks.length} toplam kayıt</span>
+            <span style="font-size:.75rem;color:var(--tx2)">${showAll ? weeks.length : Math.min(3, weeks.length)}/${weeks.length} kayıt</span>
         </div>
-        <div style="max-height:500px;overflow-y:auto;padding-right:8px">`;
+        <div style="display:grid;gap:8px">`;
     
-    years.forEach((year, yearIdx) => {
-        const yearWeeks = byYear[year];
-        const isCurrentYear = year === new Date().getFullYear().toString();
+    displayWeeks.forEach((w, idx) => {
+        const cnt = Object.keys(w.personelShifts || {}).length;
+        const isFirst = idx === 0;
+        const borderColor = isFirst ? 'var(--accent)' : 'var(--bg4)';
+        const badge = isFirst ? '<span style="font-size:.6rem;background:var(--accent);color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px">EN YENİ</span>' : '';
         
         html += `
-            <div style="margin-bottom:16px">
-                <div style="font-weight:700;color:${isCurrentYear ? 'var(--accent)' : 'var(--tx)'};font-size:.9rem;padding:8px 0;border-bottom:2px solid ${isCurrentYear ? 'var(--accent)' : 'var(--bg4)'};margin-bottom:10px;display:flex;align-items:center;gap:8px">
-                    📅 ${year}
-                    <span style="font-size:.7rem;font-weight:400;color:var(--tx2)">(${yearWeeks.length} hafta)</span>
-                    ${isCurrentYear ? '<span style="font-size:.65rem;background:var(--accent);color:#fff;padding:2px 6px;border-radius:4px">GÜNCEL</span>' : ''}
-                </div>
-                <div style="display:grid;gap:8px">`;
-        
-        yearWeeks.forEach((w, idx) => {
-            const cnt = Object.keys(w.personelShifts || {}).length;
-            const isRecent = yearIdx === 0 && idx < 2;
-            const borderColor = isRecent ? 'var(--accent)' : 'var(--bg4)';
-            const badge = yearIdx === 0 && idx === 0 ? '<span style="font-size:.6rem;background:var(--accent);color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px">EN YENİ</span>' : '';
-            
-            html += `
-                <div onclick="selectShift('${w.id}')" 
-                     style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--bg3);border:2px solid ${borderColor};border-radius:10px;cursor:pointer;transition:all .2s" 
-                     onmouseover="this.style.borderColor='var(--accent)';this.style.transform='translateX(4px)'" 
-                     onmouseout="this.style.borderColor='${borderColor}';this.style.transform='none'">
-                    <div>
-                        <div style="font-weight:600;color:var(--tx);font-size:.85rem;display:flex;align-items:center">
-                            ${formatWeekWithYear(w.weekLabel, w.weekStart)}${badge}
-                        </div>
-                        <div style="font-size:.7rem;color:var(--tx2);margin-top:3px">
-                            👥 ${cnt} personel
-                            ${w.source === 'excel' ? ' • 📊 Excel' : ''}
-                        </div>
+            <div onclick="selectShift('${w.id}')" 
+                 style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--bg3);border:2px solid ${borderColor};border-radius:10px;cursor:pointer;transition:all .2s" 
+                 onmouseover="this.style.borderColor='var(--accent)';this.style.transform='translateX(4px)'" 
+                 onmouseout="this.style.borderColor='${borderColor}';this.style.transform='none'">
+                <div>
+                    <div style="font-weight:600;color:var(--tx);font-size:.85rem;display:flex;align-items:center">
+                        ${formatWeekWithYear(w.weekLabel, w.weekStart)}${badge}
                     </div>
-                    <div style="color:var(--accent);font-size:1.2rem;font-weight:bold">›</div>
-                </div>`;
-        });
-        
-        html += '</div></div>';
+                    <div style="font-size:.7rem;color:var(--tx2);margin-top:3px">👥 ${cnt} personel</div>
+                </div>
+                <div style="color:var(--accent);font-size:1.2rem;font-weight:bold">›</div>
+            </div>`;
     });
     
     html += '</div>';
+    
+    // Daha Fazla butonu
+    if (hasMore) {
+        html += `
+            <button onclick="renderShiftHistory(window._allShiftWeeks, window._shiftBranch, true)" 
+                    class="btn btn-ghost" style="width:100%;margin-top:12px;font-size:.8rem">
+                📂 Daha Fazla Yükle (${weeks.length - 3} daha)
+            </button>`;
+    } else if (showAll && weeks.length > 3) {
+        html += `
+            <button onclick="renderShiftHistory(window._allShiftWeeks, window._shiftBranch, false)" 
+                    class="btn btn-ghost" style="width:100%;margin-top:12px;font-size:.8rem">
+                🔼 Daha Az Göster
+            </button>`;
+    }
+    
     container.innerHTML = html;
 }
 
@@ -5218,15 +5222,6 @@ function renderShiftTable(shift, docId) {
     
     html += `</div>`; // shiftTablePrint close
     
-    // Kontrol butonları
-    html += `<div style="margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-        <button class="btn btn-ghost btn-sm" onclick="addPersonelToShift('${docId}')">👤 Personel Ekle</button>
-        <button class="btn btn-ghost btn-sm" onclick="removePersonelFromShift('${docId}')">🗑️ Personel Çıkar</button>
-        <div style="flex:1"></div>
-        <button class="btn btn-ghost btn-sm" onclick="printShift()">🖨️ Yazdır</button>
-        <button class="btn btn-primary btn-sm" onclick="exportShiftPDF('${shift.branch}', '${weekLabelWithYear.replace(/'/g, "\\'")}')">📥 PDF İndir</button>
-    </div>`;
-    
     container.innerHTML = html;
 }
 
@@ -5407,19 +5402,27 @@ async function saveShiftRules(docId) {
 }
 
 // Özel istek ekleme
-function addSpecialRequest(docId) {
-    const sube = document.getElementById('shiftSube').value;
+async function addSpecialRequest(docId) {
     const days = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
     const dayOpts = days.map((d, i) => `<option value="${i}">${d}</option>`).join('');
+    
+    // Shift'teki personelleri al
+    let personelOpts = '<option value="">-- Personel Seçin --</option>';
+    try {
+        const doc = await db.collection('shifts').doc(docId).get();
+        const data = doc.data();
+        const names = data.personelOrder || Object.keys(data.personelShifts || {});
+        personelOpts += names.map(n => `<option value="${n}">${n}</option>`).join('');
+    } catch (e) { console.error(e); }
     
     showModal('Özel İstek Ekle', `
         <div style="padding:8px 0">
             <div class="form-group" style="margin-bottom:12px">
-                <label class="form-label">Personel Adı</label>
-                <input type="text" id="reqPersonel" class="form-input" placeholder="Örn: TUANA">
+                <label class="form-label">Personel</label>
+                <select id="reqPersonel" class="form-select">${personelOpts}</select>
             </div>
             <div class="form-group" style="margin-bottom:12px">
-                <label class="form-label">Gün (Opsiyonel)</label>
+                <label class="form-label">Gün</label>
                 <select id="reqDay" class="form-select">
                     <option value="">-- Tüm hafta için --</option>
                     ${dayOpts}
@@ -5435,9 +5438,9 @@ function addSpecialRequest(docId) {
 }
 
 async function saveSpecialRequest(docId) {
-    const personel = document.getElementById('reqPersonel').value.trim().toUpperCase();
+    const personel = document.getElementById('reqPersonel').value.trim();
     const day = document.getElementById('reqDay').value;
-    const reason = document.getElementById('reqReason').value.trim().toUpperCase();
+    const reason = document.getElementById('reqReason').value.trim();
     
     if (!personel || !reason) { toast('Personel ve neden gerekli', 'error'); return; }
     
@@ -5720,16 +5723,41 @@ async function createNewShift() {
         document.getElementById('shiftSube').value = sube;
         await loadShiftList();
         
-        // Yeni haftayı seç
+        // Yeni haftayı seç ve tabloyu yükle
         setTimeout(() => {
-            document.getElementById('shiftHafta').value = newDoc.id;
+            const haftaSelect = document.getElementById('shiftHafta');
+            haftaSelect.value = newDoc.id;
+            // Dropdown'da yeni eklenen seçenek görünsün
+            if (!haftaSelect.querySelector(`option[value="${newDoc.id}"]`)) {
+                const opt = document.createElement('option');
+                opt.value = newDoc.id;
+                opt.textContent = label + ' (Yeni)';
+                opt.selected = true;
+                haftaSelect.insertBefore(opt, haftaSelect.options[1]);
+            }
             loadShiftWeek();
-        }, 300);
+        }, 500);
         
     } catch (e) { 
         console.error('Shift oluşturma hatası:', e); 
         toast('Oluşturma hatası: ' + e.message, 'error'); 
     }
+}
+
+// PDF İndir - Trigger fonksiyonu
+function triggerPdfDownload() {
+    const haftaSelect = document.getElementById('shiftHafta');
+    const subeSelect = document.getElementById('shiftSube');
+    
+    if (!haftaSelect?.value) {
+        toast('Önce bir shift seçin', 'error');
+        return;
+    }
+    
+    const branch = subeSelect?.value || '';
+    const weekLabel = haftaSelect.selectedOptions[0]?.textContent || '';
+    
+    exportShiftPDF(branch, weekLabel);
 }
 
 async function exportShiftPDF(branch, weekLabel) {
@@ -5849,42 +5877,62 @@ async function exportShiftPDF(branch, weekLabel) {
 }
 
 // Yazdır fonksiyonu
-function printShift() {
-    const table = document.getElementById('shiftMainTable');
-    if (!table) { toast('Önce bir shift seçin', 'error'); return; }
+async function printShift() {
+    const haftaSelect = document.getElementById('shiftHafta');
+    const docId = haftaSelect?.value;
     
-    // Tablo verilerini topla
-    const rows = table.querySelectorAll('tbody tr');
-    const branch = document.getElementById('shiftSube').value;
-    const weekLabel = document.getElementById('shiftHafta').selectedOptions[0]?.textContent || '';
-    
-    // Özel istekleri al (mevcut shift'ten)
-    const specialRequestsDiv = document.querySelector('#shiftTableContainer [style*="FFF8E1"]');
-    let specialRequests = [];
-    if (specialRequestsDiv) {
-        specialRequestsDiv.querySelectorAll('[style*="F57C00"]').forEach(el => {
-            const text = el.textContent.trim();
-            if (text && !text.includes('eklenmemiş')) {
-                specialRequests.push(text);
-            }
-        });
+    if (!docId) { 
+        toast('Önce bir shift seçin', 'error'); 
+        return; 
     }
     
+    const branch = document.getElementById('shiftSube').value;
+    const weekLabel = haftaSelect.selectedOptions[0]?.textContent || '';
+    
+    // Firebase'den veri al
+    let shiftData = null;
+    try {
+        const doc = await db.collection('shifts').doc(docId).get();
+        shiftData = doc.data();
+    } catch (e) { 
+        console.error(e);
+        toast('Shift verisi alınamadı', 'error');
+        return;
+    }
+    
+    const personelShifts = shiftData.personelShifts || {};
+    const personelOrder = shiftData.personelOrder || Object.keys(personelShifts);
+    const days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+    const daysLong = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+    
+    // Tablo verisi + yıldızlı günleri topla
     const data = [];
-    rows.forEach(row => {
-        const cells = row.querySelectorAll('td');
+    const starDays = []; // Yıldızlı günler listesi
+    
+    personelOrder.forEach(name => {
+        if (!personelShifts[name]) return;
         const rowData = [];
-        cells.forEach((cell, idx) => {
-            if (idx === 0) {
-                rowData.push({ text: cell.textContent.trim(), bg: '#FFFF00', color: '#000' });
-            } else {
-                const select = cell.querySelector('select');
-                let val = select ? select.value : cell.textContent.trim();
-                if (/^\*+$/.test(val)) val = 'OFF';
-                const colors = getShiftColorExcel(val);
-                rowData.push({ text: val || '-', bg: colors.bg, color: colors.text });
+        rowData.push({ text: name, bg: '#FFFF00', color: '#000' });
+        
+        for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+            let val = personelShifts[name][dayIdx] || '';
+            const hasStar = val.includes('*') && !/^\*+$/.test(val);
+            const cleanVal = val.replace(/\*/g, '').trim();
+            const isEmpty = !val || /^\*+$/.test(val.trim());
+            
+            // Yıldızlı günü kaydet
+            if (hasStar && cleanVal) {
+                starDays.push(`${name} - ${daysLong[dayIdx]}: ${cleanVal}`);
             }
-        });
+            
+            if (isEmpty) {
+                rowData.push({ text: '-', bg: '#fff', color: '#999', hasStar: false });
+            } else {
+                const colors = getShiftColorExcel(cleanVal);
+                const displayText = hasStar ? '⭐' + cleanVal : cleanVal;
+                rowData.push({ text: displayText, bg: colors.bg, color: colors.text, hasStar });
+            }
+        }
         data.push(rowData);
     });
     
@@ -5904,6 +5952,7 @@ function printShift() {
                 th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
                 th { background: #FFFF00 !important; font-weight: 600; }
                 th:first-child { background: #00B050 !important; color: #fff !important; text-align: left; }
+                .star-cell { border: 2px solid #e07b39 !important; }
                 .rules-box { margin-top: 12px; }
                 .rule { display: inline-block; padding: 6px 10px; margin: 3px; font-size: 10px; border-radius: 4px; }
                 .rule1 { background: #C6EFCE !important; color: #2E7D32 !important; }
@@ -5923,13 +5972,13 @@ function printShift() {
                 <thead>
                     <tr>
                         <th style="background:#00B050 !important; color:#fff !important;">SHIFT<br>${weekLabel}</th>
-                        <th>Pzt</th><th>Sal</th><th>Çar</th><th>Per</th><th>Cum</th><th>Cmt</th><th>Paz</th>
+                        ${days.map(d => `<th>${d}</th>`).join('')}
                     </tr>
                 </thead>
                 <tbody>
                     ${data.map(row => `
                         <tr>
-                            ${row.map((cell, idx) => `<td style="background:${cell.bg} !important; color:${cell.color} !important; font-weight:600; ${idx === 0 ? 'text-align:left;' : ''}">${cell.text}</td>`).join('')}
+                            ${row.map((cell, idx) => `<td style="background:${cell.bg} !important; color:${cell.color} !important; font-weight:600; ${idx === 0 ? 'text-align:left;' : ''} ${cell.hasStar ? 'border:2px solid #e07b39 !important;' : ''}">${cell.text}</td>`).join('')}
                         </tr>
                     `).join('')}
                 </tbody>
@@ -5937,15 +5986,15 @@ function printShift() {
             
             <div class="rules-box">
                 <div class="rule rule1">AÇILIŞ PERSONELİ İŞE GEÇ KALMAMALIDIR!</div>
-                <div class="rule rule2">(*) SEMBOLÜ ÖZEL İSTEK GÜNLERİDİR</div>
+                <div class="rule rule2">⭐ SEMBOLÜ ÖZEL İSTEK GÜNLERİDİR</div>
                 <div class="rule rule3">AÇILIŞ: 09:50-18:50 | KAPANIŞ: 16:30-01:30</div>
                 <div class="rule rule4">*YEMEK: 45DK, MOLA: 1x15DK</div>
             </div>
             
             <div class="requests-box">
-                <div class="requests-title">📌 Özel İstek Günleri</div>
-                ${specialRequests.length > 0 
-                    ? specialRequests.map(r => `<span class="request-item">${r}</span>`).join('') 
+                <div class="requests-title">📌 Özel İstek Günleri (⭐)</div>
+                ${starDays.length > 0 
+                    ? starDays.map(r => `<span class="request-item">${r}</span>`).join('') 
                     : '<span class="empty-requests">Bu hafta için özel istek yok</span>'
                 }
             </div>
