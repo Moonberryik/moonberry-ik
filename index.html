@@ -4865,8 +4865,8 @@ async function updateAdminCredentials() {
 // Shift tipleri ve saat aralıkları
 const SHIFT_TYPES = ['AÇILIŞ', 'ARA', 'KAPANIŞ', 'OFF', 'Y.İ'];
 const COMMON_TIMES = [
-    '10:00 - 19:00', '11:00 - 20:00', '12:00 - 21:00', '13:00 - 22:00', 
-    '14:00 - 23:00', '15:00 - 00:00'
+    '10:00/19:00', '11:00/20:00', '12:00/21:00', '13:00/22:00', 
+    '14:00/23:00', '15:00/00:00'
 ];
 
 // Hafta label'ına yıl ekle
@@ -4880,9 +4880,9 @@ function formatWeekWithYear(weekLabel, weekStart) {
     }
     return `${label} (${year})`;
 }
-// Part-time saat seçenekleri
-const PARTTIME_START = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
-const PARTTIME_END = ['14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '00:00'];
+// Part-time saat seçenekleri (10:00 - 00:00 arası tüm saatler)
+const PARTTIME_START = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'];
+const PARTTIME_END = ['11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '00:00'];
 
 // Excel renkleri (gerçek Excel'den alındı)
 const SHIFT_COLORS = {
@@ -5164,6 +5164,12 @@ function renderShiftTable(shift, docId) {
     
     html += `</tbody></table></div>`;
     
+    // Personel Ekle/Çıkar butonları (shift tablosunun hemen altında)
+    html += `<div style="display:flex;gap:10px;margin:16px 0;justify-content:center">
+        <button class="btn btn-primary btn-sm" onclick="addPersonelToShift('${docId}')" style="padding:8px 16px;font-size:.8rem">➕ Personel Ekle</button>
+        <button class="btn btn-ghost btn-sm" onclick="removePersonelFromShiftModal('${docId}')" style="padding:8px 16px;font-size:.8rem">➖ Personel Çıkar</button>
+    </div>`;
+    
     // Shift Kuralları bölümü (düzenlenebilir)
     html += `<div id="shiftAnnouncements" style="margin-top:20px;padding:16px;background:var(--bg2);border-radius:12px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -5261,27 +5267,27 @@ function formatShiftValue(val) {
     return val;
 }
 
-async function updateShiftCell(docId, name, dayIdx, value) {
+async function updateShiftCell(docId, name, dayIdx, value, keepStar = false) {
     if (value === 'parttime') { 
         // Part-time saat seçici modal
         const startOpts = PARTTIME_START.map(t => `<option value="${t}">${t}</option>`).join('');
         const endOpts = PARTTIME_END.map(t => `<option value="${t}">${t}</option>`).join('');
         
-        showModal('Part-time Saat Seç', `
+        showModal('Özel Saat Gir', `
             <div style="padding:8px 0">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
                     <div class="form-group">
-                        <label class="form-label">Başlangıç Saati</label>
+                        <label class="form-label">Başlangıç</label>
                         <select id="parttimeStart" class="form-select" style="font-size:1rem">${startOpts}</select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Bitiş Saati</label>
+                        <label class="form-label">Bitiş</label>
                         <select id="parttimeEnd" class="form-select" style="font-size:1rem">${endOpts}</select>
                     </div>
                 </div>
                 <div style="margin-top:12px">
                     <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-                        <input type="checkbox" id="parttimeStar" style="width:18px;height:18px">
+                        <input type="checkbox" id="parttimeStar" ${keepStar ? 'checked' : ''} style="width:18px;height:18px">
                         <span>⭐ Özel istek olarak işaretle</span>
                     </label>
                 </div>
@@ -5295,13 +5301,44 @@ async function updateShiftCell(docId, name, dayIdx, value) {
         const data = doc.data();
         if (!data.personelShifts) data.personelShifts = {};
         if (!data.personelShifts[name]) data.personelShifts[name] = {};
-        data.personelShifts[name][dayIdx] = value;
+        // Yıldız koruma
+        const finalValue = keepStar && value ? '*' + value : value;
+        data.personelShifts[name][dayIdx] = finalValue;
         await db.collection('shifts').doc(docId).update({ personelShifts: data.personelShifts });
         toast('✓ Kaydedildi', 'success');
-        loadShiftWeek(); // Tabloyu yenile
+        loadShiftWeek();
     } catch (e) { 
         console.error(e); 
         toast('Güncelleme hatası!', 'error'); 
+        loadShiftWeek();
+    }
+}
+
+// Yıldız toggle fonksiyonu
+async function toggleStar(docId, name, dayIdx, isChecked) {
+    try {
+        const doc = await db.collection('shifts').doc(docId).get();
+        const data = doc.data();
+        if (!data.personelShifts || !data.personelShifts[name]) return;
+        
+        let val = data.personelShifts[name][dayIdx] || '';
+        const cleanVal = val.replace(/\*/g, '').trim();
+        
+        if (!cleanVal) {
+            toast('Önce shift seçin', 'error');
+            loadShiftWeek();
+            return;
+        }
+        
+        const finalValue = isChecked ? '*' + cleanVal : cleanVal;
+        data.personelShifts[name][dayIdx] = finalValue;
+        
+        await db.collection('shifts').doc(docId).update({ personelShifts: data.personelShifts });
+        toast(isChecked ? '⭐ Özel istek eklendi' : 'Özel istek kaldırıldı', 'success');
+        loadShiftWeek();
+    } catch (e) { 
+        console.error(e); 
+        toast('Hata!', 'error'); 
         loadShiftWeek();
     }
 }
@@ -5430,14 +5467,26 @@ async function removeSpecialRequest(docId, idx) {
 }
 
 async function addPersonelToShift(docId) {
-    // Mağazadaki personel listesini getir
+    // Mağazadaki personel listesini getir (şube bazlı)
     const sube = document.getElementById('shiftSube').value;
     try {
         const pSnap = await db.collection('personel').get();
         const personelList = [];
         pSnap.forEach(d => {
             const p = d.data();
-            if (p.branch === sube) personelList.push(p.name);
+            if (p.branch === sube) {
+                // codeName varsa onu kullan, yoksa "Ad S." formatı
+                const displayName = p.codeName || (p.name.split(' ')[0] + ' ' + (p.name.split(' ')[1] || '').charAt(0) + '.');
+                personelList.push({ name: p.name, displayName, role: p.role });
+            }
+        });
+        
+        // Rütbeye göre sırala
+        const roleOrder = ['bolge_muduru', 'magaza_muduru', 'magaza_muduru_yardimcisi', 'kidemli_barista', 'barista', 'part_time'];
+        personelList.sort((a, b) => {
+            const aIdx = roleOrder.indexOf(a.role) === -1 ? 99 : roleOrder.indexOf(a.role);
+            const bIdx = roleOrder.indexOf(b.role) === -1 ? 99 : roleOrder.indexOf(b.role);
+            return aIdx - bIdx;
         });
         
         if (personelList.length === 0) {
@@ -5447,17 +5496,17 @@ async function addPersonelToShift(docId) {
         }
         
         // Modal ile seçim
-        const opts = personelList.map(n => `<option value="${n}">${n}</option>`).join('');
+        const opts = personelList.map(p => `<option value="${p.displayName}">${p.displayName} (${p.name})</option>`).join('');
         showModal('Personel Ekle', `
             <div style="padding:8px 0">
                 <div class="form-group" style="margin-bottom:16px">
-                    <label class="form-label">Kayıtlı Personel</label>
+                    <label class="form-label">${sube} Personeli</label>
                     <select id="addPersonelSelect" class="form-select">${opts}</select>
                 </div>
                 <div style="text-align:center;color:var(--tx2);margin:12px 0">- veya -</div>
                 <div class="form-group">
-                    <label class="form-label">Manuel Giriş</label>
-                    <input type="text" id="addPersonelManual" class="form-input" placeholder="Personel adı">
+                    <label class="form-label">Geçici Personel (Manuel)</label>
+                    <input type="text" id="addPersonelManual" class="form-input" placeholder="Kod adı girin">
                 </div>
             </div>
         `, `<button class="btn btn-ghost" onclick="closeModal()">İptal</button>
@@ -5492,6 +5541,9 @@ async function doAddPersonel(docId, name) {
         loadShiftWeek();
     } catch (e) { console.error(e); toast('Ekleme hatası!', 'error'); }
 }
+
+// Alias fonksiyon
+const removePersonelFromShiftModal = removePersonelFromShift;
 
 async function removePersonelFromShift(docId) {
     try {
@@ -5608,7 +5660,7 @@ async function createNewShift() {
         let ps = {};
         let personelOrder = [];
         
-        // Önceki haftadan kopyala
+        // Önceki haftadan kopyala (TÜM shift verileri dahil)
         if (copy) {
             const allShifts = [];
             existingSnap.forEach(doc => {
@@ -5618,9 +5670,11 @@ async function createNewShift() {
             allShifts.sort((a, b) => (b.weekStart || '').localeCompare(a.weekStart || ''));
             
             if (allShifts.length > 0) {
-                // personelOrder'ı da kopyala
-                personelOrder = allShifts[0].personelOrder || Object.keys(allShifts[0].personelShifts || {});
-                personelOrder.forEach(n => ps[n] = {});
+                const prevShift = allShifts[0];
+                // personelOrder'ı kopyala
+                personelOrder = prevShift.personelOrder || Object.keys(prevShift.personelShifts || {});
+                // TÜM shift verilerini kopyala (günler dahil)
+                ps = JSON.parse(JSON.stringify(prevShift.personelShifts || {}));
             }
         }
         
@@ -5633,15 +5687,16 @@ async function createNewShift() {
                 if (p.branch === sube) personelList.push(p);
             });
             // Rütbeye göre sırala
-            const roleOrder = ['bolge_muduru', 'magaza_muduru', 'kidemli_barista', 'barista', 'part_time'];
+            const roleOrder = ['bolge_muduru', 'magaza_muduru', 'magaza_muduru_yardimcisi', 'kidemli_barista', 'barista', 'part_time'];
             personelList.sort((a, b) => {
                 const aIdx = roleOrder.indexOf(a.role) === -1 ? 99 : roleOrder.indexOf(a.role);
                 const bIdx = roleOrder.indexOf(b.role) === -1 ? 99 : roleOrder.indexOf(b.role);
                 return aIdx - bIdx;
             });
             personelList.forEach(p => {
-                ps[p.name] = {};
-                personelOrder.push(p.name);
+                const displayName = p.codeName || p.name.split(' ')[0] + ' ' + (p.name.split(' ')[1] || '').charAt(0) + '.';
+                ps[displayName] = {};
+                personelOrder.push(displayName);
             });
         }
         
@@ -5677,47 +5732,61 @@ async function createNewShift() {
     }
 }
 
-function exportShiftPDF(branch, weekLabel) {
+async function exportShiftPDF(branch, weekLabel) {
     const table = document.getElementById('shiftMainTable');
     if (!table) { toast('Önce bir shift seçin', 'error'); return; }
     
     toast('PDF oluşturuluyor...', 'info');
     
-    // Özel istekleri al
-    const specialRequestsDiv = document.querySelector('#shiftTableContainer [style*="FFF8E1"]');
-    let specialRequests = [];
-    if (specialRequestsDiv) {
-        specialRequestsDiv.querySelectorAll('[style*="F57C00"]').forEach(el => {
-            const text = el.textContent.trim();
-            if (text && !text.includes('eklenmemiş')) {
-                specialRequests.push(text);
-            }
-        });
+    // Mevcut shift verisini Firebase'den al
+    const haftaSelect = document.getElementById('shiftHafta');
+    const docId = haftaSelect?.value;
+    
+    let shiftData = null;
+    if (docId) {
+        try {
+            const doc = await db.collection('shifts').doc(docId).get();
+            shiftData = doc.data();
+        } catch (e) { console.error(e); }
     }
     
-    // Tablo verilerini topla
-    const rows = table.querySelectorAll('tbody tr');
+    if (!shiftData) {
+        toast('Shift verisi alınamadı', 'error');
+        return;
+    }
+    
+    const personelShifts = shiftData.personelShifts || {};
+    const personelOrder = shiftData.personelOrder || Object.keys(personelShifts);
+    const days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+    
+    // Tablo verilerini hazırla
     const data = [];
-    rows.forEach(row => {
-        const cells = row.querySelectorAll('td');
+    personelOrder.forEach(name => {
+        if (!personelShifts[name]) return;
         const rowData = [];
-        cells.forEach((cell, idx) => {
-            if (idx === 0) {
-                rowData.push({ text: cell.textContent.trim(), bg: '#FFFF00', color: '#000' });
+        rowData.push({ text: name, bg: '#FFFF00', color: '#000' });
+        
+        for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+            let val = personelShifts[name][dayIdx] || '';
+            const hasStar = val.includes('*') && !/^\*+$/.test(val);
+            const cleanVal = val.replace(/\*/g, '').trim();
+            const isEmpty = !val || /^\*+$/.test(val.trim());
+            
+            if (isEmpty) {
+                rowData.push({ text: '-', bg: '#fff', color: '#999' });
             } else {
-                const select = cell.querySelector('select');
-                let val = select ? select.value : cell.textContent.trim();
-                if (/^\*+$/.test(val)) val = 'OFF';
-                const colors = getShiftColorExcel(val);
-                rowData.push({ text: val || '-', bg: colors.bg, color: colors.text });
+                const colors = getShiftColorExcel(cleanVal);
+                const displayText = hasStar ? '⭐' + cleanVal : cleanVal;
+                rowData.push({ text: displayText, bg: colors.bg, color: colors.text, hasStar });
             }
-        });
+        }
         data.push(rowData);
     });
     
     // PDF için element oluştur
     const pdfContent = document.createElement('div');
-    pdfContent.style.cssText = 'width:1000px;padding:24px;background:#fff;font-family:Inter,Arial,sans-serif;';
+    pdfContent.id = 'pdfTempContent';
+    pdfContent.style.cssText = 'position:fixed;top:0;left:0;width:1000px;padding:24px;background:#fff;font-family:Inter,Arial,sans-serif;z-index:-9999;';
     
     pdfContent.innerHTML = `
         <div style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #e07b39">
@@ -5728,39 +5797,24 @@ function exportShiftPDF(branch, weekLabel) {
             <thead>
                 <tr>
                     <th style="padding:10px;background:#00B050;color:#fff;border:1px solid #ddd;text-align:left;font-weight:600">SHIFT<br>${weekLabel}</th>
-                    <th style="padding:10px;background:#FFFF00;color:#000;border:1px solid #ddd;text-align:center;font-weight:600">Pzt</th>
-                    <th style="padding:10px;background:#FFFF00;color:#000;border:1px solid #ddd;text-align:center;font-weight:600">Sal</th>
-                    <th style="padding:10px;background:#FFFF00;color:#000;border:1px solid #ddd;text-align:center;font-weight:600">Çar</th>
-                    <th style="padding:10px;background:#FFFF00;color:#000;border:1px solid #ddd;text-align:center;font-weight:600">Per</th>
-                    <th style="padding:10px;background:#FFFF00;color:#000;border:1px solid #ddd;text-align:center;font-weight:600">Cum</th>
-                    <th style="padding:10px;background:#FFFF00;color:#000;border:1px solid #ddd;text-align:center;font-weight:600">Cmt</th>
-                    <th style="padding:10px;background:#FFFF00;color:#000;border:1px solid #ddd;text-align:center;font-weight:600">Paz</th>
+                    ${days.map(d => `<th style="padding:10px;background:#FFFF00;color:#000;border:1px solid #ddd;text-align:center;font-weight:600">${d}</th>`).join('')}
                 </tr>
             </thead>
             <tbody>
                 ${data.map((row, i) => `
                     <tr style="background:${i % 2 === 0 ? '#fff' : '#f9f9f9'}">
-                        ${row.map((cell, idx) => `<td style="padding:8px;${idx === 0 ? 'text-align:left;' : 'text-align:center;'}border:1px solid #ddd;background:${cell.bg};color:${cell.color};font-weight:600;font-size:10px">${cell.text}</td>`).join('')}
+                        ${row.map((cell, idx) => `<td style="padding:8px;${idx === 0 ? 'text-align:left;' : 'text-align:center;'}border:1px solid #ddd;background:${cell.bg};color:${cell.color};font-weight:600;font-size:10px;${cell.hasStar ? 'border:2px solid #e07b39;' : ''}">${cell.text}</td>`).join('')}
                     </tr>
                 `).join('')}
             </tbody>
         </table>
         
-        <!-- 4 Kural -->
+        <!-- Kurallar -->
         <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px">
             <div style="padding:8px 12px;background:#C6EFCE;color:#2E7D32;border-radius:6px;font-size:10px;font-weight:500">AÇILIŞ PERSONELİ İŞE GEÇ KALMAMALIDIR!</div>
-            <div style="padding:8px 12px;background:#FFEB9C;color:#9C5700;border-radius:6px;font-size:10px;font-weight:500">(*) SEMBOLÜ ÖZEL İSTEK GÜNLERİDİR</div>
+            <div style="padding:8px 12px;background:#FFEB9C;color:#9C5700;border-radius:6px;font-size:10px;font-weight:500">⭐ SEMBOLÜ ÖZEL İSTEK GÜNLERİDİR</div>
             <div style="padding:8px 12px;background:#BDE0FE;color:#1565C0;border-radius:6px;font-size:10px;font-weight:500">AÇILIŞ: 09:50-18:50 | KAPANIŞ: 16:30-01:30</div>
             <div style="padding:8px 12px;background:#E8F4FD;color:#1976D2;border-radius:6px;font-size:10px;font-weight:500">*YEMEK: 45DK, MOLA: 1x15DK</div>
-        </div>
-        
-        <!-- Özel İstekler -->
-        <div style="margin-top:16px;padding:14px;background:#FFF8E1;border-radius:8px;border:1px solid #FFE082">
-            <div style="font-weight:600;color:#F57C00;font-size:11px;margin-bottom:10px">📌 Özel İstek Günleri</div>
-            ${specialRequests.length > 0 
-                ? `<div style="display:flex;flex-wrap:wrap;gap:6px">${specialRequests.map(r => `<span style="background:#FFECB3;color:#E65100;padding:5px 10px;border-radius:4px;font-size:10px;font-weight:500">${r}</span>`).join('')}</div>`
-                : '<div style="color:#9E9E9E;font-style:italic;font-size:10px;padding:8px;background:#fff;border-radius:4px;text-align:center">Bu hafta için özel istek yok</div>'
-            }
         </div>
     `;
     
@@ -5768,26 +5822,30 @@ function exportShiftPDF(branch, weekLabel) {
     
     const filename = `Shift_${branch.replace(/\s/g, '_')}_${weekLabel.replace(/\s/g, '_').replace(/[^\w-]/g, '')}.pdf`;
     
-    html2pdf().set({
-        margin: [8, 8, 8, 8],
-        filename: filename,
-        image: { type: 'jpeg', quality: 0.95 },
-        html2canvas: { 
-            scale: 2, 
-            useCORS: true,
-            logging: false,
-            backgroundColor: '#ffffff',
-            windowWidth: 1000
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-    }).from(pdfContent).save().then(() => {
-        document.body.removeChild(pdfContent);
-        toast('PDF indirildi! ✓', 'success');
-    }).catch(err => {
-        console.error('PDF hatası:', err);
-        document.body.removeChild(pdfContent);
-        toast('PDF hatası: ' + err.message, 'error');
-    });
+    // PDF oluştur
+    setTimeout(() => {
+        html2pdf().set({
+            margin: [10, 10, 10, 10],
+            filename: filename,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { 
+                scale: 2, 
+                useCORS: true,
+                logging: true,
+                backgroundColor: '#ffffff',
+                width: 1000,
+                windowWidth: 1000
+            },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        }).from(pdfContent).save().then(() => {
+            document.body.removeChild(pdfContent);
+            toast('PDF indirildi! ✓', 'success');
+        }).catch(err => {
+            console.error('PDF hatası:', err);
+            document.body.removeChild(pdfContent);
+            toast('PDF hatası: ' + err.message, 'error');
+        });
+    }, 100);
 }
 
 // Yazdır fonksiyonu
