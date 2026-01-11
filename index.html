@@ -5071,7 +5071,16 @@ function renderShiftTable(shift, docId) {
     const days = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
     const daysShort = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
     const personelShifts = shift.personelShifts || {};
-    const personelNames = Object.keys(personelShifts);
+    
+    // Sıralama: personelOrder varsa kullan, yoksa Object.keys
+    let personelNames = shift.personelOrder || Object.keys(personelShifts);
+    // personelOrder'da olmayan ama personelShifts'te olan isimleri de ekle
+    Object.keys(personelShifts).forEach(name => {
+        if (!personelNames.includes(name)) personelNames.push(name);
+    });
+    // personelShifts'te olmayan isimleri çıkar
+    personelNames = personelNames.filter(name => personelShifts[name]);
+    
     const specialRequests = shift.specialRequests || [];
     
     if (personelNames.length === 0) {
@@ -5115,25 +5124,37 @@ function renderShiftTable(shift, docId) {
         
         days.forEach((_, dayIdx) => {
             let val = p[dayIdx] || '';
-            // **** gibi değerleri OFF olarak göster
-            const displayVal = formatShiftValue(val);
-            const colors = getShiftColorExcel(val);
+            // Yıldız kontrolü
+            const hasStar = val.includes('*') && !/^\*+$/.test(val);
+            const cleanVal = val.replace(/\*/g, '').trim();
+            // **** gibi değerler veya boş = boş göster
+            const isEmpty = !val || /^\*+$/.test(val.trim());
+            const displayVal = isEmpty ? '' : cleanVal;
+            const colors = isEmpty ? {bg:'#fff',border:'#ddd',text:'#999'} : getShiftColorExcel(cleanVal);
             
-            html += `<td style="padding:4px;text-align:center;border:1px solid #ddd;min-width:85px">
-                <select onchange="updateShiftCell('${docId}','${name}',${dayIdx},this.value)" 
-                    style="width:100%;padding:8px 2px;border:2px solid ${colors.border};background:${colors.bg};color:${colors.text};border-radius:6px;font-size:.8rem;font-weight:600;cursor:pointer;text-align:center">
-                    <option value="" style="background:#fff;color:#333">-</option>
-                    <optgroup label="Shift Tipleri">
-                        ${SHIFT_TYPES.map(t => `<option value="${t}" ${displayVal === t ? 'selected' : ''} style="background:${SHIFT_COLORS[t]?.bg || '#fff'};color:${SHIFT_COLORS[t]?.text || '#333'}">${t}</option>`).join('')}
-                    </optgroup>
-                    <optgroup label="Tam Gün">
-                        ${COMMON_TIMES.map(t => `<option value="${t}" ${val === t ? 'selected' : ''}>${t}</option>`).join('')}
-                    </optgroup>
-                    ${val && !SHIFT_TYPES.includes(displayVal) && !COMMON_TIMES.includes(val) && !/^\*+$/.test(val) ? `<option value="${val}" selected style="background:${colors.bg};color:${colors.text};font-weight:700">${displayVal}</option>` : ''}
-                    <optgroup label="Part-time">
-                        <option value="parttime">⏰ Saat Seç...</option>
-                    </optgroup>
-                </select>
+            html += `<td style="padding:4px;text-align:center;border:1px solid #ddd;min-width:100px">
+                <div style="display:flex;flex-direction:column;gap:2px">
+                    <select onchange="updateShiftCell('${docId}','${name}',${dayIdx},this.value, document.getElementById('star_${docId}_${name}_${dayIdx}').checked)" 
+                        style="width:100%;padding:6px 2px;border:2px solid ${colors.border};background:${colors.bg};color:${colors.text};border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;text-align:center">
+                        <option value="" ${isEmpty ? 'selected' : ''} style="background:#fff;color:#999"></option>
+                        <optgroup label="Shift Tipleri">
+                            ${SHIFT_TYPES.map(t => `<option value="${t}" ${displayVal === t ? 'selected' : ''} style="background:${SHIFT_COLORS[t]?.bg || '#fff'};color:${SHIFT_COLORS[t]?.text || '#333'}">${t}</option>`).join('')}
+                        </optgroup>
+                        <optgroup label="Tam Gün">
+                            ${COMMON_TIMES.map(t => `<option value="${t}" ${cleanVal === t ? 'selected' : ''}>${t}</option>`).join('')}
+                        </optgroup>
+                        ${cleanVal && !SHIFT_TYPES.includes(displayVal) && !COMMON_TIMES.includes(cleanVal) ? `<option value="${cleanVal}" selected style="background:${colors.bg};color:${colors.text};font-weight:700">${displayVal}</option>` : ''}
+                        <optgroup label="Part-time">
+                            <option value="parttime">⏰ Saat Seç...</option>
+                        </optgroup>
+                    </select>
+                    <label style="display:flex;align-items:center;justify-content:center;gap:3px;font-size:.65rem;color:#666;cursor:pointer">
+                        <input type="checkbox" id="star_${docId}_${name}_${dayIdx}" ${hasStar ? 'checked' : ''} 
+                            onchange="toggleStar('${docId}','${name}',${dayIdx},this.checked)"
+                            style="width:12px;height:12px;cursor:pointer">
+                        <span style="color:${hasStar ? '#e07b39' : '#999'}">⭐ Özel</span>
+                    </label>
+                </div>
             </td>`;
         });
         html += '</tr>';
@@ -5238,7 +5259,7 @@ function formatShiftValue(val) {
     return val;
 }
 
-async function updateShiftCell(docId, name, dayIdx, value) {
+async function updateShiftCell(docId, name, dayIdx, value, hasStar = false) {
     if (value === 'parttime') { 
         // Part-time saat seçici modal
         const startOpts = PARTTIME_START.map(t => `<option value="${t}">${t}</option>`).join('');
@@ -5269,9 +5290,35 @@ async function updateShiftCell(docId, name, dayIdx, value) {
         const data = doc.data();
         if (!data.personelShifts) data.personelShifts = {};
         if (!data.personelShifts[name]) data.personelShifts[name] = {};
-        data.personelShifts[name][dayIdx] = value;
+        // Yıldız varsa başa ekle
+        const finalValue = hasStar && value ? '*' + value : value;
+        data.personelShifts[name][dayIdx] = finalValue;
         await db.collection('shifts').doc(docId).update({ personelShifts: data.personelShifts });
         toast('✓ Kaydedildi', 'success');
+    } catch (e) { 
+        console.error(e); 
+        toast('Güncelleme hatası!', 'error'); 
+        loadShiftWeek();
+    }
+}
+
+// Yıldız toggle fonksiyonu
+async function toggleStar(docId, name, dayIdx, isChecked) {
+    try {
+        const doc = await db.collection('shifts').doc(docId).get();
+        const data = doc.data();
+        if (!data.personelShifts || !data.personelShifts[name]) return;
+        
+        let val = data.personelShifts[name][dayIdx] || '';
+        // Mevcut yıldızları temizle
+        const cleanVal = val.replace(/\*/g, '').trim();
+        
+        // Yeni değeri oluştur
+        const finalValue = isChecked && cleanVal ? '*' + cleanVal : cleanVal;
+        data.personelShifts[name][dayIdx] = finalValue;
+        
+        await db.collection('shifts').doc(docId).update({ personelShifts: data.personelShifts });
+        toast(isChecked ? '⭐ Özel istek işaretlendi' : 'Özel istek kaldırıldı', 'success');
     } catch (e) { 
         console.error(e); 
         toast('Güncelleme hatası!', 'error'); 
@@ -5283,7 +5330,7 @@ async function confirmParttime(docId, name, dayIdx) {
     const start = document.getElementById('parttimeStart').value;
     const end = document.getElementById('parttimeEnd').value;
     if (!start || !end) { toast('Saat seçin', 'error'); return; }
-    const value = `${start} - ${end}`;
+    const value = `${start}/${end}`;
     closeModal();
     try {
         const doc = await db.collection('shifts').doc(docId).get();
