@@ -110,8 +110,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .nav-group{margin-bottom:20px}
 .nav-label{font-size:.65rem;color:var(--sidebarTx3);text-transform:uppercase;letter-spacing:1.5px;padding:0 12px;margin-bottom:8px;font-weight:600}
 .nav-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radiusSm);cursor:pointer;transition:var(--transition);color:var(--sidebarTx2);font-weight:500;font-size:.9rem;margin-bottom:2px}
-.nav-item:hover{background:rgba(255,255,255,.1);color:var(--sidebarTx)}
-.nav-item.active{background:var(--accent);color:#fff;box-shadow:0 4px 16px rgba(255,134,116,.25)}
+.nav-item:hover{background:rgba(255,134,116,.15);color:#fff}
+.nav-item.active{background:linear-gradient(135deg,var(--accent),#ff6b5b);color:#fff;box-shadow:0 4px 20px rgba(255,134,116,.35);font-weight:600}
 .nav-item .icon{font-size:1.1rem;width:24px;text-align:center;display:flex;align-items:center;justify-content:center}
 .nav-item .icon svg{width:20px;height:20px;stroke:currentColor;stroke-width:2;fill:none}
 .nav-divider{height:1px;background:rgba(255,255,255,.1);margin:16px 12px}
@@ -141,10 +141,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 
 /* Legacy card styles for other pages */
 .card-icon.orange{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.card-icon.coral{background:linear-gradient(135deg,#ff8674,#ff6b5b);color:#fff}
+.card-icon.teal{background:linear-gradient(135deg,#008c95,#00a8a8);color:#fff}
 .card-icon.green{background:linear-gradient(135deg,#27ae60,#2ecc71);color:#fff}
 .card-icon.red{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff}
-.card-icon.blue{background:linear-gradient(135deg,#3498db,#2980b9);color:#fff}
-.card-icon.purple{background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff}
+.card-icon.blue{background:linear-gradient(135deg,#008c95,#4db6ac);color:#fff}
+.card-icon.purple{background:linear-gradient(135deg,#ff8674,#008c95);color:#fff}
 
 /* Form Elements */
 .form-section{background:var(--surface);border:1px solid var(--surface3);border-radius:var(--radius);padding:24px;margin-bottom:20px}
@@ -154,7 +156,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .form-group.full{grid-column:span 2}
 .form-label{font-size:.8rem;font-weight:500;color:var(--txdark2)}
 .form-input,.form-select,.form-textarea{padding:12px 14px;background:var(--surface2);border:1.5px solid var(--surface3);border-radius:var(--radiusSm);color:var(--txdark);font-size:.9rem;font-family:var(--font);transition:var(--transition)}
-.form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--accent);background:var(--surface)}
+.form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px rgba(255,134,116,.15)}
 .form-textarea{resize:vertical;min-height:100px}
 .form-input::placeholder{color:var(--txdark2);opacity:.6}
 
@@ -169,14 +171,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 
 /* Buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 24px;border-radius:var(--radiusSm);font-size:.9rem;font-weight:600;cursor:pointer;transition:var(--transition);border:none;font-family:var(--font)}
-.btn-primary{background:var(--accent);color:#fff}
-.btn-primary:hover{background:var(--accent2);box-shadow:0 4px 16px rgba(255,134,116,.3)}
+.btn:focus{outline:none;box-shadow:0 0 0 3px rgba(255,134,116,.3)}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#ff6b5b);color:#fff}
+.btn-primary:hover{background:linear-gradient(135deg,var(--accent2),#007a82);box-shadow:0 4px 20px rgba(255,134,116,.35)}
 .btn-secondary{background:var(--surface3);color:var(--txdark)}
-.btn-secondary:hover{background:var(--surface2)}
-.btn-danger{background:var(--red);color:#fff}
-.btn-danger:hover{background:#c0392b}
+.btn-secondary:hover{background:var(--surface2);border-color:var(--accent)}
+.btn-danger{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff}
+.btn-danger:hover{background:linear-gradient(135deg,#c0392b,#a93226);box-shadow:0 4px 16px rgba(231,76,60,.3)}
 .btn-ghost{background:transparent;color:var(--txdark2);border:1.5px solid var(--surface3)}
-.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);background:rgba(255,134,116,.05)}
 .btn-group{display:flex;gap:12px;margin-top:24px;flex-wrap:wrap}
 .btn-sm{padding:8px 16px;font-size:.8rem}
 
@@ -191,8 +194,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 /* Tabs */
 .tabs{display:flex;gap:4px;background:var(--surface3);padding:4px;border-radius:var(--radiusSm);margin-bottom:20px}
 .tab{flex:1;padding:10px 16px;border:none;background:transparent;color:var(--txdark2);font-size:.85rem;font-weight:600;cursor:pointer;border-radius:6px;transition:var(--transition);font-family:var(--font)}
-.tab:hover{color:var(--txdark)}
-.tab.active{background:var(--surface);color:var(--accent);box-shadow:var(--shadowSm)}
+.tab:hover{color:var(--txdark);background:rgba(255,134,116,.08)}
+.tab.active{background:linear-gradient(135deg,var(--accent),#ff6b5b);color:#fff;box-shadow:0 2px 8px rgba(255,134,116,.25)}
 
 /* Violation List */
 .violation-list{display:flex;flex-direction:column;gap:10px}
@@ -208,7 +211,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 
 /* Dashboard Cards */
 .dashboard-card{transition:all .25s cubic-bezier(.4,0,.2,1)!important}
-.dashboard-card:hover{transform:translateY(-4px);box-shadow:0 12px 24px rgba(0,0,0,.12)!important;border-color:var(--accent)!important}
+.dashboard-card:hover{transform:translateY(-4px);box-shadow:0 12px 28px rgba(255,134,116,.15)!important;border-color:var(--accent)!important}
 .dashboard-section{margin-bottom:32px}
 
 /* Preview */
@@ -266,8 +269,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 /* Admin Panel */
 .admin-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
 .admin-tab{padding:10px 20px;background:var(--surface2);border:1.5px solid var(--surface3);border-radius:var(--radiusSm);color:var(--txdark2);font-size:.85rem;font-weight:600;cursor:pointer;transition:var(--transition)}
-.admin-tab:hover{border-color:var(--accent);color:var(--accent)}
-.admin-tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.admin-tab:hover{border-color:var(--accent);color:var(--accent);background:rgba(255,134,116,.05)}
+.admin-tab.active{background:linear-gradient(135deg,var(--accent),#ff6b5b);border-color:var(--accent);color:#fff;box-shadow:0 2px 12px rgba(255,134,116,.25)}
 .admin-section{display:none;animation:fadeUp .3s}
 .admin-section.active{display:block}
 .admin-card{background:var(--surface2);border:1px solid var(--surface3);border-radius:var(--radiusSm);padding:20px;margin-bottom:16px}
@@ -285,6 +288,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .sync-code-area{background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radiusSm);padding:16px;margin:16px 0}
 .sync-code-text{width:100%;min-height:120px;background:var(--bg);border:1px solid var(--bg4);border-radius:6px;padding:12px;color:var(--tx);font-family:var(--mono);font-size:.8rem;resize:vertical}
 .sync-actions{display:flex;gap:12px;margin-top:12px}
+
+/* Permission Checkboxes */
+.perm-cb{cursor:pointer;transition:transform .15s}
+.perm-cb:hover{transform:scale(1.1)}
+.perm-cb:checked{animation:checkPop .2s ease}
+@keyframes checkPop{0%{transform:scale(.8)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 
 /* Responsive */
 @media(max-width:768px){
@@ -458,7 +468,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
             <div class="page active" id="page-dashboard">
                 <div class="page-header" style="margin-bottom:24px">
                     <div class="page-title" style="display:flex;align-items:center;gap:10px">
-                        <div style="width:36px;height:36px;background:linear-gradient(135deg,#11998e,#38ef7d);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                        <div style="width:36px;height:36px;background:linear-gradient(135deg,#ff8674,#008c95);border-radius:8px;display:flex;align-items:center;justify-content:center">
                             <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                         </div>
                         Yönetim Paneli
@@ -474,7 +484,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
                         <div class="dashboard-card" onclick="goTo('personel')" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:16px">
-                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#ff8674,#ff6b5b);border-radius:10px;display:flex;align-items:center;justify-content:center">
                                 <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
                             </div>
                             <div>
@@ -483,7 +493,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             </div>
                         </div>
                         <div class="dashboard-card" onclick="goTo('puantaj')" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:16px">
-                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#f093fb,#f5576c);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#ff8674,#008c95);border-radius:10px;display:flex;align-items:center;justify-content:center">
                                 <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                             </div>
                             <div>
@@ -492,7 +502,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             </div>
                         </div>
                         <div class="dashboard-card" onclick="goTo('shift')" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:16px">
-                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#4facfe,#00f2fe);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#008c95,#00a8a8);border-radius:10px;display:flex;align-items:center;justify-content:center">
                                 <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                             </div>
                             <div>
@@ -511,7 +521,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
                         <div class="dashboard-card" onclick="goTo('sozlesme')" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:16px">
-                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#43e97b,#38f9d7);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#008c95,#00a8a8);border-radius:10px;display:flex;align-items:center;justify-content:center">
                                 <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                             </div>
                             <div>
@@ -520,7 +530,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             </div>
                         </div>
                         <div class="dashboard-card" onclick="goTo('tutanak')" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:16px">
-                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#fa709a,#fee140);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#ff8674,#ffa07a);border-radius:10px;display:flex;align-items:center;justify-content:center">
                                 <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                             </div>
                             <div>
@@ -529,8 +539,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             </div>
                         </div>
                         <div class="dashboard-card" onclick="goTo('savunma')" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:16px">
-                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#a8edea,#fed6e3);border-radius:10px;display:flex;align-items:center;justify-content:center">
-                                <svg width="20" height="20" fill="none" stroke="#666" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#008c95,#4db6ac);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                                <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
                             </div>
                             <div>
                                 <div style="font-weight:600;color:var(--tx)">Savunma</div>
@@ -538,7 +548,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             </div>
                         </div>
                         <div class="dashboard-card" onclick="goTo('fesih')" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:16px">
-                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#ff6b6b,#ee5a24);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#e74c3c,#c0392b);border-radius:10px;display:flex;align-items:center;justify-content:center">
                                 <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                             </div>
                             <div>
@@ -547,7 +557,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             </div>
                         </div>
                         <div class="dashboard-card" onclick="goTo('istifa')" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:16px">
-                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#a29bfe,#6c5ce7);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#ff8674,#008c95);border-radius:10px;display:flex;align-items:center;justify-content:center">
                                 <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                             </div>
                             <div>
@@ -556,7 +566,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             </div>
                         </div>
                         <div class="dashboard-card" onclick="goTo('ibraname')" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:16px">
-                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#00b894,#00cec9);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#27ae60,#2ecc71);border-radius:10px;display:flex;align-items:center;justify-content:center">
                                 <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                             </div>
                             <div>
@@ -565,7 +575,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             </div>
                         </div>
                         <div class="dashboard-card" onclick="goTo('ihtarname')" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:16px">
-                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#fdcb6e,#e17055);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#f39c12,#e67e22);border-radius:10px;display:flex;align-items:center;justify-content:center">
                                 <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                             </div>
                             <div>
@@ -606,17 +616,24 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 
                 <!-- Diğer -->
                 <div class="dashboard-section">
-                    <div style="font-size:.8rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;padding-left:4px">📚 Diğer</div>
+                    <div style="font-size:.8rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;padding-left:4px;display:flex;align-items:center;gap:8px">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                        Sistem
+                    </div>
                     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
                         <div class="dashboard-card" onclick="goTo('katalog')" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:16px">
-                            <div style="font-size:2rem">📚</div>
+                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#008c95,#4db6ac);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                                <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+                            </div>
                             <div>
                                 <div style="font-weight:600;color:var(--tx)">İhlal Kataloğu</div>
                                 <div style="font-size:.75rem;color:var(--tx2)">Yasal Dayanaklar</div>
                             </div>
                         </div>
                         <div class="dashboard-card" onclick="openAdminWithPin()" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:16px">
-                            <div style="font-size:2rem">⚙️</div>
+                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#ff8674,#008c95);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                                <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                            </div>
                             <div>
                                 <div style="font-weight:600;color:var(--tx)">Yönetim</div>
                                 <div style="font-size:.75rem;color:var(--tx2)">Sistem Ayarları</div>
@@ -977,7 +994,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <div class="back-link" onclick="goTo('dashboard')">← Ana Sayfa</div>
                 <div class="page-header">
                     <div class="page-title" style="display:flex;align-items:center;gap:10px">
-                        <div style="width:36px;height:36px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                        <div style="width:36px;height:36px;background:linear-gradient(135deg,#ff8674,#ff6b5b);border-radius:8px;display:flex;align-items:center;justify-content:center">
                             <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
                         </div>
                         Personel Listesi
@@ -1003,7 +1020,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <div class="back-link" onclick="goTo('dashboard')">← Ana Sayfa</div>
                 <div class="page-header">
                     <div class="page-title" style="display:flex;align-items:center;gap:10px">
-                        <div style="width:36px;height:36px;background:linear-gradient(135deg,#4facfe,#00f2fe);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                        <div style="width:36px;height:36px;background:linear-gradient(135deg,#008c95,#00a8a8);border-radius:8px;display:flex;align-items:center;justify-content:center">
                             <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                         </div>
                         Shift Planı
@@ -1086,9 +1103,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 
                 <!-- Sekmeler -->
                 <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--cardBorder);padding-bottom:12px">
-                    <button class="puantaj-tab active" onclick="showPuantajTab('kayit', this)" style="padding:10px 20px;border:none;background:var(--accent);color:#fff;border-radius:8px;cursor:pointer;font-weight:500;transition:all .2s">📝 Kayıt</button>
-                    <button class="puantaj-tab" onclick="showPuantajTab('analiz', this)" style="padding:10px 20px;border:none;background:var(--bg3);color:var(--tx);border-radius:8px;cursor:pointer;font-weight:500;transition:all .2s">📊 Analiz</button>
-                    <button class="puantaj-tab" onclick="showPuantajTab('arsiv', this)" style="padding:10px 20px;border:none;background:var(--bg3);color:var(--tx);border-radius:8px;cursor:pointer;font-weight:500;transition:all .2s">📁 Arşiv</button>
+                    <button class="puantaj-tab active" onclick="showPuantajTab('kayit', this)" style="padding:10px 20px;border:none;background:linear-gradient(135deg,var(--accent),#ff6b5b);color:#fff;border-radius:8px;cursor:pointer;font-weight:600;transition:all .2s;box-shadow:0 2px 12px rgba(255,134,116,.3)">📝 Kayıt</button>
+                    <button class="puantaj-tab" onclick="showPuantajTab('analiz', this)" style="padding:10px 20px;border:none;background:var(--bg3);color:var(--tx);border-radius:8px;cursor:pointer;font-weight:600;transition:all .2s">📊 Analiz</button>
+                    <button class="puantaj-tab" onclick="showPuantajTab('arsiv', this)" style="padding:10px 20px;border:none;background:var(--bg3);color:var(--tx);border-radius:8px;cursor:pointer;font-weight:600;transition:all .2s">📁 Arşiv</button>
                 </div>
                 
                 <!-- KAYIT SEKMESİ -->
@@ -1130,17 +1147,42 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                     
                     <!-- Puan Sistemi Açıklama -->
-                    <div style="background:linear-gradient(135deg,rgba(255,134,116,.1),rgba(0,140,149,.1));border:1px solid var(--cardBorder);border-radius:12px;padding:16px;margin-bottom:20px">
-                        <div style="font-weight:600;color:var(--tx);margin-bottom:10px">⭐ Yıldız Sistemi</div>
-                        <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:.85rem">
-                            <div style="display:flex;align-items:center;gap:6px"><span style="color:#e74c3c">⭐</span> Ciddi İhlal (-1)</div>
-                            <div style="display:flex;align-items:center;gap:6px"><span style="color:#e67e22">⭐⭐</span> Orta İhlal (-1)</div>
-                            <div style="display:flex;align-items:center;gap:6px"><span style="color:#f39c12">⭐⭐⭐</span> Hafif Uyarı (-1)</div>
-                            <div style="display:flex;align-items:center;gap:6px"><span style="color:#27ae60">⭐⭐⭐⭐</span> İyi Performans (+1)</div>
-                            <div style="display:flex;align-items:center;gap:6px"><span style="color:#2ecc71">⭐⭐⭐⭐⭐</span> Mükemmel (+2)</div>
+                    <div style="background:linear-gradient(135deg,rgba(255,134,116,.08),rgba(0,140,149,.08));border:1px solid var(--cardBorder);border-radius:16px;padding:20px;margin-bottom:24px">
+                        <div style="font-weight:700;color:var(--tx);margin-bottom:14px;font-size:1rem;display:flex;align-items:center;gap:8px">
+                            <span style="font-size:1.3rem">⭐</span> Puantaj Sistemi
                         </div>
-                        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--cardBorder);font-size:.8rem;color:var(--tx2)">
-                            <strong>Prim Kuralı:</strong> Toplam puan -5'e ulaşırsa prim hakkı kaybedilir. Her ay puanlar sıfırlanır.
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px">
+                            <div style="background:rgba(192,57,43,.1);border-radius:10px;padding:12px;text-align:center">
+                                <div style="font-size:1.1rem;margin-bottom:4px">⭐</div>
+                                <div style="font-size:.8rem;color:#c0392b;font-weight:600">Ciddi İhlal</div>
+                                <div style="font-size:.9rem;color:#e74c3c;font-weight:700">-3 Puan</div>
+                            </div>
+                            <div style="background:rgba(211,84,0,.1);border-radius:10px;padding:12px;text-align:center">
+                                <div style="font-size:1.1rem;margin-bottom:4px">⭐⭐</div>
+                                <div style="font-size:.8rem;color:#d35400;font-weight:600">Orta İhlal</div>
+                                <div style="font-size:.9rem;color:#e67e22;font-weight:700">-2 Puan</div>
+                            </div>
+                            <div style="background:rgba(241,196,15,.1);border-radius:10px;padding:12px;text-align:center">
+                                <div style="font-size:1.1rem;margin-bottom:4px">⭐⭐⭐</div>
+                                <div style="font-size:.8rem;color:#f39c12;font-weight:600">Hafif Uyarı</div>
+                                <div style="font-size:.9rem;color:#f1c40f;font-weight:700">-1 Puan</div>
+                            </div>
+                            <div style="background:rgba(39,174,96,.1);border-radius:10px;padding:12px;text-align:center">
+                                <div style="font-size:1.1rem;margin-bottom:4px">⭐⭐⭐⭐</div>
+                                <div style="font-size:.8rem;color:#27ae60;font-weight:600">İyi Performans</div>
+                                <div style="font-size:.9rem;color:#2ecc71;font-weight:700">+1 Puan</div>
+                            </div>
+                            <div style="background:rgba(46,204,113,.1);border-radius:10px;padding:12px;text-align:center">
+                                <div style="font-size:1.1rem;margin-bottom:4px">⭐⭐⭐⭐⭐</div>
+                                <div style="font-size:.8rem;color:#2ecc71;font-weight:600">Mükemmel</div>
+                                <div style="font-size:.9rem;color:#27ae60;font-weight:700">+2 Puan</div>
+                            </div>
+                        </div>
+                        <div style="background:var(--bg3);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px">
+                            <span style="font-size:1.2rem">⚠️</span>
+                            <div style="font-size:.85rem;color:var(--tx2)">
+                                <strong style="color:var(--tx)">Prim Kuralı:</strong> Toplam puan <strong style="color:#e74c3c">-5</strong>'e ulaşırsa prim hakkı kaybedilir. Her ay başı puanlar sıfırlanır.
+                            </div>
                         </div>
                     </div>
                     
@@ -1220,6 +1262,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <div class="admin-tabs">
                     <button class="admin-tab active" onclick="showAdminTab('genel',this)">Genel</button>
                     <button class="admin-tab" onclick="showAdminTab('kullanicilar',this)">Kullanıcılar</button>
+                    <button class="admin-tab" onclick="showAdminTab('oturumlar',this)">⏱️ Oturumlar</button>
+                    <button class="admin-tab" onclick="showAdminTab('izinler',this)">🔐 İzinler</button>
                     <button class="admin-tab" onclick="showAdminTab('puantajKurallar',this)">Puantaj Kuralları</button>
                     <button class="admin-tab" onclick="showAdminTab('subeler',this)">Şubeler</button>
                     <button class="admin-tab" onclick="showAdminTab('pozisyonlar',this)">Pozisyonlar</button>
@@ -1324,6 +1368,190 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                         <div id="permissionsContainer" style="margin-top:16px"></div>
                         <div class="btn-group" style="margin-top:16px"><button class="btn btn-primary btn-sm" onclick="saveRolePermissions()">Yetkileri Kaydet</button></div>
+                    </div>
+                </div>
+
+                <!-- Oturum Yönetimi -->
+                <div class="admin-section" id="admin-oturumlar">
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">⏱️ Oturum Ayarları</div>
+                        </div>
+                        <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:20px">
+                            Güvenlik için oturum zaman aşımı ve otomatik çıkış ayarlarını yapılandırın.
+                        </p>
+                        
+                        <div class="form-grid" style="margin-bottom:24px">
+                            <div class="form-group">
+                                <label class="form-label">⏰ İnaktivite Süresi (dakika)</label>
+                                <select id="sessionTimeout" class="form-select">
+                                    <option value="15">15 dakika</option>
+                                    <option value="30" selected>30 dakika</option>
+                                    <option value="60">1 saat</option>
+                                    <option value="120">2 saat</option>
+                                    <option value="0">Devre Dışı</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">🔔 Uyarı Süresi (saniye)</label>
+                                <select id="sessionWarning" class="form-select">
+                                    <option value="30">30 saniye önce</option>
+                                    <option value="60" selected>1 dakika önce</option>
+                                    <option value="120">2 dakika önce</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+                            <label style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--bg3);border-radius:10px;cursor:pointer">
+                                <input type="checkbox" id="sessionLogoutOnClose" style="width:18px;height:18px;accent-color:#ff8674">
+                                <span style="font-size:.9rem;color:var(--tx)">Tarayıcı kapatılınca çıkış yap</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--bg3);border-radius:10px;cursor:pointer">
+                                <input type="checkbox" id="sessionSingleDevice" style="width:18px;height:18px;accent-color:#ff8674">
+                                <span style="font-size:.9rem;color:var(--tx)">Tek cihaz politikası</span>
+                            </label>
+                        </div>
+                        
+                        <div class="btn-group">
+                            <button class="btn btn-primary btn-sm" onclick="saveSessionSettings()">💾 Ayarları Kaydet</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Aktif Oturumlar -->
+                    <div class="admin-card" style="margin-top:16px">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">🖥️ Aktif Oturumlar</div>
+                            <button class="btn btn-sm btn-ghost" onclick="loadActiveSessions()">🔄 Yenile</button>
+                        </div>
+                        <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:16px">
+                            Sisteme giriş yapmış tüm kullanıcıların aktif oturumlarını görüntüleyin ve yönetin.
+                        </p>
+                        
+                        <div id="activeSessionsList" style="margin-top:16px">
+                            <div style="text-align:center;padding:40px;color:var(--tx2)">
+                                <div style="font-size:2rem;margin-bottom:12px">🔄</div>
+                                <div>Oturumlar yükleniyor...</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Oturum Geçmişi -->
+                    <div class="admin-card" style="margin-top:16px">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">📊 Son Giriş Aktiviteleri</div>
+                        </div>
+                        <div id="sessionHistoryList" style="margin-top:16px">
+                            <div style="text-align:center;padding:40px;color:var(--tx2)">
+                                <div style="font-size:2rem;margin-bottom:12px">📊</div>
+                                <div>Geçmiş yükleniyor...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gelişmiş İzin Yönetimi -->
+                <div class="admin-section" id="admin-izinler">
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">🔐 Gelişmiş İzin Yönetimi</div>
+                        </div>
+                        <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:20px">
+                            Her rol için sayfa, belge ve yönetim paneli erişim izinlerini detaylı olarak yapılandırın.
+                        </p>
+                        
+                        <!-- Rol Seçimi -->
+                        <div class="form-group" style="margin-bottom:24px">
+                            <label class="form-label">Rol Seçin</label>
+                            <select id="advRoleSelect" class="form-select" onchange="loadAdvancedPermissions()" style="max-width:300px">
+                                <option value="">-- Rol Seçin --</option>
+                                <option value="barista">🧑‍🍳 Barista</option>
+                                <option value="magaza_muduru">🏪 Mağaza Müdürü</option>
+                                <option value="bolge_muduru">🌍 Bölge Müdürü</option>
+                            </select>
+                        </div>
+                        
+                        <!-- İzin Paneli -->
+                        <div id="advPermissionsPanel" style="display:none">
+                            <!-- Sayfalar -->
+                            <div style="background:var(--bg3);border-radius:12px;padding:20px;margin-bottom:20px">
+                                <div style="font-weight:600;color:var(--tx);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+                                    <span style="font-size:1.2rem">📄</span> Sayfa İzinleri
+                                </div>
+                                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px" id="pagePermissions">
+                                    <!-- JS ile doldurulacak -->
+                                </div>
+                            </div>
+                            
+                            <!-- Belgeler -->
+                            <div style="background:var(--bg3);border-radius:12px;padding:20px;margin-bottom:20px">
+                                <div style="font-weight:600;color:var(--tx);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+                                    <span style="font-size:1.2rem">📋</span> Belge İzinleri
+                                </div>
+                                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px" id="docPermissions">
+                                    <!-- JS ile doldurulacak -->
+                                </div>
+                            </div>
+                            
+                            <!-- Admin Panelleri -->
+                            <div style="background:var(--bg3);border-radius:12px;padding:20px;margin-bottom:20px">
+                                <div style="font-weight:600;color:var(--tx);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+                                    <span style="font-size:1.2rem">⚙️</span> Yönetim Paneli İzinleri
+                                </div>
+                                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px" id="adminPermissions">
+                                    <!-- JS ile doldurulacak -->
+                                </div>
+                            </div>
+                            
+                            <!-- Özel İzinler -->
+                            <div style="background:linear-gradient(135deg,rgba(255,134,116,.1),rgba(0,140,149,.1));border:1px solid var(--cardBorder);border-radius:12px;padding:20px;margin-bottom:20px">
+                                <div style="font-weight:600;color:var(--tx);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+                                    <span style="font-size:1.2rem">🎯</span> Özel İzinler
+                                </div>
+                                <div style="display:flex;flex-direction:column;gap:12px" id="specialPermissions">
+                                    <!-- JS ile doldurulacak -->
+                                </div>
+                            </div>
+                            
+                            <!-- Kaydet Butonu -->
+                            <div class="btn-group">
+                                <button class="btn btn-primary" onclick="saveAdvancedPermissions()">💾 İzinleri Kaydet</button>
+                                <button class="btn btn-ghost" onclick="resetAdvancedPermissions()">🔄 Varsayılana Dön</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Boş Durum -->
+                        <div id="advPermissionsEmpty" style="text-align:center;padding:40px;color:var(--tx2)">
+                            <div style="font-size:3rem;margin-bottom:16px">🔐</div>
+                            <div>Düzenlemek için yukarıdan bir rol seçin</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Hızlı Referans -->
+                    <div class="admin-card" style="margin-top:16px">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">📚 İzin Referansı</div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+                            <div style="background:var(--bg3);border-radius:10px;padding:16px">
+                                <div style="font-weight:600;color:#27ae60;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                                    <span>👁️</span> Görüntüleme
+                                </div>
+                                <div style="font-size:.85rem;color:var(--tx2)">Kullanıcı sayfayı/belgeyi görebilir ancak değişiklik yapamaz.</div>
+                            </div>
+                            <div style="background:var(--bg3);border-radius:10px;padding:16px">
+                                <div style="font-weight:600;color:#3498db;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                                    <span>✏️</span> Düzenleme
+                                </div>
+                                <div style="font-size:.85rem;color:var(--tx2)">Kullanıcı sayfada/belgede ekleme, düzenleme ve silme yapabilir.</div>
+                            </div>
+                            <div style="background:var(--bg3);border-radius:10px;padding:16px">
+                                <div style="font-weight:600;color:#e74c3c;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                                    <span>🔒</span> Erişim Yok
+                                </div>
+                                <div style="font-size:.85rem;color:var(--tx2)">Kullanıcı bu sayfayı/belgeyi hiçbir şekilde göremez.</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1890,6 +2118,22 @@ document.addEventListener('DOMContentLoaded', () => {
 // Çıkış yap fonksiyonu
 async function logout() {
     try {
+        // Oturumu sonlandır
+        if (currentUser?.sessionId) {
+            try {
+                await db.collection('sessions').doc(currentUser.sessionId).update({
+                    status: 'ended',
+                    endedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } catch (e) {
+                console.error('Oturum sonlandırma hatası:', e);
+            }
+        }
+        
+        // Session timeout'ları temizle
+        if (sessionTimeoutId) clearTimeout(sessionTimeoutId);
+        if (sessionWarningId) clearTimeout(sessionWarningId);
+        
         await firebase.auth().signOut();
         currentUser = null;
         document.getElementById('lockOverlay').classList.remove('hidden');
@@ -2145,6 +2389,12 @@ async function handleLogin(event) {
         // Load Firebase data
         loadFirebaseData();
         
+        // Oturum oluştur
+        await createSession();
+        
+        // Oturum timeout'unu başlat
+        loadSessionSettings();
+        
         toast('Hoş geldiniz, ' + (currentUser.name || user.email), 'success');
         
     } catch (error) {
@@ -2293,13 +2543,16 @@ function applyUserPermissions() {
     // Yönetici her şeye erişebilir
     if (currentUser.role === 'yonetici') return;
     
-    // Barista için özel kısıtlamalar
+    // Gelişmiş izin sistemini yükle ve uygula
+    loadUserAdvancedPermissions();
+    
+    // Barista için ek kısıtlamalar (eski sistem uyumluluğu)
     if (currentUser.role === 'barista') {
         applyBaristaRestrictions();
         return;
     }
     
-    // Diğer roller için yetki kontrolü
+    // Diğer roller için yetki kontrolü (eski sistem uyumluluğu)
     db.collection('permissions').doc(currentUser.role).get().then(doc => {
         if (!doc.exists) return;
         const perms = doc.data();
@@ -2425,8 +2678,14 @@ function goTo(page) {
         const now = new Date();
         const aySelect = document.getElementById('puantajAy');
         const yilSelect = document.getElementById('puantajYil');
+        const subeSelect = document.getElementById('puantajSube');
         if (aySelect) aySelect.value = String(now.getMonth() + 1).padStart(2, '0');
         if (yilSelect) yilSelect.value = String(now.getFullYear());
+        // Tuzla Port varsayılan şube
+        if (subeSelect) {
+            const tuzlaOption = Array.from(subeSelect.options).find(o => o.value.toLowerCase().includes('tuzla'));
+            if (tuzlaOption) subeSelect.value = tuzlaOption.value;
+        }
         loadPuantaj(); 
     }
     if (page === 'shift') { 
@@ -3544,6 +3803,11 @@ function switchAdminTab(tab, btn) {
     document.getElementById('admin-' + tab).classList.add('active');
     if (tab === 'sablonlar') loadTemplate();
     if (tab === 'belgeler') loadDocTemplate('tutanak', 'olay');
+    if (tab === 'oturumlar') {
+        loadSessionSettings();
+        loadActiveSessions();
+        loadSessionHistory();
+    }
 }
 
 function loadAdminFields() {
@@ -4514,10 +4778,25 @@ goTo = function(page) {
 
 // Tarayıcı kapatma/yenileme koruması
 window.addEventListener('beforeunload', (e) => {
+    // Tarayıcı kapatılınca çıkış yap ayarı aktifse oturumu sonlandır
+    const logoutOnClose = document.getElementById('sessionLogoutOnClose')?.checked;
+    if (logoutOnClose && currentUser?.sessionId) {
+        // Senkron olarak oturumu sonlandırmaya çalış (best effort)
+        navigator.sendBeacon && navigator.sendBeacon('/api/end-session', JSON.stringify({ sessionId: currentUser.sessionId }));
+    }
+    
     if (hasUnsavedDocChanges) {
         e.preventDefault();
         e.returnValue = 'Kaydedilmemiş değişiklikler var. Sayfadan ayrılmak istediğinize emin misiniz?';
         return e.returnValue;
+    }
+});
+
+// Visibility change - sayfa gizlendiğinde aktiviteyi duraklat
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && currentUser?.sessionId) {
+        // Sayfa tekrar görünür olduğunda aktiviteyi güncelle
+        updateSessionActivity();
     }
 });
 
@@ -4766,14 +5045,20 @@ async function loadPuantaj() {
             
             puanlar.forEach(x => {
                 const yildiz = x.score || 3;
-                if (yildiz <= 3) {
-                    toplamPuan -= 1; // 1-3 yıldız = -1 puan
+                if (yildiz === 1) {
+                    toplamPuan -= 3; // 1 yıldız = -3 puan (Ciddi İhlal)
+                    negatifOlay++;
+                } else if (yildiz === 2) {
+                    toplamPuan -= 2; // 2 yıldız = -2 puan (Orta İhlal)
+                    negatifOlay++;
+                } else if (yildiz === 3) {
+                    toplamPuan -= 1; // 3 yıldız = -1 puan (Hafif Uyarı)
                     negatifOlay++;
                 } else if (yildiz === 4) {
-                    toplamPuan += 1; // 4 yıldız = +1 puan
+                    toplamPuan += 1; // 4 yıldız = +1 puan (İyi Performans)
                     pozitifOlay++;
                 } else if (yildiz === 5) {
-                    toplamPuan += 2; // 5 yıldız = +2 puan
+                    toplamPuan += 2; // 5 yıldız = +2 puan (Mükemmel)
                     pozitifOlay++;
                 }
             });
@@ -4798,55 +5083,67 @@ async function loadPuantaj() {
         window.puantajPersonelCache = personelList;
         
         // Personel Kartları
-        html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-bottom:24px">`;
+        html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;margin-bottom:28px">`;
         personelList.forEach(p => {
-            const statusColor = p.primDurumu === 'prim_yok' ? '#ff6b6b' : '#51cf66';
-            const statusBg = p.primDurumu === 'prim_yok' ? 'rgba(255,107,107,.15)' : 'rgba(81,207,102,.15)';
+            const statusColor = p.primDurumu === 'prim_yok' ? '#e74c3c' : '#27ae60';
+            const statusBg = p.primDurumu === 'prim_yok' ? 'rgba(231,76,60,.12)' : 'rgba(39,174,96,.12)';
             const puanColor = p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx)');
             const puanSign = p.toplamPuan > 0 ? '+' : '';
+            const cardBorder = p.primDurumu === 'prim_yok' ? 'rgba(231,76,60,.3)' : 'var(--cardBorder)';
             
             html += `
-                <div class="puantaj-card" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:16px;padding:20px;transition:all .2s;box-shadow:0 2px 12px rgba(0,0,0,.06)">
-                    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px">
-                        <div>
-                            <div style="font-weight:600;font-size:1.1rem;color:var(--tx)">${p.name}</div>
-                            <div style="font-size:.8rem;color:var(--tx2)">${p.position || 'Personel'}</div>
+                <div class="puantaj-card" style="background:var(--cardBg);border:2px solid ${cardBorder};border-radius:20px;padding:24px;transition:all .3s;box-shadow:0 4px 20px rgba(0,0,0,.08)">
+                    <!-- Header -->
+                    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:20px">
+                        <div style="display:flex;align-items:center;gap:14px">
+                            <div style="width:48px;height:48px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#fff;font-weight:700">
+                                ${p.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <div style="font-weight:700;font-size:1.15rem;color:var(--tx);margin-bottom:2px">${p.name}</div>
+                                <div style="font-size:.85rem;color:var(--tx2)">${p.position || 'Personel'}</div>
+                            </div>
                         </div>
-                        <div style="background:${statusBg};color:${statusColor};padding:6px 12px;border-radius:20px;font-size:.8rem;font-weight:600">
-                            ${p.primDurumu === 'prim_yok' ? '⚠️ PRİM YOK' : '✓ Prim Var'}
-                        </div>
-                    </div>
-                    <div style="display:flex;gap:10px;margin-bottom:16px">
-                        <div style="flex:1;background:var(--bg3);border-radius:12px;padding:14px;text-align:center">
-                            <div style="font-size:1.8rem;font-weight:700;color:${puanColor}">${puanSign}${p.toplamPuan}</div>
-                            <div style="font-size:.7rem;color:var(--tx2);text-transform:uppercase">Toplam Puan</div>
-                        </div>
-                        <div style="flex:1;background:rgba(231,76,60,.1);border-radius:12px;padding:14px;text-align:center">
-                            <div style="font-size:1.8rem;font-weight:700;color:#e74c3c">${p.negatifOlay}</div>
-                            <div style="font-size:.7rem;color:var(--tx2);text-transform:uppercase">Negatif</div>
-                        </div>
-                        <div style="flex:1;background:rgba(39,174,96,.1);border-radius:12px;padding:14px;text-align:center">
-                            <div style="font-size:1.8rem;font-weight:700;color:#27ae60">${p.pozitifOlay}</div>
-                            <div style="font-size:.7rem;color:var(--tx2);text-transform:uppercase">Pozitif</div>
+                        <div style="background:${statusBg};color:${statusColor};padding:8px 14px;border-radius:24px;font-size:.8rem;font-weight:700;border:1px solid ${statusColor}20">
+                            ${p.primDurumu === 'prim_yok' ? '⚠️ PRİM YOK' : '✅ Aktif'}
                         </div>
                     </div>
+                    
+                    <!-- Stats -->
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px">
+                        <div style="background:linear-gradient(135deg,var(--bg3),var(--bg4));border-radius:14px;padding:16px 12px;text-align:center">
+                            <div style="font-size:2rem;font-weight:800;color:${puanColor};line-height:1">${puanSign}${p.toplamPuan}</div>
+                            <div style="font-size:.75rem;color:var(--tx2);margin-top:4px;font-weight:500">PUAN</div>
+                        </div>
+                        <div style="background:rgba(231,76,60,.08);border-radius:14px;padding:16px 12px;text-align:center;border:1px solid rgba(231,76,60,.15)">
+                            <div style="font-size:2rem;font-weight:800;color:#e74c3c;line-height:1">${p.negatifOlay}</div>
+                            <div style="font-size:.75rem;color:#c0392b;margin-top:4px;font-weight:500">İHLAL</div>
+                        </div>
+                        <div style="background:rgba(39,174,96,.08);border-radius:14px;padding:16px 12px;text-align:center;border:1px solid rgba(39,174,96,.15)">
+                            <div style="font-size:2rem;font-weight:800;color:#27ae60;line-height:1">${p.pozitifOlay}</div>
+                            <div style="font-size:.75rem;color:#1e8449;margin-top:4px;font-weight:500">BAŞARI</div>
+                        </div>
+                    </div>
+                    
                     ${p.toplamPuan <= -5 ? `
-                        <div style="background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);border-radius:8px;padding:10px;margin-bottom:12px;text-align:center">
-                            <div style="color:#e74c3c;font-weight:600;font-size:.85rem">🚨 Prim Hakkı Kaybedildi!</div>
-                            <div style="color:#c0392b;font-size:.75rem;margin-top:4px">Toplam puan -5'e ulaştı</div>
+                        <div style="background:linear-gradient(135deg,rgba(231,76,60,.15),rgba(192,57,43,.15));border:1px solid rgba(231,76,60,.4);border-radius:12px;padding:12px;margin-bottom:14px;text-align:center">
+                            <div style="color:#c0392b;font-weight:700;font-size:.9rem">🚨 Prim Hakkı Kaybedildi!</div>
+                            <div style="color:#e74c3c;font-size:.8rem;margin-top:4px">Toplam puan -5 veya altına düştü</div>
                         </div>
                     ` : ''}
+                    
+                    <!-- Action Buttons -->
                     ${!isBarista ? `
-                    <div style="display:flex;gap:8px">
-                        <button class="btn btn-sm" style="flex:1;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.2);color:#e74c3c" onclick="showPuantajModal('${p.id}', '${p.name}', 'negatif')">
-                            ⭐ İhlal Ekle
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <button class="btn" style="padding:12px;background:linear-gradient(135deg,rgba(231,76,60,.1),rgba(192,57,43,.1));border:2px solid rgba(231,76,60,.25);color:#c0392b;border-radius:12px;font-weight:600;font-size:.85rem;cursor:pointer;transition:all .2s" onclick="showPuantajModal('${p.id}', '${p.name}', 'negatif')" onmouseover="this.style.background='rgba(231,76,60,.2)';this.style.borderColor='rgba(231,76,60,.4)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(231,76,60,.1),rgba(192,57,43,.1))';this.style.borderColor='rgba(231,76,60,.25)'">
+                            ⚠️ İhlal Ekle
                         </button>
-                        <button class="btn btn-sm" style="flex:1;background:rgba(39,174,96,.1);border:1px solid rgba(39,174,96,.2);color:#27ae60" onclick="showPuantajModal('${p.id}', '${p.name}', 'pozitif')">
-                            ⭐ Başarı Ekle
+                        <button class="btn" style="padding:12px;background:linear-gradient(135deg,rgba(39,174,96,.1),rgba(30,132,73,.1));border:2px solid rgba(39,174,96,.25);color:#1e8449;border-radius:12px;font-weight:600;font-size:.85rem;cursor:pointer;transition:all .2s" onclick="showPuantajModal('${p.id}', '${p.name}', 'pozitif')" onmouseover="this.style.background='rgba(39,174,96,.2)';this.style.borderColor='rgba(39,174,96,.4)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(39,174,96,.1),rgba(30,132,73,.1))';this.style.borderColor='rgba(39,174,96,.25)'">
+                            🏆 Başarı Ekle
                         </button>
                     </div>
                     ` : `
-                    <div style="text-align:center;padding:8px;background:var(--bg3);border-radius:8px;font-size:.75rem;color:var(--tx3)">
+                    <div style="text-align:center;padding:12px;background:var(--bg3);border-radius:12px;font-size:.8rem;color:var(--tx3);border:1px dashed var(--bg4)">
                         👁️ Salt Okunur Mod
                     </div>
                     `}
@@ -4870,7 +5167,8 @@ async function loadPuantaj() {
                     const yildiz = puan.score || 3;
                     const stars = '⭐'.repeat(yildiz);
                     const isNegative = yildiz <= 3;
-                    const puanEtki = isNegative ? '-1' : (yildiz === 5 ? '+2' : '+1');
+                    // Yeni puan sistemi: 1★=-3, 2★=-2, 3★=-1, 4★=+1, 5★=+2
+                    const puanEtki = yildiz === 1 ? '-3' : (yildiz === 2 ? '-2' : (yildiz === 3 ? '-1' : (yildiz === 5 ? '+2' : '+1')));
                     const bgColor = isNegative ? 'rgba(231,76,60,.08)' : 'rgba(39,174,96,.08)';
                     const borderColor = isNegative ? 'rgba(231,76,60,.2)' : 'rgba(39,174,96,.2)';
                     
@@ -4911,37 +5209,49 @@ function showPuantajModal(personelId, name, type = 'negatif') {
     const title = isNegative ? `${name} - İhlal Kaydet` : `${name} - Başarı Kaydet`;
     const titleColor = isNegative ? '#e74c3c' : '#27ae60';
     
+    // Kural seçenekleri (cache'ten)
+    const kurallar = (puantajRulesCache || []).filter(r => {
+        if (isNegative) return r.effect && r.effect.includes('-');
+        return r.effect && !r.effect.includes('-');
+    });
+    
+    let kuralOptions = '<option value="">-- Kural Seçin (Opsiyonel) --</option>';
+    kurallar.forEach(k => {
+        kuralOptions += `<option value="${k.id}" data-title="${k.title}">${k.title}</option>`;
+    });
+    kuralOptions += '<option value="other">📝 Diğer (Manuel Giriş)</option>';
+    
     // Yıldız seçenekleri
     let starOptions = '';
     if (isNegative) {
         starOptions = `
-            <div class="star-option" onclick="selectPuantajStar(1, this)" style="padding:12px;background:rgba(231,76,60,.1);border:2px solid transparent;border-radius:10px;cursor:pointer;text-align:center;transition:all .2s">
-                <div style="font-size:1.2rem">⭐</div>
-                <div style="font-size:.75rem;color:#e74c3c;font-weight:600;margin-top:4px">Ciddi İhlal</div>
-                <div style="font-size:.65rem;color:var(--tx3)">-1 Puan</div>
+            <div class="star-option" onclick="selectPuantajStar(1, this)" style="padding:14px 8px;background:rgba(192,57,43,.12);border:2px solid transparent;border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+                <div style="font-size:1.3rem;margin-bottom:4px">⭐</div>
+                <div style="font-size:.8rem;color:#c0392b;font-weight:700">Ciddi İhlal</div>
+                <div style="font-size:.85rem;color:#e74c3c;font-weight:600;margin-top:2px">-3 Puan</div>
             </div>
-            <div class="star-option" onclick="selectPuantajStar(2, this)" style="padding:12px;background:rgba(230,126,34,.1);border:2px solid transparent;border-radius:10px;cursor:pointer;text-align:center;transition:all .2s">
-                <div style="font-size:1.2rem">⭐⭐</div>
-                <div style="font-size:.75rem;color:#e67e22;font-weight:600;margin-top:4px">Orta İhlal</div>
-                <div style="font-size:.65rem;color:var(--tx3)">-1 Puan</div>
+            <div class="star-option" onclick="selectPuantajStar(2, this)" style="padding:14px 8px;background:rgba(211,84,0,.12);border:2px solid transparent;border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+                <div style="font-size:1.3rem;margin-bottom:4px">⭐⭐</div>
+                <div style="font-size:.8rem;color:#d35400;font-weight:700">Orta İhlal</div>
+                <div style="font-size:.85rem;color:#e67e22;font-weight:600;margin-top:2px">-2 Puan</div>
             </div>
-            <div class="star-option" onclick="selectPuantajStar(3, this)" style="padding:12px;background:rgba(243,156,18,.1);border:2px solid transparent;border-radius:10px;cursor:pointer;text-align:center;transition:all .2s">
-                <div style="font-size:1.2rem">⭐⭐⭐</div>
-                <div style="font-size:.75rem;color:#f39c12;font-weight:600;margin-top:4px">Hafif Uyarı</div>
-                <div style="font-size:.65rem;color:var(--tx3)">-1 Puan</div>
+            <div class="star-option" onclick="selectPuantajStar(3, this)" style="padding:14px 8px;background:rgba(241,196,15,.12);border:2px solid transparent;border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+                <div style="font-size:1.3rem;margin-bottom:4px">⭐⭐⭐</div>
+                <div style="font-size:.8rem;color:#f39c12;font-weight:700">Hafif Uyarı</div>
+                <div style="font-size:.85rem;color:#f1c40f;font-weight:600;margin-top:2px">-1 Puan</div>
             </div>
         `;
     } else {
         starOptions = `
-            <div class="star-option" onclick="selectPuantajStar(4, this)" style="padding:12px;background:rgba(39,174,96,.1);border:2px solid transparent;border-radius:10px;cursor:pointer;text-align:center;transition:all .2s">
-                <div style="font-size:1.2rem">⭐⭐⭐⭐</div>
-                <div style="font-size:.75rem;color:#27ae60;font-weight:600;margin-top:4px">İyi Performans</div>
-                <div style="font-size:.65rem;color:var(--tx3)">+1 Puan</div>
+            <div class="star-option" onclick="selectPuantajStar(4, this)" style="padding:14px 8px;background:rgba(39,174,96,.12);border:2px solid transparent;border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+                <div style="font-size:1.3rem;margin-bottom:4px">⭐⭐⭐⭐</div>
+                <div style="font-size:.8rem;color:#27ae60;font-weight:700">İyi Performans</div>
+                <div style="font-size:.85rem;color:#2ecc71;font-weight:600;margin-top:2px">+1 Puan</div>
             </div>
-            <div class="star-option" onclick="selectPuantajStar(5, this)" style="padding:12px;background:rgba(46,204,113,.1);border:2px solid transparent;border-radius:10px;cursor:pointer;text-align:center;transition:all .2s">
-                <div style="font-size:1.2rem">⭐⭐⭐⭐⭐</div>
-                <div style="font-size:.75rem;color:#2ecc71;font-weight:600;margin-top:4px">Mükemmel</div>
-                <div style="font-size:.65rem;color:var(--tx3)">+2 Puan</div>
+            <div class="star-option" onclick="selectPuantajStar(5, this)" style="padding:14px 8px;background:rgba(46,204,113,.12);border:2px solid transparent;border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+                <div style="font-size:1.3rem;margin-bottom:4px">⭐⭐⭐⭐⭐</div>
+                <div style="font-size:.8rem;color:#2ecc71;font-weight:700">Mükemmel</div>
+                <div style="font-size:.85rem;color:#27ae60;font-weight:600;margin-top:2px">+2 Puan</div>
             </div>
         `;
     }
@@ -4949,20 +5259,31 @@ function showPuantajModal(personelId, name, type = 'negatif') {
     const body = `
         <div style="padding:8px 0">
             <div style="text-align:center;margin-bottom:20px">
-                <div style="font-size:2rem">${isNegative ? '⚠️' : '🏆'}</div>
-                <div style="color:${titleColor};font-weight:600;font-size:.9rem;margin-top:4px">${isNegative ? 'İhlal/Uyarı Kaydı' : 'Başarı/Ödül Kaydı'}</div>
+                <div style="font-size:2.5rem">${isNegative ? '⚠️' : '🏆'}</div>
+                <div style="color:${titleColor};font-weight:700;font-size:1rem;margin-top:6px">${isNegative ? 'İhlal/Uyarı Kaydı' : 'Başarı/Ödül Kaydı'}</div>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(${isNegative ? 3 : 2}, 1fr);gap:10px;margin-bottom:20px">
+            
+            <div style="display:grid;grid-template-columns:repeat(${isNegative ? 3 : 2}, 1fr);gap:12px;margin-bottom:20px">
                 ${starOptions}
             </div>
+            
             <div style="margin-bottom:16px">
-                <label style="display:block;font-size:.85rem;color:var(--tx2);margin-bottom:8px">Açıklama *</label>
-                <input type="text" id="puantajNote" class="form-input" placeholder="${isNegative ? 'Örn: Check listi yanlış işaretledi' : 'Örn: Mükemmel temizlik yaptı'}" style="background:var(--bg3);color:var(--tx);border-color:var(--bg4)">
+                <label style="display:block;font-size:.85rem;color:var(--tx2);margin-bottom:8px;font-weight:500">📋 Kural Seç</label>
+                <select id="puantajKural" class="form-select" onchange="onPuantajKuralChange()" style="background:var(--bg3);color:var(--tx);border-color:var(--bg4)">
+                    ${kuralOptions}
+                </select>
             </div>
+            
             <div style="margin-bottom:16px">
-                <label style="display:block;font-size:.85rem;color:var(--tx2);margin-bottom:8px">Tarih</label>
+                <label style="display:block;font-size:.85rem;color:var(--tx2);margin-bottom:8px;font-weight:500">📝 Açıklama <span style="color:#e74c3c">*</span></label>
+                <textarea id="puantajNote" class="form-input" rows="3" placeholder="${isNegative ? 'Örn: Check listi yanlış işaretledi, müşteriye kaba davrandı...' : 'Örn: Mükemmel temizlik yaptı, ekstra mesai çalıştı...'}" style="background:var(--bg3);color:var(--tx);border-color:var(--bg4);resize:vertical;min-height:80px;font-family:inherit"></textarea>
+            </div>
+            
+            <div style="margin-bottom:16px">
+                <label style="display:block;font-size:.85rem;color:var(--tx2);margin-bottom:8px;font-weight:500">📅 Olay Tarihi</label>
                 <input type="date" id="puantajDate" class="form-input" value="${new Date().toISOString().split('T')[0]}" style="background:var(--bg3);color:var(--tx);border-color:var(--bg4)">
             </div>
+            
             <input type="hidden" id="puantajPersonelId" value="${personelId}">
             <input type="hidden" id="puantajScore" value="0">
         </div>
@@ -4972,6 +5293,20 @@ function showPuantajModal(personelId, name, type = 'negatif') {
         <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
         <button class="btn" style="background:${titleColor};color:#fff" onclick="savePuantajFromModal()">Kaydet</button>
     `);
+}
+
+// Kural seçildiğinde açıklamaya otomatik yaz
+function onPuantajKuralChange() {
+    const kuralSelect = document.getElementById('puantajKural');
+    const noteField = document.getElementById('puantajNote');
+    const selectedOption = kuralSelect.options[kuralSelect.selectedIndex];
+    
+    if (kuralSelect.value && kuralSelect.value !== 'other' && selectedOption) {
+        const title = selectedOption.dataset.title || selectedOption.text;
+        if (title && !noteField.value) {
+            noteField.value = title;
+        }
+    }
 }
 
 function selectPuantajStar(value, element) {
@@ -4997,9 +5332,11 @@ function showPuantajTab(tab, btn) {
     document.querySelectorAll('.puantaj-tab').forEach(b => {
         b.style.background = 'var(--bg3)';
         b.style.color = 'var(--tx)';
+        b.style.boxShadow = 'none';
     });
-    btn.style.background = 'var(--accent)';
+    btn.style.background = 'linear-gradient(135deg, var(--accent), #ff6b5b)';
     btn.style.color = '#fff';
+    btn.style.boxShadow = '0 2px 12px rgba(255,134,116,.3)';
     
     // Seçili sekmeyi göster
     if (tab === 'kayit') {
@@ -5087,7 +5424,14 @@ async function loadPuantajAnaliz() {
                 personelStats[d.personelId] = { id: d.personelId, toplamPuan: 0, negatif: 0, pozitif: 0, kayitlar: [] };
             }
             const yildiz = d.score || 3;
-            if (yildiz <= 3) {
+            // Yeni puan sistemi: 1★=-3, 2★=-2, 3★=-1, 4★=+1, 5★=+2
+            if (yildiz === 1) {
+                personelStats[d.personelId].toplamPuan -= 3;
+                personelStats[d.personelId].negatif++;
+            } else if (yildiz === 2) {
+                personelStats[d.personelId].toplamPuan -= 2;
+                personelStats[d.personelId].negatif++;
+            } else if (yildiz === 3) {
                 personelStats[d.personelId].toplamPuan -= 1;
                 personelStats[d.personelId].negatif++;
             } else if (yildiz === 4) {
@@ -5231,7 +5575,12 @@ async function loadPuantajArsiv() {
                 donemler[period].personeller[d.personelId] = { toplamPuan: 0 };
             }
             const yildiz = d.score || 3;
-            if (yildiz <= 3) {
+            // Yeni puan sistemi: 1★=-3, 2★=-2, 3★=-1, 4★=+1, 5★=+2
+            if (yildiz === 1) {
+                donemler[period].personeller[d.personelId].toplamPuan -= 3;
+            } else if (yildiz === 2) {
+                donemler[period].personeller[d.personelId].toplamPuan -= 2;
+            } else if (yildiz === 3) {
                 donemler[period].personeller[d.personelId].toplamPuan -= 1;
             } else if (yildiz === 4) {
                 donemler[period].personeller[d.personelId].toplamPuan += 1;
@@ -5566,6 +5915,897 @@ async function saveRolePermissions() {
     }
 }
 
+// ==================== GELİŞMİŞ İZİN YÖNETİMİ ====================
+const PERMISSION_STRUCTURE = {
+    pages: [
+        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
+        { id: 'personel', label: 'Personel', icon: '👥' },
+        { id: 'puantaj', label: 'Puantaj', icon: '⭐' },
+        { id: 'shift', label: 'Shift Planı', icon: '📅' }
+    ],
+    documents: [
+        { id: 'sozlesme', label: 'İş Sözleşmesi', icon: '📄' },
+        { id: 'tutanak', label: 'Tutanak', icon: '📝' },
+        { id: 'savunma', label: 'Savunma İsteme', icon: '💬' },
+        { id: 'fesih', label: 'Fesih', icon: '❌' },
+        { id: 'istifa', label: 'İstifa', icon: '🚪' },
+        { id: 'ibraname', label: 'İbraname', icon: '✅' },
+        { id: 'ihtarname', label: 'İhtarname', icon: '⚠️' }
+    ],
+    admin: [
+        { id: 'admin_genel', label: 'Genel Ayarlar', icon: '⚙️' },
+        { id: 'admin_kullanicilar', label: 'Kullanıcı Yönetimi', icon: '👤' },
+        { id: 'admin_izinler', label: 'İzin Yönetimi', icon: '🔐' },
+        { id: 'admin_puantaj', label: 'Puantaj Kuralları', icon: '⭐' },
+        { id: 'admin_subeler', label: 'Şube Yönetimi', icon: '📍' },
+        { id: 'admin_pozisyonlar', label: 'Pozisyonlar', icon: '👔' },
+        { id: 'admin_ihlaller', label: 'İhlal Kataloğu', icon: '📚' },
+        { id: 'admin_sablonlar', label: 'Şablonlar', icon: '📋' }
+    ],
+    special: [
+        { id: 'print_shift', label: 'Shift planını yazdırabilir', icon: '🖨️' },
+        { id: 'view_checklist_history', label: 'Geçmiş checklisti görebilir', icon: '📊' },
+        { id: 'view_salary', label: 'Maaş bilgilerini görebilir', icon: '💰' },
+        { id: 'export_data', label: 'Veri dışa aktarabilir', icon: '📤' },
+        { id: 'delete_records', label: 'Kayıt silebilir', icon: '🗑️' }
+    ]
+};
+
+const DEFAULT_ROLE_PERMISSIONS = {
+    barista: {
+        pages: { dashboard: { view: true, edit: false }, personel: { view: false, edit: false }, puantaj: { view: true, edit: false }, shift: { view: true, edit: false } },
+        documents: { sozlesme: { view: false, edit: false }, tutanak: { view: false, edit: false }, savunma: { view: false, edit: false }, fesih: { view: false, edit: false }, istifa: { view: false, edit: false }, ibraname: { view: false, edit: false }, ihtarname: { view: false, edit: false } },
+        admin: { admin_genel: false, admin_kullanicilar: false, admin_izinler: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: false, admin_sablonlar: false },
+        special: { print_shift: true, view_checklist_history: false, view_salary: false, export_data: false, delete_records: false }
+    },
+    magaza_muduru: {
+        pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true } },
+        documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true }, ihtarname: { view: true, edit: true } },
+        admin: { admin_genel: false, admin_kullanicilar: false, admin_izinler: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false },
+        special: { print_shift: true, view_checklist_history: true, view_salary: false, export_data: true, delete_records: false }
+    },
+    bolge_muduru: {
+        pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true } },
+        documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: true }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true }, ihtarname: { view: true, edit: true } },
+        admin: { admin_genel: true, admin_kullanicilar: true, admin_izinler: false, admin_puantaj: true, admin_subeler: true, admin_pozisyonlar: true, admin_ihlaller: true, admin_sablonlar: true },
+        special: { print_shift: true, view_checklist_history: true, view_salary: true, export_data: true, delete_records: true }
+    }
+};
+
+async function loadAdvancedPermissions() {
+    const role = document.getElementById('advRoleSelect').value;
+    const panel = document.getElementById('advPermissionsPanel');
+    const empty = document.getElementById('advPermissionsEmpty');
+    
+    if (!role) {
+        panel.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+    }
+    
+    panel.style.display = 'block';
+    empty.style.display = 'none';
+    
+    // Firebase'den izinleri al veya varsayılanı kullan
+    let perms = DEFAULT_ROLE_PERMISSIONS[role];
+    try {
+        const doc = await db.collection('advancedPermissions').doc(role).get();
+        if (doc.exists) {
+            perms = { ...perms, ...doc.data() };
+        }
+    } catch (error) {
+        console.error('İzin yükleme hatası:', error);
+    }
+    
+    // Sayfalar
+    renderPagePermissions(perms.pages || {});
+    
+    // Belgeler
+    renderDocPermissions(perms.documents || {});
+    
+    // Admin
+    renderAdminPermissions(perms.admin || {});
+    
+    // Özel izinler
+    renderSpecialPermissions(perms.special || {});
+}
+
+function renderPagePermissions(perms) {
+    const container = document.getElementById('pagePermissions');
+    let html = '';
+    
+    PERMISSION_STRUCTURE.pages.forEach(p => {
+        const perm = perms[p.id] || { view: false, edit: false };
+        html += `
+            <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:10px;padding:14px">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                    <span style="font-size:1.2rem">${p.icon}</span>
+                    <span style="font-weight:600;color:var(--tx)">${p.label}</span>
+                </div>
+                <div style="display:flex;gap:16px">
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                        <input type="checkbox" class="perm-cb" data-cat="pages" data-id="${p.id}" data-type="view" ${perm.view ? 'checked' : ''} style="width:18px;height:18px;accent-color:#27ae60">
+                        <span style="font-size:.8rem;color:var(--tx2)">👁️ Görüntüle</span>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                        <input type="checkbox" class="perm-cb" data-cat="pages" data-id="${p.id}" data-type="edit" ${perm.edit ? 'checked' : ''} style="width:18px;height:18px;accent-color:#3498db">
+                        <span style="font-size:.8rem;color:var(--tx2)">✏️ Düzenle</span>
+                    </label>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function renderDocPermissions(perms) {
+    const container = document.getElementById('docPermissions');
+    let html = '';
+    
+    PERMISSION_STRUCTURE.documents.forEach(d => {
+        const perm = perms[d.id] || { view: false, edit: false };
+        html += `
+            <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:10px;padding:14px">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                    <span style="font-size:1.2rem">${d.icon}</span>
+                    <span style="font-weight:600;color:var(--tx)">${d.label}</span>
+                </div>
+                <div style="display:flex;gap:16px">
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                        <input type="checkbox" class="perm-cb" data-cat="documents" data-id="${d.id}" data-type="view" ${perm.view ? 'checked' : ''} style="width:18px;height:18px;accent-color:#27ae60">
+                        <span style="font-size:.8rem;color:var(--tx2)">👁️ Görüntüle</span>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                        <input type="checkbox" class="perm-cb" data-cat="documents" data-id="${d.id}" data-type="edit" ${perm.edit ? 'checked' : ''} style="width:18px;height:18px;accent-color:#3498db">
+                        <span style="font-size:.8rem;color:var(--tx2)">✏️ Düzenle</span>
+                    </label>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function renderAdminPermissions(perms) {
+    const container = document.getElementById('adminPermissions');
+    let html = '';
+    
+    PERMISSION_STRUCTURE.admin.forEach(a => {
+        const hasAccess = perms[a.id] || false;
+        html += `
+            <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:10px;padding:14px">
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+                    <input type="checkbox" class="perm-cb" data-cat="admin" data-id="${a.id}" data-type="access" ${hasAccess ? 'checked' : ''} style="width:20px;height:20px;accent-color:#ff8674">
+                    <div>
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <span style="font-size:1rem">${a.icon}</span>
+                            <span style="font-weight:600;color:var(--tx);font-size:.9rem">${a.label}</span>
+                        </div>
+                    </div>
+                </label>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function renderSpecialPermissions(perms) {
+    const container = document.getElementById('specialPermissions');
+    let html = '';
+    
+    PERMISSION_STRUCTURE.special.forEach(s => {
+        const hasPermission = perms[s.id] || false;
+        html += `
+            <label style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--cardBorder)'">
+                <input type="checkbox" class="perm-cb" data-cat="special" data-id="${s.id}" data-type="enabled" ${hasPermission ? 'checked' : ''} style="width:22px;height:22px;accent-color:#ff8674">
+                <span style="font-size:1.3rem">${s.icon}</span>
+                <span style="font-weight:500;color:var(--tx);font-size:.95rem">${s.label}</span>
+            </label>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+async function saveAdvancedPermissions() {
+    const role = document.getElementById('advRoleSelect').value;
+    if (!role) {
+        toast('Lütfen bir rol seçin', 'error');
+        return;
+    }
+    
+    const permissions = {
+        pages: {},
+        documents: {},
+        admin: {},
+        special: {}
+    };
+    
+    // Tüm checkbox'ları topla
+    document.querySelectorAll('.perm-cb').forEach(cb => {
+        const cat = cb.dataset.cat;
+        const id = cb.dataset.id;
+        const type = cb.dataset.type;
+        
+        if (cat === 'pages' || cat === 'documents') {
+            if (!permissions[cat][id]) permissions[cat][id] = { view: false, edit: false };
+            permissions[cat][id][type] = cb.checked;
+        } else if (cat === 'admin') {
+            permissions.admin[id] = cb.checked;
+        } else if (cat === 'special') {
+            permissions.special[id] = cb.checked;
+        }
+    });
+    
+    try {
+        await db.collection('advancedPermissions').doc(role).set(permissions);
+        toast('İzinler başarıyla kaydedildi!', 'success');
+    } catch (error) {
+        console.error('İzin kayıt hatası:', error);
+        toast('Kayıt hatası!', 'error');
+    }
+}
+
+function resetAdvancedPermissions() {
+    const role = document.getElementById('advRoleSelect').value;
+    if (!role) {
+        toast('Lütfen bir rol seçin', 'error');
+        return;
+    }
+    
+    if (!confirm(`"${role}" rolünün izinleri varsayılana döndürülecek. Emin misiniz?`)) return;
+    
+    // Varsayılan izinleri yükle
+    const perms = DEFAULT_ROLE_PERMISSIONS[role];
+    
+    renderPagePermissions(perms.pages || {});
+    renderDocPermissions(perms.documents || {});
+    renderAdminPermissions(perms.admin || {});
+    renderSpecialPermissions(perms.special || {});
+    
+    toast('Varsayılan izinler yüklendi. Kaydetmeyi unutmayın!', 'success');
+}
+
+// İzin kontrol fonksiyonu
+function checkPermission(category, id, type = 'view') {
+    if (!currentUser) return false;
+    if (currentUser.role === 'yonetici') return true;
+    
+    const perms = window.userAdvancedPermissions;
+    if (!perms) return false;
+    
+    if (category === 'pages' || category === 'documents') {
+        return perms[category]?.[id]?.[type] || false;
+    } else if (category === 'admin') {
+        return perms.admin?.[id] || false;
+    } else if (category === 'special') {
+        return perms.special?.[id] || false;
+    }
+    
+    return false;
+}
+
+// Kullanıcı girişinde izinleri yükle
+async function loadUserAdvancedPermissions() {
+    if (!currentUser || currentUser.role === 'yonetici') {
+        window.userAdvancedPermissions = null;
+        return;
+    }
+    
+    try {
+        const doc = await db.collection('advancedPermissions').doc(currentUser.role).get();
+        if (doc.exists) {
+            window.userAdvancedPermissions = doc.data();
+        } else {
+            window.userAdvancedPermissions = DEFAULT_ROLE_PERMISSIONS[currentUser.role] || null;
+        }
+        
+        // İzinleri uygula
+        applyAdvancedPermissions();
+    } catch (error) {
+        console.error('Kullanıcı izin yükleme hatası:', error);
+    }
+}
+
+// İzinleri UI'a uygula
+function applyAdvancedPermissions() {
+    if (!window.userAdvancedPermissions) return;
+    
+    const perms = window.userAdvancedPermissions;
+    
+    // Navbar menülerini kısıtla
+    document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+        const page = item.dataset.page;
+        const pagePerm = perms.pages?.[page];
+        
+        if (pagePerm && !pagePerm.view) {
+            item.style.display = 'none';
+        }
+    });
+    
+    // Dashboard kartlarını kısıtla
+    document.querySelectorAll('.dashboard-card').forEach(card => {
+        const onclick = card.getAttribute('onclick') || '';
+        
+        // Sayfa kartları
+        PERMISSION_STRUCTURE.pages.forEach(p => {
+            if (onclick.includes(`'${p.id}'`)) {
+                const perm = perms.pages?.[p.id];
+                if (perm && !perm.view) {
+                    card.style.display = 'none';
+                }
+            }
+        });
+        
+        // Belge kartları
+        PERMISSION_STRUCTURE.documents.forEach(d => {
+            if (onclick.includes(`'${d.id}'`)) {
+                const perm = perms.documents?.[d.id];
+                if (perm && !perm.view) {
+                    card.style.display = 'none';
+                }
+            }
+        });
+    });
+    
+    // Belgeler bölümünü kontrol et
+    const hasAnyDocAccess = Object.values(perms.documents || {}).some(d => d.view);
+    if (!hasAnyDocAccess) {
+        document.querySelectorAll('.dashboard-section').forEach(section => {
+            const header = section.querySelector('div');
+            if (header && header.textContent.includes('Belgeler')) {
+                section.style.display = 'none';
+            }
+        });
+    }
+    
+    // Admin paneli erişimini kontrol et
+    const hasAnyAdminAccess = Object.values(perms.admin || {}).some(a => a);
+    if (!hasAnyAdminAccess) {
+        document.querySelectorAll('.dashboard-section').forEach(section => {
+            const header = section.querySelector('div');
+            if (header && header.textContent.includes('Sistem')) {
+                section.style.display = 'none';
+            }
+        });
+    }
+    
+    // Özel izinleri uygula
+    if (!perms.special?.print_shift) {
+        // Print butonlarını gizle
+        document.querySelectorAll('[onclick*="print"]').forEach(btn => {
+            if (btn.closest('#page-shift')) {
+                btn.style.display = 'none';
+            }
+        });
+    }
+    
+    // Salt okunur badge ekle (düzenleme izni yoksa)
+    const hasAnyEdit = Object.values(perms.pages || {}).some(p => p.edit) ||
+                       Object.values(perms.documents || {}).some(d => d.edit);
+    
+    if (!hasAnyEdit) {
+        const userRoleEl = document.getElementById('userRole');
+        if (userRoleEl && !userRoleEl.innerHTML.includes('SALT OKUNUR')) {
+            userRoleEl.innerHTML = '<span style="background:var(--accent);color:#fff;padding:2px 8px;border-radius:10px;font-size:.65rem">SALT OKUNUR</span> ' + userRoleEl.textContent;
+        }
+    }
+}
+
+
+// ==================== OTURUM YÖNETİMİ ====================
+let sessionTimeoutId = null;
+let sessionWarningId = null;
+let lastActivityTime = Date.now();
+const SESSION_EVENTS = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+
+// Oturum ayarlarını yükle
+async function loadSessionSettings() {
+    try {
+        const doc = await db.collection('settings').doc('session').get();
+        if (doc.exists) {
+            const settings = doc.data();
+            document.getElementById('sessionTimeout').value = settings.timeout || '30';
+            document.getElementById('sessionWarning').value = settings.warning || '60';
+            document.getElementById('sessionLogoutOnClose').checked = settings.logoutOnClose || false;
+            document.getElementById('sessionSingleDevice').checked = settings.singleDevice || false;
+            
+            // Timeout'u başlat
+            initSessionTimeout(settings.timeout || 30, settings.warning || 60);
+        }
+    } catch (error) {
+        console.error('Oturum ayarları yükleme hatası:', error);
+    }
+}
+
+// Oturum ayarlarını kaydet
+async function saveSessionSettings() {
+    const timeout = document.getElementById('sessionTimeout').value;
+    const warning = document.getElementById('sessionWarning').value;
+    const logoutOnClose = document.getElementById('sessionLogoutOnClose').checked;
+    const singleDevice = document.getElementById('sessionSingleDevice').checked;
+    
+    try {
+        await db.collection('settings').doc('session').set({
+            timeout: parseInt(timeout),
+            warning: parseInt(warning),
+            logoutOnClose,
+            singleDevice,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // Timeout'u güncelle
+        initSessionTimeout(parseInt(timeout), parseInt(warning));
+        
+        toast('Oturum ayarları kaydedildi', 'success');
+    } catch (error) {
+        console.error('Oturum ayarları kayıt hatası:', error);
+        toast('Kayıt hatası!', 'error');
+    }
+}
+
+// Session timeout başlat
+function initSessionTimeout(timeoutMinutes, warningSeconds) {
+    // Eski timeout'ları temizle
+    if (sessionTimeoutId) clearTimeout(sessionTimeoutId);
+    if (sessionWarningId) clearTimeout(sessionWarningId);
+    
+    // Devre dışıysa çık
+    if (timeoutMinutes === 0) return;
+    
+    const timeoutMs = timeoutMinutes * 60 * 1000;
+    const warningMs = timeoutMs - (warningSeconds * 1000);
+    
+    // Aktivite dinleyicilerini ekle
+    SESSION_EVENTS.forEach(event => {
+        document.addEventListener(event, resetSessionTimer, { passive: true });
+    });
+    
+    // Zamanlayıcıları başlat
+    startSessionTimers(timeoutMs, warningMs);
+}
+
+function startSessionTimers(timeoutMs, warningMs) {
+    // Eski timeout'ları temizle
+    if (sessionTimeoutId) clearTimeout(sessionTimeoutId);
+    if (sessionWarningId) clearTimeout(sessionWarningId);
+    
+    // Uyarı timer'ı
+    if (warningMs > 0) {
+        sessionWarningId = setTimeout(() => {
+            showSessionWarning();
+        }, warningMs);
+    }
+    
+    // Çıkış timer'ı
+    sessionTimeoutId = setTimeout(() => {
+        sessionAutoLogout();
+    }, timeoutMs);
+}
+
+function resetSessionTimer() {
+    lastActivityTime = Date.now();
+    
+    // Ayarları al ve timer'ları yeniden başlat
+    const timeoutEl = document.getElementById('sessionTimeout');
+    const warningEl = document.getElementById('sessionWarning');
+    
+    if (timeoutEl && warningEl) {
+        const timeoutMinutes = parseInt(timeoutEl.value) || 30;
+        const warningSeconds = parseInt(warningEl.value) || 60;
+        
+        if (timeoutMinutes > 0) {
+            const timeoutMs = timeoutMinutes * 60 * 1000;
+            const warningMs = timeoutMs - (warningSeconds * 1000);
+            startSessionTimers(timeoutMs, warningMs);
+        }
+    }
+}
+
+function showSessionWarning() {
+    const warningEl = document.getElementById('sessionWarning');
+    const seconds = warningEl ? parseInt(warningEl.value) : 60;
+    
+    const body = `
+        <div style="text-align:center;padding:20px">
+            <div style="font-size:4rem;margin-bottom:16px">⏰</div>
+            <div style="font-size:1.2rem;font-weight:600;color:var(--tx);margin-bottom:12px">Oturum Süresi Doluyor!</div>
+            <div style="color:var(--tx2);margin-bottom:20px">
+                <span id="sessionCountdown">${seconds}</span> saniye içinde otomatik çıkış yapılacak.
+            </div>
+            <div style="font-size:.85rem;color:var(--tx3)">Devam etmek için herhangi bir yere tıklayın.</div>
+        </div>
+    `;
+    
+    showModal('⏰ Oturum Uyarısı', body, `
+        <button class="btn btn-ghost" onclick="sessionAutoLogout()">Çıkış Yap</button>
+        <button class="btn btn-primary" onclick="extendSession()">Devam Et</button>
+    `);
+    
+    // Geri sayım
+    let countdown = seconds;
+    const countdownInterval = setInterval(() => {
+        countdown--;
+        const el = document.getElementById('sessionCountdown');
+        if (el) el.textContent = countdown;
+        
+        if (countdown <= 0) {
+            clearInterval(countdownInterval);
+        }
+    }, 1000);
+    
+    window.sessionCountdownInterval = countdownInterval;
+}
+
+function extendSession() {
+    if (window.sessionCountdownInterval) {
+        clearInterval(window.sessionCountdownInterval);
+    }
+    closeModal();
+    resetSessionTimer();
+    toast('Oturum uzatıldı', 'success');
+}
+
+async function sessionAutoLogout() {
+    if (window.sessionCountdownInterval) {
+        clearInterval(window.sessionCountdownInterval);
+    }
+    closeModal();
+    
+    // Oturum kaydını güncelle
+    if (currentUser) {
+        try {
+            await db.collection('sessions').doc(currentUser.sessionId).update({
+                status: 'timeout',
+                endedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (e) {}
+    }
+    
+    toast('Oturum süresi doldu', 'error');
+    setTimeout(() => {
+        logout();
+    }, 1000);
+}
+
+// Aktif oturumları yükle
+async function loadActiveSessions() {
+    const container = document.getElementById('activeSessionsList');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div style="text-align:center;padding:40px;color:var(--tx2)">
+            <div style="font-size:2rem;margin-bottom:12px">🔄</div>
+            <div>Yükleniyor...</div>
+        </div>
+    `;
+    
+    try {
+        const snapshot = await db.collection('sessions')
+            .where('status', '==', 'active')
+            .orderBy('startedAt', 'desc')
+            .limit(50)
+            .get();
+        
+        if (snapshot.empty) {
+            container.innerHTML = `
+                <div style="text-align:center;padding:40px;color:var(--tx2)">
+                    <div style="font-size:2rem;margin-bottom:12px">✨</div>
+                    <div>Aktif oturum bulunamadı</div>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = `
+            <div style="overflow-x:auto">
+                <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+                    <thead>
+                        <tr style="background:var(--bg3)">
+                            <th style="padding:12px;text-align:left;color:var(--tx);font-weight:600;border-bottom:1px solid var(--bg4)">Kullanıcı</th>
+                            <th style="padding:12px;text-align:left;color:var(--tx);font-weight:600;border-bottom:1px solid var(--bg4)">Cihaz</th>
+                            <th style="padding:12px;text-align:left;color:var(--tx);font-weight:600;border-bottom:1px solid var(--bg4)">IP Adresi</th>
+                            <th style="padding:12px;text-align:left;color:var(--tx);font-weight:600;border-bottom:1px solid var(--bg4)">Giriş Zamanı</th>
+                            <th style="padding:12px;text-align:left;color:var(--tx);font-weight:600;border-bottom:1px solid var(--bg4)">Son Aktivite</th>
+                            <th style="padding:12px;text-align:center;color:var(--tx);font-weight:600;border-bottom:1px solid var(--bg4)">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        snapshot.forEach(doc => {
+            const s = doc.data();
+            const startedAt = s.startedAt?.toDate?.() ? s.startedAt.toDate().toLocaleString('tr-TR') : '-';
+            const lastActivity = s.lastActivity?.toDate?.() ? formatTimeAgo(s.lastActivity.toDate()) : '-';
+            const isCurrentSession = currentUser?.sessionId === doc.id;
+            
+            html += `
+                <tr style="border-bottom:1px solid var(--bg4);transition:background .2s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
+                    <td style="padding:12px">
+                        <div style="display:flex;align-items:center;gap:10px">
+                            <div style="width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:.8rem">
+                                ${(s.userName || 'U').charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <div style="color:var(--tx);font-weight:500">${s.userName || s.userEmail || '-'}</div>
+                                <div style="font-size:.75rem;color:var(--tx3)">${s.userRole || '-'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="padding:12px">
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <span>${getDeviceIcon(s.device)}</span>
+                            <span style="color:var(--tx2)">${s.device || 'Bilinmiyor'}</span>
+                        </div>
+                    </td>
+                    <td style="padding:12px;color:var(--tx2);font-family:var(--mono);font-size:.8rem">${s.ip || '-'}</td>
+                    <td style="padding:12px;color:var(--tx2)">${startedAt}</td>
+                    <td style="padding:12px">
+                        <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.75rem">
+                            <span style="width:6px;height:6px;background:#27ae60;border-radius:50%;animation:pulse 2s infinite"></span>
+                            ${lastActivity}
+                        </span>
+                    </td>
+                    <td style="padding:12px;text-align:center">
+                        ${isCurrentSession ? 
+                            '<span style="font-size:.75rem;color:var(--tx3);background:var(--bg3);padding:4px 10px;border-radius:4px">Bu Oturum</span>' :
+                            `<button onclick="terminateSession('${doc.id}')" style="background:rgba(231,76,60,.1);border:none;color:#e74c3c;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:.8rem;transition:all .2s" onmouseover="this.style.background='rgba(231,76,60,.2)'" onmouseout="this.style.background='rgba(231,76,60,.1)'">🚫 Sonlandır</button>`
+                        }
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Oturum yükleme hatası:', error);
+        container.innerHTML = `
+            <div style="text-align:center;padding:40px;color:var(--red)">
+                <div style="font-size:2rem;margin-bottom:12px">⚠️</div>
+                <div>Yükleme hatası: ${error.message}</div>
+            </div>
+        `;
+    }
+}
+
+// Oturum geçmişini yükle
+async function loadSessionHistory() {
+    const container = document.getElementById('sessionHistoryList');
+    if (!container) return;
+    
+    try {
+        const snapshot = await db.collection('sessions')
+            .orderBy('startedAt', 'desc')
+            .limit(20)
+            .get();
+        
+        if (snapshot.empty) {
+            container.innerHTML = `
+                <div style="text-align:center;padding:40px;color:var(--tx2)">
+                    <div style="font-size:2rem;margin-bottom:12px">📊</div>
+                    <div>Henüz oturum geçmişi yok</div>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '<div style="display:flex;flex-direction:column;gap:8px">';
+        
+        snapshot.forEach(doc => {
+            const s = doc.data();
+            const startedAt = s.startedAt?.toDate?.() ? s.startedAt.toDate().toLocaleString('tr-TR') : '-';
+            const statusColor = s.status === 'active' ? '#27ae60' : (s.status === 'timeout' ? '#f39c12' : '#95a5a6');
+            const statusText = s.status === 'active' ? 'Aktif' : (s.status === 'timeout' ? 'Zaman Aşımı' : 'Sonlandı');
+            const statusIcon = s.status === 'active' ? '🟢' : (s.status === 'timeout' ? '🟡' : '⚪');
+            
+            html += `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border-radius:10px">
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <span>${statusIcon}</span>
+                        <div>
+                            <div style="font-weight:500;color:var(--tx)">${s.userName || s.userEmail || '-'}</div>
+                            <div style="font-size:.75rem;color:var(--tx3)">${s.device || 'Bilinmiyor'} • ${s.ip || '-'}</div>
+                        </div>
+                    </div>
+                    <div style="text-align:right">
+                        <div style="font-size:.8rem;color:var(--tx2)">${startedAt}</div>
+                        <div style="font-size:.75rem;color:${statusColor}">${statusText}</div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Oturum geçmişi yükleme hatası:', error);
+    }
+}
+
+// Oturum sonlandır
+async function terminateSession(sessionId) {
+    if (!confirm('Bu oturumu sonlandırmak istediğinize emin misiniz?')) return;
+    
+    try {
+        await db.collection('sessions').doc(sessionId).update({
+            status: 'terminated',
+            endedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            terminatedBy: currentUser?.id || 'admin'
+        });
+        
+        toast('Oturum sonlandırıldı', 'success');
+        loadActiveSessions();
+        loadSessionHistory();
+    } catch (error) {
+        console.error('Oturum sonlandırma hatası:', error);
+        toast('Sonlandırma hatası!', 'error');
+    }
+}
+
+// Tüm oturumları sonlandır (şifre değişikliğinde)
+async function terminateAllSessions(userId, exceptCurrentSession = true) {
+    try {
+        const snapshot = await db.collection('sessions')
+            .where('userId', '==', userId)
+            .where('status', '==', 'active')
+            .get();
+        
+        const batch = db.batch();
+        snapshot.forEach(doc => {
+            if (exceptCurrentSession && doc.id === currentUser?.sessionId) return;
+            batch.update(doc.ref, {
+                status: 'terminated',
+                endedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                terminatedBy: 'password_change'
+            });
+        });
+        
+        await batch.commit();
+        return true;
+    } catch (error) {
+        console.error('Toplu oturum sonlandırma hatası:', error);
+        return false;
+    }
+}
+
+// Yeni oturum başlat
+async function createSession() {
+    if (!currentUser) return null;
+    
+    const sessionId = 'S' + Date.now() + Math.random().toString(36).substr(2, 9);
+    const deviceInfo = getDeviceInfo();
+    
+    try {
+        // Tek cihaz politikası kontrolü
+        const settingsDoc = await db.collection('settings').doc('session').get();
+        if (settingsDoc.exists && settingsDoc.data().singleDevice) {
+            // Bu kullanıcının diğer aktif oturumlarını sonlandır
+            const existingSessions = await db.collection('sessions')
+                .where('userId', '==', currentUser.id)
+                .where('status', '==', 'active')
+                .get();
+            
+            const batch = db.batch();
+            existingSessions.forEach(doc => {
+                batch.update(doc.ref, {
+                    status: 'forced_logout',
+                    endedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    terminatedBy: 'single_device_policy'
+                });
+            });
+            await batch.commit();
+        }
+        
+        await db.collection('sessions').doc(sessionId).set({
+            userId: currentUser.id,
+            userEmail: currentUser.email,
+            userName: currentUser.name,
+            userRole: currentUser.role,
+            device: deviceInfo.device,
+            browser: deviceInfo.browser,
+            ip: await getClientIP(),
+            status: 'active',
+            startedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastActivity: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        currentUser.sessionId = sessionId;
+        return sessionId;
+    } catch (error) {
+        console.error('Oturum oluşturma hatası:', error);
+        return null;
+    }
+}
+
+// Oturum aktivitesini güncelle
+async function updateSessionActivity() {
+    if (!currentUser?.sessionId) return;
+    
+    try {
+        await db.collection('sessions').doc(currentUser.sessionId).update({
+            lastActivity: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    } catch (error) {
+        console.error('Aktivite güncelleme hatası:', error);
+    }
+}
+
+// Periyodik aktivite güncellemesi (5 dakikada bir)
+setInterval(() => {
+    if (currentUser?.sessionId) {
+        updateSessionActivity();
+    }
+}, 5 * 60 * 1000);
+
+// Cihaz bilgisi al
+function getDeviceInfo() {
+    const ua = navigator.userAgent;
+    let device = 'Bilinmiyor';
+    let browser = 'Bilinmiyor';
+    
+    // Cihaz
+    if (/iPhone/i.test(ua)) device = 'iPhone';
+    else if (/iPad/i.test(ua)) device = 'iPad';
+    else if (/Android/i.test(ua)) device = 'Android';
+    else if (/Windows/i.test(ua)) device = 'Windows PC';
+    else if (/Mac/i.test(ua)) device = 'Mac';
+    else if (/Linux/i.test(ua)) device = 'Linux';
+    
+    // Tarayıcı
+    if (/Chrome/i.test(ua)) browser = 'Chrome';
+    else if (/Firefox/i.test(ua)) browser = 'Firefox';
+    else if (/Safari/i.test(ua)) browser = 'Safari';
+    else if (/Edge/i.test(ua)) browser = 'Edge';
+    
+    return { device: device + ' / ' + browser, browser };
+}
+
+function getDeviceIcon(device) {
+    if (!device) return '💻';
+    const d = device.toLowerCase();
+    if (d.includes('iphone') || d.includes('android')) return '📱';
+    if (d.includes('ipad') || d.includes('tablet')) return '📱';
+    if (d.includes('mac')) return '🖥️';
+    if (d.includes('windows')) return '💻';
+    if (d.includes('linux')) return '🐧';
+    return '💻';
+}
+
+// IP adresi al (basit yaklaşım)
+async function getClientIP() {
+    try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        return data.ip;
+    } catch {
+        return 'Bilinmiyor';
+    }
+}
+
+// Zaman formatlama
+function formatTimeAgo(date) {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    
+    if (diffMins < 1) return 'Az önce';
+    if (diffMins < 60) return `${diffMins} dk önce`;
+    if (diffHours < 24) return `${diffHours} saat önce`;
+    return date.toLocaleDateString('tr-TR');
+}
+
 // ==================== PUANTAJ KURALLARI (ADMIN) ====================
 async function loadPuantajRulesAdmin() {
     const container = document.getElementById('puantajRulesList');
@@ -5580,29 +6820,82 @@ async function loadPuantajRulesAdmin() {
         }
         
         let html = '';
+        
+        // Kuralları kategoriye göre grupla
+        const ihlaller = [];
+        const basarilar = [];
+        
         snapshot.forEach(doc => {
-            const r = doc.data();
-            const effectColor = r.effect === 'prim_yok' ? '#ff6b6b' : '#fcc419';
-            const effectBg = r.effect === 'prim_yok' ? 'rgba(255,107,107,.15)' : 'rgba(252,196,25,.15)';
-            const starCount = r.star || 1;
-            const stars = '⭐'.repeat(starCount);
-            html += `
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px;margin-bottom:10px;transition:all .2s" onmouseover="this.style.background='rgba(255,255,255,.05)'" onmouseout="this.style.background='rgba(255,255,255,.03)'">
-                    <div style="flex:1">
-                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-                            <span style="font-size:.9rem">${stars}</span>
-                            <span style="font-weight:600;color:var(--tx)">${r.title}</span>
-                            <span style="font-size:.75rem;background:${effectBg};color:${effectColor};padding:3px 10px;border-radius:20px">${r.effect === 'prim_yok' ? 'Prim Kaybı' : r.effect}</span>
-                        </div>
-                        <div style="font-size:.8rem;color:var(--tx3)">${r.desc || ''}</div>
-                    </div>
-                    <div style="display:flex;gap:6px">
-                        <button onclick="editPuantajRule('${doc.id}')" style="background:rgba(255,255,255,.08);border:none;color:var(--tx);padding:8px 12px;border-radius:8px;cursor:pointer;font-size:.8rem;transition:all .2s" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.08)'">Düzenle</button>
-                        <button onclick="deletePuantajRule('${doc.id}')" style="background:rgba(255,107,107,.1);border:none;color:#ff6b6b;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:.8rem;transition:all .2s" onmouseover="this.style.background='rgba(255,107,107,.2)'" onmouseout="this.style.background='rgba(255,107,107,.1)'">Sil</button>
-                    </div>
-                </div>
-            `;
+            const r = { id: doc.id, ...doc.data() };
+            if (r.effect && r.effect.includes('+')) {
+                basarilar.push(r);
+            } else {
+                ihlaller.push(r);
+            }
         });
+        
+        // İhlaller
+        if (ihlaller.length > 0) {
+            html += `<div style="margin-bottom:20px">
+                <div style="font-size:.85rem;font-weight:600;color:#e74c3c;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                    <span>⚠️</span> İhlal Kuralları
+                </div>`;
+            ihlaller.forEach(r => {
+                const starCount = r.star || 1;
+                const stars = '⭐'.repeat(starCount);
+                const effectColor = r.effect === '-3' ? '#c0392b' : (r.effect === '-2' ? '#d35400' : '#f39c12');
+                const effectBg = r.effect === '-3' ? 'rgba(192,57,43,.15)' : (r.effect === '-2' ? 'rgba(211,84,0,.15)' : 'rgba(243,156,18,.15)');
+                html += `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:rgba(231,76,60,.05);border:1px solid rgba(231,76,60,.15);border-radius:12px;margin-bottom:8px">
+                        <div style="flex:1">
+                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap">
+                                <span style="font-size:1rem">${stars}</span>
+                                <span style="font-weight:600;color:var(--tx)">${r.title}</span>
+                                <span style="font-size:.8rem;background:${effectBg};color:${effectColor};padding:4px 12px;border-radius:20px;font-weight:600">${r.effect} Puan</span>
+                            </div>
+                            ${r.desc ? `<div style="font-size:.8rem;color:var(--tx3);margin-top:4px">${r.desc}</div>` : ''}
+                        </div>
+                        <div style="display:flex;gap:6px">
+                            <button onclick="editPuantajRule('${r.id}')" style="background:var(--bg3);border:none;color:var(--tx);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:.8rem;transition:all .2s" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">✏️ Düzenle</button>
+                            <button onclick="deletePuantajRule('${r.id}')" style="background:rgba(255,107,107,.1);border:none;color:#e74c3c;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:.8rem;transition:all .2s" onmouseover="this.style.background='rgba(255,107,107,.2)'" onmouseout="this.style.background='rgba(255,107,107,.1)'">🗑️ Sil</button>
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+        }
+        
+        // Başarılar
+        if (basarilar.length > 0) {
+            html += `<div>
+                <div style="font-size:.85rem;font-weight:600;color:#27ae60;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                    <span>🏆</span> Başarı Kuralları
+                </div>`;
+            basarilar.forEach(r => {
+                const starCount = r.star || 4;
+                const stars = '⭐'.repeat(starCount);
+                const effectColor = r.effect === '+2' ? '#27ae60' : '#2ecc71';
+                const effectBg = r.effect === '+2' ? 'rgba(39,174,96,.15)' : 'rgba(46,204,113,.15)';
+                html += `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:rgba(39,174,96,.05);border:1px solid rgba(39,174,96,.15);border-radius:12px;margin-bottom:8px">
+                        <div style="flex:1">
+                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap">
+                                <span style="font-size:1rem">${stars}</span>
+                                <span style="font-weight:600;color:var(--tx)">${r.title}</span>
+                                <span style="font-size:.8rem;background:${effectBg};color:${effectColor};padding:4px 12px;border-radius:20px;font-weight:600">${r.effect} Puan</span>
+                            </div>
+                            ${r.desc ? `<div style="font-size:.8rem;color:var(--tx3);margin-top:4px">${r.desc}</div>` : ''}
+                        </div>
+                        <div style="display:flex;gap:6px">
+                            <button onclick="editPuantajRule('${r.id}')" style="background:var(--bg3);border:none;color:var(--tx);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:.8rem;transition:all .2s" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">✏️ Düzenle</button>
+                            <button onclick="deletePuantajRule('${r.id}')" style="background:rgba(255,107,107,.1);border:none;color:#e74c3c;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:.8rem;transition:all .2s" onmouseover="this.style.background='rgba(255,107,107,.2)'" onmouseout="this.style.background='rgba(255,107,107,.1)'">🗑️ Sil</button>
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+        }
+        
         container.innerHTML = html;
     } catch (error) {
         console.error('Kural yükleme hatası:', error);
@@ -5616,28 +6909,41 @@ function showAddPuantajRuleModal(editId = null) {
     const body = `
         <input type="hidden" id="ruleEditId" value="${editId || ''}">
         <div class="form-grid">
-            <div class="form-group full"><label class="form-label">Kural Başlığı *</label><input type="text" id="ruleTitle" class="form-input" placeholder="Örn: Geç Kalma, Devamsızlık vb."></div>
+            <div class="form-group full">
+                <label class="form-label">Kural Başlığı *</label>
+                <input type="text" id="ruleTitle" class="form-input" placeholder="Örn: Check listi yanlış işaretleme, Geç kalma vb.">
+            </div>
             <div class="form-group">
-                <label class="form-label">Yıldız Seviyesi *</label>
-                <select id="ruleStar" class="form-select" style="font-size:1rem">
-                    <option value="1">⭐ (1 Yıldız) - Uyarı</option>
-                    <option value="2">⭐⭐ (2 Yıldız) - Dikkat</option>
-                    <option value="3">⭐⭐⭐ (3 Yıldız) - Ciddi</option>
-                    <option value="4">⭐⭐⭐⭐ (4 Yıldız) - Çok Ciddi</option>
-                    <option value="5">⭐⭐⭐⭐⭐ (5 Yıldız) - Kritik</option>
+                <label class="form-label">Kategori *</label>
+                <select id="ruleCategory" class="form-select">
+                    <option value="ihlal">⚠️ İhlal (Negatif)</option>
+                    <option value="basari">🏆 Başarı (Pozitif)</option>
                 </select>
             </div>
             <div class="form-group">
                 <label class="form-label">Puan Etkisi *</label>
                 <select id="ruleEffect" class="form-select">
-                    <option value="-1">-1 Puan</option>
-                    <option value="-2">-2 Puan</option>
-                    <option value="-3">-3 Puan</option>
-                    <option value="-5">-5 Puan</option>
-                    <option value="prim_yok">Prim Hakkı Kaybı</option>
+                    <optgroup label="── Negatif (İhlaller) ──">
+                        <option value="-3">⭐ Ciddi İhlal (-3 Puan)</option>
+                        <option value="-2">⭐⭐ Orta İhlal (-2 Puan)</option>
+                        <option value="-1">⭐⭐⭐ Hafif Uyarı (-1 Puan)</option>
+                    </optgroup>
+                    <optgroup label="── Pozitif (Başarılar) ──">
+                        <option value="+1">⭐⭐⭐⭐ İyi Performans (+1 Puan)</option>
+                        <option value="+2">⭐⭐⭐⭐⭐ Mükemmel (+2 Puan)</option>
+                    </optgroup>
                 </select>
             </div>
-            <div class="form-group full"><label class="form-label">Açıklama</label><textarea id="ruleDesc" class="form-textarea" rows="2" placeholder="Kuralın detaylı açıklaması..."></textarea></div>
+            <div class="form-group full">
+                <label class="form-label">Açıklama</label>
+                <textarea id="ruleDesc" class="form-textarea" rows="3" placeholder="Kuralın detaylı açıklaması..." style="resize:vertical"></textarea>
+            </div>
+        </div>
+        <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-top:16px">
+            <div style="font-size:.8rem;color:var(--tx2);display:flex;align-items:center;gap:8px">
+                <span style="font-size:1.1rem">💡</span>
+                <span>Bu kural, İhlal/Başarı kaydederken seçilebilir olacak ve otomatik puan hesaplamasını etkileyecek.</span>
+            </div>
         </div>
     `;
     
@@ -5659,7 +6965,7 @@ async function loadPuantajRuleForEdit(id) {
         if (doc.exists) {
             const r = doc.data();
             document.getElementById('ruleTitle').value = r.title || '';
-            document.getElementById('ruleStar').value = r.star || '1';
+            document.getElementById('ruleCategory').value = r.category || 'ihlal';
             document.getElementById('ruleEffect').value = r.effect || '-1';
             document.getElementById('ruleDesc').value = r.desc || '';
         }
@@ -5671,7 +6977,7 @@ async function loadPuantajRuleForEdit(id) {
 async function savePuantajRule() {
     const editId = document.getElementById('ruleEditId').value;
     const title = document.getElementById('ruleTitle').value.trim();
-    const star = document.getElementById('ruleStar').value;
+    const category = document.getElementById('ruleCategory').value;
     const effect = document.getElementById('ruleEffect').value;
     const desc = document.getElementById('ruleDesc').value.trim();
     
@@ -5680,7 +6986,15 @@ async function savePuantajRule() {
         return;
     }
     
-    const data = { title, star: parseInt(star), effect, desc };
+    // Yıldız sayısını etkiden hesapla
+    let star = 3;
+    if (effect === '-3') star = 1;
+    else if (effect === '-2') star = 2;
+    else if (effect === '-1') star = 3;
+    else if (effect === '+1') star = 4;
+    else if (effect === '+2') star = 5;
+    
+    const data = { title, category, star, effect, desc, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
     
     try {
         if (editId) {
