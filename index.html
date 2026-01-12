@@ -21,7 +21,9 @@
     --surface:#ffffff;--surface2:#fafafa;--surface3:#f5f5f5;
     --tx:#1a1a1a;--tx2:#555555;--tx3:#888888;
     --txdark:#1a1a1a;--txdark2:#555555;
-    --accent:#e07b39;--accent2:#c56a2e;--accentLight:rgba(224,123,57,.12);
+    /* Marka Renkleri */
+    --brand-coral:#ff8674;--brand-teal:#008c95;
+    --accent:var(--brand-coral);--accent2:var(--brand-teal);--accentLight:rgba(255,134,116,.15);
     --green:#27ae60;--red:#e74c3c;--yellow:#f39c12;--blue:#3498db;
     --glass:rgba(255,255,255,.98);--glassBorder:rgba(0,0,0,.08);
     --shadow:0 4px 24px rgba(0,0,0,.08);--shadowSm:0 2px 8px rgba(0,0,0,.05);
@@ -31,6 +33,9 @@
     --cardBg:#ffffff;--cardBorder:rgba(0,0,0,.06);
     --sectionBg:#ffffff;
     --sidebarBg:#1c1c1e;--sidebarTx:#ffffff;--sidebarTx2:rgba(255,255,255,.65);--sidebarTx3:rgba(255,255,255,.4);
+    /* Logolar */
+    --logo-dark:url('https://static.wixstatic.com/media/760af2_0e846222ae5b4021930a757e498f30e9~mv2.png');
+    --logo-light:url('https://static.wixstatic.com/media/760af2_755f54f13b654f1bb318c97f16a029a3~mv2.png/v1/fill/w_104,h_92,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Moonberry%20Coffee%20Logo.png');
 }
 /* Dark Mode */
 [data-theme="dark"]{
@@ -76,7 +81,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .lock-overlay{position:fixed;inset:0;background:var(--bg);z-index:10000;display:flex;align-items:center;justify-content:center;opacity:1;transition:opacity .5s,visibility .5s}
 .lock-overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}
 .lock-card{background:var(--glass);border:1px solid var(--glassBorder);backdrop-filter:blur(40px);border-radius:var(--radiusLg);padding:48px;text-align:center;max-width:400px;width:90%}
-.lock-logo{font-size:3.5rem;margin-bottom:16px;filter:drop-shadow(0 4px 12px rgba(224,123,57,.3))}
+.lock-logo{font-size:3.5rem;margin-bottom:16px;filter:drop-shadow(0 4px 12px rgba(255,134,116,.3))}
 .lock-title{font-size:1.4rem;font-weight:700;margin-bottom:6px}
 .lock-sub{color:var(--tx2);font-size:.85rem;margin-bottom:32px}
 .login-form{display:flex;flex-direction:column;gap:16px;text-align:left}
@@ -86,7 +91,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .login-field input:focus{border-color:var(--accent);background:var(--bg2)}
 .login-field input.error{border-color:var(--red);animation:shake .4s}
 .login-btn{padding:14px 24px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:var(--radius);color:#fff;font-size:1rem;font-weight:600;cursor:pointer;transition:var(--transition);margin-top:8px}
-.login-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(224,123,57,.4)}
+.login-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(255,134,116,.4)}
 .login-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 .lock-error{color:var(--red);font-size:.8rem;height:20px;opacity:0;transition:var(--transition);text-align:center;margin-top:8px}
 .lock-error.show{opacity:1}
@@ -98,7 +103,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .sidebar{width:260px;background:var(--sidebarBg);border-right:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;position:fixed;height:100vh;z-index:100;transition:var(--transition)}
 .sidebar-header{padding:24px 20px;border-bottom:1px solid rgba(255,255,255,.1)}
 .logo{display:flex;align-items:center;gap:12px}
-.logo-icon{width:42px;height:42px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:1.4rem;box-shadow:0 4px 16px rgba(224,123,57,.3)}
+.logo-icon{width:42px;height:42px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:1.4rem;box-shadow:0 4px 16px rgba(255,134,116,.3)}
 .logo-text{font-size:1.1rem;font-weight:700;letter-spacing:-.02em;color:var(--sidebarTx)}
 .logo-sub{font-size:.7rem;color:var(--sidebarTx3);margin-top:2px}
 .nav{flex:1;padding:16px 12px;overflow-y:auto}
@@ -106,7 +111,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .nav-label{font-size:.65rem;color:var(--sidebarTx3);text-transform:uppercase;letter-spacing:1.5px;padding:0 12px;margin-bottom:8px;font-weight:600}
 .nav-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radiusSm);cursor:pointer;transition:var(--transition);color:var(--sidebarTx2);font-weight:500;font-size:.9rem;margin-bottom:2px}
 .nav-item:hover{background:rgba(255,255,255,.1);color:var(--sidebarTx)}
-.nav-item.active{background:var(--accent);color:#fff;box-shadow:0 4px 16px rgba(224,123,57,.25)}
+.nav-item.active{background:var(--accent);color:#fff;box-shadow:0 4px 16px rgba(255,134,116,.25)}
 .nav-item .icon{font-size:1.1rem;width:24px;text-align:center;display:flex;align-items:center;justify-content:center}
 .nav-item .icon svg{width:20px;height:20px;stroke:currentColor;stroke-width:2;fill:none}
 .nav-divider{height:1px;background:rgba(255,255,255,.1);margin:16px 12px}
@@ -165,7 +170,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 /* Buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 24px;border-radius:var(--radiusSm);font-size:.9rem;font-weight:600;cursor:pointer;transition:var(--transition);border:none;font-family:var(--font)}
 .btn-primary{background:var(--accent);color:#fff}
-.btn-primary:hover{background:var(--accent2);box-shadow:0 4px 16px rgba(224,123,57,.3)}
+.btn-primary:hover{background:var(--accent2);box-shadow:0 4px 16px rgba(255,134,116,.3)}
 .btn-secondary{background:var(--surface3);color:var(--txdark)}
 .btn-secondary:hover{background:var(--surface2)}
 .btn-danger{background:var(--red);color:#fff}
@@ -302,7 +307,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     <!-- Lock Screen - Login -->
     <div class="lock-overlay" id="lockOverlay">
         <div class="lock-card">
-            <img src="https://static.wixstatic.com/media/760af2_cb121a61291f4f07adb48cfb70f3e2d9~mv2.png/v1/fill/w_94,h_82,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/beyazwhitelogo-min1.png" alt="Moonberry Coffee" class="lock-logo-img" style="width:80px;height:auto;margin-bottom:16px">
+            <img id="loginLogo" src="https://static.wixstatic.com/media/760af2_cb121a61291f4f07adb48cfb70f3e2d9~mv2.png/v1/fill/w_94,h_82,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/beyazwhitelogo-min1.png" alt="Moonberry Coffee" class="lock-logo-img" style="width:80px;height:auto;margin-bottom:16px">
             <div class="lock-title">Moonberry Coffee</div>
             <div class="lock-sub">Yönetim Paneli'ne giriş yapın</div>
             <div id="lockLocked" class="lock-locked" style="display:none">
@@ -346,7 +351,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo" onclick="goTo('dashboard')" style="cursor:pointer" title="Ana Sayfaya Dön">
-                    <img src="https://static.wixstatic.com/media/760af2_cb121a61291f4f07adb48cfb70f3e2d9~mv2.png/v1/fill/w_94,h_82,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/beyazwhitelogo-min1.png" alt="Logo" style="width:40px;height:auto">
+                    <img id="sidebarLogo" src="https://static.wixstatic.com/media/760af2_cb121a61291f4f07adb48cfb70f3e2d9~mv2.png/v1/fill/w_94,h_82,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/beyazwhitelogo-min1.png" alt="Logo" style="width:40px;height:auto">
                     <div>
                         <div class="logo-text">Moonberry</div>
                         <div class="logo-sub">Yönetim Paneli</div>
@@ -439,7 +444,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
             <div class="main-header" style="display:flex;justify-content:space-between;align-items:center;padding:16px 32px;background:var(--bg2);border-bottom:1px solid var(--bg4)">
                 <div id="breadcrumb" style="display:flex;align-items:center;gap:10px;font-size:.9rem">
                     <a onclick="goTo('dashboard')" style="color:var(--accent);font-weight:600;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:8px">
-                        <img src="https://static.wixstatic.com/media/760af2_cb121a61291f4f07adb48cfb70f3e2d9~mv2.png" style="width:28px;height:24px;object-fit:contain" onerror="this.outerHTML='☕'"> Moonberry
+                        <img id="breadcrumbLogo" src="https://static.wixstatic.com/media/760af2_cb121a61291f4f07adb48cfb70f3e2d9~mv2.png" style="width:28px;height:24px;object-fit:contain" onerror="this.outerHTML='☕'"> Moonberry
                     </a>
                     <span style="color:var(--tx3);font-size:.8rem">›</span>
                     <span id="currentPageName" style="color:var(--tx);font-weight:500">Ana Sayfa</span>
@@ -1032,7 +1037,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
                             Yazdır
                         </button>
-                        <button class="btn" onclick="downloadShiftPDF()" style="padding:10px 16px;background:#e07b39;color:#fff;border:none;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:500;cursor:pointer">
+                        <button class="btn" onclick="downloadShiftPDF()" style="padding:10px 16px;background:#ff8674;color:#fff;border:none;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:500;cursor:pointer">
                             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                             PDF İndir
                         </button>
@@ -1076,48 +1081,116 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                         Puantaj Sistemi
                     </div>
-                    <div class="page-subtitle">Personel performans değerlendirme</div>
+                    <div class="page-subtitle">Personel performans ve olay takibi</div>
                 </div>
-                <div class="form-section">
-                    <div class="form-section-title">📅 Puantaj Dönemi</div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">Ay</label>
-                            <select id="puantajAy" class="form-select" onchange="loadPuantaj()">
-                                <option value="01">Ocak</option>
-                                <option value="02">Şubat</option>
-                                <option value="03">Mart</option>
-                                <option value="04">Nisan</option>
-                                <option value="05">Mayıs</option>
-                                <option value="06">Haziran</option>
-                                <option value="07">Temmuz</option>
-                                <option value="08">Ağustos</option>
-                                <option value="09">Eylül</option>
-                                <option value="10">Ekim</option>
-                                <option value="11">Kasım</option>
-                                <option value="12">Aralık</option>
-                            </select>
+                
+                <!-- Sekmeler -->
+                <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--cardBorder);padding-bottom:12px">
+                    <button class="puantaj-tab active" onclick="showPuantajTab('kayit', this)" style="padding:10px 20px;border:none;background:var(--accent);color:#fff;border-radius:8px;cursor:pointer;font-weight:500;transition:all .2s">📝 Kayıt</button>
+                    <button class="puantaj-tab" onclick="showPuantajTab('analiz', this)" style="padding:10px 20px;border:none;background:var(--bg3);color:var(--tx);border-radius:8px;cursor:pointer;font-weight:500;transition:all .2s">📊 Analiz</button>
+                    <button class="puantaj-tab" onclick="showPuantajTab('arsiv', this)" style="padding:10px 20px;border:none;background:var(--bg3);color:var(--tx);border-radius:8px;cursor:pointer;font-weight:500;transition:all .2s">📁 Arşiv</button>
+                </div>
+                
+                <!-- KAYIT SEKMESİ -->
+                <div id="puantajKayitTab">
+                    <div class="form-section">
+                        <div class="form-section-title">📅 Dönem Seçimi</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Ay</label>
+                                <select id="puantajAy" class="form-select" onchange="loadPuantaj()">
+                                    <option value="01">Ocak</option>
+                                    <option value="02">Şubat</option>
+                                    <option value="03">Mart</option>
+                                    <option value="04">Nisan</option>
+                                    <option value="05">Mayıs</option>
+                                    <option value="06">Haziran</option>
+                                    <option value="07">Temmuz</option>
+                                    <option value="08">Ağustos</option>
+                                    <option value="09">Eylül</option>
+                                    <option value="10">Ekim</option>
+                                    <option value="11">Kasım</option>
+                                    <option value="12">Aralık</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Yıl</label>
+                                <select id="puantajYil" class="form-select" onchange="loadPuantaj()">
+                                    <option value="2027">2027</option>
+                                    <option value="2026">2026</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2024">2024</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Şube</label>
+                                <select id="puantajSube" class="form-select" onchange="loadPuantaj()"></select>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Yıl</label>
-                            <select id="puantajYil" class="form-select" onchange="loadPuantaj()">
-                                <option value="2026">2026</option>
-                                <option value="2025">2025</option>
-                            </select>
+                    </div>
+                    
+                    <!-- Puan Sistemi Açıklama -->
+                    <div style="background:linear-gradient(135deg,rgba(255,134,116,.1),rgba(0,140,149,.1));border:1px solid var(--cardBorder);border-radius:12px;padding:16px;margin-bottom:20px">
+                        <div style="font-weight:600;color:var(--tx);margin-bottom:10px">⭐ Yıldız Sistemi</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:.85rem">
+                            <div style="display:flex;align-items:center;gap:6px"><span style="color:#e74c3c">⭐</span> Ciddi İhlal (-1)</div>
+                            <div style="display:flex;align-items:center;gap:6px"><span style="color:#e67e22">⭐⭐</span> Orta İhlal (-1)</div>
+                            <div style="display:flex;align-items:center;gap:6px"><span style="color:#f39c12">⭐⭐⭐</span> Hafif Uyarı (-1)</div>
+                            <div style="display:flex;align-items:center;gap:6px"><span style="color:#27ae60">⭐⭐⭐⭐</span> İyi Performans (+1)</div>
+                            <div style="display:flex;align-items:center;gap:6px"><span style="color:#2ecc71">⭐⭐⭐⭐⭐</span> Mükemmel (+2)</div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Şube</label>
-                            <select id="puantajSube" class="form-select" onchange="loadPuantaj()"></select>
+                        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--cardBorder);font-size:.8rem;color:var(--tx2)">
+                            <strong>Prim Kuralı:</strong> Toplam puan -5'e ulaşırsa prim hakkı kaybedilir. Her ay puanlar sıfırlanır.
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <div class="form-section-title" style="justify-content:space-between">
+                            <span>👥 Personel Durumu</span>
+                            <button class="btn btn-sm btn-ghost" onclick="showPuantajRules()">📋 Kural Tanımları</button>
+                        </div>
+                        <div id="puantajTableContainer">
+                            <p style="color:var(--tx2);text-align:center;padding:40px">Puantaj verisi yükleniyor...</p>
                         </div>
                     </div>
                 </div>
-                <div class="form-section">
-                    <div class="form-section-title" style="justify-content:space-between">
-                        <span>⭐ Puantaj Tablosu</span>
-                        <button class="btn btn-sm btn-ghost" onclick="showPuantajRules()">📋 Kurallar</button>
+                
+                <!-- ANALİZ SEKMESİ -->
+                <div id="puantajAnalizTab" style="display:none">
+                    <div class="form-section">
+                        <div class="form-section-title">📊 Performans Analizi</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Dönem</label>
+                                <select id="analizDonem" class="form-select" onchange="loadPuantajAnaliz()">
+                                    <option value="current">Bu Ay</option>
+                                    <option value="all">Tüm Zamanlar</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Şube</label>
+                                <select id="analizSube" class="form-select" onchange="loadPuantajAnaliz()"></select>
+                            </div>
+                        </div>
                     </div>
-                    <div id="puantajTableContainer">
-                        <p style="color:var(--tx2);text-align:center;padding:40px">Puantaj verisi yükleniyor...</p>
+                    <div id="puantajAnalizContainer">
+                        <p style="color:var(--tx2);text-align:center;padding:40px">Analiz yükleniyor...</p>
+                    </div>
+                </div>
+                
+                <!-- ARŞİV SEKMESİ -->
+                <div id="puantajArsivTab" style="display:none">
+                    <div class="form-section">
+                        <div class="form-section-title">📁 Geçmiş Dönemler</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Şube</label>
+                                <select id="arsivSube" class="form-select" onchange="loadPuantajArsiv()"></select>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="puantajArsivContainer">
+                        <p style="color:var(--tx2);text-align:center;padding:40px">Arşiv yükleniyor...</p>
                     </div>
                 </div>
             </div>
@@ -1197,6 +1270,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                                     <label class="form-label">Önizlenecek Rol</label>
                                     <select id="previewRoleSelect" class="form-input">
                                         <option value="">-- Rol Seçin --</option>
+                                        <option value="barista">Barista (Salt Okunur)</option>
                                         <option value="bolge_muduru">Bölge Müdürü</option>
                                         <option value="magaza_muduru">Mağaza Müdürü</option>
                                     </select>
@@ -1243,6 +1317,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         <div class="form-group">
                             <label class="form-label">Rol Seç</label>
                             <select id="roleSelect" class="form-select" onchange="loadRolePermissions()">
+                                <option value="barista">Barista (Salt Okunur)</option>
                                 <option value="bolge_muduru">Bölge Müdürü</option>
                                 <option value="magaza_muduru">Mağaza Müdürü</option>
                             </select>
@@ -1717,18 +1792,18 @@ const DEFAULT_STATE = {
     },
     documentTemplates: {
         tutanak: {
-            olay: '<p><strong>OLAY:</strong></p><p>{{TARIH}} tarihinde saat {{SAAT}} sıralarında, {{SUBE}} şubesinde görevli {{PERSONEL}} ({{TC}}) aşağıda açıklanan olayı gerçekleştirmiştir:</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #e07b39;margin:15px 0">{{ACIKLAMA}}</p><p>İşbu tutanak, olayın tespiti amacıyla düzenlenmiş olup, ilgili personele tebliğ edilmiştir.</p>',
+            olay: '<p><strong>OLAY:</strong></p><p>{{TARIH}} tarihinde saat {{SAAT}} sıralarında, {{SUBE}} şubesinde görevli {{PERSONEL}} ({{TC}}) aşağıda açıklanan olayı gerçekleştirmiştir:</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #ff8674;margin:15px 0">{{ACIKLAMA}}</p><p>İşbu tutanak, olayın tespiti amacıyla düzenlenmiş olup, ilgili personele tebliğ edilmiştir.</p>',
             devamsizlik: '<p><strong>DEVAMSIZLIK TESPİTİ:</strong></p><p>{{PERSONEL}} ({{TC}}), {{TARIH}} tarihinde {{SUBE}} şubesinde göreve gelmemiştir.</p><p>Yapılan araştırmada herhangi bir mazeret bildirimi tespit edilememiştir.</p><p style="background:#fef9e7;padding:12px;border-radius:6px;margin:15px 0">⚠️ İş Kanunu Md. 25/II-g: Ardı ardına 2 iş günü veya ay içinde 3 iş günü devamsızlık haklı fesih sebebidir.</p>',
-            kasa: '<p><strong>KASA SAYIM TESPİTİ:</strong></p><p>{{TARIH}} tarihinde saat {{SAAT}} itibarıyla {{SUBE}} şubesinde yapılan kasa sayımında aşağıdaki tespit yapılmıştır:</p><p>Sorumlu personel: {{PERSONEL}} ({{TC}})</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #e07b39;margin:15px 0">{{ACIKLAMA}}</p><p>TBK Md. 407/2 uyarınca personelin yazılı muvafakati ile ücretinden kesinti yapılabilir.</p>',
+            kasa: '<p><strong>KASA SAYIM TESPİTİ:</strong></p><p>{{TARIH}} tarihinde saat {{SAAT}} itibarıyla {{SUBE}} şubesinde yapılan kasa sayımında aşağıdaki tespit yapılmıştır:</p><p>Sorumlu personel: {{PERSONEL}} ({{TC}})</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #ff8674;margin:15px 0">{{ACIKLAMA}}</p><p>TBK Md. 407/2 uyarınca personelin yazılı muvafakati ile ücretinden kesinti yapılabilir.</p>',
             imza: '<p><strong>İMZADAN İMTİNA TESPİTİ:</strong></p><p>{{TARIH}} tarihinde {{PERSONEL}} ({{TC}}) adlı personele tebliğ edilmek istenen belgeyi imzalamaktan imtina etmiştir.</p><p>İmtina edilen belge: {{ACIKLAMA}}</p><p style="background:#ebf5fb;padding:12px;border-radius:6px;margin:15px 0">📌 Yargıtay içtihadı gereği, 2 şahit huzurunda düzenlenen imtina tutanağı tebliğ yerine geçer.</p>'
         },
-        savunma: '<p>Şirketimiz {{SUBE}} şubesinde {{POZISYON}} olarak görev yapmaktasınız.</p><p><strong>{{TARIH}}</strong> tarihinde gerçekleştirdiğiniz aşağıdaki davranış/eylem nedeniyle savunmanız istenmektedir:</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #e07b39;margin:15px 0">{{ACIKLAMA}}</p><p>Bu davranış <strong>{{DAYANAK}}</strong> kapsamında değerlendirilmektedir.</p><p style="background:#fef9e7;padding:12px;border-radius:6px;margin:15px 0">⚠️ Savunmanızı bu yazının tebliğinden itibaren <strong>{{SURE}}</strong> içinde yazılı olarak vermeniz gerekmektedir. Süresinde savunma verilmemesi, savunma hakkından vazgeçilmiş sayılacaktır.</p>',
+        savunma: '<p>Şirketimiz {{SUBE}} şubesinde {{POZISYON}} olarak görev yapmaktasınız.</p><p><strong>{{TARIH}}</strong> tarihinde gerçekleştirdiğiniz aşağıdaki davranış/eylem nedeniyle savunmanız istenmektedir:</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #ff8674;margin:15px 0">{{ACIKLAMA}}</p><p>Bu davranış <strong>{{DAYANAK}}</strong> kapsamında değerlendirilmektedir.</p><p style="background:#fef9e7;padding:12px;border-radius:6px;margin:15px 0">⚠️ Savunmanızı bu yazının tebliğinden itibaren <strong>{{SURE}}</strong> içinde yazılı olarak vermeniz gerekmektedir. Süresinde savunma verilmemesi, savunma hakkından vazgeçilmiş sayılacaktır.</p>',
         fesih: {
             hakli: '<p>{{TARIH}} tarihinde gerçekleştirdiğiniz aşağıdaki eylem/davranış nedeniyle iş sözleşmeniz <strong>4857 sayılı İş Kanunu\'nun {{DAYANAK}} maddesi</strong> uyarınca haklı nedenle ve derhal feshedilmiştir:</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #c0392b;margin:15px 0">{{ACIKLAMA}}</p><p>Bu fesih işlemi sonucunda kıdem ve ihbar tazminatı ödenmeyecektir.</p>',
-            gecerli: '<p>Aşağıda belirtilen nedenlerle iş sözleşmeniz <strong>4857 sayılı İş Kanunu\'nun 17. ve 18. maddeleri</strong> uyarınca geçerli nedenle feshedilmiştir:</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #e07b39;margin:15px 0">{{ACIKLAMA}}</p><p>İhbar süreniz: {{IHBAR_SURE}}<br>Son çalışma gününüz: {{SON_GUN}}</p><p>Kıdem tazminatı ve diğer yasal haklarınız ödenecektir.</p>',
+            gecerli: '<p>Aşağıda belirtilen nedenlerle iş sözleşmeniz <strong>4857 sayılı İş Kanunu\'nun 17. ve 18. maddeleri</strong> uyarınca geçerli nedenle feshedilmiştir:</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #ff8674;margin:15px 0">{{ACIKLAMA}}</p><p>İhbar süreniz: {{IHBAR_SURE}}<br>Son çalışma gününüz: {{SON_GUN}}</p><p>Kıdem tazminatı ve diğer yasal haklarınız ödenecektir.</p>',
             deneme: '<p>{{BASLAMA}} tarihinde başlayan iş sözleşmeniz, 2 aylık deneme süresi içinde <strong>4857 sayılı İş Kanunu\'nun 15. maddesi</strong> uyarınca sona erdirilmiştir.</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #3498db;margin:15px 0">{{ACIKLAMA}}</p><p>Deneme süresi içinde fesih bildirim süresine ve tazminata tabi değildir.</p>'
         },
-        borc: '<p>Ben {{PERSONEL}}, {{TARIH}} tarihli olayda kusurum nedeniyle <strong>{{TUTAR}} TL</strong> borcu kabul ediyorum.</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #e07b39;margin:15px 0">{{ACIKLAMA}}</p><p>TBK Md. 407/2 uyarınca bu borcun {{ODEME_SEKLI}} kabul ve taahhüt ediyorum.</p><p>Baskı altında olmadığımı, borcumu ve kesinti koşullarını anladığımı beyan ederim.</p>'
+        borc: '<p>Ben {{PERSONEL}}, {{TARIH}} tarihli olayda kusurum nedeniyle <strong>{{TUTAR}} TL</strong> borcu kabul ediyorum.</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #ff8674;margin:15px 0">{{ACIKLAMA}}</p><p>TBK Md. 407/2 uyarınca bu borcun {{ODEME_SEKLI}} kabul ve taahhüt ediyorum.</p><p>Baskı altında olmadığımı, borcumu ve kesinti koşullarını anladığımı beyan ederim.</p>'
     }
 };
 
@@ -2206,7 +2281,8 @@ function applyUserPermissions() {
         const roleNames = {
             'yonetici': 'Yönetici',
             'bolge_muduru': 'Bölge Müdürü',
-            'magaza_muduru': 'Mağaza Müdürü'
+            'magaza_muduru': 'Mağaza Müdürü',
+            'barista': 'Barista'
         };
         userRoleEl.textContent = roleNames[currentUser.role] || currentUser.role;
     }
@@ -2216,6 +2292,12 @@ function applyUserPermissions() {
     
     // Yönetici her şeye erişebilir
     if (currentUser.role === 'yonetici') return;
+    
+    // Barista için özel kısıtlamalar
+    if (currentUser.role === 'barista') {
+        applyBaristaRestrictions();
+        return;
+    }
     
     // Diğer roller için yetki kontrolü
     db.collection('permissions').doc(currentUser.role).get().then(doc => {
@@ -2235,6 +2317,55 @@ function applyUserPermissions() {
             document.querySelector('.nav-item[data-page="admin"]').style.display = 'none';
         }
     });
+}
+
+// Barista kısıtlamaları
+function applyBaristaRestrictions() {
+    // İzin verilen sayfalar
+    const allowedPages = ['dashboard', 'puantaj', 'shift'];
+    
+    // Navbar menülerini kısıtla
+    document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+        const page = item.dataset.page;
+        if (!allowedPages.includes(page)) {
+            item.style.display = 'none';
+        }
+    });
+    
+    // Nav gruplarını kontrol et - boş olanları gizle
+    document.querySelectorAll('.nav-group').forEach(group => {
+        const visibleItems = group.querySelectorAll('.nav-item:not([style*="display: none"])');
+        if (visibleItems.length === 0) {
+            group.style.display = 'none';
+        }
+    });
+    
+    // Dashboard kartlarını kısıtla
+    document.querySelectorAll('.dashboard-card').forEach(card => {
+        const onclick = card.getAttribute('onclick') || '';
+        const allowedCards = ['puantaj', 'shift'];
+        const isAllowed = allowedCards.some(p => onclick.includes(`'${p}'`));
+        if (!isAllowed && onclick.includes('goTo')) {
+            card.style.display = 'none';
+        }
+    });
+    
+    // Dashboard section'ları kontrol et - Belgeler bölümünü tamamen gizle
+    document.querySelectorAll('.dashboard-section').forEach(section => {
+        const header = section.querySelector('div');
+        if (header && header.textContent.includes('Belgeler')) {
+            section.style.display = 'none';
+        }
+        if (header && header.textContent.includes('Sistem')) {
+            section.style.display = 'none';
+        }
+    });
+    
+    // Barista badge'i ekle
+    const userRoleEl = document.getElementById('userRole');
+    if (userRoleEl) {
+        userRoleEl.innerHTML = '<span style="background:var(--accent);color:#fff;padding:2px 8px;border-radius:10px;font-size:.65rem">SALT OKUNUR</span> Barista';
+    }
 }
 
 async function loadFirebaseData() {
@@ -2288,7 +2419,16 @@ function goTo(page) {
     if (page === 'katalog') renderViolations();
     if (page === 'admin') renderAdminLists();
     if (page === 'personel') loadPersonelList();
-    if (page === 'puantaj') { populateSubeSelect('puantajSube'); loadPuantaj(); }
+    if (page === 'puantaj') { 
+        populateSubeSelect('puantajSube'); 
+        // Şimdiki ay ve yılı seç
+        const now = new Date();
+        const aySelect = document.getElementById('puantajAy');
+        const yilSelect = document.getElementById('puantajYil');
+        if (aySelect) aySelect.value = String(now.getMonth() + 1).padStart(2, '0');
+        if (yilSelect) yilSelect.value = String(now.getFullYear());
+        loadPuantaj(); 
+    }
     if (page === 'shift') { 
         populateSubeSelect('shiftSube'); 
         loadShiftList();
@@ -2629,7 +2769,7 @@ function generateSozlesme() {
         <div style="margin-top:25px;padding:15px;border:1px solid #000;page-break-inside:avoid;">
             <p style="font-size:9pt;margin-bottom:8px;font-style:italic">(Aşağıdaki alan Personel tarafından kendi el yazısı ile doldurulacaktır)</p>
             <p style="font-weight:bold;margin-bottom:8px;font-size:10pt">EL YAZISI İLE BEYAN:</p>
-            <p style="background:#f5f5f5;padding:8px;margin:8px 0;font-style:italic;font-size:9pt;border-left:3px solid #e07b39">${elYazisiMetni}</p>
+            <p style="background:#f5f5f5;padding:8px;margin:8px 0;font-style:italic;font-size:9pt;border-left:3px solid #ff8674">${elYazisiMetni}</p>
             <div style="margin-top:10px;border:1px solid #ccc;height:50px;background:#fafafa"></div>
             <table style="width:100%;margin-top:10px;border:none;font-size:10pt">
                 <tr>
@@ -2671,7 +2811,7 @@ function generateTutanak() {
         </div>
         <div class="doc-section">
             <div class="doc-section-title">OLAY AÇIKLAMASI</div>
-            <p style="background:#f9f9f9;padding:15px;border-left:4px solid #e07b39">${aciklama}</p>
+            <p style="background:#f9f9f9;padding:15px;border-left:4px solid #ff8674">${aciklama}</p>
         </div>
         <p style="margin:20px 0">İşbu tutanak şahitler huzurunda düzenlenmiştir.</p>
         <div class="doc-section">
@@ -2971,7 +3111,7 @@ function generateBorc() {
         </div>
         <div class="doc-section">
             <div class="doc-section-title">OLAY AÇIKLAMASI</div>
-            <p style="background:#f9f9f9;padding:15px;border-left:4px solid #e07b39">${aciklama}</p>
+            <p style="background:#f9f9f9;padding:15px;border-left:4px solid #ff8674">${aciklama}</p>
         </div>
         <div class="doc-section">
             <p>Ben ${personel}, ${tarih} tarihli olayda kusurum nedeniyle <strong>${tutar} TL</strong> borcumu kabul ediyor, TBK 407/2 uyarınca ${odemeLabels[odeme]} kendi irademle taahhüt ediyorum.</p>
@@ -3042,7 +3182,7 @@ function generateAvans() {
         </table>
         <div style="margin:15px 0">
             <strong>Talep Gerekçesi:</strong>
-            <p style="background-color:#f9f9f9;-webkit-print-color-adjust:exact;padding:12px;border-left:3px solid #e07b39;margin:8px 0;min-height:50px">${gerekce}</p>
+            <p style="background-color:#f9f9f9;-webkit-print-color-adjust:exact;padding:12px;border-left:3px solid #ff8674;margin:8px 0;min-height:50px">${gerekce}</p>
         </div>
         <div style="background-color:#f5f5f5;-webkit-print-color-adjust:exact;padding:10px;border-radius:4px;margin:15px 0">
             <strong>PERSONEL BEYANI:</strong> Ben ${personel}, yukarıda belirtilen tutarda avans talep ettiğimi, bu avansın onaylanması halinde gelecek ay maaşımdan tek seferde kesilerek mahsup edileceğini kabul ve taahhüt ederim.
@@ -3199,7 +3339,7 @@ function generateZimmet() {
     
     const html = `<div class="doc" style="font-size:11pt;line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact">
         ${docHeader('DEMİRBAŞ TESLİM VE ZİMMET TUTANAĞI')}
-        <p style="text-align:center;font-weight:bold;margin-top:-10px;margin-bottom:20px;color:#e07b39">${islemLabels[islem]}</p>
+        <p style="text-align:center;font-weight:bold;margin-top:-10px;margin-bottom:20px;color:#ff8674">${islemLabels[islem]}</p>
         <div class="doc-section" style="margin-bottom:15px">
             <table style="width:100%;font-size:10pt">
                 <tr><td><strong>Tarih:</strong> ${tarih}</td><td style="text-align:right"><strong>Belge No:</strong> ${docNo('ZMT', sube)}</td></tr>
@@ -3246,7 +3386,7 @@ function generateZimmet() {
             </table>
         </div>
         
-        ${notlar ? `<div style="margin:15px 0"><strong>Ek Notlar:</strong><p style="background-color:#f9f9f9;-webkit-print-color-adjust:exact;padding:10px;border-left:3px solid #e07b39;margin:5px 0">${notlar}</p></div>` : ''}
+        ${notlar ? `<div style="margin:15px 0"><strong>Ek Notlar:</strong><p style="background-color:#f9f9f9;-webkit-print-color-adjust:exact;padding:10px;border-left:3px solid #ff8674;margin:5px 0">${notlar}</p></div>` : ''}
         
         <div style="background-color:#ebf5fb;-webkit-print-color-adjust:exact;padding:12px;border-radius:6px;font-size:10pt;margin:20px 0">
             <strong>PERSONEL TAAHHÜDÜ:</strong><br>
@@ -3604,14 +3744,16 @@ function startRolePreview() {
     
     // Önizleme kullanıcısını ayarla
     const roleNames = {
+        'barista': 'Barista',
         'bolge_muduru': 'Bölge Müdürü',
-        'magaza_muduru': 'Mağaza Müdürü'
+        'magaza_muduru': 'Mağaza Müdürü',
+        'yonetici': 'Yönetici'
     };
     
     currentUser = {
         ...currentUser,
         role: role,
-        branch: role === 'magaza_muduru' ? branch : 'all',
+        branch: role === 'magaza_muduru' ? branch : (role === 'barista' ? branch : 'all'),
         name: `Önizleme: ${roleNames[role]}`
     };
     
@@ -3638,6 +3780,18 @@ function startRolePreview() {
 }
 
 function applyRolePreviewPermissions(role, branch) {
+    // Barista için özel kısıtlamalar
+    if (role === 'barista') {
+        applyBaristaRestrictions();
+        if (branch) {
+            document.querySelectorAll('select[id*="Sube"]').forEach(select => {
+                select.value = branch;
+                select.disabled = true;
+            });
+        }
+        return;
+    }
+    
     // Menü öğelerini göster/gizle
     const hiddenForMagaza = ['admin', 'sozlesme', 'fesih'];
     const hiddenForBolge = [];
@@ -3684,6 +3838,21 @@ function stopRolePreview() {
     // Tüm menü öğelerini göster
     document.querySelectorAll('.nav-item[data-page]').forEach(item => {
         item.style.display = '';
+    });
+    
+    // Tüm nav gruplarını göster
+    document.querySelectorAll('.nav-group').forEach(group => {
+        group.style.display = '';
+    });
+    
+    // Tüm dashboard kartlarını göster
+    document.querySelectorAll('.dashboard-card').forEach(card => {
+        card.style.display = '';
+    });
+    
+    // Tüm dashboard section'ları göster
+    document.querySelectorAll('.dashboard-section').forEach(section => {
+        section.style.display = '';
     });
     
     // Şube seçicileri aç
@@ -4556,6 +4725,9 @@ async function loadPuantaj() {
     const yil = document.getElementById('puantajYil').value;
     const sube = document.getElementById('puantajSube').value;
     
+    // Barista kontrolü
+    const isBarista = currentUser?.role === 'barista';
+    
     container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx2)">Yükleniyor...</div>';
     
     // Kuralları yükle
@@ -4579,12 +4751,6 @@ async function loadPuantaj() {
             puantajData[d.personelId].push({ id: doc.id, ...d });
         });
         
-        // Kural seçenekleri
-        let ruleOptions = puantajRulesCache.map(r => 
-            `<option value="${r.id}" data-score="${r.effect === 'prim_yok' ? 1 : (r.effect.includes('-') ? Math.max(1, 5 + parseInt(r.effect)) : 3)}">${r.title}</option>`
-        ).join('');
-        ruleOptions += '<option value="other">Diğer (Manuel)</option>';
-        
         let html = '';
         const personelList = [];
         
@@ -4592,86 +4758,134 @@ async function loadPuantaj() {
             const p = doc.data();
             const puanlar = puantajData[doc.id] || [];
             const kayitSayisi = puanlar.length;
-            const toplamPuan = puanlar.reduce((sum, x) => sum + (x.score || 0), 0);
-            const ortalama = kayitSayisi > 0 ? (toplamPuan / kayitSayisi).toFixed(1) : '-';
-            const dusukPuanSayisi = puanlar.filter(x => x.score === 1).length;
-            const primDurumu = dusukPuanSayisi >= 5 ? 'prim_yok' : 'prim_var';
             
-            personelList.push({ id: doc.id, name: p.name, tc: p.tc, position: p.position, ortalama, primDurumu, kayitSayisi, dusukPuanSayisi, puanlar });
+            // Yeni puan hesaplama: 1-3 yıldız negatif, 4-5 yıldız pozitif
+            let toplamPuan = 0;
+            let negatifOlay = 0;
+            let pozitifOlay = 0;
+            
+            puanlar.forEach(x => {
+                const yildiz = x.score || 3;
+                if (yildiz <= 3) {
+                    toplamPuan -= 1; // 1-3 yıldız = -1 puan
+                    negatifOlay++;
+                } else if (yildiz === 4) {
+                    toplamPuan += 1; // 4 yıldız = +1 puan
+                    pozitifOlay++;
+                } else if (yildiz === 5) {
+                    toplamPuan += 2; // 5 yıldız = +2 puan
+                    pozitifOlay++;
+                }
+            });
+            
+            const primDurumu = toplamPuan <= -5 ? 'prim_yok' : 'prim_var';
+            
+            personelList.push({ 
+                id: doc.id, 
+                name: p.name, 
+                tc: p.tc, 
+                position: p.position, 
+                toplamPuan,
+                primDurumu, 
+                kayitSayisi, 
+                negatifOlay,
+                pozitifOlay,
+                puanlar 
+            });
         });
         
         // Puantaj cache'e personel listesini kaydet
         window.puantajPersonelCache = personelList;
         
         // Personel Kartları
-        html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:24px">`;
+        html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-bottom:24px">`;
         personelList.forEach(p => {
             const statusColor = p.primDurumu === 'prim_yok' ? '#ff6b6b' : '#51cf66';
-            const statusBg = p.primDurumu === 'prim_yok' ? 'rgba(255,107,107,.1)' : 'rgba(81,207,102,.1)';
-            const stars = p.ortalama !== '-' ? '★'.repeat(Math.round(parseFloat(p.ortalama))) + '☆'.repeat(5 - Math.round(parseFloat(p.ortalama))) : '☆☆☆☆☆';
+            const statusBg = p.primDurumu === 'prim_yok' ? 'rgba(255,107,107,.15)' : 'rgba(81,207,102,.15)';
+            const puanColor = p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx)');
+            const puanSign = p.toplamPuan > 0 ? '+' : '';
             
             html += `
                 <div class="puantaj-card" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:16px;padding:20px;transition:all .2s;box-shadow:0 2px 12px rgba(0,0,0,.06)">
-                    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px">
+                    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px">
                         <div>
-                            <div style="font-weight:600;font-size:1.05rem;color:var(--tx)">${p.name}</div>
+                            <div style="font-weight:600;font-size:1.1rem;color:var(--tx)">${p.name}</div>
                             <div style="font-size:.8rem;color:var(--tx2)">${p.position || 'Personel'}</div>
                         </div>
-                        <div style="background:${statusBg};color:${statusColor};padding:4px 10px;border-radius:20px;font-size:.75rem;font-weight:500">
-                            ${p.primDurumu === 'prim_yok' ? '⚠️ Prim Yok' : '✓ Prim Var'}
+                        <div style="background:${statusBg};color:${statusColor};padding:6px 12px;border-radius:20px;font-size:.8rem;font-weight:600">
+                            ${p.primDurumu === 'prim_yok' ? '⚠️ PRİM YOK' : '✓ Prim Var'}
                         </div>
                     </div>
-                    <div style="display:flex;gap:12px;margin-bottom:16px">
-                        <div style="flex:1;background:var(--bg3);border-radius:12px;padding:12px;text-align:center">
-                            <div style="font-size:1.6rem;font-weight:700;color:var(--accent)">${p.ortalama}</div>
-                            <div style="font-size:.65rem;color:var(--tx2);text-transform:uppercase">Ortalama</div>
+                    <div style="display:flex;gap:10px;margin-bottom:16px">
+                        <div style="flex:1;background:var(--bg3);border-radius:12px;padding:14px;text-align:center">
+                            <div style="font-size:1.8rem;font-weight:700;color:${puanColor}">${puanSign}${p.toplamPuan}</div>
+                            <div style="font-size:.7rem;color:var(--tx2);text-transform:uppercase">Toplam Puan</div>
                         </div>
-                        <div style="flex:1;background:var(--bg3);border-radius:12px;padding:12px;text-align:center">
-                            <div style="font-size:1.6rem;font-weight:700;color:var(--tx)">${p.kayitSayisi}</div>
-                            <div style="font-size:.65rem;color:var(--tx2);text-transform:uppercase">Kayıt</div>
+                        <div style="flex:1;background:rgba(231,76,60,.1);border-radius:12px;padding:14px;text-align:center">
+                            <div style="font-size:1.8rem;font-weight:700;color:#e74c3c">${p.negatifOlay}</div>
+                            <div style="font-size:.7rem;color:var(--tx2);text-transform:uppercase">Negatif</div>
                         </div>
-                        <div style="flex:1;background:var(--bg3);border-radius:12px;padding:12px;text-align:center">
-                            <div style="font-size:1.6rem;font-weight:700;color:#e74c3c">${p.dusukPuanSayisi}</div>
-                            <div style="font-size:.65rem;color:var(--tx2);text-transform:uppercase">Düşük</div>
+                        <div style="flex:1;background:rgba(39,174,96,.1);border-radius:12px;padding:14px;text-align:center">
+                            <div style="font-size:1.8rem;font-weight:700;color:#27ae60">${p.pozitifOlay}</div>
+                            <div style="font-size:.7rem;color:var(--tx2);text-transform:uppercase">Pozitif</div>
                         </div>
                     </div>
-                    <div style="color:var(--yellow);font-size:1rem;margin-bottom:12px;letter-spacing:2px">${stars}</div>
+                    ${p.toplamPuan <= -5 ? `
+                        <div style="background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);border-radius:8px;padding:10px;margin-bottom:12px;text-align:center">
+                            <div style="color:#e74c3c;font-weight:600;font-size:.85rem">🚨 Prim Hakkı Kaybedildi!</div>
+                            <div style="color:#c0392b;font-size:.75rem;margin-top:4px">Toplam puan -5'e ulaştı</div>
+                        </div>
+                    ` : ''}
+                    ${!isBarista ? `
                     <div style="display:flex;gap:8px">
-                        <button class="btn btn-sm btn-primary" style="flex:1" onclick="showPuantajModal('${p.id}', '${p.name}')">
-                            ⭐ Puan Ver
+                        <button class="btn btn-sm" style="flex:1;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.2);color:#e74c3c" onclick="showPuantajModal('${p.id}', '${p.name}', 'negatif')">
+                            ⭐ İhlal Ekle
                         </button>
-                        <button class="btn btn-sm" style="background:var(--bg4);border:none;color:var(--tx)" onclick="showPersonelAnaliz('${p.id}', '${p.name}')" title="Performans Analizi">
-                            📊 Analiz
+                        <button class="btn btn-sm" style="flex:1;background:rgba(39,174,96,.1);border:1px solid rgba(39,174,96,.2);color:#27ae60" onclick="showPuantajModal('${p.id}', '${p.name}', 'pozitif')">
+                            ⭐ Başarı Ekle
                         </button>
                     </div>
+                    ` : `
+                    <div style="text-align:center;padding:8px;background:var(--bg3);border-radius:8px;font-size:.75rem;color:var(--tx3)">
+                        👁️ Salt Okunur Mod
+                    </div>
+                    `}
                 </div>
             `;
         });
         html += `</div>`;
         
-        // Geçmiş Puanlar
-        html += `<div style="background:rgba(255,255,255,.02);border-radius:16px;padding:20px;border:1px solid rgba(255,255,255,.06)">`;
-        html += `<div style="font-weight:600;margin-bottom:16px;color:var(--tx)">Bu Ay Verilen Puanlar</div>`;
+        // Bu Ay Kayıtlar
+        html += `<div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:16px;padding:20px">`;
+        html += `<div style="font-weight:600;margin-bottom:16px;color:var(--tx);font-size:1rem">📋 Bu Ay Kayıtları</div>`;
         
         let hasRecords = false;
         personelList.forEach(p => {
             if (p.puanlar && p.puanlar.length > 0) {
                 hasRecords = true;
                 html += `<div style="margin-bottom:16px">`;
-                html += `<div style="font-size:.85rem;font-weight:500;color:var(--tx);margin-bottom:8px">${p.name}</div>`;
+                html += `<div style="font-size:.9rem;font-weight:600;color:var(--tx);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--cardBorder)">${p.name}</div>`;
                 p.puanlar.forEach(puan => {
-                    const tarih = puan.updatedAt?.toDate?.() ? puan.updatedAt.toDate().toLocaleDateString('tr-TR') : '-';
-                    const stars = '★'.repeat(puan.score) + '☆'.repeat(5 - puan.score);
-                    const rule = puantajRulesCache.find(r => r.id === puan.ruleId);
+                    const tarih = puan.createdAt?.toDate?.() ? puan.createdAt.toDate().toLocaleDateString('tr-TR') : '-';
+                    const yildiz = puan.score || 3;
+                    const stars = '⭐'.repeat(yildiz);
+                    const isNegative = yildiz <= 3;
+                    const puanEtki = isNegative ? '-1' : (yildiz === 5 ? '+2' : '+1');
+                    const bgColor = isNegative ? 'rgba(231,76,60,.08)' : 'rgba(39,174,96,.08)';
+                    const borderColor = isNegative ? 'rgba(231,76,60,.2)' : 'rgba(39,174,96,.2)';
+                    
                     html += `
-                        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(255,255,255,.03);border-radius:10px;margin-bottom:6px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:${bgColor};border:1px solid ${borderColor};border-radius:10px;margin-bottom:8px">
                             <div style="display:flex;align-items:center;gap:12px">
-                                <span style="color:var(--yellow);letter-spacing:2px">${stars}</span>
-                                <span style="color:var(--tx2);font-size:.85rem">${rule?.title || puan.note || '-'}</span>
+                                <span style="font-size:.9rem">${stars}</span>
+                                <div>
+                                    <div style="color:var(--tx);font-size:.85rem;font-weight:500">${puan.note || '-'}</div>
+                                    <div style="color:var(--tx3);font-size:.75rem">${tarih}</div>
+                                </div>
                             </div>
-                            <div style="display:flex;align-items:center;gap:12px">
-                                <span style="color:var(--tx3);font-size:.75rem">${tarih}</span>
-                                <button onclick="deletePuantajEntry('${puan.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:.8rem;padding:4px 8px;border-radius:6px;transition:all .2s" onmouseover="this.style.background='rgba(255,107,107,.1)'" onmouseout="this.style.background='none'">Sil</button>
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <span style="font-weight:600;color:${isNegative ? '#e74c3c' : '#27ae60'};font-size:.9rem">${puanEtki}</span>
+                                ${!isBarista ? `<button onclick="deletePuantajEntry('${puan.id}')" style="background:rgba(255,107,107,.1);border:none;color:#e74c3c;cursor:pointer;font-size:.75rem;padding:6px 10px;border-radius:6px;transition:all .2s" onmouseover="this.style.background='rgba(255,107,107,.2)'" onmouseout="this.style.background='rgba(255,107,107,.1)'">Sil</button>` : ''}
                             </div>
                         </div>
                     `;
@@ -4681,7 +4895,7 @@ async function loadPuantaj() {
         });
         
         if (!hasRecords) {
-            html += `<div style="text-align:center;padding:40px;color:var(--tx3)">Bu ay henüz puan verilmemiş</div>`;
+            html += `<div style="text-align:center;padding:40px;color:var(--tx3)">Bu ay henüz kayıt eklenmemiş</div>`;
         }
         html += `</div>`;
         
@@ -4692,92 +4906,128 @@ async function loadPuantaj() {
     }
 }
 
-function showPuantajModal(personelId, name) {
-    let ruleOptions = puantajRulesCache.map(r => {
-        const autoScore = r.effect === 'prim_yok' ? 1 : (r.effect.includes('-') ? Math.max(1, 5 + parseInt(r.effect)) : 3);
-        return `<option value="${r.id}" data-score="${autoScore}">${r.title} (${autoScore}★)</option>`;
-    }).join('');
+function showPuantajModal(personelId, name, type = 'negatif') {
+    const isNegative = type === 'negatif';
+    const title = isNegative ? `${name} - İhlal Kaydet` : `${name} - Başarı Kaydet`;
+    const titleColor = isNegative ? '#e74c3c' : '#27ae60';
+    
+    // Yıldız seçenekleri
+    let starOptions = '';
+    if (isNegative) {
+        starOptions = `
+            <div class="star-option" onclick="selectPuantajStar(1, this)" style="padding:12px;background:rgba(231,76,60,.1);border:2px solid transparent;border-radius:10px;cursor:pointer;text-align:center;transition:all .2s">
+                <div style="font-size:1.2rem">⭐</div>
+                <div style="font-size:.75rem;color:#e74c3c;font-weight:600;margin-top:4px">Ciddi İhlal</div>
+                <div style="font-size:.65rem;color:var(--tx3)">-1 Puan</div>
+            </div>
+            <div class="star-option" onclick="selectPuantajStar(2, this)" style="padding:12px;background:rgba(230,126,34,.1);border:2px solid transparent;border-radius:10px;cursor:pointer;text-align:center;transition:all .2s">
+                <div style="font-size:1.2rem">⭐⭐</div>
+                <div style="font-size:.75rem;color:#e67e22;font-weight:600;margin-top:4px">Orta İhlal</div>
+                <div style="font-size:.65rem;color:var(--tx3)">-1 Puan</div>
+            </div>
+            <div class="star-option" onclick="selectPuantajStar(3, this)" style="padding:12px;background:rgba(243,156,18,.1);border:2px solid transparent;border-radius:10px;cursor:pointer;text-align:center;transition:all .2s">
+                <div style="font-size:1.2rem">⭐⭐⭐</div>
+                <div style="font-size:.75rem;color:#f39c12;font-weight:600;margin-top:4px">Hafif Uyarı</div>
+                <div style="font-size:.65rem;color:var(--tx3)">-1 Puan</div>
+            </div>
+        `;
+    } else {
+        starOptions = `
+            <div class="star-option" onclick="selectPuantajStar(4, this)" style="padding:12px;background:rgba(39,174,96,.1);border:2px solid transparent;border-radius:10px;cursor:pointer;text-align:center;transition:all .2s">
+                <div style="font-size:1.2rem">⭐⭐⭐⭐</div>
+                <div style="font-size:.75rem;color:#27ae60;font-weight:600;margin-top:4px">İyi Performans</div>
+                <div style="font-size:.65rem;color:var(--tx3)">+1 Puan</div>
+            </div>
+            <div class="star-option" onclick="selectPuantajStar(5, this)" style="padding:12px;background:rgba(46,204,113,.1);border:2px solid transparent;border-radius:10px;cursor:pointer;text-align:center;transition:all .2s">
+                <div style="font-size:1.2rem">⭐⭐⭐⭐⭐</div>
+                <div style="font-size:.75rem;color:#2ecc71;font-weight:600;margin-top:4px">Mükemmel</div>
+                <div style="font-size:.65rem;color:var(--tx3)">+2 Puan</div>
+            </div>
+        `;
+    }
     
     const body = `
         <div style="padding:8px 0">
-            <div style="margin-bottom:20px">
-                <label style="display:block;font-size:.85rem;color:var(--tx2);margin-bottom:8px">Kural Seç</label>
-                <select id="puantajRule" class="form-select" onchange="onPuantajRuleChange()" style="background:var(--bg3);color:var(--tx);border-color:var(--bg4)">
-                    <option value="">-- Kural Seçin --</option>
-                    ${ruleOptions}
-                    <option value="other">Diğer (Manuel giriş)</option>
-                </select>
+            <div style="text-align:center;margin-bottom:20px">
+                <div style="font-size:2rem">${isNegative ? '⚠️' : '🏆'}</div>
+                <div style="color:${titleColor};font-weight:600;font-size:.9rem;margin-top:4px">${isNegative ? 'İhlal/Uyarı Kaydı' : 'Başarı/Ödül Kaydı'}</div>
             </div>
-            <div style="margin-bottom:20px">
-                <label style="display:block;font-size:.85rem;color:var(--tx2);margin-bottom:8px">Puan</label>
-                <div id="puantajStars" style="display:flex;gap:8px;justify-content:center">
-                    ${[1,2,3,4,5].map(i => `<span class="puan-star" data-value="${i}" onclick="selectPuantajStar(${i})" style="font-size:2rem;color:var(--bg4);cursor:pointer;transition:all .2s">★</span>`).join('')}
-                </div>
+            <div style="display:grid;grid-template-columns:repeat(${isNegative ? 3 : 2}, 1fr);gap:10px;margin-bottom:20px">
+                ${starOptions}
             </div>
-            <div id="puantajNoteContainer" style="display:none;margin-bottom:20px">
-                <label style="display:block;font-size:.85rem;color:var(--tx2);margin-bottom:8px">Açıklama</label>
-                <input type="text" id="puantajNote" class="form-input" placeholder="Neden bu puan verildi?" style="background:var(--bg3);color:var(--tx);border-color:var(--bg4)">
+            <div style="margin-bottom:16px">
+                <label style="display:block;font-size:.85rem;color:var(--tx2);margin-bottom:8px">Açıklama *</label>
+                <input type="text" id="puantajNote" class="form-input" placeholder="${isNegative ? 'Örn: Check listi yanlış işaretledi' : 'Örn: Mükemmel temizlik yaptı'}" style="background:var(--bg3);color:var(--tx);border-color:var(--bg4)">
+            </div>
+            <div style="margin-bottom:16px">
+                <label style="display:block;font-size:.85rem;color:var(--tx2);margin-bottom:8px">Tarih</label>
+                <input type="date" id="puantajDate" class="form-input" value="${new Date().toISOString().split('T')[0]}" style="background:var(--bg3);color:var(--tx);border-color:var(--bg4)">
             </div>
             <input type="hidden" id="puantajPersonelId" value="${personelId}">
             <input type="hidden" id="puantajScore" value="0">
         </div>
     `;
     
-    showModal(`${name} - Puan Ver`, body, `
+    showModal(title, body, `
         <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
-        <button class="btn btn-primary" onclick="savePuantajFromModal()">Kaydet</button>
+        <button class="btn" style="background:${titleColor};color:#fff" onclick="savePuantajFromModal()">Kaydet</button>
     `);
 }
 
-// Dropdown'dan puan verme
-function openPuantajFromDropdown() {
-    const select = document.getElementById('puantajPersonelSelect');
-    const personelId = select.value;
-    const name = select.options[select.selectedIndex]?.dataset?.name;
-    
-    if (!personelId) {
-        toast('Lütfen personel seçin', 'error');
-        return;
-    }
-    
-    showPuantajModal(personelId, name);
-}
-
-function onPuantajRuleChange() {
-    const select = document.getElementById('puantajRule');
-    const noteContainer = document.getElementById('puantajNoteContainer');
-    const selectedOption = select.options[select.selectedIndex];
-    
-    if (select.value === 'other') {
-        noteContainer.style.display = 'block';
-    } else {
-        noteContainer.style.display = 'none';
-        if (selectedOption && selectedOption.dataset.score) {
-            selectPuantajStar(parseInt(selectedOption.dataset.score));
-        }
-    }
-}
-
-function selectPuantajStar(value) {
+function selectPuantajStar(value, element) {
     document.getElementById('puantajScore').value = value;
-    document.querySelectorAll('.puan-star').forEach((star, i) => {
-        star.style.color = i < value ? 'var(--yellow)' : 'var(--bg4)';
+    document.querySelectorAll('.star-option').forEach(el => {
+        el.style.borderColor = 'transparent';
+        el.style.transform = 'scale(1)';
     });
+    if (element) {
+        element.style.borderColor = value <= 3 ? '#e74c3c' : '#27ae60';
+        element.style.transform = 'scale(1.05)';
+    }
+}
+
+// Sekme değiştirme
+function showPuantajTab(tab, btn) {
+    // Sekmeleri gizle
+    document.getElementById('puantajKayitTab').style.display = 'none';
+    document.getElementById('puantajAnalizTab').style.display = 'none';
+    document.getElementById('puantajArsivTab').style.display = 'none';
+    
+    // Butonları güncelle
+    document.querySelectorAll('.puantaj-tab').forEach(b => {
+        b.style.background = 'var(--bg3)';
+        b.style.color = 'var(--tx)';
+    });
+    btn.style.background = 'var(--accent)';
+    btn.style.color = '#fff';
+    
+    // Seçili sekmeyi göster
+    if (tab === 'kayit') {
+        document.getElementById('puantajKayitTab').style.display = 'block';
+    } else if (tab === 'analiz') {
+        document.getElementById('puantajAnalizTab').style.display = 'block';
+        populateSubeSelect('analizSube');
+        loadPuantajAnaliz();
+    } else if (tab === 'arsiv') {
+        document.getElementById('puantajArsivTab').style.display = 'block';
+        populateSubeSelect('arsivSube');
+        loadPuantajArsiv();
+    }
 }
 
 async function savePuantajFromModal() {
     const personelId = document.getElementById('puantajPersonelId').value;
     const score = parseInt(document.getElementById('puantajScore').value);
-    const ruleId = document.getElementById('puantajRule').value;
-    const note = document.getElementById('puantajNote')?.value || '';
+    const note = document.getElementById('puantajNote')?.value?.trim() || '';
+    const eventDate = document.getElementById('puantajDate')?.value || new Date().toISOString().split('T')[0];
     
     if (score === 0) {
-        toast('Lütfen puan seçin', 'error');
+        toast('Lütfen yıldız seviyesi seçin', 'error');
         return;
     }
     
-    if (!ruleId) {
-        toast('Lütfen bir kural seçin', 'error');
+    if (!note) {
+        toast('Lütfen açıklama girin', 'error');
         return;
     }
     
@@ -4792,18 +5042,251 @@ async function savePuantajFromModal() {
             period: puantajKey,
             branch: sube,
             score,
-            ruleId: ruleId === 'other' ? null : ruleId,
-            note: ruleId === 'other' ? note : '',
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedBy: currentUser?.username || 'admin'
+            note,
+            eventDate,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdBy: currentUser?.email || currentUser?.username || 'admin'
         });
         
-        toast('Puan kaydedildi', 'success');
+        toast('Kayıt eklendi!', 'success');
         closeModal();
         loadPuantaj();
     } catch (error) {
         console.error('Puantaj kayıt hatası:', error);
         toast('Kayıt hatası!', 'error');
+    }
+}
+
+// Analiz yükleme
+async function loadPuantajAnaliz() {
+    const container = document.getElementById('puantajAnalizContainer');
+    if (!container) return;
+    
+    const donem = document.getElementById('analizDonem')?.value || 'current';
+    const sube = document.getElementById('analizSube')?.value || '';
+    
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx2)">Analiz yükleniyor...</div>';
+    
+    try {
+        let query = db.collection('puantaj');
+        if (sube) query = query.where('branch', '==', sube);
+        
+        if (donem === 'current') {
+            const now = new Date();
+            const currentPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            query = query.where('period', '==', currentPeriod);
+        }
+        
+        const snapshot = await query.get();
+        
+        // Personel bazında toplama
+        const personelStats = {};
+        snapshot.forEach(doc => {
+            const d = doc.data();
+            if (!personelStats[d.personelId]) {
+                personelStats[d.personelId] = { id: d.personelId, toplamPuan: 0, negatif: 0, pozitif: 0, kayitlar: [] };
+            }
+            const yildiz = d.score || 3;
+            if (yildiz <= 3) {
+                personelStats[d.personelId].toplamPuan -= 1;
+                personelStats[d.personelId].negatif++;
+            } else if (yildiz === 4) {
+                personelStats[d.personelId].toplamPuan += 1;
+                personelStats[d.personelId].pozitif++;
+            } else if (yildiz === 5) {
+                personelStats[d.personelId].toplamPuan += 2;
+                personelStats[d.personelId].pozitif++;
+            }
+            personelStats[d.personelId].kayitlar.push(d);
+        });
+        
+        // Personel isimlerini al
+        const personelIds = Object.keys(personelStats);
+        for (const pid of personelIds) {
+            try {
+                const pDoc = await db.collection('personel').doc(pid).get();
+                if (pDoc.exists) {
+                    personelStats[pid].name = pDoc.data().name;
+                    personelStats[pid].position = pDoc.data().position;
+                }
+            } catch (e) {}
+        }
+        
+        const sortedPersonel = Object.values(personelStats).sort((a, b) => b.toplamPuan - a.toplamPuan);
+        
+        let html = '';
+        
+        // Özet Kartlar
+        html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">`;
+        
+        // En İyi Personel
+        const enIyi = sortedPersonel.length > 0 ? sortedPersonel[0] : null;
+        html += `
+            <div style="background:linear-gradient(135deg,rgba(39,174,96,.15),rgba(46,204,113,.1));border:1px solid rgba(39,174,96,.3);border-radius:16px;padding:20px;text-align:center">
+                <div style="font-size:2.5rem;margin-bottom:8px">🏆</div>
+                <div style="font-size:.75rem;color:var(--tx2);text-transform:uppercase;margin-bottom:4px">Ayın En İyisi</div>
+                <div style="font-size:1.1rem;font-weight:700;color:#27ae60">${enIyi?.name || '-'}</div>
+                <div style="font-size:.85rem;color:var(--tx2)">${enIyi ? (enIyi.toplamPuan > 0 ? '+' : '') + enIyi.toplamPuan + ' Puan' : ''}</div>
+            </div>
+        `;
+        
+        // Dikkat Edilmesi Gereken
+        const dikkat = sortedPersonel.length > 0 ? sortedPersonel[sortedPersonel.length - 1] : null;
+        html += `
+            <div style="background:linear-gradient(135deg,rgba(231,76,60,.15),rgba(192,57,43,.1));border:1px solid rgba(231,76,60,.3);border-radius:16px;padding:20px;text-align:center">
+                <div style="font-size:2.5rem;margin-bottom:8px">⚠️</div>
+                <div style="font-size:.75rem;color:var(--tx2);text-transform:uppercase;margin-bottom:4px">Dikkat Edilmeli</div>
+                <div style="font-size:1.1rem;font-weight:700;color:#e74c3c">${dikkat?.name || '-'}</div>
+                <div style="font-size:.85rem;color:var(--tx2)">${dikkat ? (dikkat.toplamPuan > 0 ? '+' : '') + dikkat.toplamPuan + ' Puan' : ''}</div>
+            </div>
+        `;
+        
+        // Toplam Kayıt
+        const toplamKayit = snapshot.size;
+        html += `
+            <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:16px;padding:20px;text-align:center">
+                <div style="font-size:2.5rem;margin-bottom:8px">📊</div>
+                <div style="font-size:.75rem;color:var(--tx2);text-transform:uppercase;margin-bottom:4px">Toplam Kayıt</div>
+                <div style="font-size:1.1rem;font-weight:700;color:var(--tx)">${toplamKayit}</div>
+            </div>
+        `;
+        
+        html += `</div>`;
+        
+        // Sıralama Tablosu
+        html += `<div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:16px;padding:20px">`;
+        html += `<div style="font-weight:600;margin-bottom:16px;color:var(--tx)">📋 Personel Sıralaması</div>`;
+        
+        if (sortedPersonel.length === 0) {
+            html += `<div style="text-align:center;padding:40px;color:var(--tx3)">Bu dönemde kayıt yok</div>`;
+        } else {
+            sortedPersonel.forEach((p, i) => {
+                const medal = i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : `${i + 1}.`));
+                const puanColor = p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx)');
+                const primStatus = p.toplamPuan <= -5;
+                
+                html += `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:${primStatus ? 'rgba(231,76,60,.08)' : 'var(--bg3)'};border-radius:10px;margin-bottom:8px">
+                        <div style="display:flex;align-items:center;gap:12px">
+                            <span style="font-size:1.2rem;width:30px;text-align:center">${medal}</span>
+                            <div>
+                                <div style="font-weight:600;color:var(--tx)">${p.name || 'Bilinmiyor'}</div>
+                                <div style="font-size:.75rem;color:var(--tx3)">${p.position || ''}</div>
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:16px">
+                            <div style="text-align:center">
+                                <div style="font-size:.65rem;color:var(--tx3)">Negatif</div>
+                                <div style="font-weight:600;color:#e74c3c">${p.negatif}</div>
+                            </div>
+                            <div style="text-align:center">
+                                <div style="font-size:.65rem;color:var(--tx3)">Pozitif</div>
+                                <div style="font-weight:600;color:#27ae60">${p.pozitif}</div>
+                            </div>
+                            <div style="min-width:60px;text-align:right">
+                                <div style="font-size:1.2rem;font-weight:700;color:${puanColor}">${p.toplamPuan > 0 ? '+' : ''}${p.toplamPuan}</div>
+                                ${primStatus ? '<div style="font-size:.65rem;color:#e74c3c">PRİM YOK</div>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        html += `</div>`;
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Analiz yükleme hatası:', error);
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red)">Yükleme hatası!</div>';
+    }
+}
+
+// Arşiv yükleme
+async function loadPuantajArsiv() {
+    const container = document.getElementById('puantajArsivContainer');
+    if (!container) return;
+    
+    const sube = document.getElementById('arsivSube')?.value || '';
+    
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx2)">Arşiv yükleniyor...</div>';
+    
+    try {
+        let query = db.collection('puantaj');
+        if (sube) query = query.where('branch', '==', sube);
+        
+        const snapshot = await query.get();
+        
+        // Dönem bazında gruplama
+        const donemler = {};
+        snapshot.forEach(doc => {
+            const d = doc.data();
+            const period = d.period || 'unknown';
+            if (!donemler[period]) {
+                donemler[period] = { kayitSayisi: 0, personeller: {} };
+            }
+            donemler[period].kayitSayisi++;
+            
+            if (!donemler[period].personeller[d.personelId]) {
+                donemler[period].personeller[d.personelId] = { toplamPuan: 0 };
+            }
+            const yildiz = d.score || 3;
+            if (yildiz <= 3) {
+                donemler[period].personeller[d.personelId].toplamPuan -= 1;
+            } else if (yildiz === 4) {
+                donemler[period].personeller[d.personelId].toplamPuan += 1;
+            } else if (yildiz === 5) {
+                donemler[period].personeller[d.personelId].toplamPuan += 2;
+            }
+        });
+        
+        // Sırala (yeniden eskiye)
+        const sortedDonemler = Object.entries(donemler).sort((a, b) => b[0].localeCompare(a[0]));
+        
+        let html = '';
+        
+        if (sortedDonemler.length === 0) {
+            html = '<div style="text-align:center;padding:60px;color:var(--tx3)">Henüz arşivlenmiş dönem yok</div>';
+        } else {
+            html = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">`;
+            
+            sortedDonemler.forEach(([period, data]) => {
+                const [yil, ay] = period.split('-');
+                const ayAdi = getMonthName(ay);
+                const personelSayisi = Object.keys(data.personeller).length;
+                const primYokSayisi = Object.values(data.personeller).filter(p => p.toplamPuan <= -5).length;
+                
+                html += `
+                    <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:16px;padding:20px;transition:all .2s">
+                        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px">
+                            <div>
+                                <div style="font-size:1.1rem;font-weight:700;color:var(--tx)">${ayAdi} ${yil}</div>
+                                <div style="font-size:.8rem;color:var(--tx2)">${personelSayisi} personel</div>
+                            </div>
+                            <div style="font-size:2rem">📅</div>
+                        </div>
+                        <div style="display:flex;gap:12px">
+                            <div style="flex:1;background:var(--bg3);border-radius:10px;padding:12px;text-align:center">
+                                <div style="font-size:1.4rem;font-weight:700;color:var(--tx)">${data.kayitSayisi}</div>
+                                <div style="font-size:.65rem;color:var(--tx3)">Kayıt</div>
+                            </div>
+                            <div style="flex:1;background:rgba(231,76,60,.1);border-radius:10px;padding:12px;text-align:center">
+                                <div style="font-size:1.4rem;font-weight:700;color:#e74c3c">${primYokSayisi}</div>
+                                <div style="font-size:.65rem;color:var(--tx3)">Prim Yok</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `</div>`;
+        }
+        
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Arşiv yükleme hatası:', error);
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red)">Yükleme hatası!</div>';
     }
 }
 
@@ -4813,13 +5296,13 @@ function getMonthName(ay) {
 }
 
 async function deletePuantajEntry(docId) {
-    if (!confirm('Bu puanı silmek istediğinize emin misiniz?')) {
+    if (!confirm('Bu kaydı silmek istediğinize emin misiniz?')) {
         return;
     }
     
     try {
         await db.collection('puantaj').doc(docId).delete();
-        toast('Puan silindi', 'success');
+        toast('Kayıt silindi', 'success');
         loadPuantaj();
     } catch (error) {
         console.error('Silme hatası:', error);
@@ -4898,6 +5381,7 @@ function showAddUserModal(editId = null) {
             <div class="form-group">
                 <label class="form-label">Rol *</label>
                 <select id="userRole" class="form-select">
+                    <option value="barista">☕ Barista</option>
                     <option value="magaza_muduru">🏪 Mağaza Müdürü</option>
                     <option value="bolge_muduru">🏢 Bölge Müdürü</option>
                     <option value="yonetici">👑 Yönetici</option>
@@ -5051,7 +5535,7 @@ async function loadRolePermissions() {
             const checked = perms[p.id] !== false;
             html += `
                 <label style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:#1a1a1a;border:1px solid #333;border-radius:12px;cursor:pointer;transition:all .2s" onmouseover="this.style.background='#222';this.style.borderColor='#444'" onmouseout="this.style.background='#1a1a1a';this.style.borderColor='#333'">
-                    <input type="checkbox" id="perm_${p.id}" ${checked ? 'checked' : ''} style="width:20px;height:20px;accent-color:#e07b39;cursor:pointer">
+                    <input type="checkbox" id="perm_${p.id}" ${checked ? 'checked' : ''} style="width:20px;height:20px;accent-color:#ff8674;cursor:pointer">
                     <span style="font-size:.9rem;color:#e0e0e0;font-weight:500">${p.label}</span>
                 </label>
             `;
@@ -5273,6 +5757,27 @@ function updateDarkModeIcon(theme) {
         icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
         if (btn) { btn.style.background = 'var(--surface2)'; btn.style.borderColor = 'var(--surface3)'; }
     }
+    // Logo güncelle (Dark: beyaz logo, Light: renkli logo)
+    updateLogos(theme);
+}
+
+function updateLogos(theme) {
+    const darkLogo = 'https://static.wixstatic.com/media/760af2_cb121a61291f4f07adb48cfb70f3e2d9~mv2.png/v1/fill/w_94,h_82,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/beyazwhitelogo-min1.png';
+    const lightLogo = 'https://static.wixstatic.com/media/760af2_755f54f13b654f1bb318c97f16a029a3~mv2.png/v1/fill/w_104,h_92,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Moonberry%20Coffee%20Logo.png';
+    
+    // Login logo (tema ile değişir)
+    const loginLogo = document.getElementById('loginLogo');
+    if (loginLogo) {
+        loginLogo.src = theme === 'dark' ? darkLogo : lightLogo;
+    }
+    
+    // Breadcrumb logo (tema ile değişir - ana içerik alanında)
+    const breadcrumbLogo = document.getElementById('breadcrumbLogo');
+    if (breadcrumbLogo) {
+        breadcrumbLogo.src = theme === 'dark' ? darkLogo : lightLogo;
+    }
+    
+    // Sidebar logo her zaman beyaz kalır (koyu arka plan)
 }
 
 // Dark mode init
@@ -5484,6 +5989,12 @@ async function loadShiftWeek() {
     const container = document.getElementById('shiftTableContainer');
     const haftaId = document.getElementById('shiftHafta').value;
     
+    // Barista için silme butonunu gizle
+    const deleteBtn = document.getElementById('deleteShiftBtn');
+    if (deleteBtn) {
+        deleteBtn.style.display = currentUser?.role === 'barista' ? 'none' : 'flex';
+    }
+    
     if (!haftaId) { 
         container.innerHTML = '<p style="color:var(--tx2);text-align:center;padding:40px">⬆️ Yukarıdan hafta seçin veya yeni hafta oluşturun.</p>'; 
         return; 
@@ -5509,6 +6020,9 @@ function renderShiftTable(shift, docId) {
     const days = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
     const daysShort = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
     const personelShifts = shift.personelShifts || {};
+    
+    // Barista kontrolü - salt okunur mod
+    const isBarista = currentUser?.role === 'barista';
     
     // Şube bazlı saat kuralları
     const isTuzla = (shift.branch || '').toLowerCase().includes('tuzla');
@@ -5541,10 +6055,10 @@ function renderShiftTable(shift, docId) {
     const weekLabelWithYear = formatWeekWithYear(shift.weekLabel, shift.weekStart);
     let html = `<div id="shiftTablePrint">
         <!-- PDF Header (print only) -->
-        <div id="shiftPdfHeader" style="display:none;text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #e07b39">
+        <div id="shiftPdfHeader" style="display:none;text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #ff8674">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
                 <img src="https://static.wixstatic.com/media/760af2_cb121a61291f4f07adb48cfb70f3e2d9~mv2.png" style="width:45px;height:40px;object-fit:contain" onerror="this.style.display='none'">
-                <h2 style="color:#e07b39;margin:0;font-size:1.4rem">Moonberry Coffee - ${shift.branch}</h2>
+                <h2 style="color:#ff8674;margin:0;font-size:1.4rem">Moonberry Coffee - ${shift.branch}</h2>
             </div>
             <p style="color:#666;margin:0;font-size:1rem">Shift Planı: ${weekLabelWithYear}</p>
         </div>
@@ -5584,12 +6098,12 @@ function renderShiftTable(shift, docId) {
             const showStar = hasStar || isOff;
             
             // Yıldızlı veya OFF değer için border
-            const borderStyle = showStar ? `3px solid #e07b39` : `2px solid ${colors.border}`;
+            const borderStyle = showStar ? `3px solid #ff8674` : `2px solid ${colors.border}`;
             const starIndicator = showStar ? '⭐' : '';
             
             html += `<td style="padding:4px;text-align:center;border:1px solid #ddd;min-width:90px">
-                <select onchange="updateShiftCell('${docId}','${name}',${dayIdx},this.value)" 
-                    style="width:100%;padding:8px 2px;border:${borderStyle};background:${colors.bg};color:${colors.text};border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;text-align:center">
+                <select ${isBarista ? 'disabled' : ''} onchange="updateShiftCell('${docId}','${name}',${dayIdx},this.value)" 
+                    style="width:100%;padding:8px 2px;border:${borderStyle};background:${colors.bg};color:${colors.text};border-radius:6px;font-size:.75rem;font-weight:600;cursor:${isBarista ? 'not-allowed' : 'pointer'};text-align:center;${isBarista ? 'opacity:.8;' : ''}">
                     <option value="" ${isEmpty ? 'selected' : ''} style="background:#fff;color:#999"></option>
                     <optgroup label="── Shift Türleri ──">
                         ${SHIFT_TYPES.map(t => `<option value="${t}" ${displayVal === t && !hasStar ? 'selected' : ''} style="background:${SHIFT_COLORS[t]?.bg || '#fff'};color:${SHIFT_COLORS[t]?.text || '#333'}">${t === 'OFF' ? '⭐ ' : ''}${t}</option>`).join('')}
@@ -5615,17 +6129,19 @@ function renderShiftTable(shift, docId) {
     
     html += `</tbody></table></div>`;
     
-    // Personel Ekle/Çıkar butonları (shift tablosunun hemen altında)
-    html += `<div style="display:flex;gap:10px;margin:16px 0;justify-content:center">
-        <button class="btn btn-primary btn-sm" onclick="addPersonelToShift('${docId}')" style="padding:8px 16px;font-size:.8rem">➕ Personel Ekle</button>
-        <button class="btn btn-ghost btn-sm" onclick="removePersonelFromShiftModal('${docId}')" style="padding:8px 16px;font-size:.8rem">➖ Personel Çıkar</button>
-    </div>`;
+    // Personel Ekle/Çıkar butonları (shift tablosunun hemen altında) - Barista için gizle
+    if (!isBarista) {
+        html += `<div style="display:flex;gap:10px;margin:16px 0;justify-content:center">
+            <button class="btn btn-primary btn-sm" onclick="addPersonelToShift('${docId}')" style="padding:8px 16px;font-size:.8rem">➕ Personel Ekle</button>
+            <button class="btn btn-ghost btn-sm" onclick="removePersonelFromShiftModal('${docId}')" style="padding:8px 16px;font-size:.8rem">➖ Personel Çıkar</button>
+        </div>`;
+    }
     
     // Shift Kuralları bölümü (düzenlenebilir)
     html += `<div id="shiftAnnouncements" style="margin-top:20px;padding:16px;background:var(--bg2);border-radius:12px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
             <div style="font-weight:600;color:var(--tx);font-size:.9rem">📢 Shift Kuralları</div>
-            <button class="btn btn-ghost btn-sm" onclick="editShiftRules('${docId}')" style="padding:4px 10px;font-size:.75rem">✏️ Düzenle</button>
+            ${!isBarista ? `<button class="btn btn-ghost btn-sm" onclick="editShiftRules('${docId}')" style="padding:4px 10px;font-size:.75rem">✏️ Düzenle</button>` : ''}
         </div>
         <div id="shiftRulesContent" style="display:flex;flex-direction:column;gap:8px">
             ${(shift.customRules || SHIFT_ANNOUNCEMENTS).map((a, i) => `
@@ -5657,7 +6173,7 @@ function renderShiftTable(shift, docId) {
     html += `<div id="shiftSpecialRequests" style="margin-top:16px;padding:16px;background:#FFF8E1;border:2px solid #FFB300;border-radius:12px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
             <div style="font-weight:600;color:#E65100;font-size:.9rem">⭐ Özel İstek Günleri</div>
-            <button class="btn btn-primary btn-sm" onclick="addSpecialRequest('${docId}')" style="padding:4px 10px;font-size:.75rem;background:#FF9800">+ Özel İstek Ekle</button>
+            ${!isBarista ? `<button class="btn btn-primary btn-sm" onclick="addSpecialRequest('${docId}')" style="padding:4px 10px;font-size:.75rem;background:#FF9800">+ Özel İstek Ekle</button>` : ''}
         </div>
         <div style="font-size:.75rem;color:#795548;margin-bottom:10px;padding:6px 10px;background:rgba(0,0,0,.05);border-radius:6px">
             SHIFT'E YILDIZ (*) SEMBOLÜ OLAN GÜNLER ÖZEL İSTEK GÜNLERİDİR.
@@ -5671,7 +6187,7 @@ function renderShiftTable(shift, docId) {
                         <span style="color:#666;margin:0 4px">→</span>
                         <span style="color:#333;font-weight:500">${r.reason}</span>
                     </div>
-                    <button onclick="removeSpecialRequestGroup('${docId}', '${r.personel}', '${r.reason}')" style="background:none;border:none;color:#E53935;cursor:pointer;font-size:1rem" title="Bu isteği sil">×</button>
+                    ${!isBarista ? `<button onclick="removeSpecialRequestGroup('${docId}', '${r.personel}', '${r.reason}')" style="background:none;border:none;color:#E53935;cursor:pointer;font-size:1rem" title="Bu isteği sil">×</button>` : ''}
                 </div>
             `).join('') : `
                 <div style="text-align:center;padding:16px;color:#795548;font-size:.85rem">
@@ -6277,6 +6793,7 @@ async function downloadShiftPDF() {
     const personelShifts = shiftData.personelShifts || {};
     const personelOrder = shiftData.personelOrder || Object.keys(personelShifts);
     const specialRequests = shiftData.specialRequests || [];
+    const customRules = shiftData.customRules || SHIFT_ANNOUNCEMENTS;
     const days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
     const daysLong = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
     
@@ -6319,7 +6836,9 @@ async function downloadShiftPDF() {
             } else {
                 // Renk al
                 const colors = getShiftColorExcel(cleanVal);
-                const displayText = (showStar ? '★ ' : '') + cleanVal;
+                // Yıldız için Unicode karakter (★ = U+2605)
+                const starSymbol = String.fromCharCode(0x2605);
+                const displayText = (showStar ? starSymbol + ' ' : '') + cleanVal;
                 
                 row.push({ 
                     text: displayText, 
@@ -6359,9 +6878,9 @@ async function downloadShiftPDF() {
         pageOrientation: 'landscape',
         pageMargins: [15, 15, 15, 15],
         content: [
-            // Başlık
-            { text: 'Moonberry Coffee - ' + branch, fontSize: 16, bold: true, color: '#e07b39' },
-            { text: 'Shift Planı: ' + weekLabel, fontSize: 10, color: '#666666', margin: [0, 2, 0, 10] },
+            // Başlık - Marka renkleri
+            { text: 'Moonberry Coffee - ' + branch, fontSize: 16, bold: true, color: '#ff8674' },
+            { text: 'Shift Planı: ' + weekLabel, fontSize: 10, color: '#008c95', margin: [0, 2, 0, 10] },
             
             // Tablo
             {
@@ -6382,16 +6901,21 @@ async function downloadShiftPDF() {
                 }
             },
             
-            // Kurallar
+            // Kurallar - customRules'tan dinamik
             { text: '', margin: [0, 8, 0, 0] },
             {
                 table: {
-                    widths: ['auto', 'auto', 'auto', 'auto'],
+                    widths: customRules.map(() => 'auto').concat(['auto']),
                     body: [[
-                        { text: 'AÇILIŞ PERSONELİ GEÇ KALMAMALI!', fillColor: '#C6EFCE', color: '#2E7D32', fontSize: 7, bold: true, margin: [4, 2, 4, 2] },
-                        { text: '★ ÖZEL İSTEK GÜNLERİ', fillColor: '#FFEB9C', color: '#9C5700', fontSize: 7, bold: true, margin: [4, 2, 4, 2] },
-                        { text: saatKurali, fillColor: '#BDE0FE', color: '#1565C0', fontSize: 7, bold: true, margin: [4, 2, 4, 2] },
-                        { text: 'YEMEK: 45DK, MOLA: 15DK', fillColor: '#E8F4FD', color: '#1976D2', fontSize: 7, bold: true, margin: [4, 2, 4, 2] }
+                        ...customRules.map(a => ({
+                            text: a.text,
+                            fillColor: a.bg,
+                            color: a.color,
+                            fontSize: 7,
+                            bold: true,
+                            margin: [4, 2, 4, 2]
+                        })),
+                        { text: saatKurali, fillColor: '#BDE0FE', color: '#1565C0', fontSize: 7, bold: true, margin: [4, 2, 4, 2] }
                     ]]
                 },
                 layout: 'noBorders'
@@ -6498,6 +7022,7 @@ async function printShift() {
     const personelShifts = shiftData.personelShifts || {};
     const personelOrder = shiftData.personelOrder || Object.keys(personelShifts);
     const specialRequests = shiftData.specialRequests || [];
+    const customRules = shiftData.customRules || SHIFT_ANNOUNCEMENTS;
     const days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
     const daysLong = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
     
@@ -6566,10 +7091,10 @@ async function printShift() {
                     body { margin: 0; padding: 0; }
                 }
                 body { font-family: Arial, sans-serif; padding: 12px; background: #fff; margin: 0; }
-                .header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 3px solid #e07b39; }
+                .header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 3px solid #ff8674; }
                 .logo { width: 50px; height: 44px; object-fit: contain; }
-                .title { color: #e07b39; font-size: 18px; margin: 0; font-weight: 700; }
-                .subtitle { color: #666; font-size: 11px; margin: 4px 0 0 0; }
+                .title { color: #ff8674; font-size: 18px; margin: 0; font-weight: 700; }
+                .subtitle { color: #008c95; font-size: 11px; margin: 4px 0 0 0; }
                 table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 12px; table-layout: fixed; }
                 th, td { border: 1px solid #bbb; padding: 6px 4px; text-align: center; }
                 th { font-weight: 600; }
@@ -6605,17 +7130,15 @@ async function printShift() {
                 <tbody>
                     ${data.map((row, i) => `
                         <tr style="background:${i % 2 === 0 ? '#fff' : '#f5f5f5'}">
-                            ${row.map((cell, idx) => `<td style="background:${cell.bg} !important; color:${cell.color} !important; font-weight:600;${cell.hasStar ? ' border:2px solid #e07b39 !important;' : ''}">${cell.text}</td>`).join('')}
+                            ${row.map((cell, idx) => `<td style="background:${cell.bg} !important; color:${cell.color} !important; font-weight:600;${cell.hasStar ? ' border:2px solid #ff8674 !important;' : ''}">${cell.text}</td>`).join('')}
                         </tr>
                     `).join('')}
                 </tbody>
             </table>
             
             <div class="rules-box">
-                <span class="rule rule1">AÇILIŞ PERSONELİ İŞE GEÇ KALMAMALIDIR!</span>
-                <span class="rule rule2">⭐ SEMBOLÜ ÖZEL İSTEK GÜNLERİDİR</span>
+                ${customRules.map((a, i) => `<span class="rule" style="background:${a.bg} !important; color:${a.color} !important;">${a.text}</span>`).join('')}
                 <span class="rule rule3">${saatKurali}</span>
-                <span class="rule rule4">YEMEK: 45DK, MOLA: 1x15DK</span>
             </div>
             
             <div class="requests-box">
