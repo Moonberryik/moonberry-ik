@@ -77,27 +77,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 ::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:var(--tx3)}
 
-/* Lock Screen - Login */
-.lock-overlay{position:fixed;inset:0;background:var(--bg);z-index:10000;display:flex;align-items:center;justify-content:center;opacity:1;transition:opacity .5s,visibility .5s}
-.lock-overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}
-.lock-card{background:var(--glass);border:1px solid var(--glassBorder);backdrop-filter:blur(40px);border-radius:var(--radiusLg);padding:48px;text-align:center;max-width:400px;width:90%}
-.lock-logo{font-size:3.5rem;margin-bottom:16px;filter:drop-shadow(0 4px 12px rgba(255,134,116,.3))}
-.lock-title{font-size:1.4rem;font-weight:700;margin-bottom:6px}
-.lock-sub{color:var(--tx2);font-size:.85rem;margin-bottom:32px}
-.login-form{display:flex;flex-direction:column;gap:16px;text-align:left}
-.login-field{display:flex;flex-direction:column;gap:6px}
-.login-field label{font-size:.8rem;color:var(--tx2);font-weight:500}
-.login-field input{width:100%;padding:14px 16px;background:var(--bg3);border:2px solid var(--bg4);border-radius:var(--radius);color:var(--tx);font-size:1rem;outline:none;transition:var(--transition)}
-.login-field input:focus{border-color:var(--accent);background:var(--bg2)}
-.login-field input.error{border-color:var(--red);animation:shake .4s}
-.login-btn{padding:14px 24px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:var(--radius);color:#fff;font-size:1rem;font-weight:600;cursor:pointer;transition:var(--transition);margin-top:8px}
-.login-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(255,134,116,.4)}
-.login-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
-.lock-error{color:var(--red);font-size:.8rem;height:20px;opacity:0;transition:var(--transition);text-align:center;margin-top:8px}
-.lock-error.show{opacity:1}
-.lock-info{color:var(--tx3);font-size:.75rem;margin-top:16px}
-.lock-locked{background:rgba(231,76,60,.1);border:1px solid var(--red);border-radius:var(--radiusSm);padding:12px;margin-bottom:16px;color:var(--red);font-size:.85rem}
-
 /* App Layout */
 .app{display:flex;min-height:100vh;opacity:0;transition:opacity .3s}
 .sidebar{width:260px;background:var(--sidebarBg);border-right:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;position:fixed;height:100vh;z-index:100;transition:var(--transition)}
@@ -1354,20 +1333,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <p style="color:var(--tx2);text-align:center;padding:20px">Kullanıcılar yükleniyor...</p>
                         </div>
                     </div>
-                    <div class="admin-card" style="margin-top:20px">
-                        <div class="admin-card-header"><div class="admin-card-title">Rol Yetkileri</div></div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Her rolün hangi sayfalara erişebileceğini belirleyin.</p>
-                        <div class="form-group">
-                            <label class="form-label">Rol Seç</label>
-                            <select id="roleSelect" class="form-select" onchange="loadRolePermissions()">
-                                <option value="barista">Barista (Salt Okunur)</option>
-                                <option value="bolge_muduru">Bölge Müdürü</option>
-                                <option value="magaza_muduru">Mağaza Müdürü</option>
-                            </select>
-                        </div>
-                        <div id="permissionsContainer" style="margin-top:16px"></div>
-                        <div class="btn-group" style="margin-top:16px"><button class="btn btn-primary btn-sm" onclick="saveRolePermissions()">Yetkileri Kaydet</button></div>
-                    </div>
                 </div>
 
                 <!-- Oturum Yönetimi -->
@@ -1700,15 +1665,6 @@ let db = null;
 
 // ==================== AUTH & SESSION ====================
 let currentUser = null;
-let loginAttempts = 0;
-let lockoutUntil = null;
-const MAX_ATTEMPTS = 5;
-const LOCKOUT_DURATION = 30 * 60 * 1000; // 30 dakika
-
-// Varsayılan kullanıcılar (Firebase'de yoksa oluşturulacak)
-const DEFAULT_USERS = [
-    { username: 'admin', password: 'moonberry2024', role: 'yonetici', name: 'Yönetici', branch: 'all' }
-];
 
 // Varsayılan puantaj kuralları
 const DEFAULT_PUANTAJ_RULES = [
@@ -1718,27 +1674,8 @@ const DEFAULT_PUANTAJ_RULES = [
     { id: 'R04', title: 'Müşteri Şikayeti', effect: '-1', desc: 'Doğrulanmış müşteri şikayeti' }
 ];
 
-// Varsayılan rol yetkileri
-const DEFAULT_PERMISSIONS = {
-    yonetici: { all: true },
-    bolge_muduru: { 
-        dashboard: true, personel: true, puantaj: true, sozlesme: true, 
-        tutanak: true, savunma: true, fesih: true, borc: true, avans: true, 
-        zimmet: true, katalog: true, admin: true,
-        admin_kullanicilar: true, admin_puantajKurallar: true, admin_subeler: true,
-        admin_pozisyonlar: true, admin_ihlaller: true, admin_sablonlar: true, admin_belgeler: true
-    },
-    magaza_muduru: { 
-        dashboard: true, personel: true, puantaj: true, sozlesme: true, 
-        tutanak: true, savunma: true, fesih: true, borc: true, avans: true, 
-        zimmet: true, katalog: true, admin: false,
-        admin_kullanicilar: false, admin_sablonlar: false
-    }
-};
-
 // ==================== DEFAULT STATE ====================
 const DEFAULT_STATE = {
-    pin: '2632',
     company: {
         name: 'TAMASLAN KAFE RESTORAN VE GIDA HİZMETLERİ SANAYİ İÇ VE DIŞ TİCARET LİMİTED ŞİRKETİ',
         short: 'MOONBERRY COFFEE',
@@ -2110,7 +2047,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     loadState();
-    initLoginScreen();
+    initDefaultData();
     initUI();
 });
 
@@ -2268,29 +2205,14 @@ function renderPositionCards() {
     `).join('');
 }
 
-// ==================== LOGIN SYSTEM ====================
-function initLoginScreen() {
-    // Login artık login.html'de yapılıyor
-    // Sadece varsayılan verileri kontrol et
-    initializeDefaultUsers();
+// ==================== VARSAYILAN VERİLERİ KONTROL ET ====================
+function initDefaultData() {
+    // Varsayılan verileri kontrol et ve oluştur
+    initializeDefaultData();
 }
 
-async function initializeDefaultUsers() {
+async function initializeDefaultData() {
     try {
-        const usersRef = db.collection('users');
-        const snapshot = await usersRef.get();
-        
-        if (snapshot.empty) {
-            // İlk kez açılıyor, varsayılan admin'i ekle
-            for (const user of DEFAULT_USERS) {
-                await usersRef.doc(user.username).set({
-                    ...user,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            }
-            console.log('Varsayılan kullanıcılar oluşturuldu');
-        }
-        
         // Varsayılan puantaj kurallarını kontrol et
         const rulesRef = db.collection('puantajRules');
         const rulesSnapshot = await rulesRef.get();
@@ -2301,14 +2223,14 @@ async function initializeDefaultUsers() {
             console.log('Varsayılan puantaj kuralları oluşturuldu');
         }
         
-        // Varsayılan rol yetkilerini kontrol et
-        const permsRef = db.collection('permissions');
-        const permsSnapshot = await permsRef.get();
-        if (permsSnapshot.empty) {
-            for (const [role, perms] of Object.entries(DEFAULT_PERMISSIONS)) {
-                await permsRef.doc(role).set(perms);
+        // Varsayılan gelişmiş izinleri kontrol et
+        const advPermsRef = db.collection('advancedPermissions');
+        const advPermsSnapshot = await advPermsRef.get();
+        if (advPermsSnapshot.empty) {
+            for (const [role, perms] of Object.entries(DEFAULT_ROLE_PERMISSIONS)) {
+                await advPermsRef.doc(role).set(perms);
             }
-            console.log('Varsayılan yetkiler oluşturuldu');
+            console.log('Varsayılan gelişmiş izinler oluşturuldu');
         }
     } catch (error) {
         console.error('Firebase initialization error:', error);
@@ -2348,47 +2270,6 @@ async function sendPasswordReset() {
     }
 }
 
-function showLoginError(msg) {
-    const errorEl = document.getElementById('lockError');
-    const inputs = document.querySelectorAll('.login-field input');
-    
-    errorEl.textContent = msg;
-    errorEl.classList.add('show');
-    inputs.forEach(i => i.classList.add('error'));
-    
-    setTimeout(() => {
-        errorEl.classList.remove('show');
-        inputs.forEach(i => i.classList.remove('error'));
-    }, 3000);
-}
-
-function showLockoutTimer() {
-    const form = document.getElementById('loginForm');
-    const lockedDiv = document.getElementById('lockLocked');
-    const timerSpan = document.getElementById('lockTimer');
-    
-    form.style.display = 'none';
-    lockedDiv.style.display = 'block';
-    
-    const updateTimer = () => {
-        const remaining = lockoutUntil - Date.now();
-        if (remaining <= 0) {
-            form.style.display = 'flex';
-            lockedDiv.style.display = 'none';
-            loginAttempts = 0;
-            localStorage.removeItem('loginAttempts');
-            localStorage.removeItem('loginLockoutUntil');
-            lockoutUntil = null;
-            return;
-        }
-        const mins = Math.floor(remaining / 60000);
-        const secs = Math.floor((remaining % 60000) / 1000);
-        timerSpan.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-        setTimeout(updateTimer, 1000);
-    };
-    updateTimer();
-}
-
 function applyUserPermissions() {
     if (!currentUser) return;
     
@@ -2416,31 +2297,6 @@ function applyUserPermissions() {
     
     // Gelişmiş izin sistemini yükle ve uygula
     loadUserAdvancedPermissions();
-    
-    // Barista için ek kısıtlamalar (eski sistem uyumluluğu)
-    if (currentUser.role === 'barista') {
-        applyBaristaRestrictions();
-        return;
-    }
-    
-    // Diğer roller için yetki kontrolü (eski sistem uyumluluğu)
-    db.collection('permissions').doc(currentUser.role).get().then(doc => {
-        if (!doc.exists) return;
-        const perms = doc.data();
-        
-        // Menü öğelerini gizle/göster
-        document.querySelectorAll('.nav-item[data-page]').forEach(item => {
-            const page = item.dataset.page;
-            if (perms[page] === false) {
-                item.style.display = 'none';
-            }
-        });
-        
-        // Admin tab'larını kontrol et
-        if (perms.admin === false) {
-            document.querySelector('.nav-item[data-page="admin"]').style.display = 'none';
-        }
-    });
 }
 
 // Barista kısıtlamaları
@@ -3603,20 +3459,17 @@ function openAdminWithPin() {
         return;
     }
     
-    // Yönetici ve Bölge Müdürü admin'e erişebilir
-    if (currentUser.role === 'yonetici' || currentUser.role === 'bolge_muduru') {
+    // Yönetici her zaman erişebilir
+    if (currentUser.role === 'yonetici') {
+        goTo('admin');
+        return;
+    }
+    
+    // Diğer roller için gelişmiş izin kontrolü
+    if (checkPermission('admin', 'admin_genel', 'access')) {
         goTo('admin');
     } else {
-        // Mağaza müdürü için yetki kontrolü
-        db.collection('permissions').doc(currentUser.role).get().then(doc => {
-            if (doc.exists && doc.data().admin !== false) {
-                goTo('admin');
-            } else {
-                toast('Bu sayfaya erişim yetkiniz yok', 'error');
-            }
-        }).catch(() => {
-            toast('Yetki kontrol hatası', 'error');
-        });
+        toast('Bu sayfaya erişim yetkiniz yok', 'error');
     }
 }
 
@@ -5724,68 +5577,6 @@ async function deleteUser(id) {
     });
 }
 
-// ==================== ROL YETKİLERİ ====================
-async function loadRolePermissions() {
-    const role = document.getElementById('roleSelect').value;
-    const container = document.getElementById('permissionsContainer');
-    
-    try {
-        const doc = await db.collection('permissions').doc(role).get();
-        const perms = doc.exists ? doc.data() : DEFAULT_PERMISSIONS[role];
-        
-        const pages = [
-            { id: 'dashboard', label: 'Ana Sayfa' },
-            { id: 'personel', label: 'Personel Listesi' },
-            { id: 'puantaj', label: 'Puantaj' },
-            { id: 'sozlesme', label: 'İş Sözleşmeleri' },
-            { id: 'tutanak', label: 'Tutanak' },
-            { id: 'savunma', label: 'Savunma İsteme' },
-            { id: 'fesih', label: 'Fesih' },
-            { id: 'borc', label: 'Borç İkrar' },
-            { id: 'avans', label: 'Avans Talebi' },
-            { id: 'zimmet', label: 'Zimmet Formu' },
-            { id: 'katalog', label: 'İhlal Kataloğu' },
-            { id: 'admin', label: 'Yönetim Paneli' },
-            { id: 'admin_kullanicilar', label: '— Kullanıcılar' },
-            { id: 'admin_sablonlar', label: '— Sözleşme Şablonları' }
-        ];
-        
-        let html = '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">';
-        pages.forEach(p => {
-            const checked = perms[p.id] !== false;
-            html += `
-                <label style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:#1a1a1a;border:1px solid #333;border-radius:12px;cursor:pointer;transition:all .2s" onmouseover="this.style.background='#222';this.style.borderColor='#444'" onmouseout="this.style.background='#1a1a1a';this.style.borderColor='#333'">
-                    <input type="checkbox" id="perm_${p.id}" ${checked ? 'checked' : ''} style="width:20px;height:20px;accent-color:#ff8674;cursor:pointer">
-                    <span style="font-size:.9rem;color:#e0e0e0;font-weight:500">${p.label}</span>
-                </label>
-            `;
-        });
-        html += '</div>';
-        
-        container.innerHTML = html;
-    } catch (error) {
-        console.error('Yetki yükleme hatası:', error);
-    }
-}
-
-async function saveRolePermissions() {
-    const role = document.getElementById('roleSelect').value;
-    const perms = {};
-    
-    document.querySelectorAll('#permissionsContainer input[type="checkbox"]').forEach(cb => {
-        const id = cb.id.replace('perm_', '');
-        perms[id] = cb.checked;
-    });
-    
-    try {
-        await db.collection('permissions').doc(role).set(perms);
-        toast('Yetkiler kaydedildi', 'success');
-    } catch (error) {
-        console.error('Yetki kayıt hatası:', error);
-        toast('Kayıt hatası!', 'error');
-    }
-}
-
 // ==================== GELİŞMİŞ İZİN YÖNETİMİ ====================
 const PERMISSION_STRUCTURE = {
     pages: [
@@ -6907,7 +6698,6 @@ renderAdminLists = function() {
     originalRenderAdminLists();
     loadUserList();
     loadPuantajRulesAdmin();
-    loadRolePermissions();
     
     // Yönetici değilse şirket bilgilerini ve şifre değiştirmeyi gizle
     if (currentUser && currentUser.role !== 'yonetici') {
