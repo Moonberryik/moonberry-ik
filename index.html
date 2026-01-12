@@ -32,7 +32,7 @@
     --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;--mono:'JetBrains Mono',monospace;
     --cardBg:#ffffff;--cardBorder:rgba(0,0,0,.06);
     --sectionBg:#ffffff;
-    --sidebarBg:#006d73;--sidebarTx:#ffffff;--sidebarTx2:rgba(255,255,255,.8);--sidebarTx3:rgba(255,255,255,.5);
+    --sidebarBg:#006d73;--sidebarTx:#ffffff;--sidebarTx2:#ffffff;--sidebarTx3:rgba(255,255,255,.7);
     /* Logolar */
     --logo-dark:url('https://static.wixstatic.com/media/760af2_0e846222ae5b4021930a757e498f30e9~mv2.png');
     --logo-light:url('https://static.wixstatic.com/media/760af2_755f54f13b654f1bb318c97f16a029a3~mv2.png/v1/fill/w_104,h_92,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Moonberry%20Coffee%20Logo.png');
@@ -47,7 +47,7 @@
     --shadow:0 8px 32px rgba(0,0,0,.4);--shadowSm:0 2px 8px rgba(0,0,0,.3);
     --cardBg:rgba(40,40,40,.95);--cardBorder:rgba(255,255,255,.08);
     --sectionBg:linear-gradient(135deg,rgba(30,30,30,.95),rgba(20,20,20,.9));
-    --sidebarBg:#0f0f0f;--sidebarTx:#ffffff;--sidebarTx2:rgba(255,255,255,.6);--sidebarTx3:rgba(255,255,255,.35);
+    --sidebarBg:#0f0f0f;--sidebarTx:#ffffff;--sidebarTx2:#ffffff;--sidebarTx3:rgba(255,255,255,.5);
 }
 [data-theme="dark"] .main{background:var(--bg)!important}
 [data-theme="dark"] .page-title,[data-theme="dark"] .page-subtitle{color:var(--tx)!important}
@@ -86,14 +86,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .logo-text{font-size:1.1rem;font-weight:700;letter-spacing:-.02em;color:var(--sidebarTx)}
 .logo-sub{font-size:.7rem;color:var(--sidebarTx3);margin-top:2px}
 .nav{flex:1;padding:16px 12px;overflow-y:auto}
-.nav-group{margin-bottom:20px}
-.nav-label{font-size:.65rem;color:var(--sidebarTx3);text-transform:uppercase;letter-spacing:1.5px;padding:0 12px;margin-bottom:8px;font-weight:600}
-.nav-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radiusSm);cursor:pointer;transition:var(--transition);color:var(--sidebarTx2);font-weight:500;font-size:.9rem;margin-bottom:2px}
+.nav-group{margin-bottom:8px}
+.nav-label{font-size:.75rem;color:var(--sidebarTx2);padding:10px 14px;margin-bottom:0;font-weight:500;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border-radius:var(--radiusSm);transition:var(--transition)}
+.nav-label:hover{background:rgba(255,255,255,.1)}
+.nav-label .nav-arrow{transition:transform .2s;font-size:.7rem}
+.nav-label.collapsed .nav-arrow{transform:rotate(-90deg)}
+.nav-items{overflow:hidden;transition:max-height .3s ease;max-height:500px}
+.nav-items.collapsed{max-height:0}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 14px 10px 20px;border-radius:var(--radiusSm);cursor:pointer;transition:var(--transition);color:var(--sidebarTx2);font-weight:500;font-size:.85rem;margin-bottom:2px}
 .nav-item:hover{background:rgba(255,134,116,.15);color:#fff}
 .nav-item.active{background:linear-gradient(135deg,var(--accent),#ff6b5b);color:#fff;box-shadow:0 4px 20px rgba(255,134,116,.35);font-weight:600}
-.nav-item .icon{font-size:1.1rem;width:24px;text-align:center;display:flex;align-items:center;justify-content:center}
-.nav-item .icon svg{width:20px;height:20px;stroke:currentColor;stroke-width:2;fill:none}
-.nav-divider{height:1px;background:rgba(255,255,255,.1);margin:16px 12px}
+.nav-item .icon{font-size:1rem;width:20px;text-align:center;display:flex;align-items:center;justify-content:center}
+.nav-item .icon svg{width:18px;height:18px;stroke:currentColor;stroke-width:2;fill:none}
+.nav-divider{height:1px;background:rgba(255,255,255,.1);margin:12px 12px}
 
 /* Main Content */
 .main{flex:1;margin-left:260px;background:var(--bg);min-height:100vh;position:relative}
@@ -347,64 +352,81 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
             </div>
             <nav class="nav">
-                <div class="nav-group">
-                    <div class="nav-label">Ana Menü</div>
-                    <div class="nav-item active" data-page="dashboard" onclick="goTo('dashboard')">
-                        <span class="icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> Ana Sayfa
-                    </div>
+                <!-- Ana Sayfa -->
+                <div class="nav-item active" data-page="dashboard" onclick="goTo('dashboard')">
+                    <span class="icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> Ana Sayfa
                 </div>
-                <div class="nav-group">
-                    <div class="nav-label">Personel</div>
-                    <div class="nav-item" data-page="personel" onclick="goTo('personel')">
-                        <span class="icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Personel Listesi
-                    </div>
-                    <div class="nav-item" data-page="puantaj" onclick="goTo('puantaj')">
-                        <span class="icon"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span> Puantaj
-                    </div>
-                    <div class="nav-item" data-page="shift" onclick="goTo('shift')">
-                        <span class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> Shift Planı
-                    </div>
+                
+                <!-- Personel -->
+                <div class="nav-item" data-page="personel" onclick="goTo('personel')">
+                    <span class="icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Personel
                 </div>
-                <div class="nav-group">
-                    <div class="nav-label">Belgeler</div>
-                    <div class="nav-item" data-page="sozlesme" onclick="goTo('sozlesme')">
-                        <span class="icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> İş Sözleşmeleri
-                    </div>
-                    <div class="nav-item" data-page="tutanak" onclick="goTo('tutanak')">
-                        <span class="icon"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span> Tutanak
-                    </div>
-                    <div class="nav-item" data-page="savunma" onclick="goTo('savunma')">
-                        <span class="icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> Savunma İsteme
-                    </div>
-                    <div class="nav-item" data-page="fesih" onclick="goTo('fesih')">
-                        <span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></span> Fesih
-                    </div>
-                    <div class="nav-item" data-page="istifa" onclick="goTo('istifa')">
-                        <span class="icon"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span> İstifa
-                    </div>
-                    <div class="nav-item" data-page="ibraname" onclick="goTo('ibraname')">
-                        <span class="icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span> İbraname
-                    </div>
-                    <div class="nav-item" data-page="borc" onclick="goTo('borc')">
-                        <span class="icon"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span> Borç İkrar
-                    </div>
-                    <div class="nav-item" data-page="avans" onclick="goTo('avans')">
-                        <span class="icon"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Avans Talebi
-                    </div>
-                    <div class="nav-item" data-page="zimmet" onclick="goTo('zimmet')">
-                        <span class="icon"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></span> Zimmet Formu
-                    </div>
-                </div>
-                <div class="nav-group">
-                    <div class="nav-label">Rehber</div>
-                    <div class="nav-item" data-page="katalog" onclick="goTo('katalog')">
-                        <span class="icon"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span> İhlal Kataloğu
-                    </div>
-                </div>
+                
                 <div class="nav-divider"></div>
+                
+                <!-- Belgeler (Collapsible) -->
                 <div class="nav-group">
-                    <div class="nav-item" data-page="admin" onclick="openAdminWithPin()">
-                        <span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Yönetim
+                    <div class="nav-label" onclick="toggleNavGroup(this)">
+                        📄 Belgeler <span class="nav-arrow">▼</span>
+                    </div>
+                    <div class="nav-items">
+                        <div class="nav-item" data-page="sozlesme" onclick="goTo('sozlesme')">
+                            <span class="icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span> İş Sözleşmesi
+                        </div>
+                        <div class="nav-item" data-page="tutanak" onclick="goTo('tutanak')">
+                            <span class="icon"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span> Tutanak
+                        </div>
+                        <div class="nav-item" data-page="savunma" onclick="goTo('savunma')">
+                            <span class="icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> Savunma İsteme
+                        </div>
+                        <div class="nav-item" data-page="fesih" onclick="goTo('fesih')">
+                            <span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></span> Fesih
+                        </div>
+                        <div class="nav-item" data-page="istifa" onclick="goTo('istifa')">
+                            <span class="icon"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span> İstifa
+                        </div>
+                        <div class="nav-item" data-page="ibraname" onclick="goTo('ibraname')">
+                            <span class="icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span> İbraname
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Formlar (Collapsible) -->
+                <div class="nav-group">
+                    <div class="nav-label" onclick="toggleNavGroup(this)">
+                        📑 Formlar <span class="nav-arrow">▼</span>
+                    </div>
+                    <div class="nav-items">
+                        <div class="nav-item" data-page="borc" onclick="goTo('borc')">
+                            <span class="icon"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span> Borç İkrar
+                        </div>
+                        <div class="nav-item" data-page="avans" onclick="goTo('avans')">
+                            <span class="icon"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Avans Talebi
+                        </div>
+                        <div class="nav-item" data-page="zimmet" onclick="goTo('zimmet')">
+                            <span class="icon"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></span> Zimmet Formu
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Yönetim (Collapsible) -->
+                <div class="nav-group">
+                    <div class="nav-label" onclick="toggleNavGroup(this)">
+                        ⚙️ Yönetim <span class="nav-arrow">▼</span>
+                    </div>
+                    <div class="nav-items">
+                        <div class="nav-item" data-page="puantaj" onclick="goTo('puantaj')">
+                            <span class="icon"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span> Puantaj
+                        </div>
+                        <div class="nav-item" data-page="shift" onclick="goTo('shift')">
+                            <span class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> Shift Planı
+                        </div>
+                        <div class="nav-item" data-page="katalog" onclick="goTo('katalog')">
+                            <span class="icon"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span> İhlal Kataloğu
+                        </div>
+                        <div class="nav-item" data-page="admin" onclick="openAdminWithPin()">
+                            <span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Ayarlar
+                        </div>
                     </div>
                 </div>
                 <!-- Kullanıcı Bilgisi ve Çıkış -->
@@ -1188,9 +1210,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
                 <div class="admin-tabs">
                     <button class="admin-tab active" onclick="showAdminTab('genel',this)">Genel</button>
-                    <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">Kullanıcılar</button>
+                    <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">👤 Kullanıcı Yönetimi</button>
                     <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">⏱️ Oturumlar</button>
-                    <button class="admin-tab" id="tab-izinler" onclick="showAdminTab('izinler',this)">🔐 İzinler</button>
                     <button class="admin-tab" onclick="showAdminTab('puantajKurallar',this)">Puantaj Kuralları</button>
                     <button class="admin-tab" onclick="showAdminTab('subeler',this)">Şubeler</button>
                     <button class="admin-tab" onclick="showAdminTab('pozisyonlar',this)">Pozisyonlar</button>
@@ -1271,16 +1292,75 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                 </div>
 
-                <!-- Kullanıcılar -->
+                <!-- Kullanıcı Yönetimi (Kullanıcılar + İzinler birleşik) -->
                 <div class="admin-section" id="admin-kullanicilar">
+                    <!-- Sistem Kullanıcıları -->
                     <div class="admin-card">
                         <div class="admin-card-header">
-                            <div class="admin-card-title">Sistem Kullanıcıları</div>
+                            <div class="admin-card-title">👤 Sistem Kullanıcıları</div>
                             <button class="btn btn-sm btn-primary" onclick="showAddUserModal()">+ Yeni Kullanıcı</button>
                         </div>
                         <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Sisteme giriş yapabilecek kullanıcıları yönetin.</p>
                         <div class="admin-list" id="userList">
                             <p style="color:var(--tx2);text-align:center;padding:20px">Kullanıcılar yükleniyor...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Rol İzinleri -->
+                    <div class="admin-card" style="margin-top:20px">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">🔐 Rol İzinleri</div>
+                        </div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Her rol için sayfa, belge ve yönetim paneli erişim izinlerini yapılandırın.</p>
+                        
+                        <!-- Rol Seçimi -->
+                        <div class="form-group" style="margin-bottom:20px">
+                            <label class="form-label">Rol Seçin</label>
+                            <select id="advRoleSelect" class="form-select" onchange="loadAdvancedPermissions()" style="max-width:300px">
+                                <option value="">-- Rol Seçin --</option>
+                                <option value="barista">🧑‍🍳 Barista</option>
+                                <option value="magaza_muduru">🏪 Mağaza Müdürü</option>
+                                <option value="bolge_muduru">🌍 Bölge Müdürü</option>
+                            </select>
+                        </div>
+                        
+                        <!-- İzin Paneli -->
+                        <div id="advPermissionsPanel" style="display:none">
+                            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px">
+                                <!-- Sayfalar -->
+                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
+                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem">📄 Sayfalar</div>
+                                    <div style="display:flex;flex-direction:column;gap:8px" id="pagePermissions"></div>
+                                </div>
+                                
+                                <!-- Belgeler -->
+                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
+                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem">📋 Belgeler</div>
+                                    <div style="display:flex;flex-direction:column;gap:8px" id="docPermissions"></div>
+                                </div>
+                                
+                                <!-- Admin Panelleri -->
+                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
+                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem">⚙️ Yönetim</div>
+                                    <div style="display:flex;flex-direction:column;gap:8px" id="adminPermissions"></div>
+                                </div>
+                                
+                                <!-- Özel İzinler -->
+                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
+                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem">🎯 Özel</div>
+                                    <div style="display:flex;flex-direction:column;gap:8px" id="specialPermissions"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="btn-group" style="margin-top:16px">
+                                <button class="btn btn-primary btn-sm" onclick="saveAdvancedPermissions()">💾 Kaydet</button>
+                                <button class="btn btn-ghost btn-sm" onclick="resetAdvancedPermissions()">🔄 Varsayılan</button>
+                            </div>
+                        </div>
+                        
+                        <div id="advPermissionsEmpty" style="text-align:center;padding:30px;color:var(--tx2)">
+                            <div style="font-size:2rem;margin-bottom:8px">🔐</div>
+                            <div style="font-size:.85rem">Düzenlemek için yukarıdan bir rol seçin</div>
                         </div>
                     </div>
                 </div>
@@ -1359,111 +1439,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <div style="text-align:center;padding:40px;color:var(--tx2)">
                                 <div style="font-size:2rem;margin-bottom:12px">📊</div>
                                 <div>Geçmiş yükleniyor...</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Gelişmiş İzin Yönetimi -->
-                <div class="admin-section" id="admin-izinler">
-                    <div class="admin-card">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title">🔐 Gelişmiş İzin Yönetimi</div>
-                        </div>
-                        <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:20px">
-                            Her rol için sayfa, belge ve yönetim paneli erişim izinlerini detaylı olarak yapılandırın.
-                        </p>
-                        
-                        <!-- Rol Seçimi -->
-                        <div class="form-group" style="margin-bottom:24px">
-                            <label class="form-label">Rol Seçin</label>
-                            <select id="advRoleSelect" class="form-select" onchange="loadAdvancedPermissions()" style="max-width:300px">
-                                <option value="">-- Rol Seçin --</option>
-                                <option value="barista">🧑‍🍳 Barista</option>
-                                <option value="magaza_muduru">🏪 Mağaza Müdürü</option>
-                                <option value="bolge_muduru">🌍 Bölge Müdürü</option>
-                            </select>
-                        </div>
-                        
-                        <!-- İzin Paneli -->
-                        <div id="advPermissionsPanel" style="display:none">
-                            <!-- Sayfalar -->
-                            <div style="background:var(--bg3);border-radius:12px;padding:20px;margin-bottom:20px">
-                                <div style="font-weight:600;color:var(--tx);margin-bottom:16px;display:flex;align-items:center;gap:8px">
-                                    <span style="font-size:1.2rem">📄</span> Sayfa İzinleri
-                                </div>
-                                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px" id="pagePermissions">
-                                    <!-- JS ile doldurulacak -->
-                                </div>
-                            </div>
-                            
-                            <!-- Belgeler -->
-                            <div style="background:var(--bg3);border-radius:12px;padding:20px;margin-bottom:20px">
-                                <div style="font-weight:600;color:var(--tx);margin-bottom:16px;display:flex;align-items:center;gap:8px">
-                                    <span style="font-size:1.2rem">📋</span> Belge İzinleri
-                                </div>
-                                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px" id="docPermissions">
-                                    <!-- JS ile doldurulacak -->
-                                </div>
-                            </div>
-                            
-                            <!-- Admin Panelleri -->
-                            <div style="background:var(--bg3);border-radius:12px;padding:20px;margin-bottom:20px">
-                                <div style="font-weight:600;color:var(--tx);margin-bottom:16px;display:flex;align-items:center;gap:8px">
-                                    <span style="font-size:1.2rem">⚙️</span> Yönetim Paneli İzinleri
-                                </div>
-                                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px" id="adminPermissions">
-                                    <!-- JS ile doldurulacak -->
-                                </div>
-                            </div>
-                            
-                            <!-- Özel İzinler -->
-                            <div style="background:linear-gradient(135deg,rgba(255,134,116,.1),rgba(0,140,149,.1));border:1px solid var(--cardBorder);border-radius:12px;padding:20px;margin-bottom:20px">
-                                <div style="font-weight:600;color:var(--tx);margin-bottom:16px;display:flex;align-items:center;gap:8px">
-                                    <span style="font-size:1.2rem">🎯</span> Özel İzinler
-                                </div>
-                                <div style="display:flex;flex-direction:column;gap:12px" id="specialPermissions">
-                                    <!-- JS ile doldurulacak -->
-                                </div>
-                            </div>
-                            
-                            <!-- Kaydet Butonu -->
-                            <div class="btn-group">
-                                <button class="btn btn-primary" onclick="saveAdvancedPermissions()">💾 İzinleri Kaydet</button>
-                                <button class="btn btn-ghost" onclick="resetAdvancedPermissions()">🔄 Varsayılana Dön</button>
-                            </div>
-                        </div>
-                        
-                        <!-- Boş Durum -->
-                        <div id="advPermissionsEmpty" style="text-align:center;padding:40px;color:var(--tx2)">
-                            <div style="font-size:3rem;margin-bottom:16px">🔐</div>
-                            <div>Düzenlemek için yukarıdan bir rol seçin</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Hızlı Referans -->
-                    <div class="admin-card" style="margin-top:16px">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title">📚 İzin Referansı</div>
-                        </div>
-                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
-                            <div style="background:var(--bg3);border-radius:10px;padding:16px">
-                                <div style="font-weight:600;color:#27ae60;margin-bottom:8px;display:flex;align-items:center;gap:6px">
-                                    <span>👁️</span> Görüntüleme
-                                </div>
-                                <div style="font-size:.85rem;color:var(--tx2)">Kullanıcı sayfayı/belgeyi görebilir ancak değişiklik yapamaz.</div>
-                            </div>
-                            <div style="background:var(--bg3);border-radius:10px;padding:16px">
-                                <div style="font-weight:600;color:#3498db;margin-bottom:8px;display:flex;align-items:center;gap:6px">
-                                    <span>✏️</span> Düzenleme
-                                </div>
-                                <div style="font-size:.85rem;color:var(--tx2)">Kullanıcı sayfada/belgede ekleme, düzenleme ve silme yapabilir.</div>
-                            </div>
-                            <div style="background:var(--bg3);border-radius:10px;padding:16px">
-                                <div style="font-weight:600;color:#e74c3c;margin-bottom:8px;display:flex;align-items:center;gap:6px">
-                                    <span>🔒</span> Erişim Yok
-                                </div>
-                                <div style="font-size:.85rem;color:var(--tx2)">Kullanıcı bu sayfayı/belgeyi hiçbir şekilde göremez.</div>
                             </div>
                         </div>
                     </div>
@@ -2074,6 +2049,15 @@ async function logout() {
     } catch (error) {
         console.error('Logout error:', error);
         toast('Çıkış hatası', 'error');
+    }
+}
+
+// Sidebar nav grup toggle
+function toggleNavGroup(label) {
+    label.classList.toggle('collapsed');
+    const items = label.nextElementSibling;
+    if (items) {
+        items.classList.toggle('collapsed');
     }
 }
 
@@ -3475,8 +3459,8 @@ function loadAdminFields() {
 
 function renderAdminLists() {
     // Yönetici-only tab'ları kontrol et
-    const adminOnlyTabs = ['tab-kullanicilar', 'tab-oturumlar', 'tab-izinler', 'tab-aktiviteler'];
-    const adminOnlySections = ['admin-kullanicilar', 'admin-oturumlar', 'admin-izinler', 'admin-aktiviteler'];
+    const adminOnlyTabs = ['tab-kullanicilar', 'tab-oturumlar', 'tab-aktiviteler'];
+    const adminOnlySections = ['admin-kullanicilar', 'admin-oturumlar', 'admin-aktiviteler'];
     
     if (currentUser?.role !== 'yonetici') {
         // Tab butonlarını gizle
@@ -6172,7 +6156,7 @@ async function loadActiveSessions() {
                     </td>
                     <td style="padding:12px;text-align:center">
                         ${isCurrentSession ? 
-                            '<span style="font-size:.75rem;color:var(--tx3);background:var(--bg3);padding:4px 10px;border-radius:4px">Bu Oturum</span>' :
+                            `<button onclick="terminateSession('${doc.id}')" style="background:rgba(243,156,18,.1);border:1px solid rgba(243,156,18,.3);color:#f39c12;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:.8rem;transition:all .2s" onmouseover="this.style.background='rgba(243,156,18,.2)'" onmouseout="this.style.background='rgba(243,156,18,.1)'">⚠️ Çıkış Yap</button>` :
                             `<button onclick="terminateSession('${doc.id}')" style="background:rgba(231,76,60,.1);border:none;color:#e74c3c;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:.8rem;transition:all .2s" onmouseover="this.style.background='rgba(231,76,60,.2)'" onmouseout="this.style.background='rgba(231,76,60,.1)'">🚫 Sonlandır</button>`
                         }
                     </td>
