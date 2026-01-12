@@ -133,7 +133,9 @@ body {
 .login-btn {
     width: 100%;
     padding: 16px 24px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent));
+    background-size: 200% 100%;
+    animation: gradientFlow 3s ease infinite;
     border: none;
     border-radius: var(--radius);
     color: #fff;
@@ -141,10 +143,16 @@ body {
     font-weight: 600;
     font-family: var(--font);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s;
     margin-top: 8px;
     position: relative;
     overflow: hidden;
+}
+
+@keyframes gradientFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
 .login-btn:hover:not(:disabled) {
@@ -393,7 +401,7 @@ body {
     <div class="login-container">
         <div class="login-card">
             <div class="logo-container">
-                <img src="https://static.wixstatic.com/media/760af2_755f54f13b654f1bb318c97f16a029a3~mv2.png/v1/fill/w_104,h_92,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Moonberry%20Coffee%20Logo.png" alt="Moonberry Coffee" class="logo-img">
+                <img src="https://static.wixstatic.com/media/760af2_cb121a61291f4f07adb48cfb70f3e2d9~mv2.png/v1/fill/w_94,h_82,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/beyazwhitelogo-min1.png" alt="Moonberry Coffee" class="logo-img">
             </div>
             
             <h1 class="login-title">Moonberry Coffee</h1>
