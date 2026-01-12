@@ -367,6 +367,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <span class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> Shift Planı
                 </div>
                 
+                <!-- Checklist -->
+                <div class="nav-item" data-page="checklist" onclick="goTo('checklist')">
+                    <span class="icon"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span> Checklist
+                </div>
+                
                 <!-- Personel -->
                 <div class="nav-item" data-page="personel" onclick="goTo('personel')">
                     <span class="icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Personel
@@ -506,6 +511,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <div>
                                 <div style="font-weight:600;color:var(--tx)">Shift Planı</div>
                                 <div style="font-size:.75rem;color:var(--tx2)">Haftalık Vardiya</div>
+                            </div>
+                        </div>
+                        <div class="dashboard-card" onclick="goTo('checklist')" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:16px">
+                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#00c9a7,#008c95);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                                <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                            </div>
+                            <div>
+                                <div style="font-weight:600;color:var(--tx)">Checklist</div>
+                                <div style="font-size:.75rem;color:var(--tx2)">Günlük Kontrol</div>
                             </div>
                         </div>
                     </div>
@@ -1034,6 +1048,64 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                     <div id="shiftHistoryContainer">
                         <p style="color:var(--tx2);text-align:center;padding:20px">Mağaza seçerek geçmiş shiftleri görüntüleyin.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Checklist -->
+            <div class="page" id="page-checklist">
+                <div class="back-link" onclick="goTo('dashboard')">← Ana Sayfa</div>
+                <div class="page-header">
+                    <div class="page-title" style="display:flex;align-items:center;gap:10px">
+                        <div style="width:36px;height:36px;background:linear-gradient(135deg,#00c9a7,#008c95);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                            <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                        </div>
+                        Checklist
+                    </div>
+                    <div class="page-subtitle">Günlük kontrol listeleri</div>
+                </div>
+                
+                <!-- Şube ve Tür Seçimi -->
+                <div class="form-section" style="margin-bottom:20px">
+                    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+                        <div class="form-group" style="margin-bottom:0;min-width:180px">
+                            <label class="form-label">Şube</label>
+                            <select id="checklistSube" class="form-select" onchange="loadChecklistTypes()"></select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;min-width:180px">
+                            <label class="form-label">Checklist Türü</label>
+                            <select id="checklistType" class="form-select" onchange="loadChecklist()">
+                                <option value="">-- Seçin --</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;min-width:140px">
+                            <label class="form-label">Tarih</label>
+                            <input type="date" id="checklistDate" class="form-input" onchange="loadChecklist()">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;min-width:120px" id="checklistTimeSlotGroup" style="display:none">
+                            <label class="form-label">Saat Dilimi</label>
+                            <select id="checklistTimeSlot" class="form-select" onchange="loadChecklist()">
+                                <option value="">-- Seçin --</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Yönetici Butonları -->
+                <div id="checklistAdminButtons" style="display:none;margin-bottom:16px">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <button class="btn btn-sm btn-primary" onclick="showAddChecklistItemModal()">+ Madde Ekle</button>
+                        <button class="btn btn-sm btn-ghost" onclick="showChecklistHistory()">📊 Geçmiş</button>
+                        <button class="btn btn-sm btn-ghost" onclick="showChecklistSettings()">⚙️ Ayarlar</button>
+                    </div>
+                </div>
+                
+                <!-- Checklist Formu -->
+                <div id="checklistFormContainer">
+                    <div style="text-align:center;padding:60px;color:var(--tx2)">
+                        <div style="font-size:4rem;margin-bottom:16px">📋</div>
+                        <div style="font-size:1.1rem;margin-bottom:8px">Checklist Seçin</div>
+                        <div style="font-size:.9rem">Yukarıdan şube ve checklist türü seçerek başlayın</div>
                     </div>
                 </div>
             </div>
@@ -2354,6 +2426,7 @@ const PAGE_NAMES = {
     'personel': 'Personel Listesi',
     'puantaj': 'Puantaj',
     'shift': 'Shift Planı',
+    'checklist': 'Checklist',
     'sozlesme': 'İş Sözleşmesi',
     'tutanak': 'Tutanak',
     'savunma': 'Savunma İsteme',
@@ -2425,6 +2498,10 @@ function goTo(page) {
     if (page === 'borc') populateSubeSelect('borc_sube');
     if (page === 'avans') populateSubeSelect('avans_sube');
     if (page === 'zimmet') populateSubeSelect('zimmet_sube');
+    // Checklist sayfası
+    if (page === 'checklist') {
+        initChecklistPage();
+    }
 }
 
 function goBack() { goTo(previousPage); }
@@ -8371,6 +8448,880 @@ function getWeekOptions() {
         options.push({ value, label, monday, sunday, isCurrent: i === 0 });
     }
     return options;
+}
+
+// ==================== CHECKLIST MODULE ====================
+// Checklist türleri - şubeye göre
+const CHECKLIST_TYPES = {
+    'Tuzla Port': [
+        { id: 'acilis', name: '☀️ Açılış', timeSlots: null, icon: '🌅' },
+        { id: 'kapanis', name: '🌙 Kapanış', timeSlots: null, icon: '🌆' },
+        { id: 'guncel', name: '📋 Güncel Kontrol', timeSlots: ['10:00', '14:00', '18:00'], icon: '📋' },
+        { id: 'platform', name: '📱 Platform Check', timeSlots: ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'], icon: '📱' },
+        { id: 'temizlik', name: '🧹 Temizlik Çizelgesi', timeSlots: null, icon: '🧹' },
+        { id: 'mudur', name: '👔 Müdür Checklist', timeSlots: null, icon: '👔', managerOnly: true }
+    ],
+    'Şişli (Merkez)': [
+        { id: 'acilis', name: '☀️ Açılış', timeSlots: null, icon: '🌅' },
+        { id: 'kapanis', name: '🌙 Kapanış', timeSlots: null, icon: '🌆' },
+        { id: 'guncel', name: '📋 Güncel Kontrol', timeSlots: ['14:00', '18:00', '22:00'], icon: '📋' },
+        { id: 'aylik', name: '📅 Aylık Bakım', timeSlots: null, icon: '📅' },
+        { id: 'mudur', name: '👔 Müdür Checklist', timeSlots: null, icon: '👔', managerOnly: true }
+    ]
+};
+
+// Platform listesi (Tuzla için)
+const PLATFORMS = ['Trendyol', 'Yemek Sepeti', 'Getir Yemek', 'Migros'];
+
+// Checklist sayfası başlat
+function initChecklistPage() {
+    // Şube dropdown'ı doldur
+    const subeSelect = document.getElementById('checklistSube');
+    if (!subeSelect) return;
+    
+    const userBranch = currentUser?.branch;
+    const isAdmin = currentUser?.role === 'yonetici' || currentUser?.role === 'bolge_muduru';
+    
+    let branches = STATE.branches || [];
+    
+    // Mağaza müdürü/barista sadece kendi şubesini görsün
+    if (!isAdmin && userBranch) {
+        branches = branches.filter(b => b === userBranch);
+    }
+    
+    subeSelect.innerHTML = branches.map(b => `<option value="${b}">${b}</option>`).join('');
+    
+    // Default Tuzla Port
+    const tuzlaOption = Array.from(subeSelect.options).find(o => o.value.toLowerCase().includes('tuzla'));
+    if (tuzlaOption && (isAdmin || !userBranch)) {
+        subeSelect.value = tuzlaOption.value;
+    }
+    
+    // Tarih bugün
+    document.getElementById('checklistDate').value = new Date().toISOString().split('T')[0];
+    
+    // Yönetici butonlarını göster/gizle
+    const adminBtns = document.getElementById('checklistAdminButtons');
+    if (adminBtns) {
+        adminBtns.style.display = (currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru') ? 'block' : 'none';
+    }
+    
+    // Checklist türlerini yükle
+    loadChecklistTypes();
+}
+
+// Checklist türlerini yükle
+function loadChecklistTypes() {
+    const branch = document.getElementById('checklistSube')?.value;
+    const typeSelect = document.getElementById('checklistType');
+    if (!typeSelect || !branch) return;
+    
+    const types = CHECKLIST_TYPES[branch] || [];
+    const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
+    
+    let html = '<option value="">-- Checklist Seçin --</option>';
+    types.forEach(t => {
+        // Müdür checklist'i sadece müdürlere göster
+        if (t.managerOnly && !isManager) return;
+        html += `<option value="${t.id}" data-timeslots="${t.timeSlots ? t.timeSlots.join(',') : ''}">${t.name}</option>`;
+    });
+    
+    typeSelect.innerHTML = html;
+    
+    // Formu temizle
+    document.getElementById('checklistFormContainer').innerHTML = `
+        <div style="text-align:center;padding:60px;color:var(--tx2)">
+            <div style="font-size:4rem;margin-bottom:16px">📋</div>
+            <div style="font-size:1.1rem;margin-bottom:8px">Checklist Seçin</div>
+            <div style="font-size:.9rem">Yukarıdan checklist türü seçerek başlayın</div>
+        </div>
+    `;
+}
+
+// Checklist yükle
+async function loadChecklist() {
+    const branch = document.getElementById('checklistSube')?.value;
+    const type = document.getElementById('checklistType')?.value;
+    const date = document.getElementById('checklistDate')?.value;
+    const container = document.getElementById('checklistFormContainer');
+    
+    if (!branch || !type || !date || !container) return;
+    
+    // Saat dilimi kontrolü
+    const typeOption = document.getElementById('checklistType')?.selectedOptions[0];
+    const timeSlots = typeOption?.dataset.timeslots?.split(',').filter(Boolean) || [];
+    const timeSlotGroup = document.getElementById('checklistTimeSlotGroup');
+    const timeSlotSelect = document.getElementById('checklistTimeSlot');
+    
+    if (timeSlots.length > 0) {
+        timeSlotGroup.style.display = 'block';
+        timeSlotSelect.innerHTML = '<option value="">-- Saat Seçin --</option>' + 
+            timeSlots.map(t => `<option value="${t}">${t}</option>`).join('');
+        
+        // Saat seçilmemişse bekle
+        if (!timeSlotSelect.value) {
+            container.innerHTML = `
+                <div style="text-align:center;padding:60px;color:var(--tx2)">
+                    <div style="font-size:4rem;margin-bottom:16px">⏰</div>
+                    <div style="font-size:1.1rem;margin-bottom:8px">Saat Dilimi Seçin</div>
+                    <div style="font-size:.9rem">Bu checklist günün belirli saatlerinde doldurulur</div>
+                </div>
+            `;
+            return;
+        }
+    } else {
+        timeSlotGroup.style.display = 'none';
+    }
+    
+    const timeSlot = timeSlotSelect?.value || null;
+    
+    // Loading
+    container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--tx2)">
+        <div class="loading-spinner" style="margin:0 auto 16px"></div>
+        Checklist yükleniyor...
+    </div>`;
+    
+    try {
+        // Firestore'dan checklist'i al
+        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
+        const checklistDoc = await db.collection('checklists').doc(checklistId).get();
+        
+        let items = [];
+        if (checklistDoc.exists) {
+            items = checklistDoc.data().items || [];
+        } else {
+            // Default maddeleri yükle
+            items = getDefaultChecklistItems(branch, type);
+            // Kaydet
+            await db.collection('checklists').doc(checklistId).set({
+                branch,
+                type,
+                items,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+        
+        // Daha önce doldurulmuş mu kontrol et
+        const submissionId = `${checklistId}_${date}${timeSlot ? '_' + timeSlot.replace(':', '') : ''}`;
+        const submissionDoc = await db.collection('checklistSubmissions').doc(submissionId).get();
+        
+        let submittedData = null;
+        if (submissionDoc.exists) {
+            submittedData = submissionDoc.data();
+        }
+        
+        // Formu render et
+        renderChecklistForm(items, branch, type, date, timeSlot, submittedData);
+        
+    } catch (error) {
+        console.error('Checklist yükleme hatası:', error);
+        container.innerHTML = `<div style="color:var(--red);padding:20px;text-align:center">
+            <div style="font-size:2rem;margin-bottom:8px">⚠️</div>
+            Checklist yüklenirken hata oluştu
+        </div>`;
+    }
+}
+
+// Checklist formunu render et
+function renderChecklistForm(items, branch, type, date, timeSlot, submittedData) {
+    const container = document.getElementById('checklistFormContainer');
+    const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
+    const isSubmitted = !!submittedData;
+    
+    // Platform check için özel render
+    if (type === 'platform') {
+        renderPlatformChecklist(container, branch, date, timeSlot, submittedData);
+        return;
+    }
+    
+    let typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === type);
+    
+    let html = `
+        <div class="form-section">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                <div>
+                    <div style="font-size:1.3rem;font-weight:700;color:var(--tx)">${typeInfo?.icon || '📋'} ${typeInfo?.name || type}</div>
+                    <div style="font-size:.85rem;color:var(--tx2)">${branch} • ${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})}${timeSlot ? ' • ' + timeSlot : ''}</div>
+                </div>
+                ${isSubmitted ? `
+                    <div style="text-align:right">
+                        <div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.85rem">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            Tamamlandı
+                        </div>
+                        <div style="font-size:.75rem;color:var(--tx3);margin-top:4px">${submittedData.submittedByName} • ${submittedData.submittedAt?.toDate ? new Date(submittedData.submittedAt.toDate()).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'}) : ''}</div>
+                    </div>
+                ` : ''}
+            </div>
+            
+            <div style="margin-bottom:20px;padding:16px;background:var(--bg3);border-radius:12px">
+                <label class="form-label" style="margin-bottom:8px">👤 Personel Adı</label>
+                <input type="text" id="checklistPersonName" class="form-input" placeholder="Adınızı girin" 
+                    value="${submittedData?.personName || currentUser?.name || ''}" 
+                    ${isSubmitted ? 'disabled' : ''}>
+            </div>
+            
+            <div style="margin-bottom:16px;padding:12px;background:rgba(255,134,116,.1);border-radius:10px;font-size:.85rem;color:var(--tx2)">
+                ⚠️ <strong>Önemli:</strong> Eksik veya yapılmayan kontrol puantaj puanını etkiler. Tüm maddeleri dikkatlice kontrol edin.
+            </div>
+            
+            <div id="checklistItems">
+    `;
+    
+    items.forEach((item, index) => {
+        const isChecked = submittedData?.items?.find(i => i.id === item.id)?.checked;
+        const isNotDone = submittedData?.items?.find(i => i.id === item.id)?.notDone;
+        
+        html += `
+            <div class="checklist-item" style="display:flex;align-items:flex-start;gap:12px;padding:16px;background:var(--bg2);border-radius:10px;margin-bottom:10px;border:1px solid var(--cardBorder)">
+                <div style="display:flex;gap:8px;flex-shrink:0">
+                    <label class="check-option" style="display:flex;align-items:center;gap:6px;cursor:${isSubmitted ? 'default' : 'pointer'}">
+                        <input type="radio" name="check_${item.id}" value="done" 
+                            ${isChecked ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''}
+                            style="display:none">
+                        <span class="check-btn done ${isChecked ? 'active' : ''}" onclick="${isSubmitted ? '' : `selectCheckOption(this, '${item.id}', 'done')`}"
+                            style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;
+                            background:${isChecked ? 'rgba(39,174,96,.2)' : 'var(--bg3)'};
+                            border:2px solid ${isChecked ? '#27ae60' : 'var(--cardBorder)'};
+                            color:${isChecked ? '#27ae60' : 'var(--tx3)'};
+                            transition:all .2s">✓</span>
+                    </label>
+                    <label class="check-option" style="display:flex;align-items:center;gap:6px;cursor:${isSubmitted ? 'default' : 'pointer'}">
+                        <input type="radio" name="check_${item.id}" value="notdone" 
+                            ${isNotDone ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''}
+                            style="display:none">
+                        <span class="check-btn notdone ${isNotDone ? 'active' : ''}" onclick="${isSubmitted ? '' : `selectCheckOption(this, '${item.id}', 'notdone')`}"
+                            style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;
+                            background:${isNotDone ? 'rgba(231,76,60,.2)' : 'var(--bg3)'};
+                            border:2px solid ${isNotDone ? '#e74c3c' : 'var(--cardBorder)'};
+                            color:${isNotDone ? '#e74c3c' : 'var(--tx3)'};
+                            transition:all .2s">✗</span>
+                    </label>
+                </div>
+                <div style="flex:1">
+                    <div style="font-size:.9rem;color:var(--tx);line-height:1.5">${item.text}</div>
+                    ${item.penalty ? `<div style="font-size:.75rem;color:var(--red);margin-top:4px">Yapılmazsa: ${item.penalty}</div>` : ''}
+                </div>
+                ${isManager && !isSubmitted ? `
+                    <button onclick="deleteChecklistItem('${item.id}')" style="background:none;border:none;color:var(--tx3);cursor:pointer;padding:4px" title="Sil">🗑️</button>
+                ` : ''}
+            </div>
+        `;
+    });
+    
+    html += `
+            </div>
+            
+            ${!isSubmitted ? `
+                <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
+                    <button class="btn btn-ghost" onclick="loadChecklist()">🔄 Yenile</button>
+                    <button class="btn btn-primary" onclick="submitChecklist('${branch}', '${type}', '${date}', '${timeSlot || ''}')">
+                        ✅ Checklist'i Tamamla
+                    </button>
+                </div>
+            ` : `
+                <div style="margin-top:24px;text-align:center;color:var(--tx2)">
+                    Bu checklist zaten tamamlanmış
+                </div>
+            `}
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// Check seçeneği seç
+function selectCheckOption(btn, itemId, value) {
+    const parent = btn.closest('.checklist-item');
+    const doneBtn = parent.querySelector('.check-btn.done');
+    const notdoneBtn = parent.querySelector('.check-btn.notdone');
+    const doneInput = parent.querySelector('input[value="done"]');
+    const notdoneInput = parent.querySelector('input[value="notdone"]');
+    
+    // Reset
+    doneBtn.style.background = 'var(--bg3)';
+    doneBtn.style.borderColor = 'var(--cardBorder)';
+    doneBtn.style.color = 'var(--tx3)';
+    notdoneBtn.style.background = 'var(--bg3)';
+    notdoneBtn.style.borderColor = 'var(--cardBorder)';
+    notdoneBtn.style.color = 'var(--tx3)';
+    
+    if (value === 'done') {
+        doneInput.checked = true;
+        doneBtn.style.background = 'rgba(39,174,96,.2)';
+        doneBtn.style.borderColor = '#27ae60';
+        doneBtn.style.color = '#27ae60';
+    } else {
+        notdoneInput.checked = true;
+        notdoneBtn.style.background = 'rgba(231,76,60,.2)';
+        notdoneBtn.style.borderColor = '#e74c3c';
+        notdoneBtn.style.color = '#e74c3c';
+    }
+}
+
+// Platform checklist render
+function renderPlatformChecklist(container, branch, date, timeSlot, submittedData) {
+    const isSubmitted = !!submittedData;
+    
+    let html = `
+        <div class="form-section">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                <div>
+                    <div style="font-size:1.3rem;font-weight:700;color:var(--tx)">📱 Platform Check</div>
+                    <div style="font-size:.85rem;color:var(--tx2)">${branch} • ${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})} • ${timeSlot}</div>
+                </div>
+                ${isSubmitted ? `
+                    <div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.85rem">
+                        ✓ Tamamlandı
+                    </div>
+                ` : ''}
+            </div>
+            
+            <div style="margin-bottom:20px;padding:16px;background:var(--bg3);border-radius:12px">
+                <label class="form-label" style="margin-bottom:8px">👤 Personel Adı</label>
+                <input type="text" id="checklistPersonName" class="form-input" placeholder="Adınızı girin" 
+                    value="${submittedData?.personName || currentUser?.name || ''}" 
+                    ${isSubmitted ? 'disabled' : ''}>
+            </div>
+            
+            <div style="background:var(--bg2);border-radius:12px;overflow:hidden;border:1px solid var(--cardBorder)">
+                <table style="width:100%;border-collapse:collapse">
+                    <thead>
+                        <tr style="background:var(--bg3)">
+                            <th style="padding:12px;text-align:left;font-weight:600;color:var(--tx)">Platform</th>
+                            <th style="padding:12px;text-align:center;font-weight:600;color:var(--tx)">Açık ✓</th>
+                            <th style="padding:12px;text-align:center;font-weight:600;color:var(--tx)">Kapalı ✗</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
+    
+    PLATFORMS.forEach(platform => {
+        const isOpen = submittedData?.platforms?.find(p => p.name === platform)?.isOpen;
+        const isClosed = submittedData?.platforms?.find(p => p.name === platform)?.isOpen === false;
+        
+        html += `
+            <tr style="border-top:1px solid var(--cardBorder)">
+                <td style="padding:12px;font-weight:500;color:var(--tx)">${platform}</td>
+                <td style="padding:12px;text-align:center">
+                    <label style="cursor:${isSubmitted ? 'default' : 'pointer'}">
+                        <input type="radio" name="platform_${platform.replace(/\s/g, '_')}" value="open" 
+                            ${isOpen ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''}
+                            style="display:none">
+                        <span onclick="${isSubmitted ? '' : `selectPlatformStatus(this, '${platform.replace(/\s/g, '_')}', true)`}"
+                            style="display:inline-flex;width:40px;height:40px;border-radius:10px;align-items:center;justify-content:center;font-size:1.3rem;
+                            background:${isOpen ? 'rgba(39,174,96,.2)' : 'var(--bg3)'};
+                            border:2px solid ${isOpen ? '#27ae60' : 'transparent'};
+                            color:${isOpen ? '#27ae60' : 'var(--tx3)'};
+                            transition:all .2s">✓</span>
+                    </label>
+                </td>
+                <td style="padding:12px;text-align:center">
+                    <label style="cursor:${isSubmitted ? 'default' : 'pointer'}">
+                        <input type="radio" name="platform_${platform.replace(/\s/g, '_')}" value="closed" 
+                            ${isClosed ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''}
+                            style="display:none">
+                        <span onclick="${isSubmitted ? '' : `selectPlatformStatus(this, '${platform.replace(/\s/g, '_')}', false)`}"
+                            style="display:inline-flex;width:40px;height:40px;border-radius:10px;align-items:center;justify-content:center;font-size:1.3rem;
+                            background:${isClosed ? 'rgba(231,76,60,.2)' : 'var(--bg3)'};
+                            border:2px solid ${isClosed ? '#e74c3c' : 'transparent'};
+                            color:${isClosed ? '#e74c3c' : 'var(--tx3)'};
+                            transition:all .2s">✗</span>
+                    </label>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                    </tbody>
+                </table>
+            </div>
+            
+            ${!isSubmitted ? `
+                <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
+                    <button class="btn btn-primary" onclick="submitPlatformChecklist('${branch}', '${date}', '${timeSlot}')">
+                        ✅ Platform Check'i Tamamla
+                    </button>
+                </div>
+            ` : ''}
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// Platform status seç
+function selectPlatformStatus(btn, platformKey, isOpen) {
+    const row = btn.closest('tr');
+    const openSpan = row.querySelector('td:nth-child(2) span');
+    const closedSpan = row.querySelector('td:nth-child(3) span');
+    const openInput = row.querySelector('input[value="open"]');
+    const closedInput = row.querySelector('input[value="closed"]');
+    
+    // Reset
+    openSpan.style.background = 'var(--bg3)';
+    openSpan.style.borderColor = 'transparent';
+    openSpan.style.color = 'var(--tx3)';
+    closedSpan.style.background = 'var(--bg3)';
+    closedSpan.style.borderColor = 'transparent';
+    closedSpan.style.color = 'var(--tx3)';
+    
+    if (isOpen) {
+        openInput.checked = true;
+        openSpan.style.background = 'rgba(39,174,96,.2)';
+        openSpan.style.borderColor = '#27ae60';
+        openSpan.style.color = '#27ae60';
+    } else {
+        closedInput.checked = true;
+        closedSpan.style.background = 'rgba(231,76,60,.2)';
+        closedSpan.style.borderColor = '#e74c3c';
+        closedSpan.style.color = '#e74c3c';
+    }
+}
+
+// Checklist gönder
+async function submitChecklist(branch, type, date, timeSlot) {
+    const personName = document.getElementById('checklistPersonName')?.value?.trim();
+    if (!personName) {
+        toast('Lütfen personel adını girin', 'error');
+        return;
+    }
+    
+    // Tüm maddelerin cevaplandığını kontrol et
+    const items = document.querySelectorAll('#checklistItems .checklist-item');
+    const responses = [];
+    let allAnswered = true;
+    
+    items.forEach(item => {
+        const doneInput = item.querySelector('input[value="done"]');
+        const notdoneInput = item.querySelector('input[value="notdone"]');
+        const itemId = doneInput?.name?.replace('check_', '');
+        
+        if (!doneInput?.checked && !notdoneInput?.checked) {
+            allAnswered = false;
+            item.style.borderColor = '#e74c3c';
+        } else {
+            item.style.borderColor = 'var(--cardBorder)';
+            responses.push({
+                id: itemId,
+                checked: doneInput?.checked || false,
+                notDone: notdoneInput?.checked || false
+            });
+        }
+    });
+    
+    if (!allAnswered) {
+        toast('Lütfen tüm maddeleri işaretleyin', 'error');
+        return;
+    }
+    
+    try {
+        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
+        const submissionId = `${checklistId}_${date}${timeSlot ? '_' + timeSlot.replace(':', '') : ''}`;
+        
+        await db.collection('checklistSubmissions').doc(submissionId).set({
+            checklistId,
+            branch,
+            type,
+            date,
+            timeSlot: timeSlot || null,
+            personName,
+            submittedBy: currentUser?.id,
+            submittedByName: currentUser?.name || personName,
+            submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            items: responses
+        });
+        
+        toast('Checklist başarıyla kaydedildi!', 'success');
+        loadChecklist();
+        
+    } catch (error) {
+        console.error('Checklist kayıt hatası:', error);
+        toast('Kayıt hatası!', 'error');
+    }
+}
+
+// Platform checklist gönder
+async function submitPlatformChecklist(branch, date, timeSlot) {
+    const personName = document.getElementById('checklistPersonName')?.value?.trim();
+    if (!personName) {
+        toast('Lütfen personel adını girin', 'error');
+        return;
+    }
+    
+    const platforms = [];
+    let allAnswered = true;
+    
+    PLATFORMS.forEach(platform => {
+        const key = platform.replace(/\s/g, '_');
+        const openInput = document.querySelector(`input[name="platform_${key}"][value="open"]`);
+        const closedInput = document.querySelector(`input[name="platform_${key}"][value="closed"]`);
+        
+        if (!openInput?.checked && !closedInput?.checked) {
+            allAnswered = false;
+        } else {
+            platforms.push({
+                name: platform,
+                isOpen: openInput?.checked || false
+            });
+        }
+    });
+    
+    if (!allAnswered) {
+        toast('Lütfen tüm platformları işaretleyin', 'error');
+        return;
+    }
+    
+    try {
+        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_platform`;
+        const submissionId = `${checklistId}_${date}_${timeSlot.replace(':', '')}`;
+        
+        await db.collection('checklistSubmissions').doc(submissionId).set({
+            checklistId,
+            branch,
+            type: 'platform',
+            date,
+            timeSlot,
+            personName,
+            submittedBy: currentUser?.id,
+            submittedByName: currentUser?.name || personName,
+            submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            platforms
+        });
+        
+        toast('Platform check kaydedildi!', 'success');
+        loadChecklist();
+        
+    } catch (error) {
+        console.error('Platform check kayıt hatası:', error);
+        toast('Kayıt hatası!', 'error');
+    }
+}
+
+// Checklist madde ekle modal
+function showAddChecklistItemModal() {
+    const branch = document.getElementById('checklistSube')?.value;
+    const type = document.getElementById('checklistType')?.value;
+    
+    if (!branch || !type) {
+        toast('Önce checklist seçin', 'error');
+        return;
+    }
+    
+    showModal('Yeni Madde Ekle', `
+        <div class="form-group">
+            <label class="form-label">Madde Metni</label>
+            <textarea id="newChecklistItemText" class="form-input" rows="3" placeholder="Kontrol maddesi..."></textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Ceza (opsiyonel)</label>
+            <input type="text" id="newChecklistItemPenalty" class="form-input" placeholder="örn: -100 puan">
+        </div>
+    `, `
+        <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
+        <button class="btn btn-primary" onclick="addChecklistItem('${branch}', '${type}')">Ekle</button>
+    `);
+}
+
+// Checklist madde ekle
+async function addChecklistItem(branch, type) {
+    const text = document.getElementById('newChecklistItemText')?.value?.trim();
+    const penalty = document.getElementById('newChecklistItemPenalty')?.value?.trim();
+    
+    if (!text) {
+        toast('Madde metni gerekli', 'error');
+        return;
+    }
+    
+    try {
+        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
+        const checklistRef = db.collection('checklists').doc(checklistId);
+        const doc = await checklistRef.get();
+        
+        const newItem = {
+            id: 'item_' + Date.now(),
+            text,
+            penalty: penalty || null,
+            order: (doc.exists ? doc.data().items?.length : 0) + 1
+        };
+        
+        if (doc.exists) {
+            await checklistRef.update({
+                items: firebase.firestore.FieldValue.arrayUnion(newItem),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } else {
+            await checklistRef.set({
+                branch,
+                type,
+                items: [newItem],
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+        
+        closeModal();
+        toast('Madde eklendi', 'success');
+        loadChecklist();
+        
+    } catch (error) {
+        console.error('Madde ekleme hatası:', error);
+        toast('Ekleme hatası!', 'error');
+    }
+}
+
+// Checklist madde sil
+async function deleteChecklistItem(itemId) {
+    if (!confirm('Bu maddeyi silmek istediğinize emin misiniz?')) return;
+    
+    const branch = document.getElementById('checklistSube')?.value;
+    const type = document.getElementById('checklistType')?.value;
+    
+    try {
+        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
+        const checklistRef = db.collection('checklists').doc(checklistId);
+        const doc = await checklistRef.get();
+        
+        if (doc.exists) {
+            const items = doc.data().items.filter(i => i.id !== itemId);
+            await checklistRef.update({
+                items,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+        
+        toast('Madde silindi', 'success');
+        loadChecklist();
+        
+    } catch (error) {
+        console.error('Madde silme hatası:', error);
+        toast('Silme hatası!', 'error');
+    }
+}
+
+// Checklist geçmişi göster
+async function showChecklistHistory() {
+    const branch = document.getElementById('checklistSube')?.value;
+    const type = document.getElementById('checklistType')?.value;
+    
+    if (!branch) {
+        toast('Önce şube seçin', 'error');
+        return;
+    }
+    
+    try {
+        let query = db.collection('checklistSubmissions')
+            .where('branch', '==', branch)
+            .orderBy('submittedAt', 'desc')
+            .limit(50);
+        
+        if (type) {
+            query = db.collection('checklistSubmissions')
+                .where('branch', '==', branch)
+                .where('type', '==', type)
+                .orderBy('submittedAt', 'desc')
+                .limit(50);
+        }
+        
+        const snapshot = await query.get();
+        
+        let html = '<div style="max-height:400px;overflow-y:auto">';
+        
+        if (snapshot.empty) {
+            html += '<p style="color:var(--tx2);text-align:center;padding:20px">Henüz checklist kaydı yok</p>';
+        } else {
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === data.type);
+                const date = data.submittedAt?.toDate ? new Date(data.submittedAt.toDate()) : new Date();
+                
+                // Tamamlanma oranı
+                let completionRate = 100;
+                if (data.items) {
+                    const done = data.items.filter(i => i.checked).length;
+                    completionRate = Math.round((done / data.items.length) * 100);
+                }
+                
+                html += `
+                    <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg2);border-radius:10px;margin-bottom:8px">
+                        <div style="width:44px;height:44px;background:${completionRate === 100 ? 'rgba(39,174,96,.15)' : 'rgba(243,156,18,.15)'};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem">
+                            ${typeInfo?.icon || '📋'}
+                        </div>
+                        <div style="flex:1">
+                            <div style="font-weight:600;color:var(--tx)">${typeInfo?.name || data.type}</div>
+                            <div style="font-size:.8rem;color:var(--tx2)">${data.personName} • ${date.toLocaleDateString('tr-TR')} ${date.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'})}</div>
+                        </div>
+                        <div style="text-align:right">
+                            <div style="font-weight:600;color:${completionRate === 100 ? '#27ae60' : '#f39c12'}">${completionRate}%</div>
+                            <div style="font-size:.75rem;color:var(--tx3)">${data.timeSlot || ''}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        html += '</div>';
+        
+        showModal('📊 Checklist Geçmişi', html, '<button class="btn btn-ghost" onclick="closeModal()">Kapat</button>');
+        
+    } catch (error) {
+        console.error('Geçmiş yükleme hatası:', error);
+        toast('Geçmiş yüklenemedi', 'error');
+    }
+}
+
+// Checklist ayarları
+function showChecklistSettings() {
+    const branch = document.getElementById('checklistSube')?.value;
+    if (!branch) {
+        toast('Önce şube seçin', 'error');
+        return;
+    }
+    
+    const types = CHECKLIST_TYPES[branch] || [];
+    
+    let html = `
+        <p style="color:var(--tx2);margin-bottom:16px">${branch} için checklist ayarları</p>
+        <div style="display:flex;flex-direction:column;gap:12px">
+    `;
+    
+    types.forEach(t => {
+        html += `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border-radius:10px">
+                <div style="display:flex;align-items:center;gap:10px">
+                    <span style="font-size:1.2rem">${t.icon}</span>
+                    <span style="font-weight:500">${t.name}</span>
+                </div>
+                <div style="font-size:.8rem;color:var(--tx2)">
+                    ${t.timeSlots ? t.timeSlots.join(', ') : 'Tek seferlik'}
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    
+    showModal('⚙️ Checklist Ayarları', html, '<button class="btn btn-ghost" onclick="closeModal()">Kapat</button>');
+}
+
+// Default checklist maddeleri
+function getDefaultChecklistItems(branch, type) {
+    const defaults = {
+        'Tuzla Port': {
+            'acilis': [
+                { id: 'tuzla_ac_1', text: 'Müzik listemiz karışık modda çalışıyor mu? Ses seviyesi 4-4.5 olarak ayarlandı mı?', penalty: '-100 puan' },
+                { id: 'tuzla_ac_2', text: 'Ön bahçede ortadaki iki ısıtıcı P3, diğerleri P2\'de mi?', penalty: '-200 puan' },
+                { id: 'tuzla_ac_3', text: 'Xiaomi ısıtıcıların üzerinde herhangi bir şey yok mu?', penalty: '-100 puan' },
+                { id: 'tuzla_ac_4', text: 'Pastacı kreması tarife uygun bir şekilde hazırlandı mı?', penalty: '-200 puan' },
+                { id: 'tuzla_ac_5', text: 'POS cihazından çıkan Z raporu paylaşıldı mı?', penalty: '-500 puan' },
+                { id: 'tuzla_ac_6', text: 'Hoparlör, şirket telefonu, masa ışıkları kontrol edildi mi?', penalty: '-100 puan' },
+                { id: 'tuzla_ac_7', text: 'Mağaza içi çamaşır suyuyla, ön bahçe farklı paspasla temizlendi mi?', penalty: '-200 puan' },
+                { id: 'tuzla_ac_8', text: 'Kutu oyunlarının içeriği tam mı? Eksik veya eskiyen oyun var mı?', penalty: '-100 puan' },
+                { id: 'tuzla_ac_9', text: 'Sabahçı 18:00\'a alarm kurdu mu?', penalty: '-100 puan' },
+                { id: 'tuzla_ac_10', text: 'Bar içi tüm dolap altları süpürülüp silindi mi?', penalty: '-200 puan' },
+                { id: 'tuzla_ac_11', text: 'Şallarımızın hepsinin logosu ön tarafa dönük mü?', penalty: '-100 puan' },
+                { id: 'tuzla_ac_12', text: 'Tüm platformlar açık mı? (Yemek Sepeti, Getir, Trendyol, Migros)', penalty: '-500 puan' }
+            ],
+            'kapanis': [
+                { id: 'tuzla_kap_1', text: 'Tüm soğutucu dolapların kapakları tamamen kapatıldı mı?', penalty: '-200 puan' },
+                { id: 'tuzla_kap_2', text: 'Demlikte çay varsa dökülüp temizliği yapıldı mı?', penalty: '-100 puan' },
+                { id: 'tuzla_kap_3', text: 'Mutfak genel ve tüm temizliği yapıldı mı?', penalty: '-200 puan' },
+                { id: 'tuzla_kap_4', text: 'Tüm bezler sabahçı için yıkandı, temiz ve katlanmış şekilde bırakıldı mı?', penalty: '-100 puan' },
+                { id: 'tuzla_kap_5', text: 'Tüm masa lambaları şarja hazır olacak şekilde yerleştirildi mi?', penalty: '-100 puan' },
+                { id: 'tuzla_kap_6', text: 'Bulaşık makinesi içerisinde bulaşık varsa yıkandı mı?', penalty: '-100 puan' },
+                { id: 'tuzla_kap_7', text: 'Bulaşık makinesinin suyu tahliye edildi mi?', penalty: '-100 puan' },
+                { id: 'tuzla_kap_8', text: 'Meyve sıkma makinası temizlendi mi? Posalar atıldı mı?', penalty: '-200 puan' },
+                { id: 'tuzla_kap_9', text: 'Espresso makinası temizlenip, ışıkları indirildi mi?', penalty: '-200 puan' },
+                { id: 'tuzla_kap_10', text: 'Kasada ve çevresinde gidere ait fatura, adisyon vb. kaldı mı?', penalty: '-100 puan' },
+                { id: 'tuzla_kap_11', text: 'Dış otomatik kapılar anahtarla kilitlendi mi?', penalty: '-500 puan' },
+                { id: 'tuzla_kap_12', text: 'Tatlı dolabı ve yan dolabın ışıkları kapatıldı mı?', penalty: '-100 puan' }
+            ],
+            'guncel': [
+                { id: 'tuzla_gun_1', text: 'Gece saat 02.00 olmadan hiçbir şekilde platform kapatılmadı mı?', penalty: '-5000 puan' },
+                { id: 'tuzla_gun_2', text: 'Müşterinin görebileceği alanlar (kasa, dolap üstü, bar) temiz mi?', penalty: '-200 puan' },
+                { id: 'tuzla_gun_3', text: 'Müzik açık mı, "Moonberry Pop" çalınıyor mu?', penalty: '-100 puan' },
+                { id: 'tuzla_gun_4', text: 'Açılış, aracı ve kapanış checkleri gruba atıldı mı?', penalty: '-200 puan' },
+                { id: 'tuzla_gun_5', text: 'Dolap içindeki SKT tarihleri kontrol edildi mi?', penalty: '-200 puan' },
+                { id: 'tuzla_gun_6', text: 'Gelen pasta, donut, kargo vb. ürünler checklendi mi?', penalty: '-200 puan' },
+                { id: 'tuzla_gun_7', text: 'Zayiat (kırılan, bozulan, çalışmayan) var mı? Gruba bildirildi mi?', penalty: '-100 puan' },
+                { id: 'tuzla_gun_8', text: 'Barista önlüğü ve personel kıyafetleri temiz mi?', penalty: '-100 puan' },
+                { id: 'tuzla_gun_9', text: 'Isıtıcılar açık mı? (Soğuk havada)', penalty: '-200 puan' },
+                { id: 'tuzla_gun_10', text: 'Pergole ışıkları açık mı?', penalty: '-100 puan' },
+                { id: 'tuzla_gun_11', text: 'Portafilter, makine, buhar çubuğu, pitcher temiz mi?', penalty: '-200 puan' },
+                { id: 'tuzla_gun_12', text: 'Kapı önünde/çevrede çöp birikmedi mi?', penalty: '-100 puan' }
+            ],
+            'temizlik': [
+                { id: 'tuzla_tem_1', text: 'Bulaşık makinesi kireç çözücü yapıldı mı? (Ayın 3, 11, 19)', penalty: '-200 puan' },
+                { id: 'tuzla_tem_2', text: 'Şurup ve sosların temizliği yapıldı mı?', penalty: '-100 puan' },
+                { id: 'tuzla_tem_3', text: 'Kuvings, blender, Yasomi temizliği yapıldı mı?', penalty: '-100 puan' },
+                { id: 'tuzla_tem_4', text: 'Mutfağa çamaşır sulu paspas yapıldı mı?', penalty: '-100 puan' },
+                { id: 'tuzla_tem_5', text: 'Mikrodalga temizliği yapıldı mı?', penalty: '-100 puan' },
+                { id: 'tuzla_tem_6', text: 'Mutfak tüm zeminler, görünmeyen zeminler temizlendi mi?', penalty: '-200 puan' }
+            ],
+            'mudur': [
+                { id: 'tuzla_mud_1', text: 'Personel vardiyaya zamanında geldi mi?', penalty: null },
+                { id: 'tuzla_mud_2', text: 'Kasa sayımı doğru mu?', penalty: null },
+                { id: 'tuzla_mud_3', text: 'Stok sayımı yapıldı mı?', penalty: null },
+                { id: 'tuzla_mud_4', text: 'Personel kıyafetleri uygun mu?', penalty: null },
+                { id: 'tuzla_mud_5', text: 'Müşteri şikayeti var mı?', penalty: null },
+                { id: 'tuzla_mud_6', text: 'Genel mağaza durumu kontrol edildi mi?', penalty: null }
+            ]
+        },
+        'Şişli (Merkez)': {
+            'acilis': [
+                { id: 'sisli_ac_1', text: 'Tüm platformlar açık mı? (Yemek Sepeti, Getir, Trendyol)', penalty: '-500 puan' },
+                { id: 'sisli_ac_2', text: 'İlk iş tüm kampanyalar açık mı kontrol edildi mi?', penalty: '-200 puan' },
+                { id: 'sisli_ac_3', text: 'Pastacı kreması tarife uygun bir şekilde hazırlandı mı?', penalty: '-200 puan' },
+                { id: 'sisli_ac_4', text: 'Yağmurlu havalarda tente açık mı kontrol edildi mi?', penalty: '-100 puan' },
+                { id: 'sisli_ac_5', text: 'Hoparlör, şirket telefonu, masa ışıkları kontrol edildi mi?', penalty: '-100 puan' },
+                { id: 'sisli_ac_6', text: 'Tezgah üstü makine altı temizliği yapıldı mı?', penalty: '-200 puan' },
+                { id: 'sisli_ac_7', text: 'Mağaza bar içi ve kasa önü çamaşır suyuyla temizlendi mi?', penalty: '-200 puan' },
+                { id: 'sisli_ac_8', text: 'Donuk gelen ürün dışarda bekletilmedi mi?', penalty: '-500 puan' },
+                { id: 'sisli_ac_9', text: 'SKT tarihi önce olan ürün önde mi? FIFO uygulandı mı?', penalty: '-200 puan' },
+                { id: 'sisli_ac_10', text: 'Servis rafımız temiz mi? Her rafı temizledin mi?', penalty: '-100 puan' },
+                { id: 'sisli_ac_11', text: 'Tatlı tabakları temizlendi mi? (Fotoğraf)', penalty: '-200 puan' }
+            ],
+            'kapanis': [
+                { id: 'sisli_kap_1', text: 'Tüm soğutucu dolapların kapakları tamamen kapatıldı mı?', penalty: '-200 puan' },
+                { id: 'sisli_kap_2', text: 'Klima kapatıldı mı? (Fotoğraf)', penalty: '-100 puan' },
+                { id: 'sisli_kap_3', text: 'Paketleme alanı ışıklarının fişi çıkarıldı mı?', penalty: '-100 puan' },
+                { id: 'sisli_kap_4', text: 'Demlikte çay varsa dökülüp temizliği yapıldı mı?', penalty: '-100 puan' },
+                { id: 'sisli_kap_5', text: 'Mutfak genel ve tüm temizliği yapıldı mı?', penalty: '-200 puan' },
+                { id: 'sisli_kap_6', text: 'Tüm bezler sabahçı için yıkandı, temiz ve katlanmış şekilde mi?', penalty: '-100 puan' },
+                { id: 'sisli_kap_7', text: 'Meyve sıkma makinası temizlendi mi? Posalar atıldı mı?', penalty: '-200 puan' },
+                { id: 'sisli_kap_8', text: 'Espresso makinası temizlenip, ışıkları indirildi mi?', penalty: '-200 puan' },
+                { id: 'sisli_kap_9', text: 'Kasada ve çevresinde gidere ait fatura, adisyon kaldı mı?', penalty: '-100 puan' },
+                { id: 'sisli_kap_10', text: 'Tatlı dolabının ışıkları kapatıldı mı?', penalty: '-100 puan' },
+                { id: 'sisli_kap_11', text: 'Şirket ve pembe telefon şarja takıldı mı?', penalty: '-100 puan' }
+            ],
+            'guncel': [
+                { id: 'sisli_gun_1', text: 'Müşterinin görebileceği alanlar (kasa, dolap üstü, bar) temiz mi?', penalty: '-200 puan' },
+                { id: 'sisli_gun_2', text: 'Müzik açık mı, "Moonberry Pop" çalınıyor mu?', penalty: '-100 puan' },
+                { id: 'sisli_gun_3', text: 'Açılış, aracı ve kapanış checkleri gruba atıldı mı?', penalty: '-200 puan' },
+                { id: 'sisli_gun_4', text: 'Dışarda meyve suyu var mı? (YASAK)', penalty: '-5000 puan' },
+                { id: 'sisli_gun_5', text: 'Dolap içindeki SKT tarihleri görünecek şekilde mi?', penalty: '-200 puan' },
+                { id: 'sisli_gun_6', text: 'Gelen pasta, donut, kargo vb. ürünler checklendi mi?', penalty: '-200 puan' },
+                { id: 'sisli_gun_7', text: 'Zayiat (kırılan, bozulan, çalışmayan) gruba bildirildi mi?', penalty: '-100 puan' }
+            ],
+            'aylik': [
+                { id: 'sisli_ayl_1', text: 'Şurup ve sosların temizliği yapıldı mı?', penalty: '-100 puan' },
+                { id: 'sisli_ayl_2', text: 'Kuvings, blender, Yasomi, Türk kahvesi makinesi temizliği yapıldı mı?', penalty: '-100 puan' },
+                { id: 'sisli_ayl_3', text: 'Mutfağa çamaşır sulu paspas yapıldı mı?', penalty: '-100 puan' },
+                { id: 'sisli_ayl_4', text: 'Mikrodalga temizliği yapıldı mı?', penalty: '-100 puan' },
+                { id: 'sisli_ayl_5', text: 'Mutfak tüm zeminler, görünmeyen zeminler temizlendi mi?', penalty: '-200 puan' }
+            ],
+            'mudur': [
+                { id: 'sisli_mud_1', text: 'Personel vardiyaya zamanında geldi mi?', penalty: null },
+                { id: 'sisli_mud_2', text: 'Kasa sayımı doğru mu?', penalty: null },
+                { id: 'sisli_mud_3', text: 'Stok sayımı yapıldı mı?', penalty: null },
+                { id: 'sisli_mud_4', text: 'Personel kıyafetleri uygun mu?', penalty: null },
+                { id: 'sisli_mud_5', text: 'Müşteri şikayeti var mı?', penalty: null },
+                { id: 'sisli_mud_6', text: 'Genel mağaza durumu kontrol edildi mi?', penalty: null }
+            ]
+        }
+    };
+    
+    return defaults[branch]?.[type] || [];
 }
     </script>
 </body>
