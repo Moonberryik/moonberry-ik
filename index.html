@@ -99,7 +99,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .lock-locked{background:rgba(231,76,60,.1);border:1px solid var(--red);border-radius:var(--radiusSm);padding:12px;margin-bottom:16px;color:var(--red);font-size:.85rem}
 
 /* App Layout */
-.app{display:flex;min-height:100vh}
+.app{display:flex;min-height:100vh;opacity:0;transition:opacity .3s}
 .sidebar{width:260px;background:var(--sidebarBg);border-right:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;position:fixed;height:100vh;z-index:100;transition:var(--transition)}
 .sidebar-header{padding:24px 20px;border-bottom:1px solid rgba(255,255,255,.1)}
 .logo{display:flex;align-items:center;gap:12px}
@@ -314,32 +314,31 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </style>
 </head>
 <body>
-    <!-- Lock Screen - Login -->
-    <div class="lock-overlay" id="lockOverlay">
-        <div class="lock-card">
-            <img id="loginLogo" src="https://static.wixstatic.com/media/760af2_cb121a61291f4f07adb48cfb70f3e2d9~mv2.png/v1/fill/w_94,h_82,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/beyazwhitelogo-min1.png" alt="Moonberry Coffee" class="lock-logo-img" style="width:80px;height:auto;margin-bottom:16px">
-            <div class="lock-title">Moonberry Coffee</div>
-            <div class="lock-sub">Yönetim Paneli'ne giriş yapın</div>
-            <div id="lockLocked" class="lock-locked" style="display:none">
-                ⚠️ Çok fazla hatalı deneme. <span id="lockTimer">30:00</span> bekleyin.
-            </div>
-            <form class="login-form" id="loginForm" onsubmit="handleLogin(event)">
-                <div class="login-field">
-                    <label>E-posta</label>
-                    <input type="email" id="loginEmail" placeholder="ornek@moonberrycoffee.com" autocomplete="email" required>
-                </div>
-                <div class="login-field">
-                    <label>Şifre</label>
-                    <input type="password" id="loginPassword" placeholder="••••••" autocomplete="current-password" required>
-                </div>
-                <button type="submit" class="login-btn" id="loginBtn">Giriş Yap</button>
-            </form>
-            <div class="lock-error" id="lockError">E-posta veya şifre hatalı</div>
-            <div style="margin-top:16px;text-align:center">
-                <a href="#" onclick="showForgotPassword(event)" style="color:var(--accent);font-size:.85rem;text-decoration:none">Şifremi Unuttum</a>
-            </div>
-        </div>
-    </div>
+    <!-- AUTH GUARD - Giriş yapmamışsa login.html'e yönlendir -->
+    <script>
+        // Sayfa yüklenmeden önce hızlı auth kontrolü
+        (function() {
+            // Firebase yüklenene kadar bekle
+            const checkAuth = setInterval(() => {
+                if (typeof firebase !== 'undefined' && firebase.auth) {
+                    clearInterval(checkAuth);
+                    firebase.auth().onAuthStateChanged(user => {
+                        if (!user) {
+                            window.location.replace('login.html');
+                        }
+                    });
+                }
+            }, 50);
+            
+            // 3 saniye içinde yüklenmediyse yine yönlendir
+            setTimeout(() => {
+                clearInterval(checkAuth);
+                if (typeof firebase === 'undefined' || !firebase.auth().currentUser) {
+                    window.location.replace('login.html');
+                }
+            }, 3000);
+        })();
+    </script>
 
     <!-- Modal System -->
     <div class="modal-overlay" id="modalOverlay">
@@ -2093,17 +2092,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         };
                     }
                     
-                    document.getElementById('lockOverlay').classList.add('hidden');
+                    // Uygulama görünür
+                    document.querySelector('.app').style.opacity = '1';
                     applyUserPermissions();
                     loadFirebaseData();
                 } catch (error) {
                     console.error('Error loading user data:', error);
                 }
             } else {
-                // Kullanıcı çıkış yapmış
-                console.log('User logged out');
-                currentUser = null;
-                document.getElementById('lockOverlay').classList.remove('hidden');
+                // Kullanıcı çıkış yapmış - Login sayfasına yönlendir
+                console.log('User logged out - redirecting to login');
+                window.location.replace('login.html');
             }
         });
     } else {
@@ -2136,8 +2135,9 @@ async function logout() {
         
         await firebase.auth().signOut();
         currentUser = null;
-        document.getElementById('lockOverlay').classList.remove('hidden');
-        toast('Çıkış yapıldı', 'success');
+        
+        // Login sayfasına yönlendir
+        window.location.replace('login.html');
     } catch (error) {
         console.error('Logout error:', error);
         toast('Çıkış hatası', 'error');
@@ -2270,20 +2270,8 @@ function renderPositionCards() {
 
 // ==================== LOGIN SYSTEM ====================
 function initLoginScreen() {
-    // Check lockout
-    const savedLockout = localStorage.getItem('loginLockoutUntil');
-    if (savedLockout && Date.now() < parseInt(savedLockout)) {
-        lockoutUntil = parseInt(savedLockout);
-        showLockoutTimer();
-    }
-    
-    // Check saved attempts
-    loginAttempts = parseInt(localStorage.getItem('loginAttempts') || '0');
-    
-    // Focus username
-    setTimeout(() => document.getElementById('loginUsername').focus(), 100);
-    
-    // Initialize Firebase users if needed
+    // Login artık login.html'de yapılıyor
+    // Sadece varsayılan verileri kontrol et
     initializeDefaultUsers();
 }
 
@@ -2328,132 +2316,15 @@ async function initializeDefaultUsers() {
 }
 
 async function handleLogin(event) {
-    event.preventDefault();
-    
-    // Check lockout
-    if (lockoutUntil && Date.now() < lockoutUntil) {
-        showLockoutTimer();
-        return;
-    }
-    
-    const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value;
-    const btn = document.getElementById('loginBtn');
-    
-    btn.disabled = true;
-    btn.textContent = 'Giriş yapılıyor...';
-    
-    try {
-        // Firebase Authentication ile giriş
-        const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
-        const user = userCredential.user;
-        
-        // Kullanıcı bilgilerini Firestore'dan al
-        const userDoc = await db.collection('users').doc(user.uid).get();
-        
-        if (userDoc.exists) {
-            currentUser = { id: user.uid, email: user.email, ...userDoc.data() };
-        } else {
-            // İlk admin girişi - Firestore'da kayıt oluştur
-            const isAdmin = email === 'admin@moonberrycoffee.com';
-            const newUserData = {
-                email: user.email,
-                name: isAdmin ? 'Yönetici' : user.email.split('@')[0],
-                role: isAdmin ? 'yonetici' : 'magaza_muduru',
-                branch: isAdmin ? 'all' : '',
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            await db.collection('users').doc(user.uid).set(newUserData);
-            currentUser = { id: user.uid, email: user.email, ...newUserData };
-        }
-        
-        // Başarılı giriş
-        loginAttempts = 0;
-        localStorage.removeItem('loginAttempts');
-        localStorage.removeItem('loginLockoutUntil');
-        
-        // Log login
-        await db.collection('logs').add({
-            type: 'login',
-            user: user.email,
-            userId: user.uid,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        
-        // Hide lock screen
-        document.getElementById('lockOverlay').classList.add('hidden');
-        
-        // Apply permissions
-        applyUserPermissions();
-        
-        // Load Firebase data
-        loadFirebaseData();
-        
-        // Oturum oluştur
-        await createSession();
-        
-        // Oturum timeout'unu başlat
-        loadSessionSettings();
-        
-        toast('Hoş geldiniz, ' + (currentUser.name || user.email), 'success');
-        
-    } catch (error) {
-        console.error('Login error:', error);
-        
-        // Firebase Auth hata mesajlarını Türkçeleştir
-        let errorMsg = 'Giriş hatası';
-        switch (error.code) {
-            case 'auth/user-not-found':
-                errorMsg = 'Bu e-posta ile kayıtlı kullanıcı bulunamadı';
-                break;
-            case 'auth/wrong-password':
-                errorMsg = 'Şifre hatalı';
-                break;
-            case 'auth/invalid-email':
-                errorMsg = 'Geçersiz e-posta adresi';
-                break;
-            case 'auth/user-disabled':
-                errorMsg = 'Bu hesap devre dışı bırakılmış';
-                break;
-            case 'auth/too-many-requests':
-                errorMsg = 'Çok fazla hatalı deneme. Lütfen bekleyin.';
-                break;
-            case 'auth/invalid-credential':
-                errorMsg = 'E-posta veya şifre hatalı';
-                break;
-            default:
-                errorMsg = error.message;
-        }
-        
-        loginAttempts++;
-        localStorage.setItem('loginAttempts', loginAttempts);
-        
-        if (loginAttempts >= MAX_ATTEMPTS) {
-            lockoutUntil = Date.now() + LOCKOUT_DURATION;
-            localStorage.setItem('loginLockoutUntil', lockoutUntil);
-            showLockoutTimer();
-        } else {
-            showLoginError(errorMsg);
-        }
-    }
-    
-    btn.disabled = false;
-    btn.textContent = 'Giriş Yap';
+    // Login artık login.html'de yapılıyor
+    if (event) event.preventDefault();
+    window.location.replace('login.html');
 }
 
-// Şifremi unuttum
+// Şifremi unuttum - login.html'e yönlendir
 function showForgotPassword(event) {
-    event.preventDefault();
-    showModal('Şifre Sıfırlama', `
-        <p style="color:var(--tx2);margin-bottom:16px">E-posta adresinizi girin, şifre sıfırlama bağlantısı göndereceğiz.</p>
-        <div class="form-group">
-            <label class="form-label">E-posta</label>
-            <input type="email" id="resetEmail" class="form-input" placeholder="ornek@moonberrycoffee.com">
-        </div>
-    `, `
-        <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
-        <button class="btn btn-primary" onclick="sendPasswordReset()">Gönder</button>
-    `);
+    if (event) event.preventDefault();
+    window.location.replace('login.html');
 }
 
 async function sendPasswordReset() {
