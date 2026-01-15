@@ -1094,9 +1094,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <!-- Yönetici Butonları -->
                 <div id="checklistAdminButtons" style="display:none;margin-bottom:16px">
                     <div style="display:flex;gap:8px;flex-wrap:wrap">
-                        <button class="btn btn-sm btn-primary" onclick="showAddChecklistItemModal()">+ Madde Ekle</button>
-                        <button class="btn btn-sm btn-ghost" onclick="showChecklistHistory()">📊 Geçmiş</button>
-                        <button class="btn btn-sm btn-ghost" onclick="showChecklistSettings()">⚙️ Ayarlar</button>
+                        <button class="btn btn-sm btn-ghost" onclick="showChecklistHistory()">📊 Geçmiş Kayıtlar</button>
                     </div>
                 </div>
                 
@@ -8641,8 +8639,11 @@ async function loadChecklist() {
 }
 
 // Checklist formunu render et
+let checklistEditMode = false;
+
 function renderChecklistForm(items, branch, type, date, timeSlot, submittedData) {
     const container = document.getElementById('checklistFormContainer');
+    const isAdmin = currentUser?.role === 'yonetici' || currentUser?.role === 'bolge_muduru';
     const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
     const isSubmitted = !!submittedData;
     
@@ -8656,32 +8657,55 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
     
     let html = `
         <div class="form-section">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
                 <div>
                     <div style="font-size:1.3rem;font-weight:700;color:var(--tx)">${typeInfo?.icon || '📋'} ${typeInfo?.name || type}</div>
                     <div style="font-size:.85rem;color:var(--tx2)">${branch} • ${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})}${timeSlot ? ' • ' + timeSlot : ''}</div>
                 </div>
-                ${isSubmitted ? `
-                    <div style="text-align:right">
+                <div style="display:flex;gap:8px;align-items:center">
+                    ${isSubmitted ? `
                         <div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.85rem">
                             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                             Tamamlandı
                         </div>
-                        <div style="font-size:.75rem;color:var(--tx3);margin-top:4px">${submittedData.submittedByName} • ${submittedData.submittedAt?.toDate ? new Date(submittedData.submittedAt.toDate()).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'}) : ''}</div>
+                    ` : ''}
+                    ${isAdmin && !isSubmitted ? `
+                        <button class="btn btn-sm ${checklistEditMode ? 'btn-primary' : 'btn-ghost'}" onclick="toggleChecklistEditMode('${branch}', '${type}', '${date}', '${timeSlot || ''}')">
+                            ${checklistEditMode ? '✓ Düzenleme' : '✏️ Düzenle'}
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+            ${isSubmitted ? `
+                <div style="font-size:.75rem;color:var(--tx3);margin-bottom:16px">${submittedData.submittedByName} • ${submittedData.submittedAt?.toDate ? new Date(submittedData.submittedAt.toDate()).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'}) : ''}</div>
+            ` : ''}
+            
+            ${!checklistEditMode ? `
+                <div style="margin-bottom:20px;padding:16px;background:var(--bg3);border-radius:12px">
+                    <label class="form-label" style="margin-bottom:8px">👤 Personel Adı</label>
+                    <input type="text" id="checklistPersonName" class="form-input" placeholder="Adınızı girin" 
+                        value="${submittedData?.personName || currentUser?.name || ''}" 
+                        ${isSubmitted ? 'disabled' : ''}>
+                </div>
+                
+                <div style="margin-bottom:16px;padding:12px;background:rgba(255,134,116,.1);border-radius:10px;font-size:.85rem;color:var(--tx2)">
+                    ⚠️ <strong>Önemli:</strong> Eksik veya yapılmayan kontrol puantaj puanını etkiler. Tüm maddeleri dikkatlice kontrol edin.
+                </div>
+            ` : `
+                <div style="margin-bottom:16px;padding:16px;background:rgba(0,140,149,.1);border-radius:12px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+                        <div style="font-size:.9rem;color:var(--tx)">
+                            <strong>📝 Düzenleme Modu</strong> - Madde ekle, sil veya toplu işlem yap
+                        </div>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap">
+                            <button class="btn btn-sm btn-primary" onclick="showAddChecklistItemModal()">+ Madde Ekle</button>
+                            <button class="btn btn-sm btn-ghost" onclick="selectAllChecklistItems()">☑️ Tümünü Seç</button>
+                            <button class="btn btn-sm btn-ghost" onclick="deselectAllChecklistItems()">☐ Seçimi Kaldır</button>
+                            <button class="btn btn-sm" style="background:#e74c3c;color:#fff" onclick="deleteSelectedChecklistItems('${branch}', '${type}')">🗑️ Seçilenleri Sil</button>
+                        </div>
                     </div>
-                ` : ''}
-            </div>
-            
-            <div style="margin-bottom:20px;padding:16px;background:var(--bg3);border-radius:12px">
-                <label class="form-label" style="margin-bottom:8px">👤 Personel Adı</label>
-                <input type="text" id="checklistPersonName" class="form-input" placeholder="Adınızı girin" 
-                    value="${submittedData?.personName || currentUser?.name || ''}" 
-                    ${isSubmitted ? 'disabled' : ''}>
-            </div>
-            
-            <div style="margin-bottom:16px;padding:12px;background:rgba(255,134,116,.1);border-radius:10px;font-size:.85rem;color:var(--tx2)">
-                ⚠️ <strong>Önemli:</strong> Eksik veya yapılmayan kontrol puantaj puanını etkiler. Tüm maddeleri dikkatlice kontrol edin.
-            </div>
+                </div>
+            `}
             
             <div id="checklistItems">
     `;
@@ -8690,61 +8714,125 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
         const isChecked = submittedData?.items?.find(i => i.id === item.id)?.checked;
         const isNotDone = submittedData?.items?.find(i => i.id === item.id)?.notDone;
         
-        html += `
-            <div class="checklist-item" style="display:flex;align-items:flex-start;gap:12px;padding:16px;background:var(--bg2);border-radius:10px;margin-bottom:10px;border:1px solid var(--cardBorder)">
-                <div style="display:flex;gap:8px;flex-shrink:0">
-                    <label class="check-option" style="display:flex;align-items:center;gap:6px;cursor:${isSubmitted ? 'default' : 'pointer'}">
-                        <input type="radio" name="check_${item.id}" value="done" 
-                            ${isChecked ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''}
-                            style="display:none">
-                        <span class="check-btn done ${isChecked ? 'active' : ''}" onclick="${isSubmitted ? '' : `selectCheckOption(this, '${item.id}', 'done')`}"
-                            style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;
-                            background:${isChecked ? 'rgba(39,174,96,.2)' : 'var(--bg3)'};
-                            border:2px solid ${isChecked ? '#27ae60' : 'var(--cardBorder)'};
-                            color:${isChecked ? '#27ae60' : 'var(--tx3)'};
-                            transition:all .2s">✓</span>
-                    </label>
-                    <label class="check-option" style="display:flex;align-items:center;gap:6px;cursor:${isSubmitted ? 'default' : 'pointer'}">
-                        <input type="radio" name="check_${item.id}" value="notdone" 
-                            ${isNotDone ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''}
-                            style="display:none">
-                        <span class="check-btn notdone ${isNotDone ? 'active' : ''}" onclick="${isSubmitted ? '' : `selectCheckOption(this, '${item.id}', 'notdone')`}"
-                            style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;
-                            background:${isNotDone ? 'rgba(231,76,60,.2)' : 'var(--bg3)'};
-                            border:2px solid ${isNotDone ? '#e74c3c' : 'var(--cardBorder)'};
-                            color:${isNotDone ? '#e74c3c' : 'var(--tx3)'};
-                            transition:all .2s">✗</span>
-                    </label>
+        if (checklistEditMode) {
+            // Düzenleme modu - checkbox ile seçim
+            html += `
+                <div class="checklist-item" data-item-id="${item.id}" style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg2);border-radius:10px;margin-bottom:8px;border:1px solid var(--cardBorder)">
+                    <input type="checkbox" class="checklist-select-item" value="${item.id}" style="width:20px;height:20px;cursor:pointer;accent-color:#008c95">
+                    <div style="flex:1;font-size:.9rem;color:var(--tx)">${index + 1}. ${item.text}</div>
+                    <button onclick="deleteChecklistItem('${item.id}')" style="background:none;border:none;color:#e74c3c;cursor:pointer;padding:4px;font-size:1.1rem" title="Sil">🗑️</button>
                 </div>
-                <div style="flex:1">
-                    <div style="font-size:.9rem;color:var(--tx);line-height:1.5">${item.text}</div>
+            `;
+        } else {
+            // Normal mod - check/uncheck
+            html += `
+                <div class="checklist-item" style="display:flex;align-items:flex-start;gap:12px;padding:16px;background:var(--bg2);border-radius:10px;margin-bottom:10px;border:1px solid var(--cardBorder)">
+                    <div style="display:flex;gap:8px;flex-shrink:0">
+                        <label class="check-option" style="display:flex;align-items:center;gap:6px;cursor:${isSubmitted ? 'default' : 'pointer'}">
+                            <input type="radio" name="check_${item.id}" value="done" 
+                                ${isChecked ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''}
+                                style="display:none">
+                            <span class="check-btn done ${isChecked ? 'active' : ''}" onclick="${isSubmitted ? '' : `selectCheckOption(this, '${item.id}', 'done')`}"
+                                style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;
+                                background:${isChecked ? 'rgba(39,174,96,.2)' : 'var(--bg3)'};
+                                border:2px solid ${isChecked ? '#27ae60' : 'var(--cardBorder)'};
+                                color:${isChecked ? '#27ae60' : 'var(--tx3)'};
+                                transition:all .2s">✓</span>
+                        </label>
+                        <label class="check-option" style="display:flex;align-items:center;gap:6px;cursor:${isSubmitted ? 'default' : 'pointer'}">
+                            <input type="radio" name="check_${item.id}" value="notdone" 
+                                ${isNotDone ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''}
+                                style="display:none">
+                            <span class="check-btn notdone ${isNotDone ? 'active' : ''}" onclick="${isSubmitted ? '' : `selectCheckOption(this, '${item.id}', 'notdone')`}"
+                                style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;
+                                background:${isNotDone ? 'rgba(231,76,60,.2)' : 'var(--bg3)'};
+                                border:2px solid ${isNotDone ? '#e74c3c' : 'var(--cardBorder)'};
+                                color:${isNotDone ? '#e74c3c' : 'var(--tx3)'};
+                                transition:all .2s">✗</span>
+                        </label>
+                    </div>
+                    <div style="flex:1">
+                        <div style="font-size:.9rem;color:var(--tx);line-height:1.5">${item.text}</div>
+                    </div>
                 </div>
-                ${isManager && !isSubmitted ? `
-                    <button onclick="deleteChecklistItem('${item.id}')" style="background:none;border:none;color:var(--tx3);cursor:pointer;padding:4px" title="Sil">🗑️</button>
-                ` : ''}
-            </div>
-        `;
+            `;
+        }
     });
     
     html += `
             </div>
             
-            ${!isSubmitted ? `
+            ${!checklistEditMode && !isSubmitted ? `
                 <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
                     <button class="btn btn-ghost" onclick="loadChecklist()">🔄 Yenile</button>
                     <button class="btn btn-primary" onclick="submitChecklist('${branch}', '${type}', '${date}', '${timeSlot || ''}')">
                         ✅ Checklist'i Tamamla
                     </button>
                 </div>
-            ` : `
+            ` : ''}
+            ${!checklistEditMode && isSubmitted ? `
                 <div style="margin-top:24px;text-align:center;color:var(--tx2)">
                     Bu checklist zaten tamamlanmış
                 </div>
-            `}
+            ` : ''}
+            ${checklistEditMode ? `
+                <div style="margin-top:24px;text-align:center">
+                    <div style="font-size:.85rem;color:var(--tx2)">Toplam ${items.length} madde</div>
+                </div>
+            ` : ''}
         </div>
     `;
     
     container.innerHTML = html;
+}
+
+// Düzenleme modunu aç/kapat
+function toggleChecklistEditMode(branch, type, date, timeSlot) {
+    checklistEditMode = !checklistEditMode;
+    loadChecklist();
+}
+
+// Tümünü seç
+function selectAllChecklistItems() {
+    document.querySelectorAll('.checklist-select-item').forEach(cb => cb.checked = true);
+}
+
+// Seçimi kaldır
+function deselectAllChecklistItems() {
+    document.querySelectorAll('.checklist-select-item').forEach(cb => cb.checked = false);
+}
+
+// Seçilenleri sil
+async function deleteSelectedChecklistItems(branch, type) {
+    const selected = Array.from(document.querySelectorAll('.checklist-select-item:checked')).map(cb => cb.value);
+    
+    if (selected.length === 0) {
+        toast('Silmek için madde seçin', 'error');
+        return;
+    }
+    
+    if (!confirm(`${selected.length} madde silinecek. Emin misiniz?`)) return;
+    
+    try {
+        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
+        const checklistRef = db.collection('checklists').doc(checklistId);
+        const doc = await checklistRef.get();
+        
+        if (doc.exists) {
+            const items = doc.data().items.filter(i => !selected.includes(i.id));
+            await checklistRef.update({
+                items,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+        
+        toast(`${selected.length} madde silindi`, 'success');
+        loadChecklist();
+        
+    } catch (error) {
+        console.error('Toplu silme hatası:', error);
+        toast('Silme hatası!', 'error');
+    }
 }
 
 // Check seçeneği seç
@@ -9352,12 +9440,84 @@ function getDefaultChecklistItems(branch, type) {
                 { id: 'tuzla_tem_6', text: 'Mutfak tüm zeminler, görünmeyen zeminler temizlendi mi?' }
             ],
             'mudur': [
-                { id: 'tuzla_mud_1', text: 'Personel vardiyaya zamanında geldi mi?' },
-                { id: 'tuzla_mud_2', text: 'Kasa sayımı doğru mu?' },
-                { id: 'tuzla_mud_3', text: 'Stok sayımı yapıldı mı?' },
-                { id: 'tuzla_mud_4', text: 'Personel kıyafetleri uygun mu?' },
-                { id: 'tuzla_mud_5', text: 'Müşteri şikayeti var mı?' },
-                { id: 'tuzla_mud_6', text: 'Genel mağaza durumu kontrol edildi mi?' }
+                { id: 'tuzla_mud_1', text: 'Stoklar tam mı? Saat 17:00\'den önce tüm eksik stoklar sipariş edildi mi?' },
+                { id: 'tuzla_mud_2', text: 'Müzik açık mı? Her zaman açık olacak. Moonberry Pop listesi çalıyor mu?' },
+                { id: 'tuzla_mud_3', text: 'Gelen tüm kargo vb. paylaşıldı mı? Kutular kırmızı kasalara mı koyuldu?' },
+                { id: 'tuzla_mud_4', text: 'Tüm stoklar kontrol edilip azalan ürünler için sipariş verildi mi?' },
+                { id: 'tuzla_mud_5', text: 'Günlük depoyu kontrol et. Dağınıklık, pislik, fazla ürün var mı?' },
+                { id: 'tuzla_mud_6', text: 'Zayi var mı? Kırılan, bozulan, bükülen, çalışmayan ürün bildirildi mi?' },
+                { id: 'tuzla_mud_7', text: 'Barista önlüğü temiz tutulmuş mu? Temizliği personele mi ait?' },
+                { id: 'tuzla_mud_8', text: 'Tüm bitkisel sütlerden barda en az 2 adet açık var mı?' },
+                { id: 'tuzla_mud_9', text: 'Masa ışıkları 17:00\'den sonra açık mı? Şarjsız lamba masada yok mu?' },
+                { id: 'tuzla_mud_10', text: 'Espresso kaşıkları her sipariş sonrasında temizleniyor mu?' },
+                { id: 'tuzla_mud_11', text: 'Müşteriyi karşılarken ve uğurlarken kibar, saygılı davranılıyor mu?' },
+                { id: 'tuzla_mud_12', text: 'Bar dışı puff yasak! Müşteri olmasa bile lavabo bölümünde içiliyor mu?' },
+                { id: 'tuzla_mud_13', text: 'Sipariş hazırlandıktan sonra "Hazırlandı" seçildi mi?' },
+                { id: 'tuzla_mud_14', text: 'Dünkü yapılan kasa tutarı kontrol edildi mi? Denk mi?' },
+                { id: 'tuzla_mud_15', text: 'Menü açık/kapalı ürünler kontrol edildi mi?' },
+                { id: 'tuzla_mud_16', text: 'Yulaf, keten, kadayıf, değirmen vb. malzemeler yarıya inmeden haber verildi mi?' },
+                { id: 'tuzla_mud_17', text: 'Personel misafirleri personel gibi duramaz! Bar arkasına geçiş yasak!' },
+                { id: 'tuzla_mud_18', text: 'Hedefi tutturmak için alternatif ürün öneriliyor mu?' },
+                { id: 'tuzla_mud_19', text: 'Paketlere arkalı önlü isim yazılıyor mu? Shot ekleniyor mu?' },
+                { id: 'tuzla_mud_20', text: 'Yöneticiler WhatsApp bilgilendirmesine "Anlaşıldı" dedi mi?' },
+                { id: 'tuzla_mud_21', text: 'Dünkü nakit her gün aracı gelince ATM\'ye yatırılıyor mu?' },
+                { id: 'tuzla_mud_22', text: 'Haftalık ve aylık görev listesi eksiksiz yapılıyor mu?' },
+                { id: 'tuzla_mud_23', text: 'Kapanış yol ücretleri paylaşılmış mı?' },
+                { id: 'tuzla_mud_24', text: 'Paspas kovasının içi temizlik sonrası boşaltılıyor mu?' },
+                { id: 'tuzla_mud_25', text: 'Masa müşterisi ile elinde telefon vb. ile konuşulmuyor mu?' },
+                { id: 'tuzla_mud_26', text: 'İptal/iade sipariş varsa kasadan geri çekilip fotoğraf atıldı mı?' },
+                { id: 'tuzla_mud_27', text: 'Tüm TV\'ler açık mı? Kasa üstü video\'da istenilen video mu çalıyor?' },
+                { id: 'tuzla_mud_28', text: 'Şirket telefonu seslide mi? Cevaplarken "Merhaba, Moonberry..." deniyor mu?' },
+                { id: 'tuzla_mud_29', text: 'Tüm soğutucu ve dondurucu kapakları tamamen kapalı mı?' },
+                { id: 'tuzla_mud_30', text: 'Müşterinin göreceği noktada kova, süpürge, paspas vb. yok mu?' },
+                { id: 'tuzla_mud_31', text: 'Lavabo içinde birikmiş su, atık var mı? Temiz tutuluyor mu?' },
+                { id: 'tuzla_mud_32', text: 'Menulux\'de 6 menüde güncellendi mi? Yazdır kısmı kaydedildi mi?' },
+                { id: 'tuzla_mud_33', text: 'Dış masaları temizle, küllükleri boşalt! Fotoğraf at!' },
+                { id: 'tuzla_mud_34', text: 'Masalar temiz görünse bile her check saatinde bez ile silinmiş mi?' },
+                { id: 'tuzla_mud_35', text: 'Dolapların camları, tüm camlar içten ve dıştan silindi mi?' },
+                { id: 'tuzla_mud_36', text: 'Girişteki büyük görsel dolabımızın genel temizliği yapıldı mı?' },
+                { id: 'tuzla_mud_37', text: 'WC temiz mi? Kurutucu üzerinde ve priz üzerinde su var mı?' },
+                { id: 'tuzla_mud_38', text: 'POS PC, kasa çevresi, dolap üstleri, sandalyelerde gereksiz eşya yok mu?' },
+                { id: 'tuzla_mud_39', text: 'Karton bardak boy sunumları düzgün mü?' },
+                { id: 'tuzla_mud_40', text: 'Online tüm menüler stok durumuna göre açık mı?' },
+                { id: 'tuzla_mud_41', text: 'Sorumlu olduğu alanın fotosu 1 saat içinde atıldı mı?' },
+                { id: 'tuzla_mud_42', text: 'Aylık temizlik çizelgesi kontrolü yapıldı mı? Fotoğraf atıldı mı?' },
+                { id: 'tuzla_mud_43', text: 'Çay saatlerinin fotosu atıldı mı? Çay poşetleri temiz sepette mi?' },
+                { id: 'tuzla_mud_44', text: 'Bitkisel sütlere SKT atıldı mı? SKT var mı?' },
+                { id: 'tuzla_mud_45', text: 'Dolapların önden ve etiketlerin ve üstlerin fotoğrafı atıldı mı?' },
+                { id: 'tuzla_mud_46', text: 'Büyük dolabın altındaki soğutma havalandırma kapağı açık mı?' },
+                { id: 'tuzla_mud_47', text: 'Sebze ve meyvelerin kapakları kapalı mı?' },
+                { id: 'tuzla_mud_48', text: 'Tüm bardaklar kurulandı mı? Bardaklarda leke yok mu?' },
+                { id: 'tuzla_mud_49', text: 'Kötü, düşük puan & yorum, iptal-iade varsa gruba bilgi verildi mi?' },
+                { id: 'tuzla_mud_50', text: 'Shot fışkırma kontrolü yapıldı mı? Ginger shot vs tıkalı değil mi?' },
+                { id: 'tuzla_mud_51', text: 'Masa ışıklarının şarjı full dolu mu?' },
+                { id: 'tuzla_mud_52', text: 'Her kontrol saatinde mutfak çamaşır suyuyla temizlendi mi?' },
+                { id: 'tuzla_mud_53', text: 'Pastacı kremasından 1 yedek 1 kullanımda var mı?' },
+                { id: 'tuzla_mud_54', text: 'Paketleme alanı temiz mi? Hiçbir eşya (sigara, telefon vb.) yok mu?' },
+                { id: 'tuzla_mud_55', text: 'Instagram, TikTok, WP paylaşımları yapıldı mı?' },
+                { id: 'tuzla_mud_56', text: 'Çekmecelerde ya da raflarda lastiksiz ya da açık ürün yok mu?' },
+                { id: 'tuzla_mud_57', text: 'Kuvings, blender, portakal soyma, Yasomi temizlendi mi?' },
+                { id: 'tuzla_mud_58', text: 'Oturma bölümü camlar tam kapalı mı? Müşteri üşüyebilir!' },
+                { id: 'tuzla_mud_59', text: 'WC şifre kağıdı müşteriye veriliyor mu?' },
+                { id: 'tuzla_mud_60', text: 'Stoklar tam mı? Eksik var mı? Sipariş verildi mi?' },
+                { id: 'tuzla_mud_61', text: 'Su, waffle, pasta, sandviç stoğumuz var mı?' },
+                { id: 'tuzla_mud_62', text: 'POS fişi, Dymo yazıcı kağıdı vb. demirbaş kontrolü yapıldı mı?' },
+                { id: 'tuzla_mud_63', text: 'Tatlı kapları, kruvasan kapları temiz mi? Tüm camlar lekesiz mi?' },
+                { id: 'tuzla_mud_64', text: 'TY ve YS iptal ve iadeler günlük kontrol edildi mi?' },
+                { id: 'tuzla_mud_65', text: 'Tüm SKT\'ler kontrol edilmiş mi? Eksik SKT var mı?' },
+                { id: 'tuzla_mud_66', text: 'Tüm dolapların üstü temiz mi? Karton bardak stoku tam mı?' },
+                { id: 'tuzla_mud_67', text: 'Reyonlarda eksik ürün var mı? Su, maden suyu, enerji içeceği?' },
+                { id: 'tuzla_mud_68', text: 'Yemek kartları aktif mi? Salı günleri kontrol edildi mi?' },
+                { id: 'tuzla_mud_69', text: 'İçeride ekstra paspas gerekiyor mu? Santrifüj döndürüldü mü?' },
+                { id: 'tuzla_mud_70', text: 'Z raporu dosyalanmış mı? Kasa anahtarı yerinde mi?' },
+                { id: 'tuzla_mud_71', text: 'Paket servis için her şey tam mı? Çekmece kontrolü yapıldı mı?' },
+                { id: 'tuzla_mud_72', text: 'Şurup, püre vb. silinmiş mi? Ağzı açık şurup yok mu?' },
+                { id: 'tuzla_mud_73', text: 'Kasa çevresinde, çekmecede, kasada dosyalanmamış evrak yok mu?' },
+                { id: 'tuzla_mud_74', text: 'Personel için siyah pipet var mı? Pet bardak var mı?' },
+                { id: 'tuzla_mud_75', text: 'Paketleme alanında eksik var mı? Üçgen, kare kaplar, dondurma kapları?' },
+                { id: 'tuzla_mud_76', text: 'Shifte giren "Shifte girdim" yazıyor mu?' },
+                { id: 'tuzla_mud_77', text: 'Tüm aynalar temiz mi?' },
+                { id: 'tuzla_mud_78', text: 'WC\'nin çöpü dolu mu? Boşaltıldı mı?' }
             ]
         },
         'Şişli (Merkez)': {
@@ -9480,12 +9640,95 @@ function getDefaultChecklistItems(branch, type) {
                 { id: 'sisli_ayl_5', text: 'Mutfak tüm zeminler, görünmeyen zeminler temizlendi mi?' }
             ],
             'mudur': [
-                { id: 'sisli_mud_1', text: 'Personel vardiyaya zamanında geldi mi?' },
-                { id: 'sisli_mud_2', text: 'Kasa sayımı doğru mu?' },
-                { id: 'sisli_mud_3', text: 'Stok sayımı yapıldı mı?' },
-                { id: 'sisli_mud_4', text: 'Personel kıyafetleri uygun mu?' },
-                { id: 'sisli_mud_5', text: 'Müşteri şikayeti var mı?' },
-                { id: 'sisli_mud_6', text: 'Genel mağaza durumu kontrol edildi mi?' }
+                { id: 'sisli_mud_1', text: 'Müşterinin kasada gördüğü noktalar, duvarlar, dolaplar temiz ve düzenli mi?' },
+                { id: 'sisli_mud_2', text: 'Müzik açık mı? Her zaman açık olacak. Afternoon, Techno Top 100 ya da Afro Beat listesi çalıyor mu?' },
+                { id: 'sisli_mud_3', text: 'Gelen tüm kargo vb. paylaşıldı mı? Kutular kırmızı kasalara mı koyuldu?' },
+                { id: 'sisli_mud_4', text: 'Pasta, donut vb. ürün geldiğinde gözle kontrol edilip teslim alındı mı?' },
+                { id: 'sisli_mud_5', text: 'Günlük depoyu kontrol et. Dağınıklık, pislik, fazla ürün var mı?' },
+                { id: 'sisli_mud_6', text: 'Zayi var mı? Kırılan, bozulan, bükülen, çalışmayan ürün bildirildi mi?' },
+                { id: 'sisli_mud_7', text: 'Barista önlüğü temiz tutulmuş mu? Temizliği personele mi ait?' },
+                { id: 'sisli_mud_8', text: 'Tüm bitkisel sütlerden barda en az 2 adet açık var mı?' },
+                { id: 'sisli_mud_9', text: 'Espresso kaşıkları her sipariş sonrasında temizleniyor mu?' },
+                { id: 'sisli_mud_10', text: 'Müşteriyi karşılarken ve uğurlarken kibar, saygılı davranılıyor mu?' },
+                { id: 'sisli_mud_11', text: 'Bar dışı puff yasak! Müşteri olmasa bile lavabo bölümünde içiliyor mu?' },
+                { id: 'sisli_mud_12', text: 'Müşteri içeri girdikten sonra 2dk\'dan uzun süre bekletilmiyor mu?' },
+                { id: 'sisli_mud_13', text: 'Kasa önündeki sandalyeye, müşteriye arkaya bakarak oturulmuyor mu?' },
+                { id: 'sisli_mud_14', text: 'Sipariş hazırlandıktan sonra "Hazırlandı" seçildi mi?' },
+                { id: 'sisli_mud_15', text: 'Servisliğimiz ve kitaplığımızın rafları temiz mi?' },
+                { id: 'sisli_mud_16', text: 'Menü açık/kapalı ürünler kontrol edildi mi?' },
+                { id: 'sisli_mud_17', text: 'Yulaf, keten, kadayıf, değirmen vb. malzemeler yarıya inmeden haber verildi mi?' },
+                { id: 'sisli_mud_18', text: 'Personel misafirleri personel gibi duramaz! Bar arkasına geçiş yasak!' },
+                { id: 'sisli_mud_19', text: 'Shiftler Cumartesi gününden hazırlandı mı?' },
+                { id: 'sisli_mud_20', text: 'Kapanış yol ücretleri paylaşılmış mı?' },
+                { id: 'sisli_mud_21', text: 'Dünkü yapılan kasa tutarı kontrol edildi mi? Denk mi?' },
+                { id: 'sisli_mud_22', text: 'Hedefi tutturmak için alternatif ürün öneriliyor mu?' },
+                { id: 'sisli_mud_23', text: 'Kasanın sol kısmı başta ve tüm duvar orta noktada temiz mi?' },
+                { id: 'sisli_mud_24', text: 'Paketlere arkalı önlü isim yazılıyor mu? Shot ekleniyor mu?' },
+                { id: 'sisli_mud_25', text: 'Yöneticiler WhatsApp bilgilendirmesine "Anlaşıldı" dedi mi?' },
+                { id: 'sisli_mud_26', text: 'Siparişe hediye shot haricinde Tamer Bey\'den izinsiz ikram yapılmadı mı?' },
+                { id: 'sisli_mud_27', text: 'Dünkü nakit her gün saat 12:00\'da aracı gelince ATM\'ye yatırılıyor mu?' },
+                { id: 'sisli_mud_28', text: 'Müşteri varken klima (30) ve elektrikli ısıtıcı açık mı?' },
+                { id: 'sisli_mud_29', text: 'Paspas kovasının içi temizlik sonrası boşaltılıyor mu?' },
+                { id: 'sisli_mud_30', text: 'Masa müşterisi ile elinde telefon vb. ile konuşulmuyor mu?' },
+                { id: 'sisli_mud_31', text: 'İptal/iade sipariş varsa kasadan geri çekilip fotoğraf atıldı mı?' },
+                { id: 'sisli_mud_32', text: 'Salon TV nemli bezle silinmiş mi? Merdiven, mutfak kontrolü yapıldı mı?' },
+                { id: 'sisli_mud_33', text: 'Merdivenler her checkde faraş ve çamaşır suyuyla temizlendi mi?' },
+                { id: 'sisli_mud_34', text: 'Klima suyu biraz bile birikmiş olsa boşaltılıyor mu?' },
+                { id: 'sisli_mud_35', text: 'Tüm TV\'ler açık mı? Kasa üstü video\'da istenilen video mu çalıyor?' },
+                { id: 'sisli_mud_36', text: 'Tüm siparişler sisteme girildi mi? Ödeme kontrolü yapıldı mı?' },
+                { id: 'sisli_mud_37', text: 'Şirket telefonu seslide mi? Cevaplarken "Merhaba, Moonberry..." deniyor mu?' },
+                { id: 'sisli_mud_38', text: 'Buz makinası ve bulaşık makinası üzerinde eşya yok mu?' },
+                { id: 'sisli_mud_39', text: 'Tüm soğutucu ve dondurucu kapakları tamamen kapalı mı?' },
+                { id: 'sisli_mud_40', text: 'Müşterinin göreceği noktada merdiven dahil kova, süpürge, paspas vb. yok mu?' },
+                { id: 'sisli_mud_41', text: 'Lavabo içinde birikmiş su, atık var mı? Temiz tutuluyor mu?' },
+                { id: 'sisli_mud_42', text: 'Süpürgelik ışıklarının hepsi yanıyor mu?' },
+                { id: 'sisli_mud_43', text: 'Menulux\'de 6 menüde güncellendi mi? Yazdır kısmı kaydedildi mi?' },
+                { id: 'sisli_mud_44', text: 'Dış masaları temizle, küllükleri boşalt! Fotoğraf at!' },
+                { id: 'sisli_mud_45', text: 'Masalar temiz görünse bile her check saatinde bez ile silinmiş mi?' },
+                { id: 'sisli_mud_46', text: 'Dolapların camları, tüm camlar içten ve dıştan silindi mi?' },
+                { id: 'sisli_mud_47', text: 'Girişteki büyük görsel dolabımızın genel temizliği yapıldı mı?' },
+                { id: 'sisli_mud_48', text: 'WC temiz mi? Kurutucu üzerinde ve priz üzerinde su var mı?' },
+                { id: 'sisli_mud_49', text: 'POS PC, kasa çevresi, dolap üstleri, sandalyelerde gereksiz eşya yok mu?' },
+                { id: 'sisli_mud_50', text: 'Karton bardak boy sunumları düzgün mü?' },
+                { id: 'sisli_mud_51', text: 'Online tüm menüler stok durumuna göre açık mı?' },
+                { id: 'sisli_mud_52', text: 'Sorumlu olduğu alanın fotosu 1 saat içinde atıldı mı?' },
+                { id: 'sisli_mud_53', text: 'Aylık temizlik çizelgesi kontrolü yapıldı mı? Fotoğraf atıldı mı?' },
+                { id: 'sisli_mud_54', text: 'Çay saatlerinin fotosu atıldı mı? Çay poşetleri temiz sepette mi?' },
+                { id: 'sisli_mud_55', text: 'Bitkisel sütlere SKT atıldı mı? SKT var mı?' },
+                { id: 'sisli_mud_56', text: 'Dolapların önden ve etiketlerin ve üstlerin fotoğrafı atıldı mı?' },
+                { id: 'sisli_mud_57', text: 'Büyük dolabın altındaki soğutma havalandırma kapağı açık mı?' },
+                { id: 'sisli_mud_58', text: 'Sebze ve meyvelerin kapakları kapalı mı?' },
+                { id: 'sisli_mud_59', text: 'Tüm bardaklar kurulandı mı? Bardaklarda leke yok mu?' },
+                { id: 'sisli_mud_60', text: 'Kötü, düşük puan & yorum, iptal-iade varsa gruba bilgi verildi mi?' },
+                { id: 'sisli_mud_61', text: 'Shot fışkırma kontrolü yapıldı mı? Ginger shot vs tıkalı değil mi?' },
+                { id: 'sisli_mud_62', text: 'Masa ışıklarının şarjı full dolu mu?' },
+                { id: 'sisli_mud_63', text: 'Her kontrol saatinde mutfak çamaşır suyuyla temizlendi mi?' },
+                { id: 'sisli_mud_64', text: 'Pastacı kremasından 1 yedek 1 kullanımda var mı?' },
+                { id: 'sisli_mud_65', text: 'Paketleme alanı temiz mi? Hiçbir eşya (sigara, telefon vb.) yok mu?' },
+                { id: 'sisli_mud_66', text: 'Instagram, TikTok, WP paylaşımları yapıldı mı?' },
+                { id: 'sisli_mud_67', text: 'Çekmecelerde ya da raflarda lastiksiz ya da açık ürün yok mu?' },
+                { id: 'sisli_mud_68', text: 'Kuvings, blender, portakal soyma, Yasomi temizlendi mi?' },
+                { id: 'sisli_mud_69', text: 'Oturma bölümü camlar tam kapalı mı? Müşteri üşüyebilir!' },
+                { id: 'sisli_mud_70', text: 'WC şifre kağıdı müşteriye veriliyor mu?' },
+                { id: 'sisli_mud_71', text: 'Stoklar tam mı? Eksik var mı? Sipariş verildi mi?' },
+                { id: 'sisli_mud_72', text: 'Su, waffle, pasta, sandviç stoğumuz var mı?' },
+                { id: 'sisli_mud_73', text: 'POS fişi, Dymo yazıcı kağıdı vb. demirbaş kontrolü yapıldı mı?' },
+                { id: 'sisli_mud_74', text: 'Tatlı kapları, kruvasan kapları temiz mi? Tüm camlar lekesiz mi?' },
+                { id: 'sisli_mud_75', text: 'TY ve YS iptal ve iadeler günlük kontrol edildi mi?' },
+                { id: 'sisli_mud_76', text: 'Tüm SKT\'ler kontrol edilmiş mi? Eksik SKT var mı?' },
+                { id: 'sisli_mud_77', text: 'Tüm dolapların üstü temiz mi? Karton bardak stoku tam mı?' },
+                { id: 'sisli_mud_78', text: 'Reyonlarda eksik ürün var mı? Su, maden suyu, enerji içeceği?' },
+                { id: 'sisli_mud_79', text: 'Yemek kartları aktif mi? Salı günleri kontrol edildi mi?' },
+                { id: 'sisli_mud_80', text: 'İçeride ekstra paspas gerekiyor mu? Santrifüj döndürüldü mü?' },
+                { id: 'sisli_mud_81', text: 'Z raporu dosyalanmış mı? Kasa anahtarı yerinde mi?' },
+                { id: 'sisli_mud_82', text: 'Paket servis için her şey tam mı? Çekmece kontrolü yapıldı mı?' },
+                { id: 'sisli_mud_83', text: 'Şurup, püre vb. silinmiş mi? Ağzı açık şurup yok mu?' },
+                { id: 'sisli_mud_84', text: 'Kasa çevresinde, çekmecede, kasada dosyalanmamış evrak yok mu?' },
+                { id: 'sisli_mud_85', text: 'Personel için siyah pipet var mı? Pet bardak var mı?' },
+                { id: 'sisli_mud_86', text: 'Paketleme alanında eksik var mı? Üçgen, kare kaplar, dondurma kapları?' },
+                { id: 'sisli_mud_87', text: 'Shifte giren "Shifte girdim" yazıyor mu?' },
+                { id: 'sisli_mud_88', text: 'Tüm aynalar temiz mi?' },
+                { id: 'sisli_mud_89', text: 'WC\'nin çöpü dolu mu? Boşaltıldı mı?' }
             ]
         }
     };
