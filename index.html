@@ -1063,28 +1063,33 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 
                 <!-- Şube ve Tür Seçimi -->
                 <div class="form-section" style="margin-bottom:20px">
-                    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
-                        <div class="form-group" style="margin-bottom:0;min-width:180px">
+                    <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+                        <div class="form-group" style="margin-bottom:0;min-width:160px">
                             <label class="form-label">Şube</label>
                             <select id="checklistSube" class="form-select" onchange="loadChecklistTypes()"></select>
-                        </div>
-                        <div class="form-group" style="margin-bottom:0;min-width:180px">
-                            <label class="form-label">Checklist Türü</label>
-                            <select id="checklistType" class="form-select" onchange="loadChecklist()">
-                                <option value="">-- Seçin --</option>
-                            </select>
                         </div>
                         <div class="form-group" style="margin-bottom:0;min-width:140px">
                             <label class="form-label">Tarih</label>
                             <input type="date" id="checklistDate" class="form-input" onchange="loadChecklist()">
                         </div>
-                        <div class="form-group" style="margin-bottom:0;min-width:120px" id="checklistTimeSlotGroup" style="display:none">
+                        <div class="form-group" style="margin-bottom:0;min-width:120px;display:none" id="checklistTimeSlotGroup">
                             <label class="form-label">Saat Dilimi</label>
                             <select id="checklistTimeSlot" class="form-select" onchange="loadChecklist()">
                                 <option value="">-- Seçin --</option>
                             </select>
                         </div>
                     </div>
+                    <!-- Checklist Türü - Yan Yana Butonlar -->
+                    <div style="margin-top:16px">
+                        <label class="form-label" style="margin-bottom:10px">Checklist Türü</label>
+                        <div id="checklistTypeButtons" style="display:flex;flex-wrap:wrap;gap:8px">
+                            <div style="color:var(--tx3);font-size:.9rem;padding:10px">Önce şube seçin</div>
+                        </div>
+                    </div>
+                    <!-- Hidden select for compatibility -->
+                    <select id="checklistType" style="display:none" onchange="loadChecklist()">
+                        <option value="">-- Seçin --</option>
+                    </select>
                 </div>
                 
                 <!-- Yönetici Butonları -->
@@ -8583,19 +8588,38 @@ function initChecklistPage() {
 function loadChecklistTypes() {
     const branch = document.getElementById('checklistSube')?.value;
     const typeSelect = document.getElementById('checklistType');
+    const buttonsContainer = document.getElementById('checklistTypeButtons');
     if (!typeSelect || !branch) return;
     
     const types = CHECKLIST_TYPES[branch] || [];
     const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
     
-    let html = '<option value="">-- Checklist Seçin --</option>';
+    // Hidden select güncelle
+    let selectHtml = '<option value="">-- Checklist Seçin --</option>';
     types.forEach(t => {
-        // Müdür checklist'i sadece müdürlere göster
         if (t.managerOnly && !isManager) return;
-        html += `<option value="${t.id}" data-timeslots="${t.timeSlots ? t.timeSlots.join(',') : ''}">${t.name}</option>`;
+        selectHtml += `<option value="${t.id}" data-timeslots="${t.timeSlots ? t.timeSlots.join(',') : ''}">${t.name}</option>`;
+    });
+    typeSelect.innerHTML = selectHtml;
+    
+    // Butonları oluştur
+    let buttonsHtml = '';
+    types.forEach(t => {
+        if (t.managerOnly && !isManager) return;
+        buttonsHtml += `
+            <button type="button" class="checklist-type-btn" data-type="${t.id}" data-timeslots="${t.timeSlots ? t.timeSlots.join(',') : ''}"
+                onclick="selectChecklistType('${t.id}')"
+                style="padding:10px 16px;border:2px solid var(--cardBorder);background:var(--bg2);color:var(--tx);border-radius:10px;cursor:pointer;font-size:.85rem;font-weight:500;transition:all .2s;display:flex;align-items:center;gap:6px">
+                <span style="font-size:1.1rem">${t.icon || '📋'}</span>
+                ${t.name}
+            </button>
+        `;
     });
     
-    typeSelect.innerHTML = html;
+    if (!buttonsHtml) {
+        buttonsHtml = '<div style="color:var(--tx3);font-size:.9rem;padding:10px">Bu şube için checklist bulunamadı</div>';
+    }
+    buttonsContainer.innerHTML = buttonsHtml;
     
     // Formu temizle
     document.getElementById('checklistFormContainer').innerHTML = `
@@ -8605,6 +8629,45 @@ function loadChecklistTypes() {
             <div style="font-size:.9rem">Yukarıdan checklist türü seçerek başlayın</div>
         </div>
     `;
+}
+
+// Checklist türü seç (buton)
+function selectChecklistType(typeId) {
+    const typeSelect = document.getElementById('checklistType');
+    typeSelect.value = typeId;
+    
+    // Buton stillerini güncelle
+    document.querySelectorAll('.checklist-type-btn').forEach(btn => {
+        if (btn.dataset.type === typeId) {
+            btn.style.background = 'linear-gradient(135deg, var(--accent), #ff6b5b)';
+            btn.style.color = '#fff';
+            btn.style.borderColor = 'var(--accent)';
+            btn.style.boxShadow = '0 4px 12px rgba(255,134,116,.3)';
+        } else {
+            btn.style.background = 'var(--bg2)';
+            btn.style.color = 'var(--tx)';
+            btn.style.borderColor = 'var(--cardBorder)';
+            btn.style.boxShadow = 'none';
+        }
+    });
+    
+    // Time slot güncelle
+    const selectedBtn = document.querySelector(`.checklist-type-btn[data-type="${typeId}"]`);
+    const timeSlots = selectedBtn?.dataset.timeslots?.split(',').filter(Boolean) || [];
+    const timeSlotGroup = document.getElementById('checklistTimeSlotGroup');
+    const timeSlotSelect = document.getElementById('checklistTimeSlot');
+    
+    if (timeSlots.length > 0) {
+        timeSlotGroup.style.display = 'block';
+        let tsHtml = '<option value="">-- Seçin --</option>';
+        timeSlots.forEach(ts => { tsHtml += `<option value="${ts}">${ts}</option>`; });
+        timeSlotSelect.innerHTML = tsHtml;
+    } else {
+        timeSlotGroup.style.display = 'none';
+        timeSlotSelect.innerHTML = '<option value="">-- Seçin --</option>';
+    }
+    
+    loadChecklist();
 }
 
 // Checklist yükle
@@ -8791,20 +8854,25 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
     items.forEach((item, index) => {
         const isChecked = submittedData?.items?.find(i => i.id === item.id)?.checked;
         const isNotDone = submittedData?.items?.find(i => i.id === item.id)?.notDone;
+        const itemNum = index + 1;
         
         if (checklistEditMode) {
             // Düzenleme modu - checkbox ile seçim
             html += `
                 <div class="checklist-item" data-item-id="${item.id}" style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg2);border-radius:10px;margin-bottom:8px;border:1px solid var(--cardBorder)">
                     <input type="checkbox" class="checklist-select-item" value="${item.id}" style="width:20px;height:20px;cursor:pointer;accent-color:#008c95">
-                    <div style="flex:1;font-size:.9rem;color:var(--tx)">${index + 1}. ${item.text}</div>
-                    <button onclick="deleteChecklistItem('${item.id}')" style="background:none;border:none;color:#e74c3c;cursor:pointer;padding:4px;font-size:1.1rem" title="Sil">🗑️</button>
+                    <span style="min-width:28px;height:28px;background:var(--bg3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:600;color:var(--tx2)">${itemNum}</span>
+                    <div style="flex:1;font-size:.9rem;color:var(--tx)">${item.text}</div>
+                    <button onclick="deleteChecklistItem('${item.id}')" style="background:none;border:none;color:#e74c3c;cursor:pointer;padding:6px;border-radius:6px;transition:all .2s" title="Sil" onmouseover="this.style.background='rgba(231,76,60,.1)'" onmouseout="this.style.background='none'">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/></svg>
+                    </button>
                 </div>
             `;
         } else {
-            // Normal mod - check/uncheck
+            // Normal mod - check/uncheck with auto numbering
             html += `
                 <div class="checklist-item" style="display:flex;align-items:flex-start;gap:12px;padding:16px;background:var(--bg2);border-radius:10px;margin-bottom:10px;border:1px solid var(--cardBorder)">
+                    <span style="min-width:32px;height:32px;background:var(--bg3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:600;color:var(--tx2);flex-shrink:0">${itemNum}</span>
                     <div style="display:flex;gap:8px;flex-shrink:0">
                         <label class="check-option" style="display:flex;align-items:center;gap:6px;cursor:${isSubmitted ? 'default' : 'pointer'}">
                             <input type="radio" name="check_${item.id}" value="done" 
