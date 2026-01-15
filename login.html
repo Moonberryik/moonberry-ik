@@ -3,722 +3,285 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="robots" content="noindex, nofollow">
-    <title>Giriş | Moonberry Coffee</title>
+    <title>Moonberry İK - Giriş</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Firebase SDK - Sadece Auth -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <style>
-:root {
-    --bg: #0f0f0f;
-    --bg2: #1a1a1a;
-    --bg3: #242424;
-    --bg4: #333333;
-    --tx: #f0f0f0;
-    --tx2: #b0b0b0;
-    --tx3: #707070;
-    --brand-coral: #ff8674;
-    --brand-teal: #008c95;
-    --accent: var(--brand-coral);
-    --accent2: var(--brand-teal);
-    --red: #e74c3c;
-    --green: #27ae60;
-    --radius: 12px;
-    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: var(--font);
-    background: var(--bg);
-    color: var(--tx);
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-}
-
-.login-container {
-    width: 100%;
-    max-width: 420px;
-}
-
-.login-card {
-    background: var(--bg2);
-    border: 1px solid var(--bg4);
-    border-radius: 20px;
-    padding: 48px 40px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-}
-
-.logo-container {
-    text-align: center;
-    margin-bottom: 32px;
-}
-
-.logo-img {
-    width: 80px;
-    height: 72px;
-    object-fit: contain;
-    filter: drop-shadow(0 4px 12px rgba(255, 134, 116, 0.3));
-}
-
-.login-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    text-align: center;
-    margin-bottom: 8px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.login-subtitle {
-    color: var(--tx2);
-    font-size: 0.9rem;
-    text-align: center;
-    margin-bottom: 36px;
-}
-
-.form-group {
-    margin-bottom: 20px;
-}
-
-.form-label {
-    display: block;
-    font-size: 0.85rem;
-    color: var(--tx2);
-    font-weight: 500;
-    margin-bottom: 8px;
-}
-
-.form-input {
-    width: 100%;
-    padding: 14px 16px;
-    background: var(--bg3);
-    border: 2px solid var(--bg4);
-    border-radius: var(--radius);
-    color: var(--tx);
-    font-size: 1rem;
-    font-family: var(--font);
-    outline: none;
-    transition: all 0.2s;
-}
-
-.form-input:focus {
-    border-color: var(--accent);
-    background: var(--bg);
-    box-shadow: 0 0 0 4px rgba(255, 134, 116, 0.15);
-}
-
-.form-input.error {
-    border-color: var(--red);
-    animation: shake 0.4s;
-}
-
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-8px); }
-    75% { transform: translateX(8px); }
-}
-
-.login-btn {
-    width: 100%;
-    padding: 16px 24px;
-    background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent));
-    background-size: 200% 100%;
-    animation: gradientFlow 3s ease infinite;
-    border: none;
-    border-radius: var(--radius);
-    color: #fff;
-    font-size: 1rem;
-    font-weight: 600;
-    font-family: var(--font);
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-    margin-top: 8px;
-    position: relative;
-    overflow: hidden;
-}
-
-@keyframes gradientFlow {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-
-.login-btn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(255, 134, 116, 0.4);
-}
-
-.login-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.login-btn .spinner {
-    display: none;
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin-right: 8px;
-}
-
-.login-btn.loading .spinner {
-    display: inline-block;
-}
-
-.login-btn.loading .btn-text {
-    opacity: 0.8;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.error-message {
-    background: rgba(231, 76, 60, 0.1);
-    border: 1px solid var(--red);
-    border-radius: 8px;
-    padding: 12px 16px;
-    color: var(--red);
-    font-size: 0.85rem;
-    margin-bottom: 20px;
-    display: none;
-    align-items: center;
-    gap: 10px;
-}
-
-.error-message.show {
-    display: flex;
-}
-
-.error-icon {
-    font-size: 1.2rem;
-}
-
-.locked-message {
-    background: rgba(231, 76, 60, 0.15);
-    border: 1px solid var(--red);
-    border-radius: 8px;
-    padding: 16px;
-    color: var(--red);
-    font-size: 0.9rem;
-    margin-bottom: 20px;
-    text-align: center;
-    display: none;
-}
-
-.locked-message.show {
-    display: block;
-}
-
-.locked-timer {
-    font-weight: 700;
-    font-size: 1.1rem;
-}
-
-.forgot-password {
-    text-align: center;
-    margin-top: 24px;
-}
-
-.forgot-link {
-    color: var(--tx3);
-    font-size: 0.85rem;
-    text-decoration: none;
-    transition: color 0.2s;
-    cursor: pointer;
-}
-
-.forgot-link:hover {
-    color: var(--accent);
-}
-
-.footer-info {
-    text-align: center;
-    margin-top: 32px;
-    padding-top: 24px;
-    border-top: 1px solid var(--bg4);
-    color: var(--tx3);
-    font-size: 0.75rem;
-}
-
-.success-message {
-    background: rgba(39, 174, 96, 0.1);
-    border: 1px solid var(--green);
-    border-radius: 8px;
-    padding: 12px 16px;
-    color: var(--green);
-    font-size: 0.85rem;
-    margin-bottom: 20px;
-    display: none;
-    align-items: center;
-    gap: 10px;
-}
-
-.success-message.show {
-    display: flex;
-}
-
-/* Reset Password Modal */
-.modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s;
-    z-index: 1000;
-}
-
-.modal-overlay.show {
-    opacity: 1;
-    visibility: visible;
-}
-
-.modal {
-    background: var(--bg2);
-    border: 1px solid var(--bg4);
-    border-radius: 16px;
-    padding: 32px;
-    width: 90%;
-    max-width: 400px;
-    transform: scale(0.9);
-    transition: transform 0.3s;
-}
-
-.modal-overlay.show .modal {
-    transform: scale(1);
-}
-
-.modal-title {
-    font-size: 1.2rem;
-    font-weight: 600;
-    margin-bottom: 12px;
-    color: var(--tx);
-}
-
-.modal-desc {
-    color: var(--tx2);
-    font-size: 0.9rem;
-    margin-bottom: 24px;
-}
-
-.modal-buttons {
-    display: flex;
-    gap: 12px;
-    margin-top: 24px;
-}
-
-.modal-btn {
-    flex: 1;
-    padding: 12px 20px;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    font-family: var(--font);
-    cursor: pointer;
-    transition: all 0.2s;
-    border: none;
-}
-
-.modal-btn-secondary {
-    background: var(--bg3);
-    color: var(--tx2);
-}
-
-.modal-btn-secondary:hover {
-    background: var(--bg4);
-}
-
-.modal-btn-primary {
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    color: #fff;
-}
-
-.modal-btn-primary:hover {
-    box-shadow: 0 4px 16px rgba(255, 134, 116, 0.3);
-}
-
-/* Toast */
-.toast {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    background: var(--bg2);
-    border: 1px solid var(--bg4);
-    border-radius: 10px;
-    padding: 14px 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-    transform: translateX(150%);
-    transition: transform 0.3s;
-    z-index: 2000;
-}
-
-.toast.show {
-    transform: translateX(0);
-}
-
-.toast.success {
-    border-left: 3px solid var(--green);
-}
-
-.toast.error {
-    border-left: 3px solid var(--red);
-}
-
-.toast-icon {
-    font-size: 1.2rem;
-}
-
-.toast-message {
-    font-size: 0.9rem;
-    color: var(--tx);
-}
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            padding: 20px;
+        }
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        }
+        .logo-container {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .logo-container img {
+            height: 60px;
+            margin-bottom: 16px;
+        }
+        .logo-text {
+            color: #fff;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        .logo-subtext {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-label {
+            display: block;
+            color: rgba(255,255,255,0.8);
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #ff8674;
+            background: rgba(255,255,255,0.12);
+            box-shadow: 0 0 0 3px rgba(255,134,116,0.2);
+        }
+        .form-input::placeholder {
+            color: rgba(255,255,255,0.4);
+        }
+        .btn-login {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #ff8674 0%, #ff6b6b 100%);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 8px;
+        }
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(255,134,116,0.4);
+        }
+        .btn-login:active {
+            transform: translateY(0);
+        }
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .error-message {
+            background: rgba(231,76,60,0.2);
+            border: 1px solid rgba(231,76,60,0.3);
+            color: #ff6b6b;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            color: rgba(255,255,255,0.7);
+            padding: 20px;
+        }
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #ff8674;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .version {
+            text-align: center;
+            color: rgba(255,255,255,0.3);
+            font-size: 0.75rem;
+            margin-top: 24px;
+        }
     </style>
 </head>
 <body>
     <div class="login-container">
-        <div class="login-card">
-            <div class="logo-container">
-                <img src="https://static.wixstatic.com/media/760af2_cb121a61291f4f07adb48cfb70f3e2d9~mv2.png/v1/fill/w_94,h_82,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/beyazwhitelogo-min1.png" alt="Moonberry Coffee" class="logo-img">
-            </div>
-            
-            <h1 class="login-title">Moonberry Coffee</h1>
-            <p class="login-subtitle">Yönetim Paneli</p>
-            
-            <!-- Kilitli Mesajı -->
-            <div class="locked-message" id="lockedMessage">
-                🔒 Çok fazla hatalı deneme!<br>
-                <span class="locked-timer" id="lockedTimer">15:00</span> sonra tekrar deneyin.
-            </div>
-            
-            <!-- Hata Mesajı -->
-            <div class="error-message" id="errorMessage">
-                <span class="error-icon">⚠️</span>
-                <span id="errorText">Hata oluştu</span>
-            </div>
-            
-            <!-- Başarı Mesajı -->
-            <div class="success-message" id="successMessage">
-                <span class="error-icon">✅</span>
-                <span id="successText">İşlem başarılı</span>
-            </div>
-            
-            <form id="loginForm" onsubmit="handleLogin(event)">
-                <div class="form-group">
-                    <label class="form-label" for="email">E-posta Adresi</label>
-                    <input type="email" id="email" class="form-input" placeholder="ornek@moonberry.com" required autocomplete="email">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label" for="password">Şifre</label>
-                    <input type="password" id="password" class="form-input" placeholder="••••••••" required autocomplete="current-password">
-                </div>
-                
-                <button type="submit" class="login-btn" id="loginBtn">
-                    <span class="spinner"></span>
-                    <span class="btn-text">Giriş Yap</span>
-                </button>
-            </form>
-            
-            <div class="forgot-password">
-                <a class="forgot-link" onclick="showResetModal()">Şifremi Unuttum</a>
-            </div>
-            
-            <div class="footer-info">
-                © 2024 Moonberry Coffee<br>
-                Güvenli bağlantı ile korunmaktadır 🔒
-            </div>
+        <div class="logo-container">
+            <img src="https://i.imgur.com/8G2MpHp.png" alt="Moonberry Logo">
+            <div class="logo-text">İK Sistemi</div>
+            <div class="logo-subtext">Personel Yönetim Platformu</div>
         </div>
-    </div>
-    
-    <!-- Şifre Sıfırlama Modal -->
-    <div class="modal-overlay" id="resetModal">
-        <div class="modal">
-            <h2 class="modal-title">🔐 Şifre Sıfırlama</h2>
-            <p class="modal-desc">E-posta adresinizi girin, şifre sıfırlama bağlantısı göndereceğiz.</p>
-            
-            <div class="form-group" style="margin-bottom:0">
-                <input type="email" id="resetEmail" class="form-input" placeholder="E-posta adresiniz">
+        
+        <div class="error-message" id="errorMessage"></div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label class="form-label">Kullanıcı Adı</label>
+                <input type="text" id="username" class="form-input" placeholder="Kullanıcı adınız" required autocomplete="username">
             </div>
             
-            <div class="modal-buttons">
-                <button class="modal-btn modal-btn-secondary" onclick="hideResetModal()">İptal</button>
-                <button class="modal-btn modal-btn-primary" onclick="sendResetEmail()">Gönder</button>
+            <div class="form-group">
+                <label class="form-label">Şifre</label>
+                <input type="password" id="password" class="form-input" placeholder="••••••••" required autocomplete="current-password">
             </div>
+            
+            <button type="submit" class="btn-login" id="loginBtn">Giriş Yap</button>
+        </form>
+        
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <div>Giriş yapılıyor...</div>
         </div>
-    </div>
-    
-    <!-- Toast -->
-    <div class="toast" id="toast">
-        <span class="toast-icon" id="toastIcon">✅</span>
-        <span class="toast-message" id="toastMessage">Mesaj</span>
+        
+        <div class="version">v18 • Moonberry Coffee © 2025</div>
     </div>
 
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
     <script>
-        // ==================== FIREBASE CONFIG ====================
+        // Firebase Config
         const firebaseConfig = {
-            apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
+            apiKey: "AIzaSyCIIwPvPwBmoGxbh_QKKBTVN3fGgF9xGZA",
             authDomain: "moonberry-ik.firebaseapp.com",
-            projectId: "moonberry-ik"
+            projectId: "moonberry-ik",
+            storageBucket: "moonberry-ik.firebasestorage.app",
+            messagingSenderId: "434726506067",
+            appId: "1:434726506067:web:4cdbe73e4c5c24093ad023"
         };
         
-        // Firebase başlat
         firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
+        const db = firebase.firestore();
         
-        // ==================== GÜVENLİK DEĞİŞKENLERİ ====================
-        const MAX_ATTEMPTS = 5;
-        const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 dakika
-        
-        let loginAttempts = parseInt(localStorage.getItem('mb_login_attempts') || '0');
-        let lockoutUntil = parseInt(localStorage.getItem('mb_lockout_until') || '0');
-        
-        // ==================== SAYFA YÜKLENDİĞİNDE ====================
-        document.addEventListener('DOMContentLoaded', () => {
-            // Zaten giriş yapmışsa yönlendir
-            auth.onAuthStateChanged(user => {
-                if (user) {
-                    window.location.replace('index.html');
+        // Zaten giriş yapılmış mı kontrol et
+        (function checkExistingSession() {
+            const session = localStorage.getItem('moonberry_session');
+            if (session) {
+                try {
+                    const data = JSON.parse(session);
+                    if (data.user && data.expiry > Date.now()) {
+                        redirectToPanel(data.user.role);
+                    } else {
+                        localStorage.removeItem('moonberry_session');
+                    }
+                } catch (e) {
+                    localStorage.removeItem('moonberry_session');
                 }
-            });
-            
-            // Kilit durumunu kontrol et
-            checkLockout();
-        });
-        
-        // ==================== KİLİT KONTROLÜ ====================
-        function checkLockout() {
-            const now = Date.now();
-            
-            if (lockoutUntil > now) {
-                showLockout();
-                startLockoutTimer();
-            } else if (lockoutUntil > 0) {
-                // Kilit süresi dolmuş, sıfırla
-                clearLockout();
             }
-        }
+        })();
         
-        function showLockout() {
-            document.getElementById('lockedMessage').classList.add('show');
-            document.getElementById('loginBtn').disabled = true;
-            document.getElementById('email').disabled = true;
-            document.getElementById('password').disabled = true;
-        }
-        
-        function hideLockout() {
-            document.getElementById('lockedMessage').classList.remove('show');
-            document.getElementById('loginBtn').disabled = false;
-            document.getElementById('email').disabled = false;
-            document.getElementById('password').disabled = false;
-        }
-        
-        function startLockoutTimer() {
-            const timerEl = document.getElementById('lockedTimer');
-            
-            const interval = setInterval(() => {
-                const now = Date.now();
-                const remaining = lockoutUntil - now;
-                
-                if (remaining <= 0) {
-                    clearInterval(interval);
-                    clearLockout();
-                    hideLockout();
-                    return;
-                }
-                
-                const mins = Math.floor(remaining / 60000);
-                const secs = Math.floor((remaining % 60000) / 1000);
-                timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-            }, 1000);
-        }
-        
-        function setLockout() {
-            lockoutUntil = Date.now() + LOCKOUT_DURATION;
-            localStorage.setItem('mb_lockout_until', lockoutUntil);
-            showLockout();
-            startLockoutTimer();
-        }
-        
-        function clearLockout() {
-            loginAttempts = 0;
-            lockoutUntil = 0;
-            localStorage.setItem('mb_login_attempts', '0');
-            localStorage.setItem('mb_lockout_until', '0');
-        }
-        
-        // ==================== GİRİŞ İŞLEMİ ====================
-        async function handleLogin(e) {
+        // Login form submit
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            // Kilit kontrolü
-            if (lockoutUntil > Date.now()) {
-                showError('Hesabınız geçici olarak kilitli.');
-                return;
-            }
-            
-            const email = document.getElementById('email').value.trim();
+            const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
-            const btn = document.getElementById('loginBtn');
+            const errorEl = document.getElementById('errorMessage');
+            const loadingEl = document.getElementById('loading');
+            const formEl = document.getElementById('loginForm');
+            const loginBtn = document.getElementById('loginBtn');
             
-            if (!email || !password) {
-                showError('E-posta ve şifre gerekli.');
-                return;
-            }
-            
-            // Loading state
-            btn.classList.add('loading');
-            btn.disabled = true;
-            hideError();
+            errorEl.style.display = 'none';
+            formEl.style.display = 'none';
+            loadingEl.style.display = 'block';
             
             try {
-                await auth.signInWithEmailAndPassword(email, password);
+                // Firebase'den kullanıcı kontrol et
+                const usersSnapshot = await db.collection('users')
+                    .where('username', '==', username)
+                    .where('active', '==', true)
+                    .get();
                 
-                // Başarılı giriş
-                clearLockout();
-                showToast('Giriş başarılı! Yönlendiriliyorsunuz...', 'success');
-                
-                // Yönlendir
-                setTimeout(() => {
-                    window.location.replace('index.html');
-                }, 1000);
-                
-            } catch (error) {
-                btn.classList.remove('loading');
-                btn.disabled = false;
-                
-                // Hatalı deneme sayısını artır
-                loginAttempts++;
-                localStorage.setItem('mb_login_attempts', loginAttempts);
-                
-                // Çok fazla deneme
-                if (loginAttempts >= MAX_ATTEMPTS) {
-                    setLockout();
-                    showError('Çok fazla hatalı deneme! 15 dakika bekleyin.');
-                    return;
+                if (usersSnapshot.empty) {
+                    throw new Error('Kullanıcı bulunamadı');
                 }
                 
-                // Hata mesajını göster
-                const remaining = MAX_ATTEMPTS - loginAttempts;
-                let errorMsg = getErrorMessage(error.code);
-                errorMsg += ` (${remaining} deneme hakkınız kaldı)`;
-                showError(errorMsg);
+                const userDoc = usersSnapshot.docs[0];
+                const userData = userDoc.data();
                 
-                // Input'u salla
-                document.getElementById('password').classList.add('error');
-                setTimeout(() => {
-                    document.getElementById('password').classList.remove('error');
-                }, 400);
-            }
-        }
-        
-        function getErrorMessage(code) {
-            switch (code) {
-                case 'auth/user-not-found':
-                    return 'Bu e-posta ile kayıtlı kullanıcı bulunamadı.';
-                case 'auth/wrong-password':
-                    return 'Şifre hatalı.';
-                case 'auth/invalid-email':
-                    return 'Geçersiz e-posta adresi.';
-                case 'auth/user-disabled':
-                    return 'Bu hesap devre dışı bırakılmış.';
-                case 'auth/too-many-requests':
-                    return 'Çok fazla deneme. Lütfen bekleyin.';
-                case 'auth/invalid-credential':
-                    return 'E-posta veya şifre hatalı.';
-                default:
-                    return 'Giriş yapılamadı.';
-            }
-        }
-        
-        // ==================== ŞİFRE SIFIRLAMA ====================
-        function showResetModal() {
-            document.getElementById('resetEmail').value = document.getElementById('email').value;
-            document.getElementById('resetModal').classList.add('show');
-        }
-        
-        function hideResetModal() {
-            document.getElementById('resetModal').classList.remove('show');
-        }
-        
-        async function sendResetEmail() {
-            const email = document.getElementById('resetEmail').value.trim();
-            
-            if (!email) {
-                showToast('E-posta adresi girin.', 'error');
-                return;
-            }
-            
-            try {
-                await auth.sendPasswordResetEmail(email);
-                hideResetModal();
-                showSuccess('Şifre sıfırlama bağlantısı gönderildi!');
+                // Şifre kontrolü (basit hash)
+                const hashedPassword = btoa(password);
+                if (userData.password !== hashedPassword) {
+                    throw new Error('Şifre hatalı');
+                }
+                
+                // Session oluştur
+                const sessionData = {
+                    user: {
+                        id: userDoc.id,
+                        username: userData.username,
+                        name: userData.name,
+                        role: userData.role,
+                        branch: userData.branch || 'all',
+                        permissions: userData.permissions || {}
+                    },
+                    expiry: Date.now() + (8 * 60 * 60 * 1000), // 8 saat
+                    loginTime: Date.now()
+                };
+                
+                localStorage.setItem('moonberry_session', JSON.stringify(sessionData));
+                
+                // Son giriş güncelle
+                await db.collection('users').doc(userDoc.id).update({
+                    lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Role göre yönlendir
+                redirectToPanel(userData.role);
+                
             } catch (error) {
-                showToast('E-posta gönderilemedi.', 'error');
-            }
-        }
-        
-        // ==================== UI YARDIMCILARI ====================
-        function showError(msg) {
-            document.getElementById('errorText').textContent = msg;
-            document.getElementById('errorMessage').classList.add('show');
-            document.getElementById('successMessage').classList.remove('show');
-        }
-        
-        function hideError() {
-            document.getElementById('errorMessage').classList.remove('show');
-        }
-        
-        function showSuccess(msg) {
-            document.getElementById('successText').textContent = msg;
-            document.getElementById('successMessage').classList.add('show');
-            document.getElementById('errorMessage').classList.remove('show');
-        }
-        
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            const icon = document.getElementById('toastIcon');
-            const msg = document.getElementById('toastMessage');
-            
-            toast.className = 'toast ' + type;
-            icon.textContent = type === 'success' ? '✅' : '❌';
-            msg.textContent = message;
-            
-            toast.classList.add('show');
-            
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
-        }
-        
-        // Enter tuşu ile modal kapatma
-        document.getElementById('resetEmail').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendResetEmail();
+                console.error('Giriş hatası:', error);
+                errorEl.textContent = error.message || 'Giriş başarısız';
+                errorEl.style.display = 'block';
+                formEl.style.display = 'block';
+                loadingEl.style.display = 'none';
             }
         });
+        
+        // Role göre doğru panele yönlendir
+        function redirectToPanel(role) {
+            const panelMap = {
+                'yonetici': 'admin.html',
+                'bolge_muduru': 'admin.html',
+                'magaza_muduru': 'manager.html',
+                'barista': 'barista.html'
+            };
+            
+            const targetPanel = panelMap[role] || 'barista.html';
+            window.location.href = targetPanel;
+        }
     </script>
 </body>
 </html>
