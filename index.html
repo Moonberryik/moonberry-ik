@@ -8547,28 +8547,79 @@ const CHECKLIST_TYPES = {
 // Platform listesi (Tuzla için)
 const PLATFORMS = ['Trendyol', 'Yemek Sepeti', 'Getir Yemek', 'Migros'];
 
+// WhatsApp Grup Linkleri
+const WHATSAPP_GROUPS = {
+    'Tuzla Port': 'https://chat.whatsapp.com/I8N0lxcMHyiIHpBjR63Q2h',
+    'Şişli (Merkez)': 'https://chat.whatsapp.com/LP9YKDCIM0k2tnUHHdImyH'
+};
+
+// Checklist zamanlama değişkenleri
+let checklistStartTime = null;
+let checklistFirstItemTime = null;
+let checklistExpectedDuration = 0; // saniye cinsinden
+
+// Personel-şube eşleştirmesi (Firebase'den yüklenecek)
+let personnelMapping = [];
+
+// Personel eşleştirmesini Firebase'den yükle
+async function loadPersonnelMapping() {
+    try {
+        const doc = await db.collection('config').doc('personnel_mapping').get();
+        if (doc.exists) {
+            personnelMapping = doc.data().personnel || [];
+        }
+    } catch (e) {
+        console.warn('Personel eşleştirmesi yüklenemedi:', e);
+    }
+}
+
+// Kullanıcının şubesini email'den al
+function getUserBranchFromEmail(email) {
+    const match = personnelMapping.find(p => p.email?.toLowerCase() === email?.toLowerCase());
+    return match ? match.branch : null;
+}
+
+// Kullanıcının adını email'den al
+function getUserNameFromEmail(email) {
+    const match = personnelMapping.find(p => p.email?.toLowerCase() === email?.toLowerCase());
+    return match ? match.name : null;
+}
+
 // Checklist sayfası başlat
-function initChecklistPage() {
+async function initChecklistPage() {
+    // Personel eşleştirmesini yükle
+    await loadPersonnelMapping();
     // Şube dropdown'ı doldur
     const subeSelect = document.getElementById('checklistSube');
     if (!subeSelect) return;
     
-    const userBranch = currentUser?.branch;
+    const userEmail = currentUser?.email;
+    const emailBranch = getUserBranchFromEmail(userEmail);
+    const userBranch = emailBranch || currentUser?.branch;
     const isAdmin = currentUser?.role === 'yonetici' || currentUser?.role === 'bolge_muduru';
     
     let branches = STATE.branches || [];
     
-    // Mağaza müdürü/barista sadece kendi şubesini görsün
-    if (!isAdmin && userBranch) {
+    // Mağaza müdürü/barista sadece kendi şubesini görsün ve değiştiremesin
+    if (!isAdmin && userBranch && userBranch !== 'all') {
         branches = branches.filter(b => b === userBranch);
+        subeSelect.disabled = true;
+        subeSelect.style.opacity = '0.7';
+        subeSelect.title = 'Şubeniz otomatik seçilmiştir';
+    } else {
+        subeSelect.disabled = false;
+        subeSelect.style.opacity = '1';
     }
     
     subeSelect.innerHTML = branches.map(b => `<option value="${b}">${b}</option>`).join('');
     
-    // Default Tuzla Port
-    const tuzlaOption = Array.from(subeSelect.options).find(o => o.value.toLowerCase().includes('tuzla'));
-    if (tuzlaOption && (isAdmin || !userBranch)) {
-        subeSelect.value = tuzlaOption.value;
+    // Kullanıcının şubesini seç veya default Tuzla Port
+    if (userBranch && userBranch !== 'all') {
+        const userOption = Array.from(subeSelect.options).find(o => o.value === userBranch);
+        if (userOption) subeSelect.value = userOption.value;
+    } else {
+        const tuzlaOption = Array.from(subeSelect.options).find(o => o.value.toLowerCase().includes('tuzla'));
+        if (tuzlaOption) subeSelect.value = tuzlaOption.value;
     }
     
     // Tarih bugün
@@ -8788,6 +8839,18 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
     const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
     const isSubmitted = !!submittedData;
     
+    // Zamanlama sıfırla (yeni checklist)
+    if (!isSubmitted) {
+        checklistStartTime = null;
+        checklistFirstItemTime = null;
+        // Beklenen süreyi hesapla
+        checklistExpectedDuration = items.reduce((sum, item) => sum + (item.duration || 60), 0);
+    }
+    
+    // Kullanıcı adını email'den al
+    const autoPersonName = getUserNameFromEmail(currentUser?.email) || currentUser?.name || '';
+    const isAutoName = !!getUserNameFromEmail(currentUser?.email);
+    
     // Platform check için özel render
     if (type === 'platform') {
         renderPlatformChecklist(container, branch, date, timeSlot, submittedData);
@@ -8795,6 +8858,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
     }
     
     let typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === type);
+    const expectedMinutes = Math.round(checklistExpectedDuration / 60);
     
     let html = `
         <div class="form-section">
@@ -8822,15 +8886,45 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
             ` : ''}
             
             ${!checklistEditMode ? `
-                <div style="margin-bottom:20px;padding:16px;background:var(--bg3);border-radius:12px">
-                    <label class="form-label" style="margin-bottom:8px">👤 Personel Adı</label>
-                    <input type="text" id="checklistPersonName" class="form-input" placeholder="Adınızı girin" 
-                        value="${submittedData?.personName || currentUser?.name || ''}" 
-                        ${isSubmitted ? 'disabled' : ''}>
+                <!-- Personel ve Zaman Bilgisi -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+                    <div style="padding:16px;background:var(--bg3);border-radius:12px">
+                        <label class="form-label" style="margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            Personel
+                        </label>
+                        <input type="text" id="checklistPersonName" class="form-input" 
+                            value="${submittedData?.personName || autoPersonName}" 
+                            ${isSubmitted || isAutoName ? 'disabled style="opacity:0.7;background:var(--bg2)"' : 'placeholder="Adınızı girin"'}>
+                        ${isAutoName && !isSubmitted ? '<div style="font-size:.75rem;color:var(--tx3);margin-top:4px">✓ Otomatik atandı</div>' : ''}
+                    </div>
+                    <div style="padding:16px;background:var(--bg3);border-radius:12px">
+                        <label class="form-label" style="margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                            Tahmini Süre
+                        </label>
+                        <div style="font-size:1.1rem;font-weight:600;color:var(--tx)">${expectedMinutes} dakika</div>
+                        <div style="font-size:.75rem;color:var(--tx3)">${items.length} madde</div>
+                    </div>
                 </div>
                 
+                <!-- Başlangıç Zamanı Banner -->
+                <div id="checklistTimerBanner" style="display:none;margin-bottom:16px;padding:14px 16px;background:linear-gradient(135deg,rgba(0,140,149,.15),rgba(0,140,149,.05));border:1px solid rgba(0,140,149,.3);border-radius:12px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <div style="width:8px;height:8px;background:#27ae60;border-radius:50%;animation:pulse 1.5s infinite"></div>
+                            <span style="font-weight:600;color:var(--tx)">Checklist Başladı</span>
+                        </div>
+                        <div style="font-size:.9rem;color:var(--tx2)">
+                            <span id="checklistStartTimeDisplay">--:--:--</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}</style>
+                
                 <div style="margin-bottom:16px;padding:12px;background:rgba(255,134,116,.1);border-radius:10px;font-size:.85rem;color:var(--tx2)">
-                    ⚠️ <strong>Önemli:</strong> Eksik veya yapılmayan kontrol puantaj puanını etkiler. Tüm maddeleri dikkatlice kontrol edin.
+                    ⚠️ <strong>Önemli:</strong> İlk maddeyi işaretlediğinizde süre başlar. Tüm maddeleri dikkatlice kontrol edin.
                 </div>
             ` : `
                 <div style="margin-bottom:16px;padding:16px;background:rgba(0,140,149,.1);border-radius:12px">
@@ -8989,6 +9083,27 @@ function selectCheckOption(btn, itemId, value) {
     const doneInput = parent.querySelector('input[value="done"]');
     const notdoneInput = parent.querySelector('input[value="notdone"]');
     
+    // İlk madde işaretlendiğinde zamanlayıcıyı başlat
+    if (!checklistFirstItemTime) {
+        checklistFirstItemTime = new Date();
+        checklistStartTime = new Date();
+        
+        // Banner'ı göster
+        const banner = document.getElementById('checklistTimerBanner');
+        if (banner) {
+            banner.style.display = 'block';
+            const timeDisplay = document.getElementById('checklistStartTimeDisplay');
+            if (timeDisplay) {
+                timeDisplay.textContent = checklistStartTime.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+            }
+        }
+        
+        // Bildirim göster
+        const typeSelect = document.getElementById('checklistType');
+        const typeName = typeSelect?.selectedOptions?.[0]?.text || 'Checklist';
+        showToast(`${typeName} başladı! Başlangıç: ${checklistStartTime.toLocaleTimeString('tr-TR')}`, 'success');
+    }
+    
     // Reset
     doneBtn.style.background = 'var(--bg3)';
     doneBtn.style.borderColor = 'var(--cardBorder)';
@@ -9007,6 +9122,39 @@ function selectCheckOption(btn, itemId, value) {
         notdoneBtn.style.background = 'rgba(231,76,60,.2)';
         notdoneBtn.style.borderColor = '#e74c3c';
         notdoneBtn.style.color = '#e74c3c';
+    }
+    
+    // Tüm maddeler işaretlendi mi kontrol et
+    checkAllItemsMarked();
+}
+
+// Tüm maddelerin işaretlenip işaretlenmediğini kontrol et
+function checkAllItemsMarked() {
+    const items = document.querySelectorAll('#checklistItems .checklist-item');
+    let allMarked = true;
+    let markedCount = 0;
+    
+    items.forEach(item => {
+        const doneInput = item.querySelector('input[value="done"]');
+        const notdoneInput = item.querySelector('input[value="notdone"]');
+        if (doneInput?.checked || notdoneInput?.checked) {
+            markedCount++;
+        } else {
+            allMarked = false;
+        }
+    });
+    
+    // İlerleme göstergesi güncelle (opsiyonel)
+    const progress = Math.round((markedCount / items.length) * 100);
+    
+    // Submit butonu aktifliği
+    const submitBtn = document.querySelector('button[onclick*="submitChecklist"]');
+    if (submitBtn) {
+        if (allMarked) {
+            submitBtn.classList.remove('btn-ghost');
+            submitBtn.classList.add('btn-primary');
+            submitBtn.innerHTML = '✅ Checklist\'i Tamamla';
+        }
     }
 }
 
@@ -9143,6 +9291,7 @@ async function submitChecklist(branch, type, date, timeSlot) {
     const items = document.querySelectorAll('#checklistItems .checklist-item');
     const responses = [];
     let allAnswered = true;
+    let doneCount = 0;
     
     items.forEach(item => {
         const doneInput = item.querySelector('input[value="done"]');
@@ -9154,6 +9303,7 @@ async function submitChecklist(branch, type, date, timeSlot) {
             item.style.borderColor = '#e74c3c';
         } else {
             item.style.borderColor = 'var(--cardBorder)';
+            if (doneInput?.checked) doneCount++;
             responses.push({
                 id: itemId,
                 checked: doneInput?.checked || false,
@@ -9167,11 +9317,73 @@ async function submitChecklist(branch, type, date, timeSlot) {
         return;
     }
     
+    // Süre hesapla
+    const endTime = new Date();
+    const actualDuration = checklistStartTime ? Math.round((endTime - checklistStartTime) / 1000) : 0;
+    const actualMinutes = Math.round(actualDuration / 60);
+    const expectedMinutes = Math.round(checklistExpectedDuration / 60);
+    const minExpectedMinutes = Math.round(expectedMinutes * 0.3); // Minimum %30
+    
+    // Süre uyarısı göster
+    if (actualDuration > 0 && actualMinutes < minExpectedMinutes) {
+        showCompletionConfirmModal(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, items.length);
+        return;
+    }
+    
+    // Doğrudan kaydet
+    await saveChecklistAndShare(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, items.length);
+}
+
+// Tamamlama onay modal'ı
+function showCompletionConfirmModal(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, totalCount) {
+    const typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === type);
+    const typeName = typeInfo?.name || type;
+    
+    const modal = document.createElement('div');
+    modal.id = 'completionConfirmModal';
+    modal.innerHTML = `
+        <div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px">
+            <div style="background:var(--bg2);border-radius:20px;max-width:420px;width:100%;padding:32px;text-align:center;border:1px solid var(--cardBorder)">
+                <div style="width:64px;height:64px;background:rgba(255,134,116,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+                    <svg width="32" height="32" fill="none" stroke="#ff8674" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                </div>
+                <h3 style="font-size:1.3rem;font-weight:700;color:var(--tx);margin-bottom:12px">Süre Kontrolü</h3>
+                <p style="color:var(--tx2);margin-bottom:24px;line-height:1.6">
+                    <strong>${typeName}</strong> için tahmini süre <strong>${expectedMinutes} dakika</strong> iken, 
+                    siz <strong>${actualMinutes} dakikada</strong> tamamladınız.<br><br>
+                    Tüm kontrolleri gerçekleştirdiğinizden emin misiniz?
+                </p>
+                <div style="display:flex;gap:12px;justify-content:center">
+                    <button onclick="document.getElementById('completionConfirmModal').remove()" class="btn btn-ghost" style="padding:12px 24px">
+                        ← Geri Dön
+                    </button>
+                    <button onclick="confirmAndSaveChecklist('${branch}', '${type}', '${date}', '${timeSlot || ''}', '${personName}', ${actualMinutes}, ${expectedMinutes}, ${doneCount}, ${totalCount})" class="btn btn-primary" style="padding:12px 24px">
+                        ✓ Evet, Tamamla
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Responses'u geçici sakla
+    window._pendingResponses = responses;
+}
+
+// Onaylı kaydet
+async function confirmAndSaveChecklist(branch, type, date, timeSlot, personName, actualMinutes, expectedMinutes, doneCount, totalCount) {
+    document.getElementById('completionConfirmModal')?.remove();
+    const responses = window._pendingResponses || [];
+    await saveChecklistAndShare(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, totalCount);
+}
+
+// Checklist'i kaydet ve paylaş
+async function saveChecklistAndShare(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, totalCount) {
     try {
         const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
         const submissionId = `${checklistId}_${date}${timeSlot ? '_' + timeSlot.replace(':', '') : ''}`;
         
-        await db.collection('checklistSubmissions').doc(submissionId).set({
+        const submissionData = {
             checklistId,
             branch,
             type,
@@ -9181,16 +9393,122 @@ async function submitChecklist(branch, type, date, timeSlot) {
             submittedBy: currentUser?.id,
             submittedByName: currentUser?.name || personName,
             submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            startTime: checklistStartTime?.toISOString() || null,
+            endTime: new Date().toISOString(),
+            actualDurationMinutes: actualMinutes,
+            expectedDurationMinutes: expectedMinutes,
+            completionRate: Math.round((doneCount / totalCount) * 100),
             items: responses
-        });
+        };
         
-        toast('Checklist başarıyla kaydedildi!', 'success');
-        loadChecklist();
+        await db.collection('checklistSubmissions').doc(submissionId).set(submissionData);
+        
+        // Başarı modal'ı göster
+        showChecklistCompleteModal(branch, type, date, timeSlot, personName, actualMinutes, expectedMinutes, doneCount, totalCount);
         
     } catch (error) {
         console.error('Checklist kayıt hatası:', error);
         toast('Kayıt hatası!', 'error');
     }
+}
+
+// Checklist tamamlandı modal'ı - WhatsApp paylaşımı ile
+function showChecklistCompleteModal(branch, type, date, timeSlot, personName, actualMinutes, expectedMinutes, doneCount, totalCount) {
+    const typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === type);
+    const typeName = typeInfo?.name || type;
+    const completionRate = Math.round((doneCount / totalCount) * 100);
+    const dateStr = new Date(date).toLocaleDateString('tr-TR', {day: 'numeric', month: 'long', year: 'numeric'});
+    const timeStr = new Date().toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'});
+    
+    const modal = document.createElement('div');
+    modal.id = 'checklistCompleteModal';
+    modal.innerHTML = `
+        <div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px">
+            <div style="background:var(--bg2);border-radius:20px;max-width:480px;width:100%;padding:32px;text-align:center;border:1px solid var(--cardBorder)">
+                <div style="width:80px;height:80px;background:linear-gradient(135deg,rgba(39,174,96,.2),rgba(39,174,96,.1));border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px">
+                    <svg width="40" height="40" fill="none" stroke="#27ae60" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </div>
+                <h3 style="font-size:1.5rem;font-weight:700;color:var(--tx);margin-bottom:8px">Checklist Tamamlandı!</h3>
+                <p style="color:var(--tx2);margin-bottom:24px">${typeName} • ${branch}</p>
+                
+                <div style="background:var(--bg3);border-radius:12px;padding:20px;margin-bottom:24px;text-align:left">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                        <div>
+                            <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Personel</div>
+                            <div style="font-weight:600;color:var(--tx)">${personName}</div>
+                        </div>
+                        <div>
+                            <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Tarih</div>
+                            <div style="font-weight:600;color:var(--tx)">${dateStr}</div>
+                        </div>
+                        <div>
+                            <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Süre</div>
+                            <div style="font-weight:600;color:var(--tx)">${actualMinutes} dk <span style="color:var(--tx3);font-weight:400">(tahmini ${expectedMinutes} dk)</span></div>
+                        </div>
+                        <div>
+                            <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Tamamlama</div>
+                            <div style="font-weight:600;color:#27ae60">${completionRate}% (${doneCount}/${totalCount})</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+                    <button onclick="closeCompleteModalAndRefresh()" class="btn btn-ghost" style="padding:12px 20px">
+                        ✓ Tamam
+                    </button>
+                    <button onclick="shareChecklistToWhatsApp('${branch}', '${typeName}', '${personName}', '${dateStr}', '${timeStr}', ${actualMinutes}, ${completionRate}, ${doneCount}, ${totalCount})" class="btn btn-primary" style="padding:12px 20px;background:linear-gradient(135deg,#25D366,#128C7E)">
+                        <svg width="18" height="18" fill="#fff" viewBox="0 0 24 24" style="margin-right:6px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                        WhatsApp'ta Paylaş
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+// Modal kapat ve yenile
+function closeCompleteModalAndRefresh() {
+    document.getElementById('checklistCompleteModal')?.remove();
+    loadChecklist();
+}
+
+// WhatsApp'ta paylaş
+function shareChecklistToWhatsApp(branch, typeName, personName, dateStr, timeStr, duration, rate, done, total) {
+    const whatsappLink = WHATSAPP_GROUPS[branch];
+    
+    const message = `✅ *CHECKLIST TAMAMLANDI*
+
+📋 *${typeName}*
+📍 ${branch}
+👤 ${personName}
+📅 ${dateStr} - ${timeStr}
+
+⏱️ Süre: ${duration} dakika
+✓ Tamamlanan: ${done}/${total} (%${rate})
+
+_Moonberry İK Sistemi_`;
+
+    const encodedMessage = encodeURIComponent(message);
+    
+    // WhatsApp grup linkini aç
+    if (whatsappLink) {
+        // Önce mesajı kopyala
+        navigator.clipboard?.writeText(message).then(() => {
+            toast('Mesaj kopyalandı! WhatsApp grubu açılıyor...', 'success');
+        }).catch(() => {});
+        
+        // Grup linkini aç
+        setTimeout(() => {
+            window.open(whatsappLink, '_blank');
+        }, 500);
+    } else {
+        // Genel WhatsApp paylaşımı
+        window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+    }
+    
+    document.getElementById('checklistCompleteModal')?.remove();
+    loadChecklist();
 }
 
 // Platform checklist gönder
