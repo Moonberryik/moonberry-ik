@@ -440,6 +440,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <div id="userRole" style="color:var(--sidebarTx2);font-size:.7rem">-</div>
                         </div>
                     </div>
+                    <button id="switchUserBtn" onclick="showSwitchUserModal()" style="display:none;width:100%;padding:8px;margin-bottom:8px;background:rgba(0,140,149,.2);border:1px solid rgba(0,140,149,.3);border-radius:8px;color:#00b4a0;font-size:.75rem;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(0,140,149,.3)'" onmouseout="this.style.background='rgba(0,140,149,.2)'">
+                        👁️ Kullanıcı Gözünden Gör
+                    </button>
                     <button onclick="logout()" style="width:100%;padding:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--sidebarTx2);font-size:.8rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.background='rgba(231,76,60,.2)';this.style.borderColor='rgba(231,76,60,.4)';this.style.color='#e74c3c'" onmouseout="this.style.background='rgba(255,255,255,.1)';this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--sidebarTx2)'">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                         Çıkış Yap
@@ -2137,6 +2140,167 @@ async function logout() {
     }
 }
 
+// Kullanıcı değiştir değişkenleri
+var originalUser = null;
+var isViewingAsOther = false;
+
+// Kullanıcı değiştir modal
+async function showSwitchUserModal() {
+    if (!currentUser || (currentUser.role !== 'yonetici' && currentUser.role !== 'bolge_muduru')) {
+        showToast('Bu özellik sadece yöneticiler için', 'error');
+        return;
+    }
+    
+    var usersSnap = await db.collection('users').get();
+    var users = [];
+    var realEmail = originalUser ? originalUser.email : currentUser.email;
+    
+    usersSnap.forEach(function(doc) {
+        var u = doc.data();
+        if (u.email !== realEmail) {
+            users.push({ id: doc.id, email: u.email || '', name: u.name || '', role: u.role || '', branch: u.branch || '' });
+        }
+    });
+    
+    var roleNames = {
+        'yonetici': '👑 Yönetici',
+        'bolge_muduru': '🏢 Bölge Müdürü',
+        'magaza_muduru': '🏪 Mağaza Müdürü',
+        'barista': '☕ Barista'
+    };
+    
+    var usersHtml = '';
+    users.forEach(function(u) {
+        var initial = (u.name || u.email || '?').charAt(0).toUpperCase();
+        var roleName = roleNames[u.role] || u.role;
+        var branchText = u.branch ? ' • ' + u.branch : '';
+        usersHtml += '<div class="switch-user-item" data-userid="' + u.id + '" data-email="' + u.email + '" data-name="' + u.name + '" data-role="' + u.role + '" data-branch="' + u.branch + '" style="padding:12px;background:var(--bg2);border-radius:10px;cursor:pointer;transition:all .2s;border:1px solid var(--cardBorder);margin-bottom:8px" onmouseover="this.style.background=\'var(--bg3)\';this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.background=\'var(--bg2)\';this.style.borderColor=\'var(--cardBorder)\'">';
+        usersHtml += '<div style="display:flex;align-items:center;gap:12px">';
+        usersHtml += '<div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600">' + initial + '</div>';
+        usersHtml += '<div style="flex:1">';
+        usersHtml += '<div style="font-weight:600;color:var(--tx)">' + (u.name || u.email) + '</div>';
+        usersHtml += '<div style="font-size:.75rem;color:var(--tx2)">' + roleName + branchText + '</div>';
+        usersHtml += '</div></div></div>';
+    });
+    
+    if (!usersHtml) {
+        usersHtml = '<div style="text-align:center;color:var(--tx2);padding:20px">Başka kullanıcı yok</div>';
+    }
+    
+    var modalHtml = '<div style="text-align:center;margin-bottom:20px">';
+    modalHtml += '<div style="font-size:2rem;margin-bottom:8px">👁️</div>';
+    modalHtml += '<div style="font-size:1.2rem;font-weight:700;color:var(--tx)">Kullanıcı Gözünden Gör</div>';
+    modalHtml += '<div style="font-size:.85rem;color:var(--tx2)">Seçtiğiniz kullanıcının gördüğü ekranı göreceksiniz</div>';
+    modalHtml += '</div>';
+    modalHtml += '<div id="switchUserList" style="max-height:400px;overflow-y:auto">' + usersHtml + '</div>';
+    modalHtml += '<div style="margin-top:16px;text-align:center">';
+    modalHtml += '<button class="btn btn-ghost" onclick="closeModal()">İptal</button>';
+    modalHtml += '</div>';
+    
+    showModal(modalHtml);
+    
+    // Click event ekle
+    setTimeout(function() {
+        document.querySelectorAll('.switch-user-item').forEach(function(item) {
+            item.onclick = function() {
+                var userId = this.dataset.userid;
+                var email = this.dataset.email;
+                var name = this.dataset.name;
+                var role = this.dataset.role;
+                var branch = this.dataset.branch;
+                switchToUser(userId, email, name, role, branch);
+            };
+        });
+    }, 100);
+}
+
+function switchToUser(userId, email, name, role, branch) {
+    if (!originalUser) {
+        originalUser = JSON.parse(JSON.stringify(currentUser));
+    }
+    
+    isViewingAsOther = true;
+    currentUser = {
+        id: userId,
+        email: email,
+        name: name,
+        role: role,
+        branch: branch,
+        isViewing: true
+    };
+    
+    updateUserUI();
+    applyUserPermissions();
+    showViewingBanner(name, role);
+    
+    closeModal();
+    showToast(name + ' olarak görüntülüyorsunuz', 'success');
+    goTo('dashboard');
+}
+
+function showViewingBanner(name, role) {
+    var roleNames = { 'yonetici': 'Yönetici', 'bolge_muduru': 'Bölge Müdürü', 'magaza_muduru': 'Mağaza Müdürü', 'barista': 'Barista' };
+    
+    var oldBanner = document.getElementById('viewingBanner');
+    if (oldBanner) oldBanner.remove();
+    
+    var banner = document.createElement('div');
+    banner.id = 'viewingBanner';
+    banner.style.cssText = 'position:fixed;top:0;left:260px;right:0;z-index:9999;background:linear-gradient(135deg,#f39c12,#e67e22);color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;font-size:.85rem;box-shadow:0 2px 12px rgba(0,0,0,.2)';
+    banner.innerHTML = '<div><strong>👁️ ÖNİZLEME:</strong> ' + name + ' (' + (roleNames[role] || role) + ') olarak görüntülüyorsunuz</div><button onclick="stopViewingAsOther()" style="background:#fff;color:#e67e22;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:.8rem">✕ Geri Dön</button>';
+    document.body.appendChild(banner);
+    
+    var mainEl = document.querySelector('.main');
+    if (mainEl) mainEl.style.marginTop = '40px';
+}
+
+function stopViewingAsOther() {
+    if (!originalUser) return;
+    
+    currentUser = JSON.parse(JSON.stringify(originalUser));
+    originalUser = null;
+    isViewingAsOther = false;
+    
+    var banner = document.getElementById('viewingBanner');
+    if (banner) banner.remove();
+    
+    var mainEl = document.querySelector('.main');
+    if (mainEl) mainEl.style.marginTop = '0';
+    
+    updateUserUI();
+    applyUserPermissions();
+    
+    showToast('Yönetici hesabına döndünüz', 'success');
+    goTo('dashboard');
+}
+
+function updateUserUI() {
+    var userNameEl = document.getElementById('userName');
+    var userRoleEl = document.getElementById('userRole');
+    var userAvatarEl = document.getElementById('userAvatar');
+    
+    var roleNames = {
+        'yonetici': 'Yönetici',
+        'bolge_muduru': 'Bölge Müdürü',
+        'magaza_muduru': 'Mağaza Müdürü',
+        'barista': 'Barista'
+    };
+    
+    if (userNameEl) {
+        if (isViewingAsOther) {
+            userNameEl.innerHTML = '<span style="background:var(--yellow);color:#000;padding:2px 6px;border-radius:4px;font-size:.65rem;margin-right:6px">ÖNİZLEME</span>' + (currentUser.name || currentUser.email);
+        } else {
+            userNameEl.textContent = currentUser.name || currentUser.email;
+        }
+    }
+    if (userRoleEl) {
+        userRoleEl.textContent = roleNames[currentUser.role] || currentUser.role;
+    }
+    if (userAvatarEl && currentUser.name) {
+        userAvatarEl.textContent = currentUser.name.charAt(0).toUpperCase();
+    }
+}
+
 // Sidebar nav grup toggle
 function toggleNavGroup(label) {
     label.classList.toggle('collapsed');
@@ -2361,6 +2525,14 @@ function applyUserPermissions() {
     }
     if (userAvatarEl && currentUser.name) {
         userAvatarEl.textContent = currentUser.name.charAt(0).toUpperCase();
+    }
+    
+    // Kullanıcı Değiştir butonu (Sadece yönetici ve bölge müdürü)
+    var switchUserBtn = document.getElementById('switchUserBtn');
+    if (switchUserBtn) {
+        var realRole = originalUser ? originalUser.role : currentUser.role;
+        var canSwitch = realRole === 'yonetici' || realRole === 'bolge_muduru';
+        switchUserBtn.style.display = canSwitch ? 'block' : 'none';
     }
     
     // Yönetici her şeye erişebilir
@@ -8578,6 +8750,7 @@ function getRoleName(role) {
 // Checklist zamanlama değişkenleri
 let checklistStartTime = null;
 let checklistFirstItemTime = null;
+let checklistTimerInterval = null;
 let checklistExpectedDuration = 0; // saniye cinsinden
 
 // Personel-şube eşleştirmesi (Firebase'den yüklenecek)
@@ -8919,6 +9092,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
     if (!isSubmitted) {
         checklistStartTime = null;
         checklistFirstItemTime = null;
+        if (checklistTimerInterval) { clearInterval(checklistTimerInterval); checklistTimerInterval = null; }
         // Beklenen süreyi hesapla
         checklistExpectedDuration = items.reduce((sum, item) => sum + (item.duration || 60), 0);
     }
@@ -8994,10 +9168,9 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
                         <div style="display:flex;align-items:center;gap:8px">
                             <div style="width:8px;height:8px;background:#27ae60;border-radius:50%;animation:pulse 1.5s infinite"></div>
                             <span style="font-weight:600;color:var(--tx)">Checklist Başladı</span>
+                            <span style="font-size:.85rem;color:var(--tx2)">(<span id="checklistStartTimeDisplay">--:--:--</span>)</span>
                         </div>
-                        <div style="font-size:.9rem;color:var(--tx2)">
-                            <span id="checklistStartTimeDisplay">--:--:--</span>
-                        </div>
+                        <div style="font-size:1.2rem;font-weight:700;color:var(--accent2);font-family:var(--mono)" id="checklistChronoDisplay">00:00:00</div>
                     </div>
                 </div>
                 
@@ -9178,10 +9351,23 @@ function selectCheckOption(btn, itemId, value) {
             }
         }
         
+        // Canlı kronometre başlat
+        if (checklistTimerInterval) clearInterval(checklistTimerInterval);
+        checklistTimerInterval = setInterval(function() {
+            var elapsed = Math.floor((new Date() - checklistStartTime) / 1000);
+            var hours = Math.floor(elapsed / 3600);
+            var minutes = Math.floor((elapsed % 3600) / 60);
+            var seconds = elapsed % 60;
+            var chronoDisplay = document.getElementById('checklistChronoDisplay');
+            if (chronoDisplay) {
+                chronoDisplay.textContent = String(hours).padStart(2,'0') + ':' + String(minutes).padStart(2,'0') + ':' + String(seconds).padStart(2,'0');
+            }
+        }, 1000);
+        
         // Bildirim göster
         const typeSelect = document.getElementById('checklistType');
         const typeName = typeSelect?.selectedOptions?.[0]?.text || 'Checklist';
-        showToast(`${typeName} başladı! Başlangıç: ${checklistStartTime.toLocaleTimeString('tr-TR')}`, 'success');
+        showToast(typeName + ' başladı!', 'success');
     }
     
     // Reset
@@ -9234,128 +9420,289 @@ function checkAllItemsMarked() {
             submitBtn.classList.remove('btn-ghost');
             submitBtn.classList.add('btn-primary');
             submitBtn.innerHTML = '✅ Checklist\'i Tamamla';
+            
+            // PDF İndir butonu göster
+            var pdfBtn = document.getElementById('checklistPdfBtn');
+            if (!pdfBtn) {
+                pdfBtn = document.createElement('button');
+                pdfBtn.id = 'checklistPdfBtn';
+                pdfBtn.className = 'btn btn-ghost';
+                pdfBtn.innerHTML = '📄 PDF İndir';
+                pdfBtn.onclick = downloadChecklistPdf;
+                pdfBtn.style.marginRight = '8px';
+                submitBtn.parentElement.insertBefore(pdfBtn, submitBtn);
+            }
         }
     }
+}
+
+// Checklist PDF İndir
+function downloadChecklistPdf() {
+    var branch = document.getElementById('checklistSube').value;
+    var date = document.getElementById('checklistDate').value;
+    var timeSlot = document.getElementById('checklistTimeSlot').value;
+    var personNameEl = document.getElementById('checklistPersonName');
+    var personName = personNameEl ? personNameEl.value : (currentUser ? currentUser.name : '');
+    var typeSelect = document.getElementById('checklistType');
+    var typeName = typeSelect && typeSelect.selectedOptions[0] ? typeSelect.selectedOptions[0].text : 'Checklist';
+    
+    var items = document.querySelectorAll('#checklistItems .checklist-item');
+    var doneCount = 0, notDoneCount = 0;
+    var itemsList = [];
+    
+    items.forEach(function(item, idx) {
+        var textEl = item.querySelector('div[style*="flex:1"]');
+        var text = textEl ? textEl.textContent.trim() : '';
+        var doneInput = item.querySelector('input[value="done"]');
+        var notdoneInput = item.querySelector('input[value="notdone"]');
+        var isDone = doneInput && doneInput.checked;
+        var isNotDone = notdoneInput && notdoneInput.checked;
+        
+        if (isDone) doneCount++;
+        if (isNotDone) notDoneCount++;
+        
+        itemsList.push({
+            no: idx + 1,
+            text: text,
+            status: isDone ? 'Yapıldı ✓' : isNotDone ? 'Yapılmadı ✗' : '-',
+            isDone: isDone
+        });
+    });
+    
+    var now = new Date();
+    var elapsed = checklistStartTime ? Math.floor((now - checklistStartTime) / 1000) : 0;
+    var elapsedMin = Math.floor(elapsed / 60);
+    var elapsedSec = elapsed % 60;
+    var dateObj = new Date(date);
+    var dateStr = dateObj.toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'});
+    
+    var docDefinition = {
+        pageSize: 'A4',
+        pageMargins: [40, 60, 40, 60],
+        content: [
+            {text: 'MOONBERRY COFFEE', style: 'header', alignment: 'center'},
+            {text: typeName.toUpperCase() + ' CHECKLIST', style: 'subheader', alignment: 'center'},
+            {text: ' ', margin: [0, 10]},
+            {
+                columns: [
+                    {text: 'Şube: ' + branch, style: 'info'},
+                    {text: 'Tarih: ' + dateStr, style: 'info', alignment: 'right'}
+                ]
+            },
+            {
+                columns: [
+                    {text: 'Personel: ' + personName, style: 'info'},
+                    {text: timeSlot ? 'Saat: ' + timeSlot : '', style: 'info', alignment: 'right'}
+                ]
+            },
+            {text: ' ', margin: [0, 5]},
+            {
+                columns: [
+                    {text: 'Başlangıç: ' + (checklistStartTime ? checklistStartTime.toLocaleTimeString('tr-TR') : '-'), style: 'info'},
+                    {text: 'Bitiş: ' + now.toLocaleTimeString('tr-TR'), style: 'info', alignment: 'center'},
+                    {text: 'Süre: ' + elapsedMin + ' dk ' + elapsedSec + ' sn', style: 'info', alignment: 'right'}
+                ]
+            },
+            {text: ' ', margin: [0, 10]},
+            {
+                style: 'tableExample',
+                table: {
+                    headerRows: 1,
+                    widths: [30, '*', 80],
+                    body: [
+                        [{text: 'No', style: 'tableHeader'}, {text: 'Madde', style: 'tableHeader'}, {text: 'Durum', style: 'tableHeader'}]
+                    ].concat(itemsList.map(function(item) {
+                        return [
+                            {text: String(item.no), alignment: 'center'},
+                            {text: item.text},
+                            {text: item.status, alignment: 'center', color: item.isDone ? '#27ae60' : '#e74c3c', bold: true}
+                        ];
+                    }))
+                }
+            },
+            {text: ' ', margin: [0, 15]},
+            {
+                columns: [
+                    {text: 'Yapıldı: ' + doneCount, style: 'summary', color: '#27ae60'},
+                    {text: 'Yapılmadı: ' + notDoneCount, style: 'summary', color: '#e74c3c'},
+                    {text: 'Toplam: ' + items.length, style: 'summary'}
+                ]
+            }
+        ],
+        styles: {
+            header: {fontSize: 18, bold: true, color: '#008c95', margin: [0, 0, 0, 5]},
+            subheader: {fontSize: 14, bold: true, color: '#ff8674', margin: [0, 0, 0, 10]},
+            info: {fontSize: 10, color: '#555', margin: [0, 2]},
+            tableHeader: {bold: true, fontSize: 10, color: '#fff', fillColor: '#008c95'},
+            tableExample: {margin: [0, 5, 0, 15], fontSize: 9},
+            summary: {fontSize: 11, bold: true, alignment: 'center'}
+        }
+    };
+    
+    var fileName = 'checklist_' + branch.replace(/[^a-zA-Z0-9]/g,'_') + '_' + typeName.replace(/[^a-zA-Z0-9]/g,'_') + '_' + date + '.pdf';
+    pdfMake.createPdf(docDefinition).download(fileName);
+    showToast('PDF indirildi', 'success');
 }
 
 // Platform checklist render
 function renderPlatformChecklist(container, branch, date, timeSlot, submittedData) {
     const isSubmitted = !!submittedData;
     
-    let html = `
-        <div class="form-section">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-                <div>
-                    <div style="font-size:1.3rem;font-weight:700;color:var(--tx)">📱 Platform Check</div>
-                    <div style="font-size:.85rem;color:var(--tx2)">${branch} • ${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})} • ${timeSlot}</div>
-                </div>
-                ${isSubmitted ? `
-                    <div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.85rem">
-                        ✓ Tamamlandı
-                    </div>
-                ` : ''}
-            </div>
-            
-            <div style="margin-bottom:20px;padding:16px;background:var(--bg3);border-radius:12px">
-                <label class="form-label" style="margin-bottom:8px">👤 Personel Adı</label>
-                <input type="text" id="checklistPersonName" class="form-input" placeholder="Adınızı girin" 
-                    value="${submittedData?.personName || currentUser?.name || ''}" 
-                    ${isSubmitted ? 'disabled' : ''}>
-            </div>
-            
-            <div style="background:var(--bg2);border-radius:12px;overflow:hidden;border:1px solid var(--cardBorder)">
-                <table style="width:100%;border-collapse:collapse">
-                    <thead>
-                        <tr style="background:var(--bg3)">
-                            <th style="padding:12px;text-align:left;font-weight:600;color:var(--tx)">Platform</th>
-                            <th style="padding:12px;text-align:center;font-weight:600;color:var(--tx)">Açık ✓</th>
-                            <th style="padding:12px;text-align:center;font-weight:600;color:var(--tx)">Kapalı ✗</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-    `;
+    // Saat dilimleri
+    var timeSlots = ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'];
     
-    PLATFORMS.forEach(platform => {
-        const isOpen = submittedData?.platforms?.find(p => p.name === platform)?.isOpen;
-        const isClosed = submittedData?.platforms?.find(p => p.name === platform)?.isOpen === false;
-        
-        html += `
-            <tr style="border-top:1px solid var(--cardBorder)">
-                <td style="padding:12px;font-weight:500;color:var(--tx)">${platform}</td>
-                <td style="padding:12px;text-align:center">
-                    <label style="cursor:${isSubmitted ? 'default' : 'pointer'}">
-                        <input type="radio" name="platform_${platform.replace(/\s/g, '_')}" value="open" 
-                            ${isOpen ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''}
-                            style="display:none">
-                        <span onclick="${isSubmitted ? '' : `selectPlatformStatus(this, '${platform.replace(/\s/g, '_')}', true)`}"
-                            style="display:inline-flex;width:40px;height:40px;border-radius:10px;align-items:center;justify-content:center;font-size:1.3rem;
-                            background:${isOpen ? 'rgba(39,174,96,.2)' : 'var(--bg3)'};
-                            border:2px solid ${isOpen ? '#27ae60' : 'transparent'};
-                            color:${isOpen ? '#27ae60' : 'var(--tx3)'};
-                            transition:all .2s">✓</span>
-                    </label>
-                </td>
-                <td style="padding:12px;text-align:center">
-                    <label style="cursor:${isSubmitted ? 'default' : 'pointer'}">
-                        <input type="radio" name="platform_${platform.replace(/\s/g, '_')}" value="closed" 
-                            ${isClosed ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''}
-                            style="display:none">
-                        <span onclick="${isSubmitted ? '' : `selectPlatformStatus(this, '${platform.replace(/\s/g, '_')}', false)`}"
-                            style="display:inline-flex;width:40px;height:40px;border-radius:10px;align-items:center;justify-content:center;font-size:1.3rem;
-                            background:${isClosed ? 'rgba(231,76,60,.2)' : 'var(--bg3)'};
-                            border:2px solid ${isClosed ? '#e74c3c' : 'transparent'};
-                            color:${isClosed ? '#e74c3c' : 'var(--tx3)'};
-                            transition:all .2s">✗</span>
-                    </label>
-                </td>
-            </tr>
-        `;
+    // Platform listesi - Tuzla için Moonberry, Şişli için sadece Moonberry (Sunberry yok)
+    var isTuzla = branch.includes('Tuzla');
+    var platforms = ['Trendyol', 'Yemek Sepeti', 'Getir Yemek', 'Migros'];
+    
+    var html = '<div class="form-section">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">';
+    html += '<div>';
+    html += '<div style="font-size:1.3rem;font-weight:700;color:var(--tx)">📱 Platform Check</div>';
+    html += '<div style="font-size:.85rem;color:var(--tx2)">' + branch + ' • ' + new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'}) + '</div>';
+    html += '</div>';
+    if (isSubmitted) {
+        html += '<div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.85rem">✓ Tamamlandı</div>';
+    }
+    html += '</div>';
+    
+    // Tablo başlığı
+    html += '<div style="overflow-x:auto;margin-bottom:20px">';
+    html += '<table style="width:100%;border-collapse:collapse;min-width:600px;background:var(--bg2);border-radius:12px;overflow:hidden">';
+    
+    // Header - Moonberry ve Sunberry (Tuzla için)
+    html += '<thead>';
+    if (isTuzla) {
+        html += '<tr style="background:linear-gradient(135deg,#f1c40f,#f39c12)">';
+        html += '<th style="padding:10px;text-align:center;font-weight:700;color:#000" colspan="5">MOONBERRY</th>';
+        html += '<th style="padding:10px;text-align:center;font-weight:700;color:#fff;background:linear-gradient(135deg,#27ae60,#2ecc71)" colspan="4">SUNBERRY</th>';
+        html += '</tr>';
+    }
+    html += '<tr style="background:var(--bg3)">';
+    html += '<th style="padding:10px;text-align:center;font-weight:600;color:var(--tx);background:#f1c40f;color:#000">SAAT</th>';
+    platforms.forEach(function(p) {
+        html += '<th style="padding:8px;text-align:center;font-weight:600;color:var(--tx);font-size:.8rem;background:rgba(241,196,15,.3)">' + p.toUpperCase() + '</th>';
     });
+    if (isTuzla) {
+        platforms.forEach(function(p) {
+            html += '<th style="padding:8px;text-align:center;font-weight:600;color:var(--tx);font-size:.8rem;background:rgba(39,174,96,.2)">' + p.toUpperCase() + '</th>';
+        });
+    }
+    html += '</tr>';
+    html += '</thead>';
     
-    html += `
-                    </tbody>
-                </table>
-            </div>
+    // Body - Her saat için satır
+    html += '<tbody>';
+    timeSlots.forEach(function(slot) {
+        html += '<tr style="border-top:1px solid var(--cardBorder)">';
+        html += '<td style="padding:10px;text-align:center;font-weight:700;background:#f1c40f;color:#000">' + slot + '</td>';
+        
+        // Moonberry platformları
+        platforms.forEach(function(p, idx) {
+            var cellId = 'moonberry_' + slot.replace(':', '') + '_' + idx;
+            var cellData = submittedData && submittedData.cells ? submittedData.cells[cellId] : null;
+            var isChecked = cellData && cellData.status === 'done';
+            var isNotDone = cellData && cellData.status === 'notdone';
+            var personName = cellData ? cellData.person : '';
             
-            ${!isSubmitted ? `
-                <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
-                    <button class="btn btn-primary" onclick="submitPlatformChecklist('${branch}', '${date}', '${timeSlot}')">
-                        ✅ Platform Check'i Tamamla
-                    </button>
-                </div>
-            ` : ''}
-        </div>
-    `;
+            html += '<td style="padding:6px;text-align:center;border-left:1px solid var(--cardBorder)">';
+            if (isSubmitted) {
+                if (isChecked) {
+                    html += '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">';
+                    html += '<span style="color:#27ae60;font-size:1.2rem">✓</span>';
+                    html += '<span style="font-size:.65rem;color:var(--tx2)">' + personName + '</span>';
+                    html += '</div>';
+                } else if (isNotDone) {
+                    html += '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">';
+                    html += '<span style="color:#e74c3c;font-size:1.2rem">✗</span>';
+                    html += '<span style="font-size:.65rem;color:var(--tx2)">' + personName + '</span>';
+                    html += '</div>';
+                } else {
+                    html += '<span style="color:var(--tx3)">-</span>';
+                }
+            } else {
+                html += '<div style="display:flex;gap:4px;justify-content:center">';
+                html += '<button type="button" class="platform-cell-btn" data-cell="' + cellId + '" data-status="done" onclick="selectPlatformCell(this)" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--cardBorder);background:' + (isChecked ? 'rgba(39,174,96,.2)' : 'var(--bg3)') + ';color:' + (isChecked ? '#27ae60' : 'var(--tx3)') + ';cursor:pointer;font-size:.9rem">✓</button>';
+                html += '<button type="button" class="platform-cell-btn" data-cell="' + cellId + '" data-status="notdone" onclick="selectPlatformCell(this)" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--cardBorder);background:' + (isNotDone ? 'rgba(231,76,60,.2)' : 'var(--bg3)') + ';color:' + (isNotDone ? '#e74c3c' : 'var(--tx3)') + ';cursor:pointer;font-size:.9rem">✗</button>';
+                html += '</div>';
+            }
+            html += '</td>';
+        });
+        
+        // Sunberry platformları (sadece Tuzla)
+        if (isTuzla) {
+            platforms.forEach(function(p, idx) {
+                var cellId = 'sunberry_' + slot.replace(':', '') + '_' + idx;
+                var cellData = submittedData && submittedData.cells ? submittedData.cells[cellId] : null;
+                var isChecked = cellData && cellData.status === 'done';
+                var isNotDone = cellData && cellData.status === 'notdone';
+                var personName = cellData ? cellData.person : '';
+                
+                html += '<td style="padding:6px;text-align:center;border-left:1px solid var(--cardBorder);background:rgba(39,174,96,.05)">';
+                if (isSubmitted) {
+                    if (isChecked) {
+                        html += '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">';
+                        html += '<span style="color:#27ae60;font-size:1.2rem">✓</span>';
+                        html += '<span style="font-size:.65rem;color:var(--tx2)">' + personName + '</span>';
+                        html += '</div>';
+                    } else if (isNotDone) {
+                        html += '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">';
+                        html += '<span style="color:#e74c3c;font-size:1.2rem">✗</span>';
+                        html += '<span style="font-size:.65rem;color:var(--tx2)">' + personName + '</span>';
+                        html += '</div>';
+                    } else {
+                        html += '<span style="color:var(--tx3)">-</span>';
+                    }
+                } else {
+                    html += '<div style="display:flex;gap:4px;justify-content:center">';
+                    html += '<button type="button" class="platform-cell-btn" data-cell="' + cellId + '" data-status="done" onclick="selectPlatformCell(this)" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--cardBorder);background:' + (isChecked ? 'rgba(39,174,96,.2)' : 'var(--bg3)') + ';color:' + (isChecked ? '#27ae60' : 'var(--tx3)') + ';cursor:pointer;font-size:.9rem">✓</button>';
+                    html += '<button type="button" class="platform-cell-btn" data-cell="' + cellId + '" data-status="notdone" onclick="selectPlatformCell(this)" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--cardBorder);background:' + (isNotDone ? 'rgba(231,76,60,.2)' : 'var(--bg3)') + ';color:' + (isNotDone ? '#e74c3c' : 'var(--tx3)') + ';cursor:pointer;font-size:.9rem">✗</button>';
+                    html += '</div>';
+                }
+                html += '</td>';
+            });
+        }
+        
+        html += '</tr>';
+    });
+    html += '</tbody></table></div>';
     
+    // Personel adı ve gönder butonu
+    if (!isSubmitted) {
+        html += '<div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap">';
+        html += '<div style="flex:1;min-width:200px">';
+        html += '<label class="form-label" style="margin-bottom:8px">👤 Personel Adı</label>';
+        html += '<input type="text" id="checklistPersonName" class="form-input" placeholder="Adınızı girin" value="' + (currentUser ? (currentUser.name || '') : '') + '">';
+        html += '</div>';
+        html += '<button class="btn btn-primary" onclick="submitPlatformChecklist(\'' + branch + '\', \'' + date + '\', \'' + timeSlot + '\')">✅ Kaydet</button>';
+        html += '</div>';
+    }
+    
+    html += '</div>';
     container.innerHTML = html;
 }
 
-// Platform status seç
-function selectPlatformStatus(btn, platformKey, isOpen) {
-    const row = btn.closest('tr');
-    const openSpan = row.querySelector('td:nth-child(2) span');
-    const closedSpan = row.querySelector('td:nth-child(3) span');
-    const openInput = row.querySelector('input[value="open"]');
-    const closedInput = row.querySelector('input[value="closed"]');
+// Platform hücre seçimi
+function selectPlatformCell(btn) {
+    var cellId = btn.dataset.cell;
+    var status = btn.dataset.status;
     
-    // Reset
-    openSpan.style.background = 'var(--bg3)';
-    openSpan.style.borderColor = 'transparent';
-    openSpan.style.color = 'var(--tx3)';
-    closedSpan.style.background = 'var(--bg3)';
-    closedSpan.style.borderColor = 'transparent';
-    closedSpan.style.color = 'var(--tx3)';
+    // Aynı hücredeki diğer butonu bul ve sıfırla
+    var allBtns = document.querySelectorAll('.platform-cell-btn[data-cell="' + cellId + '"]');
+    allBtns.forEach(function(b) {
+        b.style.background = 'var(--bg3)';
+        b.style.color = 'var(--tx3)';
+        b.classList.remove('selected');
+    });
     
-    if (isOpen) {
-        openInput.checked = true;
-        openSpan.style.background = 'rgba(39,174,96,.2)';
-        openSpan.style.borderColor = '#27ae60';
-        openSpan.style.color = '#27ae60';
+    // Bu butonu seç
+    btn.classList.add('selected');
+    if (status === 'done') {
+        btn.style.background = 'rgba(39,174,96,.2)';
+        btn.style.color = '#27ae60';
     } else {
-        closedInput.checked = true;
-        closedSpan.style.background = 'rgba(231,76,60,.2)';
-        closedSpan.style.borderColor = '#e74c3c';
-        closedSpan.style.color = '#e74c3c';
+        btn.style.background = 'rgba(231,76,60,.2)';
+        btn.style.color = '#e74c3c';
     }
 }
 
@@ -9593,51 +9940,55 @@ _Moonberry İK Sistemi_`;
 
 // Platform checklist gönder
 async function submitPlatformChecklist(branch, date, timeSlot) {
-    const personName = document.getElementById('checklistPersonName')?.value?.trim();
+    var personNameEl = document.getElementById('checklistPersonName');
+    var personName = personNameEl ? personNameEl.value.trim() : '';
     if (!personName) {
         toast('Lütfen personel adını girin', 'error');
         return;
     }
     
-    const platforms = [];
-    let allAnswered = true;
+    // Seçili hücreleri topla
+    var cells = {};
+    var selectedBtns = document.querySelectorAll('.platform-cell-btn.selected');
     
-    PLATFORMS.forEach(platform => {
-        const key = platform.replace(/\s/g, '_');
-        const openInput = document.querySelector(`input[name="platform_${key}"][value="open"]`);
-        const closedInput = document.querySelector(`input[name="platform_${key}"][value="closed"]`);
-        
-        if (!openInput?.checked && !closedInput?.checked) {
-            allAnswered = false;
-        } else {
-            platforms.push({
-                name: platform,
-                isOpen: openInput?.checked || false
-            });
-        }
+    selectedBtns.forEach(function(btn) {
+        var cellId = btn.dataset.cell;
+        var status = btn.dataset.status;
+        cells[cellId] = {
+            status: status,
+            person: personName,
+            time: new Date().toISOString()
+        };
     });
     
-    if (!allAnswered) {
-        toast('Lütfen tüm platformları işaretleyin', 'error');
+    if (Object.keys(cells).length === 0) {
+        toast('Lütfen en az bir platform durumu seçin', 'error');
         return;
     }
     
     try {
-        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_platform`;
-        const submissionId = `${checklistId}_${date}_${timeSlot.replace(':', '')}`;
+        var checklistId = branch.replace(/[^a-zA-Z0-9]/g, '_') + '_platform';
+        var submissionId = checklistId + '_' + date;
+        
+        // Mevcut veriyi al ve güncelle (aynı gün içinde farklı kişiler işaretleyebilir)
+        var existingDoc = await db.collection('checklistSubmissions').doc(submissionId).get();
+        var existingCells = existingDoc.exists ? (existingDoc.data().cells || {}) : {};
+        
+        // Yeni hücreleri mevcut veriye ekle
+        Object.keys(cells).forEach(function(key) {
+            existingCells[key] = cells[key];
+        });
         
         await db.collection('checklistSubmissions').doc(submissionId).set({
-            checklistId,
-            branch,
+            checklistId: checklistId,
+            branch: branch,
             type: 'platform',
-            date,
-            timeSlot,
-            personName,
-            submittedBy: currentUser?.id,
-            submittedByName: currentUser?.name || personName,
-            submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            platforms
-        });
+            date: date,
+            submittedBy: currentUser ? currentUser.id : null,
+            submittedByName: currentUser ? currentUser.name : personName,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            cells: existingCells
+        }, { merge: true });
         
         toast('Platform check kaydedildi!', 'success');
         loadChecklist();
