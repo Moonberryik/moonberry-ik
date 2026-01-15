@@ -1316,9 +1316,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                     <!-- Veri Temizleme - Sadece admin görecek -->
                     <div class="admin-card" id="dataCleanupCard" style="margin-top:20px;display:none">
-                        <div class="admin-card-header"><div class="admin-card-title">🧹 Veri Temizleme</div></div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Duplicate kayıtları temizleyin ve veri tutarlılığını sağlayın.</p>
+                        <div class="admin-card-header"><div class="admin-card-title">🧹 Veri Yönetimi</div></div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Verileri yönetin ve Firebase'e yükleyin.</p>
                         <div style="display:flex;gap:12px;flex-wrap:wrap">
+                            <button class="btn btn-primary btn-sm" onclick="seedChecklistDataToFirebase()">📋 Checklist Verilerini Yükle</button>
                             <button class="btn btn-ghost btn-sm" onclick="cleanDuplicatePersonel()">👥 Duplicate Personel Temizle</button>
                             <button class="btn btn-ghost btn-sm" onclick="cleanDuplicateShifts()">📅 Duplicate Shift Temizle</button>
                         </div>
@@ -2066,6 +2067,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.querySelector('.app').style.opacity = '1';
                     applyUserPermissions();
                     loadFirebaseData();
+                    
+                    // Önizleme modunu kontrol et
+                    checkPreviewMode();
                     
                     // Giriş aktivitesini logla
                     logActivity('login', { device: navigator.userAgent });
@@ -3622,6 +3626,47 @@ function renderAdminLists() {
     }
 }
 
+// Checklist verilerini Firebase'e yükle
+async function seedChecklistDataToFirebase() {
+    const resultsDiv = document.getElementById('cleanupResults');
+    resultsDiv.style.display = 'block';
+    resultsDiv.innerHTML = '<p style="color:var(--tx2)">⏳ Checklist verileri yükleniyor...</p>';
+    
+    try {
+        const branches = ['Tuzla Port', 'Şişli (Merkez)'];
+        const types = ['acilis', 'kapanis', 'guncel', 'platform', 'temizlik', 'aylik', 'mudur'];
+        let totalUploaded = 0;
+        
+        for (const branch of branches) {
+            for (const type of types) {
+                const items = getDefaultChecklistItems(branch, type);
+                if (items.length > 0) {
+                    const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
+                    await db.collection('checklists').doc(checklistId).set({
+                        branch,
+                        type,
+                        items,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    totalUploaded += items.length;
+                    console.log(`✅ ${branch} - ${type}: ${items.length} madde yüklendi`);
+                }
+            }
+        }
+        
+        resultsDiv.innerHTML = `<p style="color:var(--green)">✅ Toplam ${totalUploaded} madde Firebase'e yüklendi!</p>
+            <p style="color:var(--tx2);font-size:.8rem;margin-top:8px">Artık tüm checklist verileri veritabanından çekilecek.</p>`;
+        
+        toast(`${totalUploaded} checklist maddesi yüklendi`, 'success');
+        
+    } catch (error) {
+        console.error('Seed hatası:', error);
+        resultsDiv.innerHTML = `<p style="color:var(--red)">❌ Hata: ${error.message}</p>`;
+        toast('Yükleme hatası!', 'error');
+    }
+}
+
 // Duplicate personel temizleme
 async function cleanDuplicatePersonel() {
     const resultsDiv = document.getElementById('cleanupResults');
@@ -3741,6 +3786,62 @@ async function confirmDeleteDuplicateShifts(idsJson) {
 let originalUser = null;
 let isPreviewMode = false;
 
+// Sayfa yüklendiğinde önizleme durumunu kontrol et
+function checkPreviewMode() {
+    const saved = localStorage.getItem('moonberry_preview');
+    if (saved) {
+        try {
+            const data = JSON.parse(saved);
+            if (data.originalUser && data.previewUser) {
+                originalUser = data.originalUser;
+                isPreviewMode = true;
+                currentUser = data.previewUser;
+                
+                // UI güncelle
+                const roleNames = { 'barista': 'Barista', 'bolge_muduru': 'Bölge Müdürü', 'magaza_muduru': 'Mağaza Müdürü', 'yonetici': 'Yönetici' };
+                
+                document.getElementById('previewRoleName').textContent = roleNames[currentUser.role];
+                document.getElementById('previewBranchName').textContent = currentUser.branch || 'Tüm Şubeler';
+                document.getElementById('rolePreviewContent').style.display = 'none';
+                document.getElementById('rolePreviewActive').style.display = 'block';
+                
+                const userNameEl = document.getElementById('userName');
+                if (userNameEl) userNameEl.innerHTML = `<span style="background:var(--yellow);color:#000;padding:2px 6px;border-radius:4px;font-size:.7rem;margin-right:6px">ÖNİZLEME</span>${roleNames[currentUser.role]}`;
+                
+                const userRoleEl = document.getElementById('userRole');
+                if (userRoleEl) userRoleEl.textContent = currentUser.branch || 'Tüm Şubeler';
+                
+                // Üst bar ekle
+                showPreviewTopBar();
+                
+                // Yetkileri uygula
+                applyRolePreviewPermissions(currentUser.role, currentUser.branch);
+            }
+        } catch (e) {
+            localStorage.removeItem('moonberry_preview');
+        }
+    }
+}
+
+// Önizleme üst barı
+function showPreviewTopBar() {
+    if (document.getElementById('previewTopBar')) return;
+    
+    const roleNames = { 'barista': 'Barista', 'bolge_muduru': 'Bölge Müdürü', 'magaza_muduru': 'Mağaza Müdürü', 'yonetici': 'Yönetici' };
+    const bar = document.createElement('div');
+    bar.id = 'previewTopBar';
+    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#f39c12,#e67e22);color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;z-index:10000;font-size:.9rem;box-shadow:0 2px 10px rgba(0,0,0,.3)';
+    bar.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px">
+            <span style="font-size:1.2rem">👁️</span>
+            <span><strong>Önizleme Modu:</strong> ${roleNames[currentUser.role]} ${currentUser.branch && currentUser.branch !== 'all' ? '• ' + currentUser.branch : ''}</span>
+        </div>
+        <button onclick="stopRolePreview()" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:500">✕ Önizlemeyi Sonlandır</button>
+    `;
+    document.body.prepend(bar);
+    document.body.style.paddingTop = '50px';
+}
+
 function startRolePreview() {
     const role = document.getElementById('previewRoleSelect').value;
     const branch = document.getElementById('previewBranchSelect').value;
@@ -3788,6 +3889,12 @@ function startRolePreview() {
     if (userRoleEl) {
         userRoleEl.textContent = branch || 'Tüm Şubeler';
     }
+    
+    // LocalStorage'a kaydet
+    localStorage.setItem('moonberry_preview', JSON.stringify({ originalUser, previewUser: currentUser }));
+    
+    // Üst bar ekle
+    showPreviewTopBar();
     
     // Yetkileri uygula
     applyRolePreviewPermissions(role, branch);
@@ -3841,6 +3948,14 @@ function stopRolePreview() {
     currentUser = { ...originalUser };
     originalUser = null;
     isPreviewMode = false;
+    
+    // LocalStorage'dan sil
+    localStorage.removeItem('moonberry_preview');
+    
+    // Üst barı kaldır
+    const topBar = document.getElementById('previewTopBar');
+    if (topBar) topBar.remove();
+    document.body.style.paddingTop = '';
     
     // UI'ı sıfırla
     document.getElementById('rolePreviewContent').style.display = 'block';
@@ -8581,27 +8696,35 @@ async function loadChecklist() {
     </div>`;
     
     try {
-        // Default maddeleri al
-        let items = getDefaultChecklistItems(branch, type);
-        
-        // Firestore'dan checklist'i al (varsa)
         const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
+        let items = [];
         
+        // Önce Firebase'den çek
         try {
             const checklistDoc = await db.collection('checklists').doc(checklistId).get();
             if (checklistDoc.exists && checklistDoc.data().items?.length > 0) {
                 items = checklistDoc.data().items;
-            } else if (items.length > 0) {
-                // Default maddeleri kaydet
-                await db.collection('checklists').doc(checklistId).set({
-                    branch,
-                    type,
-                    items,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
             }
         } catch (dbError) {
-            console.warn('Firestore erişim hatası, default maddeler kullanılıyor:', dbError);
+            console.warn('Firestore erişim hatası:', dbError);
+        }
+        
+        // Firebase'de yoksa default maddeleri kullan ve kaydet (ilk kurulum)
+        if (items.length === 0) {
+            items = getDefaultChecklistItems(branch, type);
+            if (items.length > 0) {
+                try {
+                    await db.collection('checklists').doc(checklistId).set({
+                        branch,
+                        type,
+                        items,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    console.log(`İlk kurulum: ${checklistId} Firebase'e kaydedildi`);
+                } catch (e) {
+                    console.warn('İlk kayıt hatası:', e);
+                }
+            }
         }
         
         // Eğer hala items boşsa hata göster
