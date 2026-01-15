@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moonberry İK - Sistem Kurulumu</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); min-height: 100vh; padding: 20px; color: #fff; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 10px; font-size: 1.8rem; }
+        .subtitle { text-align: center; color: rgba(255,255,255,0.6); margin-bottom: 30px; }
+        .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 24px; margin-bottom: 20px; }
+        .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; }
+        .stat { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 16px; text-align: center; }
+        .stat-value { font-size: 1.8rem; font-weight: 700; color: #ff8674; }
+        .stat-label { font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 4px; }
+        .btn { padding: 14px 28px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; font-size: 1rem; transition: all 0.2s; }
+        .btn-primary { background: linear-gradient(135deg, #ff8674, #e5736a); color: #fff; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,134,116,0.3); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .progress { height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-top: 16px; }
+        .progress-bar { height: 100%; background: linear-gradient(90deg, #ff8674, #27ae60); width: 0%; transition: width 0.3s; }
+        .log { background: rgba(0,0,0,0.3); border-radius: 10px; padding: 16px; margin-top: 20px; max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; line-height: 1.6; }
+        .log-item { padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .log-success { color: #27ae60; }
+        .log-error { color: #e74c3c; }
+        .log-info { color: #3498db; }
+        #loginSection input { padding: 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: #fff; width: 100%; max-width: 320px; margin-bottom: 12px; font-size: 1rem; }
+        #loginSection input::placeholder { color: rgba(255,255,255,0.4); }
+        .warning { background: rgba(255,134,116,0.1); border: 1px solid rgba(255,134,116,0.3); border-radius: 10px; padding: 16px; margin-bottom: 20px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌙 Moonberry İK Sistemi</h1>
+        <p class="subtitle">Veritabanı Kurulumu ve Yapılandırma</p>
+        
+        <div id="loginSection" class="card">
+            <div class="card-title">🔐 Yönetici Girişi</div>
+            <input type="email" id="loginEmail" placeholder="E-posta adresi"><br>
+            <input type="password" id="loginPassword" placeholder="Şifre"><br>
+            <button class="btn btn-primary" onclick="doLogin()">Giriş Yap</button>
+        </div>
+        
+        <div id="uploadSection" style="display:none">
+            <div class="warning">
+                ⚠️ <strong>Dikkat:</strong> Bu işlem mevcut checklist verilerini siler ve yeniden oluşturur. Gönderilmiş checklist kayıtları korunur.
+            </div>
+            
+            <div class="card">
+                <div class="card-title">📊 Yüklenecek Veriler</div>
+                <div class="stats">
+                    <div class="stat"><div class="stat-value" id="statItems">0</div><div class="stat-label">Checklist Maddesi</div></div>
+                    <div class="stat"><div class="stat-value" id="statTypes">0</div><div class="stat-label">Checklist Türü</div></div>
+                    <div class="stat"><div class="stat-value" id="statPersonnel">0</div><div class="stat-label">Personel</div></div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <button class="btn btn-primary" id="btnUpload" onclick="startUpload()" style="width:100%">
+                    🚀 Kurulumu Başlat
+                </button>
+                <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+            </div>
+            
+            <div class="log" id="log" style="display:none"></div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
+            authDomain: "moonberry-ik.firebaseapp.com",
+            projectId: "moonberry-ik",
+            storageBucket: "moonberry-ik.firebasestorage.app",
+            messagingSenderId: "4872042742",
+            appId: "1:4872042742:web:24a9e5935e2b5591a794d7"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // =====================================================
+        // SİSTEM KONFİGÜRASYONU
+        // =====================================================
+        const SYSTEM_CONFIG = {
+            companyName: 'Moonberry Coffee',
+            whatsappGroups: {
+                'Tuzla Port': 'https://chat.whatsapp.com/I8N0lxcMHyiIHpBjR63Q2h',
+                'Şişli (Merkez)': 'https://chat.whatsapp.com/LP9YKDCIM0k2tnUHHdImyH'
+            },
+            platforms: ['Trendyol', 'Yemek Sepeti', 'Getir Yemek', 'Migros']
+        };
+
+        // =====================================================
+        // PERSONEL LİSTESİ - Mevcut kayıtlı personel
+        // =====================================================
+        const PERSONNEL = [
+            {email: 'baran@moonberrycoffee.com', name: 'Baran Akdemir', branch: 'Tuzla Port', role: 'barista'},
+            {email: 'balra@moonberrycoffee.com', name: 'Büşra Söğüt (Balra)', branch: 'Tuzla Port', role: 'magaza_muduru'},
+            {email: 'busra.yildiz@moonberrycoffee.com', name: 'Büşra Yıldız', branch: 'Tuzla Port', role: 'barista'},
+            {email: 'dilan@moonberrycoffee.com', name: 'Dilan Yürümez', branch: 'Tuzla Port', role: 'barista'},
+            {email: 'elif@moonberrycoffee.com', name: 'Elif Altunbaş', branch: 'Tuzla Port', role: 'barista'},
+            {email: 'tuana@moonberrycoffee.com', name: 'Tuana Yaşar', branch: 'Tuzla Port', role: 'barista'},
+            {email: 'ece@moonberrycoffee.com', name: 'Ece Özpehlivan', branch: 'Şişli (Merkez)', role: 'magaza_muduru'},
+            {email: 'esmanur@moonberrycoffee.com', name: 'Esmanur Hopoğlu', branch: 'Şişli (Merkez)', role: 'barista'},
+            {email: 'merve@moonberrycoffee.com', name: 'Merve İlgar', branch: 'Şişli (Merkez)', role: 'bolge_muduru'},
+            {email: 'tamer@moonberrycoffee.com', name: 'Tamer Karaduman', branch: 'all', role: 'yonetici'}
+        ];
+
+        // =====================================================
+        // CHECKLIST TÜRLERİ
+        // =====================================================
+        const CHECKLIST_TYPES = {
+            'Tuzla Port': [
+                {id: 'acilis', name: 'Açılış', icon: 'sunrise'},
+                {id: 'kapanis', name: 'Kapanış', icon: 'sunset'},
+                {id: 'guncel', name: 'Güncel Kontrol', icon: 'clipboard-check', timeSlots: ['10:00','14:00','18:00','22:00']},
+                {id: 'mudur', name: 'Müdür Kontrol', icon: 'user-check', managerOnly: true},
+                {id: 'platform', name: 'Platform Check', icon: 'smartphone', timeSlots: ['10:00','12:00','15:00','18:00','21:00','00:00']},
+                {id: 'haftalik', name: 'Haftalık Görevler', icon: 'calendar-week'},
+                {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
+            ],
+            'Şişli (Merkez)': [
+                {id: 'acilis', name: 'Açılış', icon: 'sunrise'},
+                {id: 'kapanis', name: 'Kapanış', icon: 'sunset'},
+                {id: 'guncel', name: 'Güncel Kontrol', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
+                {id: 'mudur', name: 'Müdür Kontrol', icon: 'user-check', managerOnly: true},
+                {id: 'platform', name: 'Platform Check', icon: 'smartphone', timeSlots: ['10:00','12:00','15:00','18:00','21:00','00:00']},
+                {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
+            ]
+        };
+
+        // =====================================================
+        // TUZLA PORT - AÇILIŞ (56 madde)
+        // =====================================================
+        const TUZLA_ACILIS = [
+            {text: 'Müzik listesi karışık modda çalışıyor mu kontrol edilecek', duration: 15},
+            {text: 'Müzik ses seviyesi 4-4,5 olarak ayarlandı', duration: 10},
+            {text: 'Moonberry Pop listesi açıldı', duration: 10},
+            {text: 'Ön bahçe ortadaki iki ısıtıcı P3, diğerleri P1 modunda açıldı', duration: 30},
+            {text: 'Xiaomi ısıtıcıların üzerinde leke kontrolü yapıldı, uygulama açıldı', duration: 20},
+            {text: 'Pastacı kreması tarife uygun hazırlandı (+2 yedekli)', duration: 300},
+            {text: 'Z raporu paylaşıldı ve dünkü raporla karşılaştırıldı', duration: 60},
+            {text: 'Hoparlör, şirket telefonu, masa ışıkları şarja takıldı', duration: 30},
+            {text: 'Mağaza içi çamaşır suyuyla, ön bahçe faraşla temizlendi', duration: 300},
+            {text: 'Kutu oyunlarının içeriği kontrol edildi, eksikler tamamlandı', duration: 120},
+            {text: 'Eskiyen oyunlar hakkında gruptan bilgilendirme yapıldı', duration: 30},
+            {text: 'Sabahçı 18:00 alarmı kurdu (çöp atma)', duration: 10},
+            {text: 'Camlar otomatik modda 3 numaralı tuşta aktif', duration: 20},
+            {text: 'Sabah gelen çilekler kontrol edildi, SKT atıldı', duration: 60},
+            {text: 'Bar içi tüm dolap altları süpürülüp silindi', duration: 180},
+            {text: 'Şalların logoları ön tarafa bakıyor', duration: 30},
+            {text: 'Donuk ürünler hızlıca donduruculara konuldu', duration: 60},
+            {text: 'SKT kontrolü yapıldı, önce giren önce çıkar uygulandı', duration: 120},
+            {text: 'Tatlı tabakları temizlendi', duration: 60},
+            {text: 'Meyve dolabı düzeni yapıldı, eskiler öne yeniler arkaya', duration: 60},
+            {text: 'POS PC ve notebook tozu alındı', duration: 30},
+            {text: 'Barista kıyafeti ve isimlik kontrol edildi', duration: 15},
+            {text: 'Masa lambaları şarjda', duration: 20},
+            {text: 'Moonberry ve Sunberry PC de farklı sekmelerde açık', duration: 30},
+            {text: 'Meyve sıkma makinası temiz tutulacak şekilde hazır', duration: 60},
+            {text: 'Girişteki sunum dolabının içi, dışı ve üstü temizlendi', duration: 120},
+            {text: 'Pleksi görseller kontrol edildi', duration: 30},
+            {text: 'Akşamcı için tüm eksikler giderildi', duration: 180},
+            {text: 'İlk çay saat 13:00 da demlenecek (alarm kuruldu)', duration: 15},
+            {text: 'Masalar temiz bez ile silindi', duration: 120},
+            {text: 'Platform check list alarmlı', duration: 15},
+            {text: 'Yazıcı arka depoya yatay konuldu', duration: 30},
+            {text: 'TV ekranları (4 adet) aktif ve çalışıyor', duration: 30},
+            {text: 'Blender yıkanıp kurulanarak hazır', duration: 60},
+            {text: 'Şirket telefonuna gelen aramalar kayıt edildi', duration: 15},
+            {text: 'Pergole ışıkları en yüksek modda açık', duration: 15},
+            {text: 'Kasa anahtarı kasa altına alındı', duration: 10},
+            {text: 'Gelen faturalar fotoğraflanıp grup ile paylaşıldı', duration: 30},
+            {text: 'Servis alanı kontrol edildi (pipet, peçete, şekerler)', duration: 60},
+            {text: 'Check list alarm saatleri kuruldu', duration: 15},
+            {text: 'Mini PC açık, POS entegrasyonu yeşil ışıklar yanıyor', duration: 20},
+            {text: 'Paket servis alanı tam dolu ve temiz', duration: 120},
+            {text: 'Teşhir vitrin dolabının camları ve ön mavi alanı silindi', duration: 60},
+            {text: 'Palmiye ağaç ışıkları silindi', duration: 30},
+            {text: 'Masa düzeni yerine getirildi', duration: 60},
+            {text: 'Şofben 3 konumuna getirildi', duration: 10},
+            {text: 'Şurup ve sos ağızları temizlendi', duration: 60},
+            {text: 'Sağlıklı shotlar kontrol edildi, eksikler yapıldı', duration: 120},
+            {text: 'İkram shotlar akşam shifti için dolduruldu', duration: 60},
+            {text: 'Bar ve paketleme alanı eksikleri tamamlandı', duration: 120},
+            {text: 'Arka taraftaki masalar ve sandalyeler temizlendi', duration: 120},
+            {text: 'Kırılacak ürünler düzgün istiflenecek şekilde yerleştirildi', duration: 60},
+            {text: 'Mermer masalar oturma düzenine göre ayarlandı', duration: 60},
+            {text: 'Platform sistemleri öğrenildi/kontrol edildi', duration: 30},
+            {text: 'Sabah gelen meyvelerin fotoğrafı paylaşıldı', duration: 30},
+            {text: 'Meşrubat dolabı dolduruldu ve fotoğraf paylaşıldı', duration: 60}
+        ];
+
+        // =====================================================
+        // TUZLA PORT - KAPANIŞ (35 madde)
+        // =====================================================
+        const TUZLA_KAPANIS = [
+            {text: 'Tüm soğutucu dolapların kapakları tamamen kapalı', duration: 30},
+            {text: 'Demlikte çay varsa döküldü, temizlik yapıldı', duration: 60},
+            {text: 'Çay saatlerinin fotosu kapanışta grupla paylaşıldı', duration: 20},
+            {text: 'Mutfak genel temizliği yapıldı', duration: 300},
+            {text: 'Zemin paspası atılıp fotoğrafı çekildi', duration: 60},
+            {text: 'Tüm bezler yıkanıp kuruması için asıldı', duration: 60},
+            {text: 'Tüm masa lambaları bar üstünde şarja hazır toplandı', duration: 60},
+            {text: 'Bulaşık makinesi içi kurulanıp yerleştirildi', duration: 120},
+            {text: 'Bulaşık makinesi suyu tahliye edildi, OFF konumuna alındı', duration: 30},
+            {text: 'Meyve sıkma makinası temizlendi', duration: 120},
+            {text: 'Espresso makinası temizlenip ışıkları kapatıldı', duration: 60},
+            {text: 'Kasada fatura/fiş dosyalandı, kasa yapıldı', duration: 120},
+            {text: 'Tatlı dolabı ve yan dolabin ışıkları kapatıldı', duration: 15},
+            {text: 'Blender yıkanıp kurulanarak yerine kondu', duration: 60},
+            {text: 'Çöpler atıldı (atık bölümüne değil)', duration: 120},
+            {text: 'Android POS arkasındaki düğmeden kapatıldı', duration: 10},
+            {text: 'Sadece açık sütler dolaba alındı', duration: 30},
+            {text: 'Mutfağa ve kasa önüne çamaşır sulu paspas atıldı', duration: 120},
+            {text: 'Bilgisayar Kapat komutuyla kapatıldı', duration: 30},
+            {text: 'Kapanış saati öncesi müşteri bilgilendirildi', duration: 30},
+            {text: 'Vitrin dolabının camları silindi', duration: 60},
+            {text: 'Arka deponun kapısı kilitlendi', duration: 15},
+            {text: 'Brandalar kapatıldı', duration: 60},
+            {text: 'Şofben 0 konumuna getirildi', duration: 10},
+            {text: 'Sol taraftaki ışıklar kontrol edildi (akıllı prize bağlı)', duration: 15},
+            {text: 'Tüm sürgülü camlar kapatıldı, kilitleme demirleri sabitlendi', duration: 60},
+            {text: 'Açık olan ısıtıcılar kapatıldı', duration: 30},
+            {text: 'Sandalyeler masaya yatırıldı', duration: 120},
+            {text: 'Küllükler ve masa ışıkları içeri alındı', duration: 60},
+            {text: 'Yan bahçede çöp varsa toplandı', duration: 60},
+            {text: 'Küllükler çamaşır sulu küvete konuldu', duration: 30},
+            {text: 'Kasa ekranı fotoğrafı grup ile paylaşıldı', duration: 20},
+            {text: 'Taksi/TAG ücreti çekilip grup ile paylaşıldı', duration: 30},
+            {text: 'Tüm kovalardaki çöpler boşaltıldı, yeni poşet takıldı', duration: 60},
+            {text: 'Elektronik kapılar kapatıldı', duration: 15}
+        ];
+
+        // =====================================================
+        // TUZLA PORT - GÜNCEL KONTROL (81 madde)
+        // =====================================================
+        const TUZLA_GUNCEL = [
+            {text: 'Gece kapanış saati gelmeden masa/sandalye çevrilmez, ışık kapatılmaz', duration: 10},
+            {text: 'Müşterinin göreceği alanlar (kasa, duvarlar, dolaplar) temiz ve düzenli', duration: 60},
+            {text: 'Müzik açık, Moonberry Pop çalıyor, 23:00 sonrası ses ortada', duration: 15},
+            {text: 'Müzik ses seviyesi 4-4,5 arasında', duration: 10},
+            {text: 'Açılış, aracı ve kapanış checkleri grup ile paylaşıldı', duration: 20},
+            {text: 'Dolap içindeki SKT tarihleri kontrol edilip fotoğrafı atıldı', duration: 60},
+            {text: 'Gelen pasta, donut, kargo vb. checklenip fotoğraf paylaşıldı', duration: 30},
+            {text: 'Zayiat varsa o anda grupla paylaşıldı', duration: 15},
+            {text: 'Tüm online indirimler açık (Tuzla ve Şişli)', duration: 30},
+            {text: 'Barista önlüğü ve kıyafetler temiz ve düzenli', duration: 15},
+            {text: 'Isıtıcılar açık (soğuk havada)', duration: 20},
+            {text: 'Pergole ışıkları açık', duration: 10},
+            {text: 'Oyun rafının olduğu köşedeki camlar aralık bırakıldı', duration: 15},
+            {text: 'Banka parası yatırıldı', duration: 30},
+            {text: 'Palmiye ağacının ışıkları silindi', duration: 30},
+            {text: 'Portafilter, makine, buhar çubuğu, pitcher, tamper temizlendi', duration: 60},
+            {text: 'Kapı önünde/çevrede çöp yok, konteynır shift çıkışı atıldı', duration: 60},
+            {text: 'Online platformlar telefondan kontrol edildi', duration: 30},
+            {text: 'Müşteri karşılama ve uğurlama kibar ve saygılı', duration: 15},
+            {text: 'Kasaya gelen müşterilere süt tercihi ve içim seçimi soruldu', duration: 15},
+            {text: 'Dışarıdaki pervaneler çalışır ve dönen modda', duration: 20},
+            {text: 'Mini PC açık, POS entegrasyonu yeşil ışıklar yanıyor', duration: 20},
+            {text: 'Bar dışında sigara/puff içilmiyor, bar içinde lavaboya doğru üfleniyor', duration: 15},
+            {text: 'Online sipariş hazırlandığında sistemde işaretlendi', duration: 15},
+            {text: 'Masa siparişlerinde ürün hazır olduğunda zile basıldı', duration: 10},
+            {text: 'Menüdeki açık/kapalı ürün bilgileri güncellendi', duration: 30},
+            {text: 'Yulaf, T.kahve, kadayıf, değirmen yarıya indi ise tamamlandı', duration: 60},
+            {text: 'Kuvings, blender, Yasomi, kahve değirmeni temiz', duration: 60},
+            {text: 'Bar çevresine gelen misafirler personel gibi durmuyor', duration: 15},
+            {text: 'Dış misafirler işleyişi bozacak kadar uzun kalmıyor', duration: 15},
+            {text: 'Paket siparişlerinde arkalı/önlü isim, not eklendi', duration: 30},
+            {text: 'Yönetici WhatsApp bilgilendirmelerine onay verildi', duration: 15},
+            {text: 'TV ekranlarının hepsi açık', duration: 20},
+            {text: 'Yeni TV ekranı açık, video çalıyor', duration: 15},
+            {text: 'Isıtıcılar kontrol edildi (P3/P1 modları)', duration: 20},
+            {text: 'Check list alarm saatleri kuruldu', duration: 15},
+            {text: 'Masa lambalarında kullanmayan masa olduğunda alınıp başkasına konuyor', duration: 20},
+            {text: 'Arka depoya stoklar yapıldı', duration: 60},
+            {text: 'Vitrin dolabındaki içecekler tam, silinmesi gerekiyorsa silindi', duration: 30},
+            {text: 'Vitrin dolabının ön mavilikleri temiz', duration: 30},
+            {text: 'Hediye shot dışında izinsiz ürün hediye edilmedi', duration: 15},
+            {text: 'Shift devirlerinde çöpler atıldı', duration: 60},
+            {text: 'Dolapların ışıkları yanıyor (çarpınca kapanmış mı kontrol)', duration: 15},
+            {text: 'Bar içinde gereksiz eşya yok', duration: 30},
+            {text: 'Dünkü nakit ATM ye yatırıldı, fark varsa yöneticiye bildirildi', duration: 30},
+            {text: 'Arka taraftaki masa üstleri temiz', duration: 60},
+            {text: 'Masa üstleri basket ile toplanıyor', duration: 20},
+            {text: 'İlk çay saat 13:00 da demlendi', duration: 15},
+            {text: 'Platform check list dolduruldu', duration: 30},
+            {text: 'Soğutucu dolapların içi temiz ve düzenli', duration: 60},
+            {text: 'Çileklerin ağzı streçli ve SKT si var', duration: 20},
+            {text: 'Blender temiz ve kuru', duration: 30},
+            {text: 'Masa lambaları şarjda', duration: 20},
+            {text: 'Müşteriyle iletişimde telefonla oyalanılmıyor', duration: 15},
+            {text: 'İptal/iade sipariş veya kötü puan varsa kasadan düşülüp paylaşıldı', duration: 30},
+            {text: 'Salon, mutfak ve dolap alt/köşeleri çamaşır sulu suyla temizlendi', duration: 120},
+            {text: 'Şirket telefonu nazik ve profesyonel şekilde yanıtlanıyor', duration: 15},
+            {text: 'Şirket telefonu sesi açık, kibar ifadeyle cevap veriliyor', duration: 15},
+            {text: 'Şirket telefonuna gelen aramalar kayıt ediliyor', duration: 15},
+            {text: 'Soğutucu/dondurucu kapakları kapalı, ağzı açık ürün yok', duration: 30},
+            {text: 'Temizlik malzemeleri müşteri göz alanında değil', duration: 15},
+            {text: 'Lavaboda su veya atık birikmiyor, temiz ve açık', duration: 30},
+            {text: 'Menulux menüsü güncellendi, Genel ürün çıkan fiş yok', duration: 30},
+            {text: 'Dış masalar ve küllükler temizlenip fotoğraf paylaşıldı', duration: 60},
+            {text: 'Masalar temiz bezle silindi', duration: 60},
+            {text: 'Büyük vitrin camları ve alt havalandırma ızgaraları temiz', duration: 60},
+            {text: 'Servis istemiyorum yazanlar sarı kalemle çizildi', duration: 10},
+            {text: 'POS, kasa çevresi, dolap üstleri ve sandalyelerde gereksiz eşya yok', duration: 30},
+            {text: 'Sorumlu olunan alanın fotoğrafı grup ile paylaşıldı', duration: 30},
+            {text: 'Aylık temizlik çizelgesi kontrol edilip fotoğrafı paylaşıldı', duration: 30},
+            {text: 'Çay saatlerinin fotoğrafı paylaşıldı, poşetler 30dk sonra çıkarıldı', duration: 20},
+            {text: 'Tüm ürünlerde SKT bulunuyor', duration: 60},
+            {text: 'Çay bardakları, kaşık ve çatallar lekesiz ve temiz', duration: 30},
+            {text: 'Mutfak çamaşır sulu paspas ile temizlenip fotoğraf paylaşıldı', duration: 120},
+            {text: 'Su taşması yaşanmadı', duration: 15},
+            {text: 'Pastacı kreması stoğu (1+2 yedek) mevcut', duration: 30},
+            {text: 'Tatlı kapları temiz, dolap üzerindeki su silindi', duration: 30},
+            {text: 'Dış alandaki tüm ışıklar yanıyor', duration: 30},
+            {text: 'Büyük çöp kovası 18:00 da atıldı', duration: 60},
+            {text: 'Reyonlarda (su, soda, enerji içeceği) eksik yok, düzenli', duration: 30},
+            {text: 'Paket servis malzemeleri eksiksiz ve düzenli', duration: 30},
+            {text: 'Şurup, püre malzemeleri silindi, ağızları kapalı', duration: 30},
+            {text: 'Kasa çekmecesi ve çevresinde fişler düzenli dosyalandı', duration: 30},
+            {text: 'Baskılı pet/karton bardak iç kullanımda kullanılmıyor', duration: 15}
+        ];
+
+        // =====================================================
+        // TUZLA PORT - MÜDÜR KONTROL (78 madde)
+        // =====================================================
+        const TUZLA_MUDUR = [
+            {text: 'Stoklar tam mı? 17:00 den önce eksik siparişleri verildi mi?', duration: 120},
+            {text: 'Müzik açık, Moonberry Pop listesi çalıyor', duration: 15},
+            {text: 'Gelen tüm kargo vb. görünür şekilde paylaşıldı', duration: 30},
+            {text: 'Tüm stoklar kontrol edildi, azalan ürünlerden sipariş geçildi', duration: 120},
+            {text: 'Günlük depo kontrol edildi, dağınıklık/pislik yok', duration: 60},
+            {text: 'Zayiat varsa grup ile paylaşıldı', duration: 30},
+            {text: 'Barista önlükleri temiz', duration: 20},
+            {text: 'Tüm bitkisel sütlerden barda en az 2 adet var', duration: 30},
+            {text: 'Masa ışıkları 17 den sonra açık, şarjsız ışık yok', duration: 30},
+            {text: 'Espresso kaşıkları her sipariş sonrası temizleniyor', duration: 30},
+            {text: 'Müşteri karşılama ve uğurlama kibar ve saygılı', duration: 15},
+            {text: 'Bar dışı puff yasağına uyuluyor', duration: 15},
+            {text: 'Sipariş hazırlandıktan sonra sistemde işaretleniyor', duration: 15},
+            {text: 'Dünkü kasa tutarı kontrol edildi', duration: 30},
+            {text: 'Menü açık/kapalı ürünler kontrol edildi, Menulux güncellendi', duration: 60},
+            {text: 'Yulaf, keten, kadayıf, değirmen vb. yarıya indiyse tamamlandı', duration: 60},
+            {text: 'Personel misafirleri personel gibi durmuyor', duration: 15},
+            {text: 'Hedef için alternatif ürün önerildi', duration: 20},
+            {text: 'Paketlere arkalı önlü isim, shot, not yazıldı', duration: 30},
+            {text: 'Yönetici WhatsApp bilgilendirmesine onay atıldı', duration: 15},
+            {text: 'Dünkü nakit ATM ye yatırıldı', duration: 30},
+            {text: 'Haftalık ve aylık görev listesi eksiksiz yapılıyor', duration: 60},
+            {text: 'Kapanış yol ücretleri paylaşıldı', duration: 20},
+            {text: 'Paspas kovasının içi temizlik sonrası boşaltıldı', duration: 15},
+            {text: 'Masa müşterisi ile telefon elinde konuşulmuyor', duration: 15},
+            {text: 'İptal/iade sipariş varsa kasadan geri çekildi', duration: 30},
+            {text: 'Tüm TV ler açık, kasa üstü video ve salon TV çalışıyor', duration: 30},
+            {text: 'Şirket telefonu sesli, kibar yanıtlanıyor', duration: 15},
+            {text: 'Tüm soğutucu ve dondurucu kapakları tamamen kapalı', duration: 30},
+            {text: 'Müşterinin göreceği noktada kova/süpürge/paspas yok', duration: 20},
+            {text: 'Lavaboda birikmiş su/atık yok, temiz ve açık', duration: 30},
+            {text: 'Menulux 6 menüde güncellendi, yazıcı ayarları aktif', duration: 60},
+            {text: 'Dış masalar temizlendi, küllükler boşaltıldı', duration: 60},
+            {text: 'Masalar temiz bez ile silindi', duration: 60},
+            {text: 'Dolapların camları içten ve dıştan temiz', duration: 60},
+            {text: 'Girişteki büyük görsel dolabın camları temiz', duration: 30},
+            {text: 'WC temiz, kurutucu ve priz üzerinde kir/toz yok', duration: 60},
+            {text: 'POS PC, kasa çevresi, dolap üstlerinde gereksiz eşya yok', duration: 30},
+            {text: 'Karton bardak boy sunumları düzgün, dolap üstleri silindi', duration: 30},
+            {text: 'Online tüm menüler stok durumuna göre ayarlandı', duration: 60},
+            {text: 'Sorumlu olunan alanın fotosu 1 saat içinde gruba atıldı', duration: 30},
+            {text: 'Aylık temizlik çizelgesi kontrolü yapıldı', duration: 30},
+            {text: 'Çay saatlerinin fotosu atıldı, poşetler çıkarıldı', duration: 20},
+            {text: 'Bitkisel sütlere SKT atıldı', duration: 30},
+            {text: 'Dolapların ön ve etiketlerin göründüğü fotosu paylaşıldı', duration: 30},
+            {text: 'Büyük dolabın altındaki soğutma havalandırması temiz', duration: 30},
+            {text: 'Sebze ve meyvelerin kapakları kapalı, meyveler streçli', duration: 30},
+            {text: 'Tüm bardaklar kurulandı, su lekesi yok', duration: 60},
+            {text: 'Kötü puan/yorum, iptal-iade varsa görseli ile paylaşıldı', duration: 30},
+            {text: 'Shot fışkırma kontrol yapıldı, ginger 5 adet var', duration: 30},
+            {text: 'Masa ışıklarının şarjı full, her checkde silindi', duration: 30},
+            {text: 'Her kontrol saatinde mutfak çamaşır suyu paspas atıldı', duration: 120},
+            {text: 'Pastacı kremasından 1 yedek 1 kullanımda var', duration: 30},
+            {text: 'Paketleme alanı temiz, kişisel eşya yok, herşey dolu', duration: 60},
+            {text: 'Instagram, TikTok, WP paylaşımları yapıldı, mesajlara bakıldı', duration: 60},
+            {text: 'Çekmecelerde/raflarda lastiksiz veya ağzı açık ürün yok', duration: 30},
+            {text: 'Kuvings, blender, portakal soyma, Yasomi makinaları temiz', duration: 60},
+            {text: 'Oturma bölümü camlar kapalı, müşteri varsa ısıtıcı açıldı', duration: 20},
+            {text: 'WC şifre kağıdı müşteriye veriliyor', duration: 15},
+            {text: 'Stoklar tam, eksik yok, sipariş geçildi', duration: 120},
+            {text: 'Su, waffle, pasta, sandviç vb. eksik yok', duration: 60},
+            {text: 'POS fişi, Dymo yazıcı kağıdı stokları tam', duration: 30},
+            {text: 'Tatlı kapları, kruvasan kapları temiz', duration: 30},
+            {text: 'TY ve YS iptal/iadeler günlük kontrol edildi', duration: 30},
+            {text: 'Tüm SKT ler kontrol edildi', duration: 60},
+            {text: 'Tüm dolapların üstü temiz, bardak sunumları düzgün', duration: 30},
+            {text: 'Reyonlarda eksik ürün yok, içecekler dolu ve düzgün', duration: 30},
+            {text: 'Yemek kartları aktif, salı günleri kesimi yapıldı', duration: 30},
+            {text: 'İçeride ekstra paspas gerekiyorsa yapıldı, sandalye ayakları temiz', duration: 60},
+            {text: 'Z raporu dosyalandı, kasa anahtarı çekmeceye alındı', duration: 30},
+            {text: 'Paket servis için herşey tam (üçgen/kare pasta, dondurma kabı vb.)', duration: 60},
+            {text: 'Şurup, püre silindi, ağzı açık ürün yok', duration: 30},
+            {text: 'Kasa çevresinde dosyalanması gereken fiş/fatura yok', duration: 30},
+            {text: 'Personel için siyah pipet var, pet değil cam bardak kullanılıyor', duration: 20},
+            {text: 'Paketleme alanında eksik yok', duration: 30},
+            {text: 'Shifte giren shifte girdim yazdı, geç kalacak önceden haber verdi', duration: 15},
+            {text: 'Tüm aynalar temiz', duration: 30},
+            {text: 'WC nin çöpü dolu değil', duration: 15}
+        ];
+
+        // =====================================================
+        // TUZLA PORT - PLATFORM CHECK (4 madde)
+        // =====================================================
+        const TUZLA_PLATFORM = [
+            {text: 'Trendyol platformu aktif ve çalışıyor', duration: 30},
+            {text: 'Yemek Sepeti platformu aktif ve çalışıyor', duration: 30},
+            {text: 'Getir Yemek platformu aktif ve çalışıyor', duration: 30},
+            {text: 'Migros platformu aktif ve çalışıyor', duration: 30}
+        ];
+
+        // =====================================================
+        // TUZLA PORT - HAFTALIK GÖREVLER (17 madde)
+        // =====================================================
+        const TUZLA_HAFTALIK = [
+            {text: 'Bulaşık makinesi kireç çözücü yapıldı', duration: 900},
+            {text: 'Şurup ve sosların temizliği yapıldı', duration: 300},
+            {text: 'Mutfak tüm zeminler ve görünmeyen yerler silindi', duration: 600},
+            {text: 'Beyaz duvarların tamamı ve bar rafları temizlendi', duration: 600},
+            {text: 'Dolap iç ve dış temizliği ve raylar yapıldı', duration: 600},
+            {text: 'Bardaklar, tabaklar, tüm kaşık/bıçak leke temizliği yapıldı', duration: 600},
+            {text: 'Tüm dolap camları içten ve dıştan temizlendi', duration: 600},
+            {text: 'Espresso makinası kaşıkları detaylı temizlendi', duration: 300},
+            {text: 'Espresso makinası detaylı temizliği (Puly Caff) yapıldı', duration: 900},
+            {text: 'Çay demlikleri bakım ve temizliği yapıldı', duration: 300},
+            {text: 'Tüm dış mekan camları detaylı temizlendi', duration: 900},
+            {text: 'Beyaz minderler detaylı temizlendi', duration: 600},
+            {text: 'Buz makinası temizliği yapıldı', duration: 600},
+            {text: 'TV üstü temizliği yapıldı', duration: 300},
+            {text: 'Kuvings, blender, Yasomi, Türk kahvesi cezve bakımı yapıldı', duration: 300},
+            {text: 'Mutfağa çamaşır sulu paspas atıldı', duration: 300},
+            {text: 'Mikrodalga temizliği yapıldı', duration: 180}
+        ];
+
+        // =====================================================
+        // TUZLA PORT - AYLIK TEMİZLİK VE BAKIM (13 madde)
+        // =====================================================
+        const TUZLA_AYLIK = [
+            {text: 'Bulaşık makinesi kireç çözücü (ayın 3, 11, 19)', duration: 900},
+            {text: 'Şurup ve sosların temizliği (ayın 2-4-6, 18-20-22)', duration: 300},
+            {text: 'Mutfak tüm zeminler detaylı (ayın 2-4-6, 18-20-22)', duration: 600},
+            {text: 'Beyaz duvarlar ve bar rafları (ayın 1-3-5, 17-19-21)', duration: 600},
+            {text: 'Dolap iç/dış ve raylar (ayın 1-3-5, 17-19-21)', duration: 600},
+            {text: 'Bardak/tabak/kaşık leke temizliği (ayın 2-4-6, 18-20-22)', duration: 600},
+            {text: 'Tüm dolap camları (ayın 1-3-5, 17-19-21)', duration: 600},
+            {text: 'Espresso makinası detaylı (ayın 2-4-6, 18-20-22)', duration: 900},
+            {text: 'Çay demlikleri bakım (ayın 1-3-5, 17-19-21)', duration: 300},
+            {text: 'Tüm dış mekan camları (ayın 5, 27)', duration: 900},
+            {text: 'Beyaz minderler (ayın 14, 25)', duration: 600},
+            {text: 'Buz makinası (ayın 12, 28)', duration: 600},
+            {text: 'TV üstü temizliği (ayın 11, 20)', duration: 300}
+        ];
+
+        // =====================================================
+        // ŞİŞLİ - AÇILIŞ (29 madde)
+        // =====================================================
+        const SISLI_ACILIS = [
+            {text: 'Tüm platformlar açık (Yemek Sepeti Go, Trendyol, Getir, Migros)', duration: 60},
+            {text: 'Tüm kampanyalar açık, Trendyol ve Yemeksepeti %30 indirim aktif', duration: 30},
+            {text: 'Pastacı kreması tarife uygun hazırlandı', duration: 300},
+            {text: 'Yağmurlu havalarda tente kontrolü yapıldı', duration: 20},
+            {text: 'Hoparlör, şirket telefonu, masa ışıkları şarja takıldı', duration: 30},
+            {text: 'Tezgah üstü ve makine altı temizliği yapıldı', duration: 180},
+            {text: 'Mağaza bar içi ve kasa önü çamaşır suyuyla silindi', duration: 180},
+            {text: 'Donuk ürünler hızlıca donduruculara konuldu', duration: 60},
+            {text: 'SKT kontrolü yapıldı, önce giren önce çıkar uygulandı', duration: 120},
+            {text: 'Servis rafı her rafı temizlendi', duration: 60},
+            {text: 'Tatlı tabakları temizlendi', duration: 60},
+            {text: 'POS PC ve notebook tozu alındı', duration: 30},
+            {text: 'Barista kıyafeti ve isimlik kontrol edildi', duration: 15},
+            {text: 'Moonberry ve Sunberry PC de farklı sekmelerde açık', duration: 30},
+            {text: 'Müzik açık, Afternoon/Techno Top 100/Afro Beat listesi karışık modda', duration: 15},
+            {text: 'Meyve sıkma makinası temiz tutulacak şekilde hazır', duration: 60},
+            {text: 'Girişteki sunum dolabının içi, dışı ve üstü temizlendi', duration: 120},
+            {text: 'Akşamcı için tüm eksikler giderildi', duration: 180},
+            {text: 'Masalar temiz bez ile silindi', duration: 120},
+            {text: 'Kasa anahtarı kasa altına alındı, Z raporu dosyaya eklendi', duration: 30},
+            {text: 'Servis alanı kontrol edildi (pipet, peçete, şekerler)', duration: 60},
+            {text: 'Paket servis alanı tam dolu ve temiz', duration: 120},
+            {text: 'Gelen kargo varsa açılış gruptan paylaşıldı', duration: 30},
+            {text: 'Masa düzeni yerine getirildi', duration: 60},
+            {text: 'Şurup ve sos ağızları temizlendi', duration: 60},
+            {text: 'Bar ve paketleme alanı eksikleri tamamlandı', duration: 120},
+            {text: 'Kırılacak ürünler düzgün istiflenecek şekilde yerleştirildi', duration: 60},
+            {text: 'Mermer masalar oturma düzenine göre ayarlandı', duration: 60},
+            {text: 'Platform sistemleri öğrenildi/kontrol edildi', duration: 30}
+        ];
+
+        // =====================================================
+        // ŞİŞLİ - KAPANIŞ (25 madde)
+        // =====================================================
+        const SISLI_KAPANIS = [
+            {text: 'Tüm soğutucu dolapların kapakları tamamen kapalı', duration: 30},
+            {text: 'Klima kapatıldı', duration: 10},
+            {text: 'Paketleme alanı ışıklarının fişi çıkarıldı', duration: 10},
+            {text: 'Demlikte çay varsa döküldü, temizlik yapıldı', duration: 60},
+            {text: 'Çay saatlerinin fotosu kapanışta grupla paylaşıldı', duration: 20},
+            {text: 'Mutfak genel temizliği yapıldı', duration: 300},
+            {text: 'Zemin paspası atılıp fotoğrafı çekildi', duration: 60},
+            {text: 'Tüm bezler yıkanıp kuruması için asıldı', duration: 60},
+            {text: 'Meyve sıkma makinası temizlendi', duration: 120},
+            {text: 'Espresso makinası temizlenip ışıkları kapatıldı', duration: 60},
+            {text: 'Kasada fatura/fiş dosyalandı, kasa yapıldı', duration: 120},
+            {text: 'Tatlı dolabının ışıkları kapatıldı', duration: 15},
+            {text: 'Şirket ve pembe telefon şarja takıldı', duration: 20},
+            {text: 'Android POS arkasındaki düğmeden kapatıldı', duration: 10},
+            {text: 'Sadece açık sütler dolaba alındı', duration: 30},
+            {text: 'Mutfağa ve kasa önüne çamaşır sulu paspas atıldı', duration: 120},
+            {text: 'Bilgisayar Kapat komutuyla kapatıldı', duration: 30},
+            {text: 'Kapanış saati öncesi müşteri bilgilendirildi', duration: 30},
+            {text: 'Vitrin dolabının camları silindi', duration: 60},
+            {text: 'Dışarıdaki masa sandalye içeri alındı', duration: 120},
+            {text: 'Mayalanması için kruvasan çıkartıldı (her gece 4 adet)', duration: 30},
+            {text: 'Küllüklerin içi temizlendi', duration: 30},
+            {text: 'Kepenk indirildi, tamamen inene kadar beklendi', duration: 60},
+            {text: 'Taksi/TAG ücreti çekilip grup ile paylaşıldı', duration: 30},
+            {text: 'Tüm kovalardaki çöpler boşaltıldı, yeni poşet takıldı', duration: 60}
+        ];
+
+        // =====================================================
+        // ŞİŞLİ - GÜNCEL KONTROL (54 madde)
+        // =====================================================
+        const SISLI_GUNCEL = [
+            {text: 'Müşterinin göreceği alanlar (kasa, duvarlar, dolaplar) temiz ve düzenli', duration: 60},
+            {text: 'Müzik açık, Moonberry Pop çalıyor, 22:00 sonrası ses ortada', duration: 15},
+            {text: 'Açılış, aracı ve kapanış checkleri grup ile paylaşıldı', duration: 20},
+            {text: 'Dışarda meyve suyu yok', duration: 15},
+            {text: 'Dolap içindeki SKT tarihleri görünecek şekilde çekilip paylaşıldı', duration: 60},
+            {text: 'Gelen pasta, donut, kargo vb. checklenip fotoğraf paylaşıldı', duration: 30},
+            {text: 'Zayiat varsa derhal grup ile paylaşıldı', duration: 15},
+            {text: 'Barista önlüğü ve kıyafetler temiz ve düzenli', duration: 15},
+            {text: 'Portafilter, makine, buhar çubuğu, pitcher, tamper temizlendi', duration: 60},
+            {text: 'Tenteler hava durumuna göre ayarlandı', duration: 30},
+            {text: 'Kapı önünde/çevrede çöp yok, derhal konteynıra götürüldü', duration: 60},
+            {text: 'Müşteri karşılama ve uğurlama kibar ve saygılı', duration: 15},
+            {text: 'Bar dışında sigara/puff içilmiyor, bar içinde lavaboya doğru üfleniyor', duration: 15},
+            {text: 'Müşteri içeri girdikten sonra 2 dakika içinde fark edilip ilgilenildi', duration: 20},
+            {text: 'Sipariş hazırlandığında sistemde işaretlendi', duration: 15},
+            {text: 'Menüdeki açık/kapalı ürün bilgileri güncellendi', duration: 30},
+            {text: 'Yulaf, T.kahve, kadayıf, değirmen yarıya indi ise tamamlandı', duration: 60},
+            {text: 'Kuvings, blender, Yasomi, kahve değirmeni temiz', duration: 60},
+            {text: 'Bar çevresine gelen misafirler personel gibi durmuyor', duration: 15},
+            {text: 'Dış misafirler işleyişi bozacak kadar uzun kalmıyor', duration: 15},
+            {text: 'Paket siparişlerinde arkalı/önlü isim, not ve shot eklendi', duration: 30},
+            {text: 'Masa lambaları şarjda', duration: 20},
+            {text: 'Yönetici WhatsApp bilgilendirmelerine onay verildi', duration: 15},
+            {text: 'Hediye küçük tatlı dışında izinsiz ürün hediye edilmedi', duration: 15},
+            {text: 'Dünkü nakit 18:00 da ATM ye yatırıldı, fark varsa yöneticiye bildirildi', duration: 30},
+            {text: 'Müşteriyle iletişimde telefonla oyalanılmıyor', duration: 15},
+            {text: 'İptal/iade sipariş veya kötü puan varsa kasadan düşülüp paylaşıldı', duration: 30},
+            {text: 'Salon, mutfak ve dolap alt/köşeleri çamaşır sulu suyla temizlendi', duration: 120},
+            {text: 'Şirket telefonu nazik ve profesyonel şekilde yanıtlanıyor', duration: 15},
+            {text: 'Şirket telefonu sesi açık, kibar ifadeyle cevap veriliyor', duration: 15},
+            {text: 'Soğutucu/dondurucu kapakları kapalı, ağzı açık ürün yok', duration: 30},
+            {text: 'Temizlik malzemeleri müşteri göz alanında değil', duration: 15},
+            {text: 'Lavaboda su veya atık birikmiyor, temiz ve açık', duration: 30},
+            {text: 'Menulux menüsü güncellendi, Genel ürün çıkan fiş yok', duration: 30},
+            {text: 'Dış masalar ve küllükler temizlenip fotoğraf paylaşıldı', duration: 60},
+            {text: 'Masalar temiz bezle silindi', duration: 60},
+            {text: 'Büyük vitrin camları ve alt havalandırma ızgaraları temiz', duration: 60},
+            {text: 'Servis istemiyorum yazanlar sarı kalemle çizildi', duration: 10},
+            {text: 'POS, kasa çevresi, dolap üstlerinde gereksiz eşya yok', duration: 30},
+            {text: 'Sorumlu olunan alanın fotoğrafı grup ile paylaşıldı', duration: 30},
+            {text: 'Aylık temizlik çizelgesi kontrol edilip fotoğrafı paylaşıldı', duration: 30},
+            {text: 'Çay saatlerinin fotoğrafı paylaşıldı, poşetler çıkarıldı', duration: 20},
+            {text: 'Tüm ürünlerde SKT bulunuyor', duration: 60},
+            {text: 'Bardak, çatal, kaşık, tabak lekesiz ve temiz', duration: 30},
+            {text: 'Mutfak az çamaşır sulu paspas ile temizlenip fotoğraf paylaşıldı', duration: 120},
+            {text: 'Su taşması yaşanmadı', duration: 15},
+            {text: 'Pastacı kreması stoğu (1+1 yedek) mevcut', duration: 30},
+            {text: 'Paketleme alanı temiz, kişisel eşyalardan arınmış, malzemeler tam', duration: 60},
+            {text: 'Tatlı ve kruvasan tabakları temiz, tüm camlar lekesiz', duration: 30},
+            {text: 'Reyonlarda (su, soda, enerji içeceği) var, düzenli ve dolu', duration: 30},
+            {text: 'Paket servis malzemeleri eksiksiz ve düzenli', duration: 30},
+            {text: 'Şurup, püre malzemeleri silindi, ağızları kapalı', duration: 30},
+            {text: 'Kasa çekmecesi ve çevresinde fişler düzenli dosyalandı', duration: 30},
+            {text: 'Baskılı karton bardak iç kullanımda kullanılmıyor', duration: 15}
+        ];
+
+        // =====================================================
+        // ŞİŞLİ - MÜDÜR KONTROL (90 madde)
+        // =====================================================
+        const SISLI_MUDUR = [
+            {text: 'Müşterinin kasada gördüğü noktalar, duvarlar, dolaplar temiz', duration: 60},
+            {text: 'Müzik açık, Afternoon listesi çalıyor', duration: 15},
+            {text: 'Gelen tüm kargo vb. görünür şekilde paylaşıldı', duration: 30},
+            {text: 'Pasta, donut vb. geldiğinde gözle kontrol edildi, kötüyse paylaşıldı', duration: 30},
+            {text: 'Günlük depo kontrol edildi, dağınıklık/pislik yok', duration: 60},
+            {text: 'Zayiat varsa grup ile paylaşıldı', duration: 30},
+            {text: 'Barista önlükleri temiz', duration: 20},
+            {text: 'Tüm bitkisel sütlerden barda en az 2 adet var', duration: 30},
+            {text: 'Espresso kaşıkları her sipariş sonrası temizleniyor', duration: 30},
+            {text: 'Müşteri karşılama ve uğurlama kibar ve saygılı', duration: 15},
+            {text: 'Bar dışı puff yasağına uyuluyor', duration: 15},
+            {text: 'Müşteri içeri girdikten sonra 2dk içinde fark edildi', duration: 20},
+            {text: 'Kasa önündeki sandalyeye müşteriye arkaya dönük oturulmuyor', duration: 15},
+            {text: 'Sipariş hazırlandıktan sonra sistemde işaretleniyor', duration: 15},
+            {text: 'Servislik ve kitaplık rafları temiz', duration: 30},
+            {text: 'Menü açık/kapalı ürünler kontrol edildi, Menulux güncellendi', duration: 60},
+            {text: 'Yulaf, keten, kadayıf, değirmen vb. yarıya indiyse tamamlandı', duration: 60},
+            {text: 'Personel misafirleri personel gibi durmuyor', duration: 15},
+            {text: 'Shiftler cumartesi gününden hazırlandı', duration: 60},
+            {text: 'Kapanış yol ücretleri paylaşıldı', duration: 20},
+            {text: 'Dünkü kasa tutarı kontrol edildi', duration: 30},
+            {text: 'Hedef için alternatif ürün önerildi', duration: 20},
+            {text: 'Kasanın sol kısmı ve tüm duvar ortası üst süpürgeliklerin üzeri temiz', duration: 30},
+            {text: 'Paketlere arkalı önlü isim, shot, not yazıldı', duration: 30},
+            {text: 'Yönetici WhatsApp bilgilendirmesine onay atıldı', duration: 15},
+            {text: 'Hediye shot haricinde izinsiz ürün gönderilmiyor', duration: 15},
+            {text: 'Dünkü nakit 12:00 da ATM ye yatırıldı', duration: 30},
+            {text: 'Müşteri varken klima 30 da ve elektrikli ısıtıcı açık, yokken kapalı', duration: 20},
+            {text: 'Paspas kovasının içi temizlik sonrası boşaltıldı', duration: 15},
+            {text: 'Masa müşterisi ile telefon elinde konuşulmuyor', duration: 15},
+            {text: 'İptal/iade sipariş varsa kasadan geri çekildi', duration: 30},
+            {text: 'Salon TV nemli bezle silindi, merdiven/mutfak/dolap altları çamaşır sulu', duration: 120},
+            {text: 'Merdivenler her checkde faraş ve çamaşır suyuyla siliniyor', duration: 60},
+            {text: 'Klima suyu biraz bile birikse boşaltıldı', duration: 15},
+            {text: 'Tüm TV ler açık, kasa üstü video ve salon TV çalışıyor', duration: 30},
+            {text: 'Tüm siparişler sisteme girildi, ödeme yapmadan giden müşteri yok', duration: 30},
+            {text: 'Şirket telefonu sesli, kibar yanıtlanıyor', duration: 15},
+            {text: 'Buz makinası ve bulaşık makinası üzerinde herhangi bir şey yok', duration: 20},
+            {text: 'Tüm soğutucu ve dondurucu kapakları kapalı, tupperlar kapalı', duration: 30},
+            {text: 'Müşterinin göreceği noktada merdiven dahil kova/süpürge/paspas yok', duration: 20},
+            {text: 'Lavaboda birikmiş su/atık yok, temiz ve açık', duration: 30},
+            {text: 'Süpürgelik ışıklarının hepsi yanıyor, düşen ışık yerleştirildi', duration: 20},
+            {text: 'Menulux 6 menüde güncellendi, yazıcı ayarları aktif', duration: 60},
+            {text: 'Dış masalar temizlendi, küllükler boşaltıldı', duration: 60},
+            {text: 'Masalar temiz bez ile silindi', duration: 60},
+            {text: 'Dolapların camları içten ve dıştan temiz', duration: 60},
+            {text: 'Girişteki büyük görsel dolabın camları temiz', duration: 30},
+            {text: 'WC temiz, kurutucu ve priz üzerinde kir/toz yok', duration: 60},
+            {text: 'POS PC, kasa çevresi, dolap üstlerinde gereksiz eşya yok', duration: 30},
+            {text: 'Karton bardak boy sunumları düzgün, dolap üstleri silindi', duration: 30},
+            {text: 'Online tüm menüler stok durumuna göre ayarlandı', duration: 60},
+            {text: 'Sorumlu olunan alanın fotosu 1 saat içinde gruba atıldı', duration: 30},
+            {text: 'Aylık temizlik çizelgesi kontrolü yapıldı', duration: 30},
+            {text: 'Çay saatlerinin fotosu atıldı, poşetler çıkarıldı', duration: 20},
+            {text: 'Bitkisel sütlere SKT atıldı', duration: 30},
+            {text: 'Dolapların ön ve etiketlerin göründüğü fotosu paylaşıldı', duration: 30},
+            {text: 'Büyük dolabın altındaki soğutma havalandırması temiz', duration: 30},
+            {text: 'Sebze ve meyvelerin kapakları kapalı, meyveler streçli', duration: 30},
+            {text: 'Tüm bardaklar kurulandı, su lekesi yok', duration: 60},
+            {text: 'Kötü puan/yorum, iptal-iade varsa görseli ile paylaşıldı', duration: 30},
+            {text: 'Shot fışkırma kontrol yapıldı, ginger 5 adet var', duration: 30},
+            {text: 'Masa ışıklarının şarjı full, her checkde silindi', duration: 30},
+            {text: 'Her kontrol saatinde mutfak çamaşır suyu paspas atıldı', duration: 120},
+            {text: 'Pastacı kremasından 1 yedek 1 kullanımda var', duration: 30},
+            {text: 'Paketleme alanı temiz, kişisel eşya yok, herşey dolu', duration: 60},
+            {text: 'Instagram, TikTok, WP paylaşımları yapıldı, mesajlara bakıldı', duration: 60},
+            {text: 'Çekmecelerde/raflarda lastiksiz veya ağzı açık ürün yok', duration: 30},
+            {text: 'Kuvings, blender, portakal soyma, Yasomi makinaları temiz', duration: 60},
+            {text: 'Oturma bölümü camlar kapalı, müşteri varsa ısıtıcı açıldı', duration: 20},
+            {text: 'WC şifre kağıdı müşteriye veriliyor', duration: 15},
+            {text: 'Stoklar tam, eksik yok, sipariş geçildi', duration: 120},
+            {text: 'Su, waffle, pasta, sandviç vb. eksik yok', duration: 60},
+            {text: 'POS fişi, Dymo yazıcı kağıdı stokları tam', duration: 30},
+            {text: 'Tatlı kapları, kruvasan kapları temiz', duration: 30},
+            {text: 'TY ve YS iptal/iadeler günlük kontrol edildi', duration: 30},
+            {text: 'Tüm SKT ler kontrol edildi', duration: 60},
+            {text: 'Tüm dolapların üstü temiz, bardak sunumları düzgün', duration: 30},
+            {text: 'Reyonlarda eksik ürün yok, içecekler dolu ve düzgün', duration: 30},
+            {text: 'Yemek kartları aktif, salı günleri kesimi yapıldı', duration: 30},
+            {text: 'İçeride ekstra paspas gerekiyorsa yapıldı, sandalye ayakları temiz', duration: 60},
+            {text: 'Z raporu dosyalandı, kasa anahtarı çekmeceye alındı', duration: 30},
+            {text: 'Paket servis için herşey tam (üçgen/kare pasta, dondurma kabı vb.)', duration: 60},
+            {text: 'Şurup, püre silindi, ağzı açık ürün yok', duration: 30},
+            {text: 'Kasa çevresinde dosyalanması gereken fiş/fatura yok', duration: 30},
+            {text: 'Personel için siyah pipet var, pet değil cam bardak kullanılıyor', duration: 20},
+            {text: 'Paketleme alanında eksik yok', duration: 30},
+            {text: 'Shifte giren shifte girdim yazdı, geç kalacak önceden haber verdi', duration: 15},
+            {text: 'Tüm aynalar temiz', duration: 30},
+            {text: 'WC nin çöpü dolu değil', duration: 15}
+        ];
+
+        // =====================================================
+        // ŞİŞLİ - PLATFORM CHECK (4 madde)
+        // =====================================================
+        const SISLI_PLATFORM = [
+            {text: 'Trendyol platformu aktif ve çalışıyor', duration: 30},
+            {text: 'Yemek Sepeti platformu aktif ve çalışıyor', duration: 30},
+            {text: 'Getir Yemek platformu aktif ve çalışıyor', duration: 30},
+            {text: 'Migros platformu aktif ve çalışıyor', duration: 30}
+        ];
+
+        // =====================================================
+        // ŞİŞLİ - AYLIK TEMİZLİK VE BAKIM (15 madde)
+        // =====================================================
+        const SISLI_AYLIK = [
+            {text: 'Şurup ve sosların temizliği (ayın 2-4-6, 18-20-22)', duration: 300},
+            {text: 'Kuvings, blender, Yasomi, Türk kahvesi cezve bakımı (her shift girişi)', duration: 300},
+            {text: 'Mutfağa çamaşır sulu paspas (her shift girişi)', duration: 300},
+            {text: 'Mikrodalga temizliği (her shift girişi)', duration: 180},
+            {text: 'Mutfak tüm zeminler detaylı (ayın 2-4-6, 18-20-22)', duration: 600},
+            {text: 'Bar raflarının tamamı (ayın 1-3-5, 17-19-21)', duration: 600},
+            {text: 'Dolap iç/dış ve raylar (ayın 1-3-5, 17-19-21)', duration: 600},
+            {text: 'Bardak/tabak/kaşık leke temizliği (ayın 2-4-6, 18-20-22)', duration: 600},
+            {text: 'Tüm dolap camları (ayın 1-3-5, 17-19-21)', duration: 600},
+            {text: 'Espresso makinası kaşıkları (her kapanışta)', duration: 300},
+            {text: 'Espresso makinası detaylı (ayın 2-4-6, 18-20-22)', duration: 900},
+            {text: 'Çay demlikleri bakım (ayın 1-3-5, 17-19-21)', duration: 300},
+            {text: 'Tüm dış mekan camları (ayın 5, 27)', duration: 900},
+            {text: 'Beyaz minderler (ayın 14, 25)', duration: 600},
+            {text: 'Buz makinası (ayın 12, 28)', duration: 600}
+        ];
+
+        // =====================================================
+        // VERİ HARİTASI
+        // =====================================================
+        const CHECKLIST_DATA = {
+            'Tuzla Port': {
+                acilis: TUZLA_ACILIS,
+                kapanis: TUZLA_KAPANIS,
+                guncel: TUZLA_GUNCEL,
+                mudur: TUZLA_MUDUR,
+                platform: TUZLA_PLATFORM,
+                haftalik: TUZLA_HAFTALIK,
+                aylik: TUZLA_AYLIK
+            },
+            'Şişli (Merkez)': {
+                acilis: SISLI_ACILIS,
+                kapanis: SISLI_KAPANIS,
+                guncel: SISLI_GUNCEL,
+                mudur: SISLI_MUDUR,
+                platform: SISLI_PLATFORM,
+                aylik: SISLI_AYLIK
+            }
+        };
+
+        // =====================================================
+        // FONKSİYONLAR
+        // =====================================================
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('uploadSection').style.display = 'block';
+                updateStats();
+            }
+        });
+        
+        async function doLogin() {
+            try {
+                await auth.signInWithEmailAndPassword(
+                    document.getElementById('loginEmail').value,
+                    document.getElementById('loginPassword').value
+                );
+            } catch (e) {
+                alert('Giriş başarısız: ' + e.message);
+            }
+        }
+        
+        function updateStats() {
+            let totalItems = 0;
+            let totalTypes = 0;
+            
+            for (const branch in CHECKLIST_DATA) {
+                for (const type in CHECKLIST_DATA[branch]) {
+                    totalItems += CHECKLIST_DATA[branch][type].length;
+                    totalTypes++;
+                }
+            }
+            
+            document.getElementById('statItems').textContent = totalItems;
+            document.getElementById('statTypes').textContent = totalTypes;
+            document.getElementById('statPersonnel').textContent = PERSONNEL.length;
+        }
+        
+        function log(msg, type = 'info') {
+            const logEl = document.getElementById('log');
+            logEl.style.display = 'block';
+            logEl.innerHTML += '<div class="log-item log-' + type + '">' + msg + '</div>';
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+        
+        function progress(pct) {
+            document.getElementById('progressBar').style.width = pct + '%';
+        }
+        
+        async function startUpload() {
+            const btn = document.getElementById('btnUpload');
+            btn.disabled = true;
+            btn.textContent = '⏳ Yükleniyor...';
+            
+            try {
+                let step = 0;
+                const totalSteps = 5;
+                
+                // 1. Sistem konfigürasyonu
+                log('📝 Sistem konfigürasyonu yükleniyor...');
+                await db.collection('config').doc('system').set({
+                    companyName: SYSTEM_CONFIG.companyName,
+                    whatsappGroups: SYSTEM_CONFIG.whatsappGroups,
+                    platforms: SYSTEM_CONFIG.platforms,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                step++;
+                progress((step / totalSteps) * 100);
+                log('✅ Sistem konfigürasyonu yüklendi', 'success');
+                
+                // 2. Checklist türleri
+                log('📝 Checklist türleri yükleniyor...');
+                await db.collection('config').doc('checklistTypes').set({
+                    'Tuzla Port': CHECKLIST_TYPES['Tuzla Port'],
+                    'Şişli (Merkez)': CHECKLIST_TYPES['Şişli (Merkez)'],
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                step++;
+                progress((step / totalSteps) * 100);
+                log('✅ Checklist türleri yüklendi', 'success');
+                
+                // 3. Personel listesi
+                log('📝 Personel listesi yükleniyor...');
+                await db.collection('config').doc('personnel').set({
+                    list: PERSONNEL,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                step++;
+                progress((step / totalSteps) * 100);
+                log('✅ Personel listesi yüklendi (' + PERSONNEL.length + ' kişi)', 'success');
+                
+                // 4. Mevcut checklists'i sil
+                log('🗑️ Mevcut checklist verileri siliniyor...');
+                const existingDocs = await db.collection('checklists').get();
+                const deletePromises = existingDocs.docs.map(doc => doc.ref.delete());
+                await Promise.all(deletePromises);
+                log('✅ ' + existingDocs.size + ' eski kayıt silindi', 'success');
+                step++;
+                progress((step / totalSteps) * 100);
+                
+                // 5. Yeni checklists yükle
+                log('📝 Checklist maddeleri yükleniyor...');
+                let uploadedCount = 0;
+                
+                for (const branch in CHECKLIST_DATA) {
+                    for (const type in CHECKLIST_DATA[branch]) {
+                        const items = CHECKLIST_DATA[branch][type];
+                        const docId = branch.replace(/[^a-zA-Z0-9]/g, '_') + '_' + type;
+                        
+                        const formattedItems = items.map((item, idx) => ({
+                            id: 'item_' + (idx + 1),
+                            text: item.text,
+                            duration: item.duration
+                        }));
+                        
+                        await db.collection('checklists').doc(docId).set({
+                            branch: branch,
+                            type: type,
+                            items: formattedItems,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        
+                        uploadedCount += items.length;
+                        log('  ✓ ' + branch + ' - ' + type + ': ' + items.length + ' madde', 'info');
+                    }
+                }
+                
+                step++;
+                progress(100);
+                log('🎉 Kurulum tamamlandı! Toplam ' + uploadedCount + ' madde yüklendi.', 'success');
+                
+                btn.textContent = '✅ Kurulum Tamamlandı';
+                btn.style.background = 'linear-gradient(135deg, #27ae60, #2ecc71)';
+                
+            } catch (error) {
+                log('❌ Hata: ' + error.message, 'error');
+                btn.disabled = false;
+                btn.textContent = '🔄 Tekrar Dene';
+            }
+        }
+    </script>
+</body>
+</html>
