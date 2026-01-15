@@ -433,6 +433,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
                 <!-- Kullanıcı Bilgisi ve Çıkış -->
                 <div style="margin-top:auto;padding:16px 20px;border-top:1px solid rgba(255,255,255,.1)">
+                    <!-- Impersonation Banner -->
+                    <div id="impersonationBanner" style="display:none;margin-bottom:12px;padding:10px;background:rgba(255,134,116,.2);border:1px solid rgba(255,134,116,.4);border-radius:8px">
+                        <div style="font-size:.75rem;color:#ff8674;margin-bottom:6px">👁️ Görüntüleme Modu</div>
+                        <div id="impersonationName" style="font-size:.85rem;color:#fff;font-weight:600"></div>
+                        <button onclick="exitImpersonation()" style="margin-top:8px;width:100%;padding:6px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:#fff;font-size:.75rem;cursor:pointer">
+                            ← Geri Dön
+                        </button>
+                    </div>
+                    
                     <div id="userInfo" style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
                         <div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600" id="userAvatar">👤</div>
                         <div style="flex:1;overflow:hidden">
@@ -440,9 +449,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <div id="userRole" style="color:var(--sidebarTx2);font-size:.7rem">-</div>
                         </div>
                     </div>
-                    <button id="switchUserBtn" onclick="showSwitchUserModal()" style="display:none;width:100%;padding:8px;margin-bottom:8px;background:rgba(0,140,149,.2);border:1px solid rgba(0,140,149,.3);border-radius:8px;color:#00b4a0;font-size:.75rem;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(0,140,149,.3)'" onmouseout="this.style.background='rgba(0,140,149,.2)'">
-                        👁️ Kullanıcı Gözünden Gör
+                    
+                    <!-- Yönetici için Kullanıcı Gözünden Gör butonu -->
+                    <button id="impersonateBtn" onclick="showImpersonationModal()" style="display:none;width:100%;padding:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--sidebarTx2);font-size:.8rem;cursor:pointer;transition:all .2s;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.background='rgba(255,134,116,.15)';this.style.borderColor='rgba(255,134,116,.3)'" onmouseout="this.style.background='rgba(255,255,255,.05)';this.style.borderColor='rgba(255,255,255,.1)'">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        Kullanıcı Gözünden Gör
                     </button>
+                    
                     <button onclick="logout()" style="width:100%;padding:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--sidebarTx2);font-size:.8rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.background='rgba(231,76,60,.2)';this.style.borderColor='rgba(231,76,60,.4)';this.style.color='#e74c3c'" onmouseout="this.style.background='rgba(255,255,255,.1)';this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--sidebarTx2)'">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                         Çıkış Yap
@@ -2067,6 +2080,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('userName').textContent = currentUser.name || currentUser.email;
                     document.getElementById('userRole').textContent = getRoleName(currentUser.role);
                     
+                    // Yönetici için impersonation butonunu göster
+                    const impersonateBtn = document.getElementById('impersonateBtn');
+                    if (impersonateBtn) {
+                        impersonateBtn.style.display = currentUser.role === 'yonetici' ? 'flex' : 'none';
+                    }
+                    
                     // Session durumunu kontrol et
                     const sessionValid = await checkSessionValidity();
                     if (!sessionValid) {
@@ -2104,6 +2123,156 @@ document.addEventListener('DOMContentLoaded', () => {
     initUI();
 });
 
+// Impersonation (Kullanıcı Gözünden Görme) Sistemi
+let originalUser = null; // Asıl kullanıcı bilgisi
+let isImpersonating = false;
+
+// Impersonation modal'ı göster
+async function showImpersonationModal() {
+    if (currentUser?.role !== 'yonetici') {
+        toast('Bu özellik sadece yöneticiler içindir', 'error');
+        return;
+    }
+    
+    // Personel listesini getir
+    let personnel = [];
+    try {
+        const persDoc = await db.collection('config').doc('personnel').get();
+        if (persDoc.exists) {
+            personnel = persDoc.data().list || [];
+        }
+        
+        // Ayrıca users collection'dan da çek
+        const usersSnap = await db.collection('users').get();
+        usersSnap.forEach(doc => {
+            const userData = doc.data();
+            if (!personnel.find(p => p.email === userData.email)) {
+                personnel.push({
+                    name: userData.name,
+                    email: userData.email,
+                    branch: userData.branch,
+                    role: userData.role
+                });
+            }
+        });
+    } catch (e) {
+        console.error('Personel listesi yüklenemedi:', e);
+    }
+    
+    // Kendini listeden çıkar
+    personnel = personnel.filter(p => p.email !== currentUser.email);
+    
+    let html = `
+        <div style="margin-bottom:16px;padding:12px;background:rgba(255,134,116,.1);border-radius:8px;font-size:.85rem;color:var(--tx2)">
+            ⚠️ Seçtiğiniz kullanıcının gördüğü ekranı göreceksiniz. Değişiklikler o kullanıcı adına kaydedilir.
+        </div>
+        <div style="max-height:400px;overflow-y:auto">
+    `;
+    
+    // Şubelere göre grupla
+    const byBranch = {};
+    personnel.forEach(p => {
+        const branch = p.branch || 'Belirsiz';
+        if (!byBranch[branch]) byBranch[branch] = [];
+        byBranch[branch].push(p);
+    });
+    
+    Object.entries(byBranch).forEach(([branch, users]) => {
+        html += `<div style="font-weight:600;color:var(--tx);margin:16px 0 8px;font-size:.9rem">${branch}</div>`;
+        users.forEach(p => {
+            const roleNames = {
+                'yonetici': 'Yönetici',
+                'bolge_muduru': 'Bölge Müdürü',
+                'magaza_muduru': 'Mağaza Müdürü',
+                'mudur_yardimcisi': 'Müdür Yardımcısı',
+                'barista': 'Barista'
+            };
+            html += `
+                <div onclick="startImpersonation('${p.email}', '${p.name}', '${p.branch || ''}', '${p.role || 'barista'}')" 
+                    style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg3);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all .2s;border:1px solid transparent"
+                    onmouseover="this.style.borderColor='var(--accent)';this.style.background='var(--bg2)'"
+                    onmouseout="this.style.borderColor='transparent';this.style.background='var(--bg3)'">
+                    <div style="width:40px;height:40px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:.9rem">
+                        ${p.name?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
+                    <div style="flex:1">
+                        <div style="font-weight:600;color:var(--tx)">${p.name || p.email}</div>
+                        <div style="font-size:.75rem;color:var(--tx3)">${roleNames[p.role] || p.role || 'Barista'}</div>
+                    </div>
+                    <svg width="20" height="20" fill="none" stroke="var(--tx3)" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+                </div>
+            `;
+        });
+    });
+    
+    html += '</div>';
+    
+    showModal('👁️ Kullanıcı Gözünden Gör', html, '<button class="btn btn-ghost" onclick="closeModal()">İptal</button>');
+}
+
+// Impersonation başlat
+function startImpersonation(email, name, branch, role) {
+    closeModal();
+    
+    // Orijinal kullanıcıyı sakla
+    originalUser = {...currentUser};
+    
+    // Kullanıcıyı değiştir
+    currentUser = {
+        ...currentUser,
+        email: email,
+        name: name,
+        branch: branch,
+        role: role,
+        isImpersonated: true
+    };
+    
+    isImpersonating = true;
+    
+    // UI güncelle
+    document.getElementById('userName').textContent = name;
+    document.getElementById('userRole').textContent = getRoleName(role) + ' (Görüntüleme)';
+    document.getElementById('userAvatar').textContent = name?.charAt(0)?.toUpperCase() || '?';
+    
+    // Banner göster
+    document.getElementById('impersonationBanner').style.display = 'block';
+    document.getElementById('impersonationName').textContent = name + ' olarak görüntülüyorsunuz';
+    
+    // Impersonate butonunu gizle
+    document.getElementById('impersonateBtn').style.display = 'none';
+    
+    // Sayfayı yenile (kullanıcı yetkilerine göre)
+    goTo('dashboard');
+    toast(`${name} olarak görüntülüyorsunuz`, 'success');
+}
+
+// Impersonation'dan çık
+function exitImpersonation() {
+    if (!originalUser) return;
+    
+    // Orijinal kullanıcıya dön
+    currentUser = {...originalUser};
+    originalUser = null;
+    isImpersonating = false;
+    
+    // UI güncelle
+    document.getElementById('userName').textContent = currentUser.name;
+    document.getElementById('userRole').textContent = getRoleName(currentUser.role);
+    document.getElementById('userAvatar').textContent = currentUser.name?.charAt(0)?.toUpperCase() || '?';
+    
+    // Banner gizle
+    document.getElementById('impersonationBanner').style.display = 'none';
+    
+    // Yönetici ise impersonate butonunu göster
+    if (currentUser.role === 'yonetici') {
+        document.getElementById('impersonateBtn').style.display = 'flex';
+    }
+    
+    // Sayfayı yenile
+    goTo('dashboard');
+    toast('Kendi hesabınıza döndünüz', 'success');
+}
+
 // Çıkış yap fonksiyonu
 async function logout() {
     try {
@@ -2137,167 +2306,6 @@ async function logout() {
     } catch (error) {
         console.error('Logout error:', error);
         toast('Çıkış hatası', 'error');
-    }
-}
-
-// Kullanıcı değiştir değişkenleri
-var originalUser = null;
-var isViewingAsOther = false;
-
-// Kullanıcı değiştir modal
-async function showSwitchUserModal() {
-    if (!currentUser || (currentUser.role !== 'yonetici' && currentUser.role !== 'bolge_muduru')) {
-        showToast('Bu özellik sadece yöneticiler için', 'error');
-        return;
-    }
-    
-    var usersSnap = await db.collection('users').get();
-    var users = [];
-    var realEmail = originalUser ? originalUser.email : currentUser.email;
-    
-    usersSnap.forEach(function(doc) {
-        var u = doc.data();
-        if (u.email !== realEmail) {
-            users.push({ id: doc.id, email: u.email || '', name: u.name || '', role: u.role || '', branch: u.branch || '' });
-        }
-    });
-    
-    var roleNames = {
-        'yonetici': '👑 Yönetici',
-        'bolge_muduru': '🏢 Bölge Müdürü',
-        'magaza_muduru': '🏪 Mağaza Müdürü',
-        'barista': '☕ Barista'
-    };
-    
-    var usersHtml = '';
-    users.forEach(function(u) {
-        var initial = (u.name || u.email || '?').charAt(0).toUpperCase();
-        var roleName = roleNames[u.role] || u.role;
-        var branchText = u.branch ? ' • ' + u.branch : '';
-        usersHtml += '<div class="switch-user-item" data-userid="' + u.id + '" data-email="' + u.email + '" data-name="' + u.name + '" data-role="' + u.role + '" data-branch="' + u.branch + '" style="padding:12px;background:var(--bg2);border-radius:10px;cursor:pointer;transition:all .2s;border:1px solid var(--cardBorder);margin-bottom:8px" onmouseover="this.style.background=\'var(--bg3)\';this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.background=\'var(--bg2)\';this.style.borderColor=\'var(--cardBorder)\'">';
-        usersHtml += '<div style="display:flex;align-items:center;gap:12px">';
-        usersHtml += '<div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600">' + initial + '</div>';
-        usersHtml += '<div style="flex:1">';
-        usersHtml += '<div style="font-weight:600;color:var(--tx)">' + (u.name || u.email) + '</div>';
-        usersHtml += '<div style="font-size:.75rem;color:var(--tx2)">' + roleName + branchText + '</div>';
-        usersHtml += '</div></div></div>';
-    });
-    
-    if (!usersHtml) {
-        usersHtml = '<div style="text-align:center;color:var(--tx2);padding:20px">Başka kullanıcı yok</div>';
-    }
-    
-    var modalHtml = '<div style="text-align:center;margin-bottom:20px">';
-    modalHtml += '<div style="font-size:2rem;margin-bottom:8px">👁️</div>';
-    modalHtml += '<div style="font-size:1.2rem;font-weight:700;color:var(--tx)">Kullanıcı Gözünden Gör</div>';
-    modalHtml += '<div style="font-size:.85rem;color:var(--tx2)">Seçtiğiniz kullanıcının gördüğü ekranı göreceksiniz</div>';
-    modalHtml += '</div>';
-    modalHtml += '<div id="switchUserList" style="max-height:400px;overflow-y:auto">' + usersHtml + '</div>';
-    modalHtml += '<div style="margin-top:16px;text-align:center">';
-    modalHtml += '<button class="btn btn-ghost" onclick="closeModal()">İptal</button>';
-    modalHtml += '</div>';
-    
-    showModal(modalHtml);
-    
-    // Click event ekle
-    setTimeout(function() {
-        document.querySelectorAll('.switch-user-item').forEach(function(item) {
-            item.onclick = function() {
-                var userId = this.dataset.userid;
-                var email = this.dataset.email;
-                var name = this.dataset.name;
-                var role = this.dataset.role;
-                var branch = this.dataset.branch;
-                switchToUser(userId, email, name, role, branch);
-            };
-        });
-    }, 100);
-}
-
-function switchToUser(userId, email, name, role, branch) {
-    if (!originalUser) {
-        originalUser = JSON.parse(JSON.stringify(currentUser));
-    }
-    
-    isViewingAsOther = true;
-    currentUser = {
-        id: userId,
-        email: email,
-        name: name,
-        role: role,
-        branch: branch,
-        isViewing: true
-    };
-    
-    updateUserUI();
-    applyUserPermissions();
-    showViewingBanner(name, role);
-    
-    closeModal();
-    showToast(name + ' olarak görüntülüyorsunuz', 'success');
-    goTo('dashboard');
-}
-
-function showViewingBanner(name, role) {
-    var roleNames = { 'yonetici': 'Yönetici', 'bolge_muduru': 'Bölge Müdürü', 'magaza_muduru': 'Mağaza Müdürü', 'barista': 'Barista' };
-    
-    var oldBanner = document.getElementById('viewingBanner');
-    if (oldBanner) oldBanner.remove();
-    
-    var banner = document.createElement('div');
-    banner.id = 'viewingBanner';
-    banner.style.cssText = 'position:fixed;top:0;left:260px;right:0;z-index:9999;background:linear-gradient(135deg,#f39c12,#e67e22);color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;font-size:.85rem;box-shadow:0 2px 12px rgba(0,0,0,.2)';
-    banner.innerHTML = '<div><strong>👁️ ÖNİZLEME:</strong> ' + name + ' (' + (roleNames[role] || role) + ') olarak görüntülüyorsunuz</div><button onclick="stopViewingAsOther()" style="background:#fff;color:#e67e22;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:.8rem">✕ Geri Dön</button>';
-    document.body.appendChild(banner);
-    
-    var mainEl = document.querySelector('.main');
-    if (mainEl) mainEl.style.marginTop = '40px';
-}
-
-function stopViewingAsOther() {
-    if (!originalUser) return;
-    
-    currentUser = JSON.parse(JSON.stringify(originalUser));
-    originalUser = null;
-    isViewingAsOther = false;
-    
-    var banner = document.getElementById('viewingBanner');
-    if (banner) banner.remove();
-    
-    var mainEl = document.querySelector('.main');
-    if (mainEl) mainEl.style.marginTop = '0';
-    
-    updateUserUI();
-    applyUserPermissions();
-    
-    showToast('Yönetici hesabına döndünüz', 'success');
-    goTo('dashboard');
-}
-
-function updateUserUI() {
-    var userNameEl = document.getElementById('userName');
-    var userRoleEl = document.getElementById('userRole');
-    var userAvatarEl = document.getElementById('userAvatar');
-    
-    var roleNames = {
-        'yonetici': 'Yönetici',
-        'bolge_muduru': 'Bölge Müdürü',
-        'magaza_muduru': 'Mağaza Müdürü',
-        'barista': 'Barista'
-    };
-    
-    if (userNameEl) {
-        if (isViewingAsOther) {
-            userNameEl.innerHTML = '<span style="background:var(--yellow);color:#000;padding:2px 6px;border-radius:4px;font-size:.65rem;margin-right:6px">ÖNİZLEME</span>' + (currentUser.name || currentUser.email);
-        } else {
-            userNameEl.textContent = currentUser.name || currentUser.email;
-        }
-    }
-    if (userRoleEl) {
-        userRoleEl.textContent = roleNames[currentUser.role] || currentUser.role;
-    }
-    if (userAvatarEl && currentUser.name) {
-        userAvatarEl.textContent = currentUser.name.charAt(0).toUpperCase();
     }
 }
 
@@ -2525,14 +2533,6 @@ function applyUserPermissions() {
     }
     if (userAvatarEl && currentUser.name) {
         userAvatarEl.textContent = currentUser.name.charAt(0).toUpperCase();
-    }
-    
-    // Kullanıcı Değiştir butonu (Sadece yönetici ve bölge müdürü)
-    var switchUserBtn = document.getElementById('switchUserBtn');
-    if (switchUserBtn) {
-        var realRole = originalUser ? originalUser.role : currentUser.role;
-        var canSwitch = realRole === 'yonetici' || realRole === 'bolge_muduru';
-        switchUserBtn.style.display = canSwitch ? 'block' : 'none';
     }
     
     // Yönetici her şeye erişebilir
@@ -8750,8 +8750,35 @@ function getRoleName(role) {
 // Checklist zamanlama değişkenleri
 let checklistStartTime = null;
 let checklistFirstItemTime = null;
-let checklistTimerInterval = null;
 let checklistExpectedDuration = 0; // saniye cinsinden
+let checklistTimerInterval = null; // Canlı kronometre interval
+
+// Canlı kronometre başlat
+function startChecklistTimer() {
+    if (checklistTimerInterval) clearInterval(checklistTimerInterval);
+    
+    checklistTimerInterval = setInterval(() => {
+        if (!checklistStartTime) return;
+        
+        const elapsed = Math.floor((new Date() - checklistStartTime) / 1000);
+        const hours = Math.floor(elapsed / 3600);
+        const minutes = Math.floor((elapsed % 3600) / 60);
+        const seconds = elapsed % 60;
+        
+        const timerDisplay = document.getElementById('checklistElapsedTime');
+        if (timerDisplay) {
+            timerDisplay.textContent = `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+        }
+    }, 1000);
+}
+
+// Kronometre durdur
+function stopChecklistTimer() {
+    if (checklistTimerInterval) {
+        clearInterval(checklistTimerInterval);
+        checklistTimerInterval = null;
+    }
+}
 
 // Personel-şube eşleştirmesi (Firebase'den yüklenecek)
 let personnelMapping = [];
@@ -8882,9 +8909,12 @@ async function loadChecklistTypes() {
     // Debug log
     console.log('Checklist türleri:', branch, types.length, 'adet');
     
+    // Güncel Kontrol'u filtrele (geçici olarak gizli)
+    const filteredTypes = types.filter(t => t.id !== 'guncel');
+    
     // Hidden select güncelle
     let selectHtml = '<option value="">-- Checklist Seçin --</option>';
-    types.forEach(t => {
+    filteredTypes.forEach(t => {
         if (t.managerOnly && !isManager) return;
         selectHtml += `<option value="${t.id}" data-timeslots="${t.timeSlots ? t.timeSlots.join(',') : ''}">${t.name}</option>`;
     });
@@ -8892,7 +8922,7 @@ async function loadChecklistTypes() {
     
     // Butonları oluştur - Modern SVG ikonlar
     let buttonsHtml = '';
-    types.forEach(t => {
+    filteredTypes.forEach(t => {
         if (t.managerOnly && !isManager) return;
         const iconSvg = getIcon(t.icon || 'clipboard-check');
         buttonsHtml += `
@@ -9067,8 +9097,38 @@ async function loadChecklist() {
             console.warn('Submission kontrol hatası:', subError);
         }
         
+        // Temizlik ve Bakım (aylik) için tarih bazlı filtreleme
+        let filteredItems = items;
+        let showAllItems = localStorage.getItem('checklist_showAll_' + type) === 'true';
+        
+        if (type === 'aylik' && !showAllItems) {
+            const today = new Date(date);
+            const dayOfMonth = today.getDate();
+            const hour = new Date().getHours();
+            const isAcilis = hour < 15; // 15:00 öncesi açılış, sonrası kapanış varsayımı
+            
+            filteredItems = items.filter(item => {
+                const text = item.text.toLowerCase();
+                
+                // Tarih kontrolü: "ayın X, Y, Z" veya "(ayın X, Y, Z)" formatı
+                const dateMatch = text.match(/\(?\s*ayın\s+([\d,\s]+)\s*\)?/i);
+                if (dateMatch) {
+                    const days = dateMatch[1].split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d));
+                    if (days.length > 0 && !days.includes(dayOfMonth)) {
+                        return false; // Bu gün için değil
+                    }
+                }
+                
+                // Shift tipi kontrolü: (Açılış) veya (Kapanış)
+                if (text.includes('(açılış)') && !isAcilis) return false;
+                if (text.includes('(kapanış)') && isAcilis) return false;
+                
+                return true;
+            });
+        }
+        
         // Formu render et
-        renderChecklistForm(items, branch, type, date, timeSlot, submittedData);
+        renderChecklistForm(filteredItems, branch, type, date, timeSlot, submittedData, items.length, showAllItems);
         
     } catch (error) {
         console.error('Checklist yükleme hatası:', error);
@@ -9082,17 +9142,18 @@ async function loadChecklist() {
 // Checklist formunu render et
 let checklistEditMode = false;
 
-function renderChecklistForm(items, branch, type, date, timeSlot, submittedData) {
+function renderChecklistForm(items, branch, type, date, timeSlot, submittedData, totalItemCount, showAllItems) {
     const container = document.getElementById('checklistFormContainer');
     const isAdmin = currentUser?.role === 'yonetici' || currentUser?.role === 'bolge_muduru';
     const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
     const isSubmitted = !!submittedData;
+    const isAylik = type === 'aylik';
+    const filteredCount = totalItemCount ? totalItemCount - items.length : 0;
     
     // Zamanlama sıfırla (yeni checklist)
     if (!isSubmitted) {
         checklistStartTime = null;
         checklistFirstItemTime = null;
-        if (checklistTimerInterval) { clearInterval(checklistTimerInterval); checklistTimerInterval = null; }
         // Beklenen süreyi hesapla
         checklistExpectedDuration = items.reduce((sum, item) => sum + (item.duration || 60), 0);
     }
@@ -9139,6 +9200,22 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
                 <div style="font-size:.75rem;color:var(--tx3);margin-bottom:16px">${submittedData.submittedByName} • ${submittedData.submittedAt?.toDate ? new Date(submittedData.submittedAt.toDate()).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'}) : ''}</div>
             ` : ''}
             
+            ${isAylik && filteredCount > 0 ? `
+                <!-- Temizlik ve Bakım Filtreleme Bilgisi -->
+                <div style="margin-bottom:16px;padding:12px 16px;background:rgba(0,140,149,.1);border:1px solid rgba(0,140,149,.2);border-radius:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+                    <div style="font-size:.85rem;color:var(--tx)">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                        ${showAllItems ? 
+                            `Tüm maddeler gösteriliyor (${items.length} madde)` : 
+                            `Bugüne ait ${items.length} madde gösteriliyor (${filteredCount} madde gizli)`
+                        }
+                    </div>
+                    <button onclick="toggleShowAllChecklistItems('${type}')" class="btn btn-sm ${showAllItems ? 'btn-primary' : 'btn-ghost'}" style="padding:6px 12px">
+                        ${showAllItems ? '📅 Tarihe Göre Filtrele' : '📋 Tümünü Göster'}
+                    </button>
+                </div>
+            ` : ''}
+            
             ${!checklistEditMode ? `
                 <!-- Personel ve Zaman Bilgisi -->
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
@@ -9162,7 +9239,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
                     </div>
                 </div>
                 
-                <!-- Başlangıç Zamanı Banner -->
+                <!-- Başlangıç Zamanı Banner - Canlı Kronometre -->
                 <div id="checklistTimerBanner" style="display:none;margin-bottom:16px;padding:14px 16px;background:linear-gradient(135deg,rgba(0,140,149,.15),rgba(0,140,149,.05));border:1px solid rgba(0,140,149,.3);border-radius:12px">
                     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
                         <div style="display:flex;align-items:center;gap:8px">
@@ -9170,7 +9247,10 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
                             <span style="font-weight:600;color:var(--tx)">Checklist Başladı</span>
                             <span style="font-size:.85rem;color:var(--tx2)">(<span id="checklistStartTimeDisplay">--:--:--</span>)</span>
                         </div>
-                        <div style="font-size:1.2rem;font-weight:700;color:var(--accent2);font-family:var(--mono)" id="checklistChronoDisplay">00:00:00</div>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <svg width="18" height="18" fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                            <span id="checklistElapsedTime" style="font-size:1.2rem;font-weight:700;color:var(--accent);font-family:'JetBrains Mono',monospace">00:00:00</span>
+                        </div>
                     </div>
                 </div>
                 
@@ -9256,7 +9336,11 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
             </div>
             
             ${!checklistEditMode && !isSubmitted ? `
-                <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
+                <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap">
+                    <button class="btn btn-ghost" onclick="downloadChecklistPDF('${branch}', '${type}', '${date}', '${timeSlot || ''}', false)">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:6px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        PDF İndir
+                    </button>
                     <button class="btn btn-ghost" onclick="loadChecklist()">🔄 Yenile</button>
                     <button class="btn btn-primary" onclick="submitChecklist('${branch}', '${type}', '${date}', '${timeSlot || ''}')">
                         ✅ Checklist'i Tamamla
@@ -9264,8 +9348,12 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
                 </div>
             ` : ''}
             ${!checklistEditMode && isSubmitted ? `
-                <div style="margin-top:24px;text-align:center;color:var(--tx2)">
-                    Bu checklist zaten tamamlanmış
+                <div style="margin-top:24px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+                    <button class="btn btn-ghost" onclick="downloadChecklistPDF('${branch}', '${type}', '${date}', '${timeSlot || ''}', true)">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:6px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        PDF İndir
+                    </button>
+                    <span style="color:var(--tx2);display:flex;align-items:center">Bu checklist zaten tamamlanmış</span>
                 </div>
             ` : ''}
             ${checklistEditMode ? `
@@ -9282,6 +9370,14 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
 // Düzenleme modunu aç/kapat
 function toggleChecklistEditMode(branch, type, date, timeSlot) {
     checklistEditMode = !checklistEditMode;
+    loadChecklist();
+}
+
+// Temizlik ve Bakım için Tümünü Göster toggle
+function toggleShowAllChecklistItems(type) {
+    const key = 'checklist_showAll_' + type;
+    const current = localStorage.getItem(key) === 'true';
+    localStorage.setItem(key, (!current).toString());
     loadChecklist();
 }
 
@@ -9352,22 +9448,12 @@ function selectCheckOption(btn, itemId, value) {
         }
         
         // Canlı kronometre başlat
-        if (checklistTimerInterval) clearInterval(checklistTimerInterval);
-        checklistTimerInterval = setInterval(function() {
-            var elapsed = Math.floor((new Date() - checklistStartTime) / 1000);
-            var hours = Math.floor(elapsed / 3600);
-            var minutes = Math.floor((elapsed % 3600) / 60);
-            var seconds = elapsed % 60;
-            var chronoDisplay = document.getElementById('checklistChronoDisplay');
-            if (chronoDisplay) {
-                chronoDisplay.textContent = String(hours).padStart(2,'0') + ':' + String(minutes).padStart(2,'0') + ':' + String(seconds).padStart(2,'0');
-            }
-        }, 1000);
+        startChecklistTimer();
         
         // Bildirim göster
         const typeSelect = document.getElementById('checklistType');
         const typeName = typeSelect?.selectedOptions?.[0]?.text || 'Checklist';
-        showToast(typeName + ' başladı!', 'success');
+        showToast(`${typeName} başladı! Başlangıç: ${checklistStartTime.toLocaleTimeString('tr-TR')}`, 'success');
     }
     
     // Reset
@@ -9420,289 +9506,302 @@ function checkAllItemsMarked() {
             submitBtn.classList.remove('btn-ghost');
             submitBtn.classList.add('btn-primary');
             submitBtn.innerHTML = '✅ Checklist\'i Tamamla';
-            
-            // PDF İndir butonu göster
-            var pdfBtn = document.getElementById('checklistPdfBtn');
-            if (!pdfBtn) {
-                pdfBtn = document.createElement('button');
-                pdfBtn.id = 'checklistPdfBtn';
-                pdfBtn.className = 'btn btn-ghost';
-                pdfBtn.innerHTML = '📄 PDF İndir';
-                pdfBtn.onclick = downloadChecklistPdf;
-                pdfBtn.style.marginRight = '8px';
-                submitBtn.parentElement.insertBefore(pdfBtn, submitBtn);
-            }
         }
     }
 }
 
-// Checklist PDF İndir
-function downloadChecklistPdf() {
-    var branch = document.getElementById('checklistSube').value;
-    var date = document.getElementById('checklistDate').value;
-    var timeSlot = document.getElementById('checklistTimeSlot').value;
-    var personNameEl = document.getElementById('checklistPersonName');
-    var personName = personNameEl ? personNameEl.value : (currentUser ? currentUser.name : '');
-    var typeSelect = document.getElementById('checklistType');
-    var typeName = typeSelect && typeSelect.selectedOptions[0] ? typeSelect.selectedOptions[0].text : 'Checklist';
+// Platform checklist render - Tablo Formatı (Tüm Gün Görünümü)
+async function renderPlatformChecklist(container, branch, date, timeSlot, submittedData) {
+    const autoPersonName = getUserNameFromEmail(currentUser?.email) || currentUser?.name || '';
     
-    var items = document.querySelectorAll('#checklistItems .checklist-item');
-    var doneCount = 0, notDoneCount = 0;
-    var itemsList = [];
+    // Tuzla için SUNBERRY platformları ekle
+    const moonberryPlatforms = ['Trendyol', 'Yemek Sepeti', 'Getir Yemek', 'Migros'];
+    const sunberryPlatforms = branch.toLowerCase().includes('tuzla') ? ['Sunberry Trendyol', 'Sunberry Yemek Sepeti', 'Sunberry Getir', 'Sunberry Migros'] : [];
+    const allPlatforms = [...moonberryPlatforms, ...sunberryPlatforms];
     
-    items.forEach(function(item, idx) {
-        var textEl = item.querySelector('div[style*="flex:1"]');
-        var text = textEl ? textEl.textContent.trim() : '';
-        var doneInput = item.querySelector('input[value="done"]');
-        var notdoneInput = item.querySelector('input[value="notdone"]');
-        var isDone = doneInput && doneInput.checked;
-        var isNotDone = notdoneInput && notdoneInput.checked;
+    // Saatler
+    const timeSlots = ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'];
+    
+    // Tüm saatler için submission verilerini çek
+    const submissions = {};
+    try {
+        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_platform`;
+        for (const ts of timeSlots) {
+            const submissionId = `${checklistId}_${date}_${ts.replace(':', '')}`;
+            const doc = await db.collection('checklistSubmissions').doc(submissionId).get();
+            if (doc.exists) {
+                submissions[ts] = doc.data();
+            }
+        }
+    } catch (e) {
+        console.warn('Platform submissions yüklenemedi:', e);
+    }
+    
+    let html = `
+        <div class="form-section">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+                <div>
+                    <div style="font-size:1.3rem;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:10px">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                        Platform Check
+                    </div>
+                    <div style="font-size:.85rem;color:var(--tx2)">${branch} • ${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})}</div>
+                </div>
+            </div>
+            
+            <!-- Seçili saat için işaretleme -->
+            ${timeSlot ? `
+                <div style="margin-bottom:16px;padding:14px 16px;background:linear-gradient(135deg,rgba(0,140,149,.15),rgba(0,140,149,.05));border:1px solid rgba(0,140,149,.3);border-radius:12px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                        <div>
+                            <span style="font-weight:600;color:var(--tx)">Seçili Saat: ${timeSlot}</span>
+                            <span style="font-size:.85rem;color:var(--tx2);margin-left:8px">(${autoPersonName})</span>
+                        </div>
+                        ${submissions[timeSlot] ? `
+                            <span style="color:#27ae60;font-size:.85rem">✓ ${submissions[timeSlot].personName} tarafından tamamlandı</span>
+                        ` : ''}
+                    </div>
+                </div>
+            ` : ''}
+            
+            <div style="overflow-x:auto;margin-bottom:20px">
+                <table style="width:100%;border-collapse:collapse;min-width:600px;background:var(--bg2);border-radius:12px;overflow:hidden;border:1px solid var(--cardBorder)">
+                    <thead>
+                        <tr style="background:var(--bg3)">
+                            <th style="padding:12px;text-align:left;font-weight:600;color:var(--tx);border-bottom:2px solid var(--cardBorder);width:80px">Saat</th>
+                            ${moonberryPlatforms.length > 0 ? `
+                                <th colspan="${moonberryPlatforms.length}" style="padding:12px;text-align:center;font-weight:700;color:var(--accent);border-bottom:2px solid var(--cardBorder);background:rgba(255,134,116,.1)">
+                                    MOONBERRY
+                                </th>
+                            ` : ''}
+                            ${sunberryPlatforms.length > 0 ? `
+                                <th colspan="${sunberryPlatforms.length}" style="padding:12px;text-align:center;font-weight:700;color:#008c95;border-bottom:2px solid var(--cardBorder);background:rgba(0,140,149,.1)">
+                                    SUNBERRY
+                                </th>
+                            ` : ''}
+                        </tr>
+                        <tr style="background:var(--bg3)">
+                            <th style="padding:8px;border-bottom:1px solid var(--cardBorder)"></th>
+                            ${moonberryPlatforms.map(p => `
+                                <th style="padding:8px;text-align:center;font-size:.75rem;color:var(--tx2);border-bottom:1px solid var(--cardBorder);min-width:80px">${p.replace('Yemek Sepeti', 'YS').replace('Getir Yemek', 'Getir')}</th>
+                            `).join('')}
+                            ${sunberryPlatforms.map(p => `
+                                <th style="padding:8px;text-align:center;font-size:.75rem;color:var(--tx2);border-bottom:1px solid var(--cardBorder);min-width:80px">${p.replace('Sunberry ', '').replace('Yemek Sepeti', 'YS')}</th>
+                            `).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
+    
+    timeSlots.forEach(ts => {
+        const sub = submissions[ts];
+        const isCurrentSlot = ts === timeSlot;
+        const rowBg = isCurrentSlot ? 'rgba(0,140,149,.05)' : 'transparent';
         
-        if (isDone) doneCount++;
-        if (isNotDone) notDoneCount++;
+        html += `
+            <tr style="border-bottom:1px solid var(--cardBorder);background:${rowBg}">
+                <td style="padding:12px;font-weight:600;color:var(--tx);vertical-align:middle">
+                    ${ts}
+                    ${isCurrentSlot ? '<span style="color:var(--accent);font-size:.7rem;display:block">▶ Aktif</span>' : ''}
+                </td>
+        `;
         
-        itemsList.push({
-            no: idx + 1,
-            text: text,
-            status: isDone ? 'Yapıldı ✓' : isNotDone ? 'Yapılmadı ✗' : '-',
-            isDone: isDone
+        allPlatforms.forEach(platform => {
+            const platformKey = platform.replace(/\s/g, '_');
+            const platformData = sub?.platforms?.find(p => p.name === platform || p.name === platform.replace('Sunberry ', ''));
+            const isOpen = platformData?.isOpen === true;
+            const isClosed = platformData?.isOpen === false;
+            const checkedBy = sub?.personName || '';
+            const canEdit = isCurrentSlot && !sub;
+            
+            html += `
+                <td style="padding:8px;text-align:center;vertical-align:middle">
+                    ${sub ? `
+                        <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+                            <span style="font-size:1.2rem;color:${isOpen ? '#27ae60' : isClosed ? '#e74c3c' : '#999'}">${isOpen ? '✓' : isClosed ? '✗' : '-'}</span>
+                            <span style="font-size:.65rem;color:var(--tx3);max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${checkedBy}">${checkedBy.split(' ')[0] || ''}</span>
+                        </div>
+                    ` : canEdit ? `
+                        <div style="display:flex;gap:4px;justify-content:center">
+                            <button onclick="markPlatformCell('${ts}', '${platform}', true)" class="platform-btn" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--cardBorder);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:.9rem;transition:all .2s" onmouseover="this.style.background='rgba(39,174,96,.2)';this.style.color='#27ae60'" onmouseout="this.style.background='var(--bg3)';this.style.color='var(--tx3)'">✓</button>
+                            <button onclick="markPlatformCell('${ts}', '${platform}', false)" class="platform-btn" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--cardBorder);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:.9rem;transition:all .2s" onmouseover="this.style.background='rgba(231,76,60,.2)';this.style.color='#e74c3c'" onmouseout="this.style.background='var(--bg3)';this.style.color='var(--tx3)'">✗</button>
+                        </div>
+                    ` : `
+                        <span style="color:var(--tx3);font-size:.8rem">-</span>
+                    `}
+                </td>
+            `;
         });
+        
+        html += `</tr>`;
     });
     
-    var now = new Date();
-    var elapsed = checklistStartTime ? Math.floor((now - checklistStartTime) / 1000) : 0;
-    var elapsedMin = Math.floor(elapsed / 60);
-    var elapsedSec = elapsed % 60;
-    var dateObj = new Date(date);
-    var dateStr = dateObj.toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'});
+    html += `
+                    </tbody>
+                </table>
+            </div>
+            
+            ${timeSlot && !submissions[timeSlot] ? `
+                <div style="margin-top:20px;display:flex;gap:12px;justify-content:flex-end">
+                    <button class="btn btn-primary" onclick="submitPlatformChecklistNew('${branch}', '${date}', '${timeSlot}')">
+                        ✅ ${timeSlot} Kontrolünü Tamamla
+                    </button>
+                </div>
+            ` : ''}
+        </div>
+    `;
     
-    var docDefinition = {
-        pageSize: 'A4',
-        pageMargins: [40, 60, 40, 60],
-        content: [
-            {text: 'MOONBERRY COFFEE', style: 'header', alignment: 'center'},
-            {text: typeName.toUpperCase() + ' CHECKLIST', style: 'subheader', alignment: 'center'},
-            {text: ' ', margin: [0, 10]},
-            {
-                columns: [
-                    {text: 'Şube: ' + branch, style: 'info'},
-                    {text: 'Tarih: ' + dateStr, style: 'info', alignment: 'right'}
-                ]
-            },
-            {
-                columns: [
-                    {text: 'Personel: ' + personName, style: 'info'},
-                    {text: timeSlot ? 'Saat: ' + timeSlot : '', style: 'info', alignment: 'right'}
-                ]
-            },
-            {text: ' ', margin: [0, 5]},
-            {
-                columns: [
-                    {text: 'Başlangıç: ' + (checklistStartTime ? checklistStartTime.toLocaleTimeString('tr-TR') : '-'), style: 'info'},
-                    {text: 'Bitiş: ' + now.toLocaleTimeString('tr-TR'), style: 'info', alignment: 'center'},
-                    {text: 'Süre: ' + elapsedMin + ' dk ' + elapsedSec + ' sn', style: 'info', alignment: 'right'}
-                ]
-            },
-            {text: ' ', margin: [0, 10]},
-            {
-                style: 'tableExample',
-                table: {
-                    headerRows: 1,
-                    widths: [30, '*', 80],
-                    body: [
-                        [{text: 'No', style: 'tableHeader'}, {text: 'Madde', style: 'tableHeader'}, {text: 'Durum', style: 'tableHeader'}]
-                    ].concat(itemsList.map(function(item) {
-                        return [
-                            {text: String(item.no), alignment: 'center'},
-                            {text: item.text},
-                            {text: item.status, alignment: 'center', color: item.isDone ? '#27ae60' : '#e74c3c', bold: true}
-                        ];
-                    }))
-                }
-            },
-            {text: ' ', margin: [0, 15]},
-            {
-                columns: [
-                    {text: 'Yapıldı: ' + doneCount, style: 'summary', color: '#27ae60'},
-                    {text: 'Yapılmadı: ' + notDoneCount, style: 'summary', color: '#e74c3c'},
-                    {text: 'Toplam: ' + items.length, style: 'summary'}
-                ]
-            }
-        ],
-        styles: {
-            header: {fontSize: 18, bold: true, color: '#008c95', margin: [0, 0, 0, 5]},
-            subheader: {fontSize: 14, bold: true, color: '#ff8674', margin: [0, 0, 0, 10]},
-            info: {fontSize: 10, color: '#555', margin: [0, 2]},
-            tableHeader: {bold: true, fontSize: 10, color: '#fff', fillColor: '#008c95'},
-            tableExample: {margin: [0, 5, 0, 15], fontSize: 9},
-            summary: {fontSize: 11, bold: true, alignment: 'center'}
-        }
+    container.innerHTML = html;
+    
+    // Platform state'i sakla
+    window._platformCheckState = {
+        branch,
+        date,
+        timeSlot,
+        platforms: allPlatforms,
+        selections: {}
     };
-    
-    var fileName = 'checklist_' + branch.replace(/[^a-zA-Z0-9]/g,'_') + '_' + typeName.replace(/[^a-zA-Z0-9]/g,'_') + '_' + date + '.pdf';
-    pdfMake.createPdf(docDefinition).download(fileName);
-    showToast('PDF indirildi', 'success');
 }
 
-// Platform checklist render
-function renderPlatformChecklist(container, branch, date, timeSlot, submittedData) {
-    const isSubmitted = !!submittedData;
+// Tek bir platform hücresini işaretle
+function markPlatformCell(timeSlot, platform, isOpen) {
+    const state = window._platformCheckState;
+    if (!state) return;
     
-    // Saat dilimleri
-    var timeSlots = ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'];
+    const key = `${timeSlot}_${platform}`;
+    state.selections[key] = isOpen;
     
-    // Platform listesi - Tuzla için Moonberry, Şişli için sadece Moonberry (Sunberry yok)
-    var isTuzla = branch.includes('Tuzla');
-    var platforms = ['Trendyol', 'Yemek Sepeti', 'Getir Yemek', 'Migros'];
-    
-    var html = '<div class="form-section">';
-    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">';
-    html += '<div>';
-    html += '<div style="font-size:1.3rem;font-weight:700;color:var(--tx)">📱 Platform Check</div>';
-    html += '<div style="font-size:.85rem;color:var(--tx2)">' + branch + ' • ' + new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'}) + '</div>';
-    html += '</div>';
-    if (isSubmitted) {
-        html += '<div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.85rem">✓ Tamamlandı</div>';
-    }
-    html += '</div>';
-    
-    // Tablo başlığı
-    html += '<div style="overflow-x:auto;margin-bottom:20px">';
-    html += '<table style="width:100%;border-collapse:collapse;min-width:600px;background:var(--bg2);border-radius:12px;overflow:hidden">';
-    
-    // Header - Moonberry ve Sunberry (Tuzla için)
-    html += '<thead>';
-    if (isTuzla) {
-        html += '<tr style="background:linear-gradient(135deg,#f1c40f,#f39c12)">';
-        html += '<th style="padding:10px;text-align:center;font-weight:700;color:#000" colspan="5">MOONBERRY</th>';
-        html += '<th style="padding:10px;text-align:center;font-weight:700;color:#fff;background:linear-gradient(135deg,#27ae60,#2ecc71)" colspan="4">SUNBERRY</th>';
-        html += '</tr>';
-    }
-    html += '<tr style="background:var(--bg3)">';
-    html += '<th style="padding:10px;text-align:center;font-weight:600;color:var(--tx);background:#f1c40f;color:#000">SAAT</th>';
-    platforms.forEach(function(p) {
-        html += '<th style="padding:8px;text-align:center;font-weight:600;color:var(--tx);font-size:.8rem;background:rgba(241,196,15,.3)">' + p.toUpperCase() + '</th>';
-    });
-    if (isTuzla) {
-        platforms.forEach(function(p) {
-            html += '<th style="padding:8px;text-align:center;font-weight:600;color:var(--tx);font-size:.8rem;background:rgba(39,174,96,.2)">' + p.toUpperCase() + '</th>';
-        });
-    }
-    html += '</tr>';
-    html += '</thead>';
-    
-    // Body - Her saat için satır
-    html += '<tbody>';
-    timeSlots.forEach(function(slot) {
-        html += '<tr style="border-top:1px solid var(--cardBorder)">';
-        html += '<td style="padding:10px;text-align:center;font-weight:700;background:#f1c40f;color:#000">' + slot + '</td>';
-        
-        // Moonberry platformları
-        platforms.forEach(function(p, idx) {
-            var cellId = 'moonberry_' + slot.replace(':', '') + '_' + idx;
-            var cellData = submittedData && submittedData.cells ? submittedData.cells[cellId] : null;
-            var isChecked = cellData && cellData.status === 'done';
-            var isNotDone = cellData && cellData.status === 'notdone';
-            var personName = cellData ? cellData.person : '';
-            
-            html += '<td style="padding:6px;text-align:center;border-left:1px solid var(--cardBorder)">';
-            if (isSubmitted) {
-                if (isChecked) {
-                    html += '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">';
-                    html += '<span style="color:#27ae60;font-size:1.2rem">✓</span>';
-                    html += '<span style="font-size:.65rem;color:var(--tx2)">' + personName + '</span>';
-                    html += '</div>';
-                } else if (isNotDone) {
-                    html += '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">';
-                    html += '<span style="color:#e74c3c;font-size:1.2rem">✗</span>';
-                    html += '<span style="font-size:.65rem;color:var(--tx2)">' + personName + '</span>';
-                    html += '</div>';
-                } else {
-                    html += '<span style="color:var(--tx3)">-</span>';
-                }
-            } else {
-                html += '<div style="display:flex;gap:4px;justify-content:center">';
-                html += '<button type="button" class="platform-cell-btn" data-cell="' + cellId + '" data-status="done" onclick="selectPlatformCell(this)" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--cardBorder);background:' + (isChecked ? 'rgba(39,174,96,.2)' : 'var(--bg3)') + ';color:' + (isChecked ? '#27ae60' : 'var(--tx3)') + ';cursor:pointer;font-size:.9rem">✓</button>';
-                html += '<button type="button" class="platform-cell-btn" data-cell="' + cellId + '" data-status="notdone" onclick="selectPlatformCell(this)" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--cardBorder);background:' + (isNotDone ? 'rgba(231,76,60,.2)' : 'var(--bg3)') + ';color:' + (isNotDone ? '#e74c3c' : 'var(--tx3)') + ';cursor:pointer;font-size:.9rem">✗</button>';
-                html += '</div>';
-            }
-            html += '</td>';
-        });
-        
-        // Sunberry platformları (sadece Tuzla)
-        if (isTuzla) {
-            platforms.forEach(function(p, idx) {
-                var cellId = 'sunberry_' + slot.replace(':', '') + '_' + idx;
-                var cellData = submittedData && submittedData.cells ? submittedData.cells[cellId] : null;
-                var isChecked = cellData && cellData.status === 'done';
-                var isNotDone = cellData && cellData.status === 'notdone';
-                var personName = cellData ? cellData.person : '';
-                
-                html += '<td style="padding:6px;text-align:center;border-left:1px solid var(--cardBorder);background:rgba(39,174,96,.05)">';
-                if (isSubmitted) {
-                    if (isChecked) {
-                        html += '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">';
-                        html += '<span style="color:#27ae60;font-size:1.2rem">✓</span>';
-                        html += '<span style="font-size:.65rem;color:var(--tx2)">' + personName + '</span>';
-                        html += '</div>';
-                    } else if (isNotDone) {
-                        html += '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">';
-                        html += '<span style="color:#e74c3c;font-size:1.2rem">✗</span>';
-                        html += '<span style="font-size:.65rem;color:var(--tx2)">' + personName + '</span>';
-                        html += '</div>';
-                    } else {
-                        html += '<span style="color:var(--tx3)">-</span>';
-                    }
-                } else {
-                    html += '<div style="display:flex;gap:4px;justify-content:center">';
-                    html += '<button type="button" class="platform-cell-btn" data-cell="' + cellId + '" data-status="done" onclick="selectPlatformCell(this)" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--cardBorder);background:' + (isChecked ? 'rgba(39,174,96,.2)' : 'var(--bg3)') + ';color:' + (isChecked ? '#27ae60' : 'var(--tx3)') + ';cursor:pointer;font-size:.9rem">✓</button>';
-                    html += '<button type="button" class="platform-cell-btn" data-cell="' + cellId + '" data-status="notdone" onclick="selectPlatformCell(this)" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--cardBorder);background:' + (isNotDone ? 'rgba(231,76,60,.2)' : 'var(--bg3)') + ';color:' + (isNotDone ? '#e74c3c' : 'var(--tx3)') + ';cursor:pointer;font-size:.9rem">✗</button>';
-                    html += '</div>';
-                }
-                html += '</td>';
-            });
+    // UI güncelle - ilgili butonları bul
+    const buttons = document.querySelectorAll(`button[onclick*="markPlatformCell('${timeSlot}', '${platform}'"]`);
+    buttons.forEach(btn => {
+        const btnIsOpen = btn.onclick.toString().includes('true)');
+        if (btnIsOpen === isOpen) {
+            btn.style.background = isOpen ? 'rgba(39,174,96,.3)' : 'rgba(231,76,60,.3)';
+            btn.style.color = isOpen ? '#27ae60' : '#e74c3c';
+            btn.style.borderColor = isOpen ? '#27ae60' : '#e74c3c';
+        } else {
+            btn.style.background = 'var(--bg3)';
+            btn.style.color = 'var(--tx3)';
+            btn.style.borderColor = 'var(--cardBorder)';
         }
-        
-        html += '</tr>';
     });
-    html += '</tbody></table></div>';
+}
+
+// Yeni platform check gönder
+async function submitPlatformChecklistNew(branch, date, timeSlot) {
+    const state = window._platformCheckState;
+    if (!state) return;
     
-    // Personel adı ve gönder butonu
-    if (!isSubmitted) {
-        html += '<div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap">';
-        html += '<div style="flex:1;min-width:200px">';
-        html += '<label class="form-label" style="margin-bottom:8px">👤 Personel Adı</label>';
-        html += '<input type="text" id="checklistPersonName" class="form-input" placeholder="Adınızı girin" value="' + (currentUser ? (currentUser.name || '') : '') + '">';
-        html += '</div>';
-        html += '<button class="btn btn-primary" onclick="submitPlatformChecklist(\'' + branch + '\', \'' + date + '\', \'' + timeSlot + '\')">✅ Kaydet</button>';
-        html += '</div>';
+    const personName = getUserNameFromEmail(currentUser?.email) || currentUser?.name;
+    if (!personName) {
+        toast('Personel adı belirlenemedi', 'error');
+        return;
     }
     
-    html += '</div>';
+    // Seçimleri kontrol et - en az bir seçim olmalı
+    const relevantSelections = Object.entries(state.selections).filter(([key]) => key.startsWith(timeSlot + '_'));
+    
+    if (relevantSelections.length === 0) {
+        toast('Lütfen en az bir platform durumu seçin', 'error');
+        return;
+    }
+    
+    // Tüm platformlar için seçim yapılmış mı?
+    const allSelected = state.platforms.every(p => {
+        const key = `${timeSlot}_${p}`;
+        return state.selections[key] !== undefined;
+    });
+    
+    if (!allSelected) {
+        if (!confirm('Bazı platformlar işaretlenmemiş. Yine de kaydetmek istiyor musunuz?')) {
+            return;
+        }
+    }
+    
+    try {
+        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_platform`;
+        const submissionId = `${checklistId}_${date}_${timeSlot.replace(':', '')}`;
+        
+        const platforms = state.platforms.map(p => ({
+            name: p,
+            isOpen: state.selections[`${timeSlot}_${p}`] ?? null
+        }));
+        
+        await db.collection('checklistSubmissions').doc(submissionId).set({
+            checklistId,
+            branch,
+            type: 'platform',
+            date,
+            timeSlot,
+            personName,
+            submittedBy: currentUser?.id,
+            submittedByName: currentUser?.name || personName,
+            submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            platforms
+        });
+        
+        toast(`${timeSlot} platform check kaydedildi!`, 'success');
+        loadChecklist();
+        
+    } catch (error) {
+        console.error('Platform check kayıt hatası:', error);
+        toast('Kayıt hatası: ' + error.message, 'error');
+    }
+}
+                            background:${isClosed ? 'rgba(231,76,60,.2)' : 'var(--bg3)'};
+                            border:2px solid ${isClosed ? '#e74c3c' : 'transparent'};
+                            color:${isClosed ? '#e74c3c' : 'var(--tx3)'};
+                            transition:all .2s">✗</span>
+                    </label>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                    </tbody>
+                </table>
+            </div>
+            
+            ${!isSubmitted ? `
+                <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
+                    <button class="btn btn-primary" onclick="submitPlatformChecklist('${branch}', '${date}', '${timeSlot}')">
+                        ✅ Platform Check'i Tamamla
+                    </button>
+                </div>
+            ` : ''}
+        </div>
+    `;
+    
     container.innerHTML = html;
 }
 
-// Platform hücre seçimi
-function selectPlatformCell(btn) {
-    var cellId = btn.dataset.cell;
-    var status = btn.dataset.status;
+// Platform status seç
+function selectPlatformStatus(btn, platformKey, isOpen) {
+    const row = btn.closest('tr');
+    const openSpan = row.querySelector('td:nth-child(2) span');
+    const closedSpan = row.querySelector('td:nth-child(3) span');
+    const openInput = row.querySelector('input[value="open"]');
+    const closedInput = row.querySelector('input[value="closed"]');
     
-    // Aynı hücredeki diğer butonu bul ve sıfırla
-    var allBtns = document.querySelectorAll('.platform-cell-btn[data-cell="' + cellId + '"]');
-    allBtns.forEach(function(b) {
-        b.style.background = 'var(--bg3)';
-        b.style.color = 'var(--tx3)';
-        b.classList.remove('selected');
-    });
+    // Reset
+    openSpan.style.background = 'var(--bg3)';
+    openSpan.style.borderColor = 'transparent';
+    openSpan.style.color = 'var(--tx3)';
+    closedSpan.style.background = 'var(--bg3)';
+    closedSpan.style.borderColor = 'transparent';
+    closedSpan.style.color = 'var(--tx3)';
     
-    // Bu butonu seç
-    btn.classList.add('selected');
-    if (status === 'done') {
-        btn.style.background = 'rgba(39,174,96,.2)';
-        btn.style.color = '#27ae60';
+    if (isOpen) {
+        openInput.checked = true;
+        openSpan.style.background = 'rgba(39,174,96,.2)';
+        openSpan.style.borderColor = '#27ae60';
+        openSpan.style.color = '#27ae60';
     } else {
-        btn.style.background = 'rgba(231,76,60,.2)';
-        btn.style.color = '#e74c3c';
+        closedInput.checked = true;
+        closedSpan.style.background = 'rgba(231,76,60,.2)';
+        closedSpan.style.borderColor = '#e74c3c';
+        closedSpan.style.color = '#e74c3c';
     }
 }
 
@@ -9806,6 +9905,9 @@ async function confirmAndSaveChecklist(branch, type, date, timeSlot, personName,
 
 // Checklist'i kaydet ve paylaş
 async function saveChecklistAndShare(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, totalCount) {
+    // Kronometreyi durdur
+    stopChecklistTimer();
+    
     try {
         const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
         const submissionId = `${checklistId}_${date}${timeSlot ? '_' + timeSlot.replace(':', '') : ''}`;
@@ -9940,55 +10042,51 @@ _Moonberry İK Sistemi_`;
 
 // Platform checklist gönder
 async function submitPlatformChecklist(branch, date, timeSlot) {
-    var personNameEl = document.getElementById('checklistPersonName');
-    var personName = personNameEl ? personNameEl.value.trim() : '';
+    const personName = document.getElementById('checklistPersonName')?.value?.trim();
     if (!personName) {
         toast('Lütfen personel adını girin', 'error');
         return;
     }
     
-    // Seçili hücreleri topla
-    var cells = {};
-    var selectedBtns = document.querySelectorAll('.platform-cell-btn.selected');
+    const platforms = [];
+    let allAnswered = true;
     
-    selectedBtns.forEach(function(btn) {
-        var cellId = btn.dataset.cell;
-        var status = btn.dataset.status;
-        cells[cellId] = {
-            status: status,
-            person: personName,
-            time: new Date().toISOString()
-        };
+    PLATFORMS.forEach(platform => {
+        const key = platform.replace(/\s/g, '_');
+        const openInput = document.querySelector(`input[name="platform_${key}"][value="open"]`);
+        const closedInput = document.querySelector(`input[name="platform_${key}"][value="closed"]`);
+        
+        if (!openInput?.checked && !closedInput?.checked) {
+            allAnswered = false;
+        } else {
+            platforms.push({
+                name: platform,
+                isOpen: openInput?.checked || false
+            });
+        }
     });
     
-    if (Object.keys(cells).length === 0) {
-        toast('Lütfen en az bir platform durumu seçin', 'error');
+    if (!allAnswered) {
+        toast('Lütfen tüm platformları işaretleyin', 'error');
         return;
     }
     
     try {
-        var checklistId = branch.replace(/[^a-zA-Z0-9]/g, '_') + '_platform';
-        var submissionId = checklistId + '_' + date;
-        
-        // Mevcut veriyi al ve güncelle (aynı gün içinde farklı kişiler işaretleyebilir)
-        var existingDoc = await db.collection('checklistSubmissions').doc(submissionId).get();
-        var existingCells = existingDoc.exists ? (existingDoc.data().cells || {}) : {};
-        
-        // Yeni hücreleri mevcut veriye ekle
-        Object.keys(cells).forEach(function(key) {
-            existingCells[key] = cells[key];
-        });
+        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_platform`;
+        const submissionId = `${checklistId}_${date}_${timeSlot.replace(':', '')}`;
         
         await db.collection('checklistSubmissions').doc(submissionId).set({
-            checklistId: checklistId,
-            branch: branch,
+            checklistId,
+            branch,
             type: 'platform',
-            date: date,
-            submittedBy: currentUser ? currentUser.id : null,
-            submittedByName: currentUser ? currentUser.name : personName,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            cells: existingCells
-        }, { merge: true });
+            date,
+            timeSlot,
+            personName,
+            submittedBy: currentUser?.id,
+            submittedByName: currentUser?.name || personName,
+            submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            platforms
+        });
         
         toast('Platform check kaydedildi!', 'success');
         loadChecklist();
@@ -9997,6 +10095,135 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
         console.error('Platform check kayıt hatası:', error);
         toast('Kayıt hatası!', 'error');
     }
+}
+
+// Checklist PDF İndir
+async function downloadChecklistPDF(branch, type, date, timeSlot, isSubmitted) {
+    const typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === type);
+    const typeName = typeInfo?.name || type;
+    const personName = document.getElementById('checklistPersonName')?.value || currentUser?.name || '-';
+    const dateStr = new Date(date).toLocaleDateString('tr-TR', {day: 'numeric', month: 'long', year: 'numeric', weekday: 'long'});
+    
+    // Maddeler ve durumları
+    const items = [];
+    document.querySelectorAll('#checklistItems .checklist-item').forEach((item, index) => {
+        const textEl = item.querySelector('div[style*="flex:1"]');
+        const text = textEl?.textContent?.trim() || '';
+        const doneInput = item.querySelector('input[value="done"]');
+        const notdoneInput = item.querySelector('input[value="notdone"]');
+        
+        let status = 'İşaretlenmedi';
+        let color = '#999999';
+        if (doneInput?.checked) {
+            status = 'Yapıldı';
+            color = '#27ae60';
+        } else if (notdoneInput?.checked) {
+            status = 'Yapılmadı';
+            color = '#e74c3c';
+        }
+        
+        items.push({num: index + 1, text, status, color});
+    });
+    
+    // Süre bilgileri
+    const startTimeStr = checklistStartTime ? checklistStartTime.toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit', second:'2-digit'}) : '-';
+    const endTimeStr = new Date().toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    const elapsedSeconds = checklistStartTime ? Math.floor((new Date() - checklistStartTime) / 1000) : 0;
+    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+    const elapsedSecs = elapsedSeconds % 60;
+    const totalTimeStr = `${elapsedMinutes} dk ${elapsedSecs} sn`;
+    
+    // Tamamlama oranı
+    const doneCount = items.filter(i => i.status === 'Yapıldı').length;
+    const notDoneCount = items.filter(i => i.status === 'Yapılmadı').length;
+    const completionRate = items.length > 0 ? Math.round((doneCount / items.length) * 100) : 0;
+    
+    // PDF oluştur
+    const docDefinition = {
+        pageSize: 'A4',
+        pageMargins: [40, 60, 40, 60],
+        content: [
+            {text: 'MOONBERRY COFFEE', style: 'brand', alignment: 'center'},
+            {text: 'Checklist Raporu', style: 'subtitle', alignment: 'center', margin: [0, 0, 0, 20]},
+            
+            // Bilgi kutusu
+            {
+                table: {
+                    widths: ['*', '*'],
+                    body: [
+                        [{text: 'Checklist Türü', style: 'label'}, {text: typeName, style: 'value'}],
+                        [{text: 'Şube', style: 'label'}, {text: branch, style: 'value'}],
+                        [{text: 'Tarih', style: 'label'}, {text: dateStr, style: 'value'}],
+                        [{text: 'Personel', style: 'label'}, {text: personName, style: 'value'}],
+                        [{text: 'Başlangıç Saati', style: 'label'}, {text: startTimeStr, style: 'value'}],
+                        [{text: 'Bitiş Saati', style: 'label'}, {text: endTimeStr, style: 'value'}],
+                        [{text: 'Toplam Süre', style: 'label'}, {text: totalTimeStr, style: 'value'}],
+                        [{text: 'Tamamlama Oranı', style: 'label'}, {text: `%${completionRate} (${doneCount}/${items.length})`, style: 'value', color: completionRate === 100 ? '#27ae60' : '#f39c12'}]
+                    ]
+                },
+                layout: 'lightHorizontalLines',
+                margin: [0, 0, 0, 20]
+            },
+            
+            {text: 'Kontrol Maddeleri', style: 'sectionHeader', margin: [0, 10, 0, 10]},
+            
+            // Maddeler tablosu
+            {
+                table: {
+                    headerRows: 1,
+                    widths: [30, '*', 70],
+                    body: [
+                        [
+                            {text: '#', style: 'tableHeader'},
+                            {text: 'Madde', style: 'tableHeader'},
+                            {text: 'Durum', style: 'tableHeader'}
+                        ],
+                        ...items.map(item => [
+                            {text: item.num.toString(), alignment: 'center'},
+                            {text: item.text, fontSize: 9},
+                            {text: item.status, color: item.color, bold: true, alignment: 'center'}
+                        ])
+                    ]
+                },
+                layout: {
+                    hLineWidth: () => 0.5,
+                    vLineWidth: () => 0.5,
+                    hLineColor: () => '#e0e0e0',
+                    vLineColor: () => '#e0e0e0',
+                    paddingLeft: () => 8,
+                    paddingRight: () => 8,
+                    paddingTop: () => 6,
+                    paddingBottom: () => 6
+                }
+            },
+            
+            // Özet
+            {
+                columns: [
+                    {text: `Yapıldı: ${doneCount}`, color: '#27ae60', bold: true},
+                    {text: `Yapılmadı: ${notDoneCount}`, color: '#e74c3c', bold: true},
+                    {text: `Toplam: ${items.length}`, bold: true}
+                ],
+                margin: [0, 15, 0, 0]
+            },
+            
+            // Footer
+            {text: `Oluşturulma: ${new Date().toLocaleString('tr-TR')}`, style: 'footer', margin: [0, 30, 0, 0]}
+        ],
+        styles: {
+            brand: {fontSize: 18, bold: true, color: '#ff8674'},
+            subtitle: {fontSize: 14, color: '#666'},
+            label: {fontSize: 10, color: '#666', margin: [0, 4, 0, 4]},
+            value: {fontSize: 10, bold: true, margin: [0, 4, 0, 4]},
+            sectionHeader: {fontSize: 12, bold: true, color: '#008c95'},
+            tableHeader: {fontSize: 10, bold: true, fillColor: '#f5f5f5', color: '#333'},
+            footer: {fontSize: 8, color: '#999', alignment: 'center'}
+        }
+    };
+    
+    // PDF oluştur ve indir
+    pdfMake.createPdf(docDefinition).download(`checklist_${branch.replace(/\s/g, '_')}_${type}_${date}.pdf`);
+    toast('PDF indiriliyor...', 'success');
 }
 
 // Checklist madde ekle modal
