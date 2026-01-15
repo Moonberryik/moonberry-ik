@@ -440,6 +440,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <div id="userRole" style="color:var(--sidebarTx2);font-size:.7rem">-</div>
                         </div>
                     </div>
+                    <!-- Kullanıcı Değiştir Butonu (Sadece Yönetici) -->
+                    <button id="switchUserBtn" onclick="showSwitchUserModal()" style="display:none;width:100%;padding:8px;margin-bottom:8px;background:rgba(0,140,149,.2);border:1px solid rgba(0,140,149,.3);border-radius:8px;color:#00b4a0;font-size:.75rem;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(0,140,149,.3)'" onmouseout="this.style.background='rgba(0,140,149,.2)'">
+                        👁️ Kullanıcı Gözünden Gör
+                    </button>
                     <button onclick="logout()" style="width:100%;padding:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--sidebarTx2);font-size:.8rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.background='rgba(231,76,60,.2)';this.style.borderColor='rgba(231,76,60,.4)';this.style.color='#e74c3c'" onmouseout="this.style.background='rgba(255,255,255,.1)';this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--sidebarTx2)'">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                         Çıkış Yap
@@ -1073,7 +1077,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <input type="date" id="checklistDate" class="form-input" onchange="loadChecklist()">
                         </div>
                         <div class="form-group" style="margin-bottom:0;min-width:120px;display:none" id="checklistTimeSlotGroup">
-                            <label class="form-label">Saat Dilimi</label>
+                            <label class="form-label">Saat</label>
                             <select id="checklistTimeSlot" class="form-select" onchange="loadChecklist()">
                                 <option value="">-- Seçin --</option>
                             </select>
@@ -2137,6 +2141,142 @@ async function logout() {
     }
 }
 
+// Kullanıcı Değiştir (Yönetici için önizleme)
+let originalUser = null; // Asıl kullanıcıyı sakla
+let isViewingAsOther = false;
+
+async function showSwitchUserModal() {
+    if (currentUser?.role !== 'yonetici' && currentUser?.role !== 'bolge_muduru') {
+        showToast('Bu özellik sadece yöneticiler için', 'error');
+        return;
+    }
+    
+    // Kullanıcıları Firebase'den çek
+    const usersSnap = await db.collection('users').get();
+    const users = [];
+    usersSnap.forEach(doc => {
+        const u = doc.data();
+        if (u.email !== currentUser.email) { // Kendisi hariç
+            users.push({ id: doc.id, ...u });
+        }
+    });
+    
+    const roleNames = {
+        'yonetici': '👑 Yönetici',
+        'bolge_muduru': '🏢 Bölge Müdürü',
+        'magaza_muduru': '🏪 Mağaza Müdürü',
+        'barista': '☕ Barista'
+    };
+    
+    let usersHtml = users.map(u => `
+        <div onclick="switchToUser('${u.id}', '${u.email}', '${u.name}', '${u.role}', '${u.branch || ''}')" 
+            style="padding:12px;background:var(--bg2);border-radius:10px;cursor:pointer;transition:all .2s;border:1px solid var(--cardBorder);margin-bottom:8px"
+            onmouseover="this.style.background='var(--bg3)';this.style.borderColor='var(--accent)'"
+            onmouseout="this.style.background='var(--bg2)';this.style.borderColor='var(--cardBorder)'">
+            <div style="display:flex;align-items:center;gap:12px">
+                <div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600">${(u.name || u.email).charAt(0).toUpperCase()}</div>
+                <div style="flex:1">
+                    <div style="font-weight:600;color:var(--tx)">${u.name || u.email}</div>
+                    <div style="font-size:.75rem;color:var(--tx2)">${roleNames[u.role] || u.role} ${u.branch ? '• ' + u.branch : ''}</div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    showModal(`
+        <div style="text-align:center;margin-bottom:20px">
+            <div style="font-size:2rem;margin-bottom:8px">👁️</div>
+            <div style="font-size:1.2rem;font-weight:700;color:var(--tx)">Kullanıcı Gözünden Gör</div>
+            <div style="font-size:.85rem;color:var(--tx2)">Seçtiğiniz kullanıcının gördüğü ekranı göreceksiniz</div>
+        </div>
+        <div style="max-height:400px;overflow-y:auto">
+            ${usersHtml || '<div style="text-align:center;color:var(--tx2);padding:20px">Başka kullanıcı yok</div>'}
+        </div>
+        <div style="margin-top:16px;text-align:center">
+            <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
+        </div>
+    `);
+}
+
+function switchToUser(userId, email, name, role, branch) {
+    // Asıl kullanıcıyı sakla
+    if (!originalUser) {
+        originalUser = { ...currentUser };
+    }
+    
+    // Geçici kullanıcıya geç
+    isViewingAsOther = true;
+    currentUser = {
+        ...currentUser,
+        id: userId,
+        email: email,
+        name: name,
+        role: role,
+        branch: branch,
+        isViewing: true // Önizleme modunda olduğunu işaretle
+    };
+    
+    // UI'ı güncelle
+    updateUserUI();
+    applyUserPermissions();
+    
+    // Banner göster
+    showViewingBanner(name, role);
+    
+    closeModal();
+    showToast(`${name} olarak görüntülüyorsunuz`, 'success');
+    
+    // Sayfayı yenile
+    goTo('dashboard');
+}
+
+function showViewingBanner(name, role) {
+    const roleNames = { 'yonetici': 'Yönetici', 'bolge_muduru': 'Bölge Müdürü', 'magaza_muduru': 'Mağaza Müdürü', 'barista': 'Barista' };
+    
+    // Eski banner varsa kaldır
+    const oldBanner = document.getElementById('viewingBanner');
+    if (oldBanner) oldBanner.remove();
+    
+    const banner = document.createElement('div');
+    banner.id = 'viewingBanner';
+    banner.style.cssText = 'position:fixed;top:0;left:260px;right:0;z-index:9999;background:linear-gradient(135deg,#f39c12,#e67e22);color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;font-size:.85rem;box-shadow:0 2px 12px rgba(0,0,0,.2)';
+    banner.innerHTML = `
+        <div>
+            <strong>👁️ ÖNİZLEME:</strong> ${name} (${roleNames[role] || role}) olarak görüntülüyorsunuz
+        </div>
+        <button onclick="stopViewingAsOther()" style="background:#fff;color:#e67e22;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:.8rem">
+            ✕ Önizlemeyi Sonlandır
+        </button>
+    `;
+    document.body.appendChild(banner);
+    
+    // Main content'i aşağı kaydır
+    document.querySelector('.main').style.marginTop = '46px';
+}
+
+function stopViewingAsOther() {
+    if (!originalUser) return;
+    
+    // Asıl kullanıcıya geri dön
+    currentUser = { ...originalUser };
+    originalUser = null;
+    isViewingAsOther = false;
+    
+    // Banner'ı kaldır
+    const banner = document.getElementById('viewingBanner');
+    if (banner) banner.remove();
+    
+    // Main content margin'ı sıfırla
+    document.querySelector('.main').style.marginTop = '0';
+    
+    // UI'ı güncelle
+    updateUserUI();
+    applyUserPermissions();
+    
+    showToast('Önizleme sonlandırıldı', 'success');
+    goTo('dashboard');
+}
+
 // Sidebar nav grup toggle
 function toggleNavGroup(label) {
     label.classList.toggle('collapsed');
@@ -2361,6 +2501,16 @@ function applyUserPermissions() {
     }
     if (userAvatarEl && currentUser.name) {
         userAvatarEl.textContent = currentUser.name.charAt(0).toUpperCase();
+    }
+    
+    // Kullanıcı Değiştir butonu (sadece yönetici/bölge müdürü)
+    const switchUserBtn = document.getElementById('switchUserBtn');
+    if (switchUserBtn) {
+        if ((currentUser.role === 'yonetici' || currentUser.role === 'bolge_muduru') && !isViewingAsOther) {
+            switchUserBtn.style.display = 'block';
+        } else {
+            switchUserBtn.style.display = 'none';
+        }
     }
     
     // Yönetici her şeye erişebilir
@@ -8578,6 +8728,7 @@ function getRoleName(role) {
 // Checklist zamanlama değişkenleri
 let checklistStartTime = null;
 let checklistFirstItemTime = null;
+let checklistTimerInterval = null; // Canlı kronometr için
 let checklistExpectedDuration = 0; // saniye cinsinden
 
 // Personel-şube eşleştirmesi (Firebase'den yüklenecek)
@@ -8810,16 +8961,24 @@ async function loadChecklist() {
         timeSlotSelect.innerHTML = '<option value="">-- Saat Seçin --</option>' + 
             timeSlots.map(t => `<option value="${t}">${t}</option>`).join('');
         
-        // Saat seçilmemişse bekle
+        // Otomatik en yakın saati seç
         if (!timeSlotSelect.value) {
-            container.innerHTML = `
-                <div style="text-align:center;padding:60px;color:var(--tx2)">
-                    <div style="font-size:4rem;margin-bottom:16px">⏰</div>
-                    <div style="font-size:1.1rem;margin-bottom:8px">Saat Dilimi Seçin</div>
-                    <div style="font-size:.9rem">Bu checklist günün belirli saatlerinde doldurulur</div>
-                </div>
-            `;
-            return;
+            const now = new Date();
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            let closestSlot = timeSlots[0];
+            let minDiff = Infinity;
+            
+            timeSlots.forEach(slot => {
+                const [h, m] = slot.split(':').map(Number);
+                const slotMinutes = h * 60 + m;
+                const diff = Math.abs(slotMinutes - currentMinutes);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestSlot = slot;
+                }
+            });
+            
+            timeSlotSelect.value = closestSlot;
         }
     } else {
         timeSlotGroup.style.display = 'none';
@@ -8894,8 +9053,45 @@ async function loadChecklist() {
             console.warn('Submission kontrol hatası:', subError);
         }
         
+        // Temizlik ve Bakım (aylik) için tarih ve shift tipi filtreleme
+        let filteredItems = items;
+        let showAllMode = localStorage.getItem('checklistShowAll_' + type) === 'true';
+        
+        if (type === 'aylik' && !showAllMode) {
+            const selectedDay = new Date(date).getDate();
+            const currentHour = new Date().getHours();
+            
+            // Shift tipini belirle: 09-14 arası açılış, 14-18 arası ara, 18+ kapanış
+            let currentShiftType = 'ara';
+            if (currentHour < 14) currentShiftType = 'acilis';
+            else if (currentHour >= 18) currentShiftType = 'kapanis';
+            
+            filteredItems = items.filter(item => {
+                // Yeni format: days array
+                if (item.days && Array.isArray(item.days)) {
+                    const dayMatch = item.days.includes(selectedDay);
+                    // daily true ise her gün göster
+                    if (item.daily) return true;
+                    if (!dayMatch) return false;
+                    // Shift tipi kontrolü
+                    if (item.shiftType && item.shiftType !== currentShiftType) return false;
+                    return true;
+                }
+                
+                // Eski format: "(ayın 3, 11, 19)" formatını parse et
+                const match = item.text.match(/\(ayın\s*([\d,\-\s]+)\)/i);
+                if (match) {
+                    // "2-4-6" veya "2, 4, 6" formatlarını destekle
+                    const daysStr = match[1].replace(/-/g, ',');
+                    const days = daysStr.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d));
+                    return days.includes(selectedDay);
+                }
+                return true; // Tarih bilgisi yoksa her zaman göster
+            });
+        }
+        
         // Formu render et
-        renderChecklistForm(items, branch, type, date, timeSlot, submittedData);
+        renderChecklistForm(filteredItems, branch, type, date, timeSlot, submittedData, items.length, showAllMode);
         
     } catch (error) {
         console.error('Checklist yükleme hatası:', error);
@@ -8909,16 +9105,18 @@ async function loadChecklist() {
 // Checklist formunu render et
 let checklistEditMode = false;
 
-function renderChecklistForm(items, branch, type, date, timeSlot, submittedData) {
+function renderChecklistForm(items, branch, type, date, timeSlot, submittedData, totalItemCount, showAllMode) {
     const container = document.getElementById('checklistFormContainer');
     const isAdmin = currentUser?.role === 'yonetici' || currentUser?.role === 'bolge_muduru';
     const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
     const isSubmitted = !!submittedData;
+    totalItemCount = totalItemCount || items.length;
     
     // Zamanlama sıfırla (yeni checklist)
     if (!isSubmitted) {
         checklistStartTime = null;
         checklistFirstItemTime = null;
+        if (checklistTimerInterval) { clearInterval(checklistTimerInterval); checklistTimerInterval = null; }
         // Beklenen süreyi hesapla
         checklistExpectedDuration = items.reduce((sum, item) => sum + (item.duration || 60), 0);
     }
@@ -8937,8 +9135,32 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
     const expectedMinutes = Math.round(checklistExpectedDuration / 60);
     const iconSvg = getIcon(typeInfo?.icon || 'clipboard-check');
     
+    // Aylik (Temizlik ve Bakım) için shift tipi bilgisi
+    let shiftTypeLabel = '';
+    if (type === 'aylik') {
+        const currentHour = new Date().getHours();
+        if (currentHour < 14) shiftTypeLabel = '🌅 Açılış Görevleri';
+        else if (currentHour >= 18) shiftTypeLabel = '🌙 Kapanış Görevleri';
+        else shiftTypeLabel = '☀️ Ara Görevler';
+    }
+    
     let html = `
         <div class="form-section">
+            ${type === 'aylik' ? `
+                <div style="margin-bottom:16px;padding:12px 16px;background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(0,140,149,.05));border:1px solid rgba(0,140,149,.2);border-radius:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+                    <div>
+                        <div style="font-weight:600;color:var(--tx);font-size:.9rem">
+                            📅 ${new Date(date).getDate()} ${new Date(date).toLocaleDateString('tr-TR', {month: 'long'})} • ${shiftTypeLabel}
+                        </div>
+                        <div style="font-size:.8rem;color:var(--tx2)">
+                            Bugün için ${items.length} / ${totalItemCount} madde ${showAllMode ? '(tümü gösteriliyor)' : ''}
+                        </div>
+                    </div>
+                    <button class="btn btn-sm ${showAllMode ? 'btn-primary' : 'btn-ghost'}" onclick="toggleShowAllChecklist('${type}')">
+                        ${showAllMode ? '📋 Bugünü Göster' : '📋 Tümünü Göster'}
+                    </button>
+                </div>
+            ` : ''}
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
                 <div>
                     <div style="font-size:1.3rem;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:10px">
@@ -8983,8 +9205,8 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
                             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                             Tahmini Süre
                         </label>
-                        <div style="font-size:1.1rem;font-weight:600;color:var(--tx)">${expectedMinutes} dakika</div>
-                        <div style="font-size:.75rem;color:var(--tx3)">${items.length} madde</div>
+                        <div style="font-size:.95rem;font-weight:600;color:var(--tx)">~${expectedMinutes} dk</div>
+                        <div style="font-size:.7rem;color:var(--tx3)">${items.length} madde</div>
                     </div>
                 </div>
                 
@@ -8994,14 +9216,29 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
                         <div style="display:flex;align-items:center;gap:8px">
                             <div style="width:8px;height:8px;background:#27ae60;border-radius:50%;animation:pulse 1.5s infinite"></div>
                             <span style="font-weight:600;color:var(--tx)">Checklist Başladı</span>
+                            <span style="font-size:.85rem;color:var(--tx2)">(<span id="checklistStartTimeDisplay">--:--:--</span>)</span>
                         </div>
-                        <div style="font-size:.9rem;color:var(--tx2)">
-                            <span id="checklistStartTimeDisplay">--:--:--</span>
+                        <div style="display:flex;align-items:center;gap:12px">
+                            <div style="font-size:1.2rem;font-weight:700;color:var(--accent2);font-family:var(--mono)" id="checklistChronoDisplay">00:00:00</div>
                         </div>
                     </div>
                 </div>
                 
                 <style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}</style>
+                
+                ${type === 'aylik' ? `
+                <div style="margin-bottom:16px;padding:14px;background:linear-gradient(135deg,rgba(52,152,219,.1),rgba(52,152,219,.05));border:1px solid rgba(52,152,219,.2);border-radius:10px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+                        <div style="font-size:.85rem;color:var(--tx)">
+                            📅 <strong>Bugün:</strong> Ayın ${new Date(date).getDate()}. günü için ${items.length} görev
+                            ${totalItemCount > items.length ? ` <span style="color:var(--tx3)">(Toplam ${totalItemCount} görev)</span>` : ''}
+                        </div>
+                        <button class="btn btn-sm ${showAllMode ? 'btn-primary' : 'btn-ghost'}" onclick="toggleChecklistShowAll('${type}')">
+                            ${showAllMode ? '📅 Tarihe Göre Göster' : '📋 Tamamını Göster'}
+                        </button>
+                    </div>
+                </div>
+                ` : ''}
                 
                 <div style="margin-bottom:16px;padding:12px;background:rgba(255,134,116,.1);border-radius:10px;font-size:.85rem;color:var(--tx2)">
                     ⚠️ <strong>Önemli:</strong> İlk maddeyi işaretlediğinizde süre başlar. Tüm maddeleri dikkatlice kontrol edin.
@@ -9106,6 +9343,14 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
     container.innerHTML = html;
 }
 
+// Tümünü göster/gizle toggle
+function toggleShowAllChecklist(type) {
+    const key = 'checklistShowAll_' + type;
+    const current = localStorage.getItem(key) === 'true';
+    localStorage.setItem(key, (!current).toString());
+    loadChecklist();
+}
+
 // Düzenleme modunu aç/kapat
 function toggleChecklistEditMode(branch, type, date, timeSlot) {
     checklistEditMode = !checklistEditMode;
@@ -9178,6 +9423,19 @@ function selectCheckOption(btn, itemId, value) {
             }
         }
         
+        // Canlı kronometr başlat
+        if (checklistTimerInterval) clearInterval(checklistTimerInterval);
+        checklistTimerInterval = setInterval(() => {
+            const elapsed = Math.floor((new Date() - checklistStartTime) / 1000);
+            const hours = Math.floor(elapsed / 3600);
+            const minutes = Math.floor((elapsed % 3600) / 60);
+            const seconds = elapsed % 60;
+            const chronoDisplay = document.getElementById('checklistChronoDisplay');
+            if (chronoDisplay) {
+                chronoDisplay.textContent = `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+            }
+        }, 1000);
+        
         // Bildirim göster
         const typeSelect = document.getElementById('checklistType');
         const typeName = typeSelect?.selectedOptions?.[0]?.text || 'Checklist';
@@ -9234,8 +9492,132 @@ function checkAllItemsMarked() {
             submitBtn.classList.remove('btn-ghost');
             submitBtn.classList.add('btn-primary');
             submitBtn.innerHTML = '✅ Checklist\'i Tamamla';
+            
+            // PDF İndir butonu göster
+            let pdfBtn = document.getElementById('checklistPdfBtn');
+            if (!pdfBtn) {
+                pdfBtn = document.createElement('button');
+                pdfBtn.id = 'checklistPdfBtn';
+                pdfBtn.className = 'btn btn-ghost';
+                pdfBtn.innerHTML = '📄 PDF İndir';
+                pdfBtn.onclick = downloadChecklistPdf;
+                pdfBtn.style.marginRight = '8px';
+                submitBtn.parentElement.insertBefore(pdfBtn, submitBtn);
+            }
         }
     }
+}
+
+// Temizlik ve Bakım için Tamamını Göster/Gizle toggle
+function toggleChecklistShowAll(type) {
+    const key = 'checklistShowAll_' + type;
+    const current = localStorage.getItem(key) === 'true';
+    localStorage.setItem(key, (!current).toString());
+    loadChecklist();
+}
+
+// Checklist PDF İndir fonksiyonu
+function downloadChecklistPdf() {
+    const branch = document.getElementById('checklistSube').value;
+    const date = document.getElementById('checklistDate').value;
+    const timeSlot = document.getElementById('checklistTimeSlot').value;
+    const personName = document.getElementById('checklistPersonName')?.value || currentUser?.name || '';
+    const typeSelect = document.getElementById('checklistType');
+    const typeName = typeSelect?.selectedOptions?.[0]?.text || 'Checklist';
+    
+    const items = document.querySelectorAll('#checklistItems .checklist-item');
+    let doneCount = 0, notDoneCount = 0;
+    const itemsList = [];
+    
+    items.forEach((item, idx) => {
+        const text = item.querySelector('div[style*="flex:1"]')?.textContent?.trim() || '';
+        const doneInput = item.querySelector('input[value="done"]');
+        const notdoneInput = item.querySelector('input[value="notdone"]');
+        const isDone = doneInput?.checked;
+        const isNotDone = notdoneInput?.checked;
+        
+        if (isDone) doneCount++;
+        if (isNotDone) notDoneCount++;
+        
+        itemsList.push({
+            no: idx + 1,
+            text: text,
+            status: isDone ? 'Yapıldı ✓' : isNotDone ? 'Yapılmadı ✗' : '-',
+            isDone: isDone
+        });
+    });
+    
+    const now = new Date();
+    const elapsed = checklistStartTime ? Math.floor((now - checklistStartTime) / 1000) : 0;
+    const elapsedMin = Math.floor(elapsed / 60);
+    const elapsedSec = elapsed % 60;
+    const dateStr = new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'});
+    
+    const docDefinition = {
+        pageSize: 'A4',
+        pageMargins: [40, 60, 40, 60],
+        content: [
+            {text: 'MOONBERRY COFFEE', style: 'header', alignment: 'center'},
+            {text: typeName.toUpperCase() + ' CHECKLIST', style: 'subheader', alignment: 'center'},
+            {text: ' ', margin: [0, 10]},
+            {
+                columns: [
+                    {text: 'Şube: ' + branch, style: 'info'},
+                    {text: 'Tarih: ' + dateStr, style: 'info', alignment: 'right'}
+                ]
+            },
+            {
+                columns: [
+                    {text: 'Personel: ' + personName, style: 'info'},
+                    {text: timeSlot ? 'Saat: ' + timeSlot : '', style: 'info', alignment: 'right'}
+                ]
+            },
+            {text: ' ', margin: [0, 5]},
+            {
+                columns: [
+                    {text: 'Başlangıç: ' + (checklistStartTime ? checklistStartTime.toLocaleTimeString('tr-TR') : '-'), style: 'info'},
+                    {text: 'Bitiş: ' + now.toLocaleTimeString('tr-TR'), style: 'info', alignment: 'center'},
+                    {text: 'Süre: ' + elapsedMin + ' dk ' + elapsedSec + ' sn', style: 'info', alignment: 'right'}
+                ]
+            },
+            {text: ' ', margin: [0, 10]},
+            {
+                style: 'tableExample',
+                table: {
+                    headerRows: 1,
+                    widths: [30, '*', 80],
+                    body: [
+                        [{text: 'No', style: 'tableHeader'}, {text: 'Madde', style: 'tableHeader'}, {text: 'Durum', style: 'tableHeader'}],
+                        ...itemsList.map(item => [
+                            {text: item.no.toString(), alignment: 'center'},
+                            {text: item.text},
+                            {text: item.status, alignment: 'center', color: item.isDone ? '#27ae60' : '#e74c3c', bold: true}
+                        ])
+                    ]
+                }
+            },
+            {text: ' ', margin: [0, 15]},
+            {
+                columns: [
+                    {text: 'Yapıldı: ' + doneCount, style: 'summary', color: '#27ae60'},
+                    {text: 'Yapılmadı: ' + notDoneCount, style: 'summary', color: '#e74c3c'},
+                    {text: 'Toplam: ' + items.length, style: 'summary'}
+                ]
+            }
+        ],
+        styles: {
+            header: {fontSize: 18, bold: true, color: '#008c95', margin: [0, 0, 0, 5]},
+            subheader: {fontSize: 14, bold: true, color: '#ff8674', margin: [0, 0, 0, 10]},
+            info: {fontSize: 10, color: '#555', margin: [0, 2]},
+            tableHeader: {bold: true, fontSize: 10, color: '#fff', fillColor: '#008c95'},
+            tableExample: {margin: [0, 5, 0, 15], fontSize: 9},
+            summary: {fontSize: 11, bold: true, alignment: 'center'}
+        }
+    };
+    
+    const fileName = `checklist_${branch.replace(/[^a-zA-Z0-9]/g,'_')}_${typeName.replace(/[^a-zA-Z0-9]/g,'_')}_${date}.pdf`;
+    pdfMake.createPdf(docDefinition).download(fileName);
+    showToast('PDF indirildi', 'success');
 }
 
 // Platform checklist render
