@@ -300,9 +300,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 <body>
     <!-- AUTH GUARD - Giriş yapmamışsa login.html'e yönlendir -->
     <script>
-        // Sayfa yüklenmeden önce hızlı auth kontrolü
         (function() {
-            // Firebase yüklenene kadar bekle
             const checkAuth = setInterval(() => {
                 if (typeof firebase !== 'undefined' && firebase.auth) {
                     clearInterval(checkAuth);
@@ -313,8 +311,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     });
                 }
             }, 50);
-            
-            // 3 saniye içinde yüklenmediyse yine yönlendir
             setTimeout(() => {
                 clearInterval(checkAuth);
                 if (typeof firebase === 'undefined' || !firebase.auth().currentUser) {
