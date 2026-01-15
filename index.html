@@ -2040,20 +2040,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Kullanıcı bilgilerini Firestore'dan al
                 try {
+                    // Önce config'i yükle (email mapping için)
+                    await loadSystemConfig();
+                    
                     const userDoc = await db.collection('users').doc(user.uid).get();
                     if (userDoc.exists) {
                         currentUser = { id: user.uid, email: user.email, ...userDoc.data() };
                     } else {
-                        // İlk admin girişi
-                        const isAdmin = user.email === 'admin@moonberrycoffee.com';
+                        // Email'den kullanıcı bilgisi al
+                        const emailMatch = personnelMapping.find(p => p.email?.toLowerCase() === user.email?.toLowerCase());
+                        const isAdmin = user.email === 'admin@moonberrycoffee.com' || user.email === 'tamer@moonberrycoffee.com';
+                        
                         currentUser = {
                             id: user.uid,
                             email: user.email,
-                            name: isAdmin ? 'Yönetici' : user.email.split('@')[0],
-                            role: isAdmin ? 'yonetici' : 'magaza_muduru',
-                            branch: isAdmin ? 'all' : ''
+                            name: emailMatch?.name || (isAdmin ? 'Yönetici' : user.email.split('@')[0]),
+                            role: emailMatch?.role || (isAdmin ? 'yonetici' : 'barista'),
+                            branch: emailMatch?.branch || (isAdmin ? 'all' : '')
                         };
                     }
+                    
+                    // Kullanıcı adını sidebar'da göster
+                    document.getElementById('userName').textContent = currentUser.name || currentUser.email;
+                    document.getElementById('userRole').textContent = getRoleName(currentUser.role);
                     
                     // Session durumunu kontrol et
                     const sessionValid = await checkSessionValidity();
@@ -8525,33 +8534,46 @@ function getWeekOptions() {
 
 // ==================== CHECKLIST MODULE ====================
 // Checklist türleri - şubeye göre
-const CHECKLIST_TYPES = {
-    'Tuzla Port': [
-        { id: 'acilis', name: '☀️ Açılış', timeSlots: null, icon: '🌅' },
-        { id: 'kapanis', name: '🌙 Kapanış', timeSlots: null, icon: '🌆' },
-        { id: 'guncel', name: '📋 Güncel Kontrol', timeSlots: ['10:00', '14:00', '18:00'], icon: '📋' },
-        { id: 'platform', name: '📱 Platform Check', timeSlots: ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'], icon: '📱' },
-        { id: 'temizlik', name: '🧹 Temizlik Çizelgesi', timeSlots: null, icon: '🧹' },
-        { id: 'mudur', name: '👔 Müdür Checklist', timeSlots: null, icon: '👔', managerOnly: true }
-    ],
-    'Şişli (Merkez)': [
-        { id: 'acilis', name: '☀️ Açılış', timeSlots: null, icon: '🌅' },
-        { id: 'kapanis', name: '🌙 Kapanış', timeSlots: null, icon: '🌆' },
-        { id: 'guncel', name: '📋 Güncel Kontrol', timeSlots: ['14:00', '18:00', '22:00'], icon: '📋' },
-        { id: 'platform', name: '📱 Platform Check', timeSlots: ['10:00', '14:00', '18:00', '22:00'], icon: '📱' },
-        { id: 'aylik', name: '📅 Aylık Bakım', timeSlots: null, icon: '📅' },
-        { id: 'mudur', name: '👔 Müdür Checklist', timeSlots: null, icon: '👔', managerOnly: true }
-    ]
+// Checklist türleri - Firebase'den yüklenecek
+let CHECKLIST_TYPES = {};
+let SYSTEM_CONFIG = {};
+
+// Platform listesi - Firebase'den yüklenecek
+let PLATFORMS = ['Trendyol', 'Yemek Sepeti', 'Getir Yemek', 'Migros'];
+
+// WhatsApp Grup Linkleri - Firebase'den yüklenecek
+let WHATSAPP_GROUPS = {};
+
+// Modern SVG İkonlar
+const ICONS = {
+    sunrise: '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 18a5 5 0 00-10 0"/><line x1="12" y1="2" x2="12" y2="9"/><line x1="4.22" y1="10.22" x2="5.64" y2="11.64"/><line x1="1" y1="18" x2="3" y2="18"/><line x1="21" y1="18" x2="23" y2="18"/><line x1="18.36" y1="11.64" x2="19.78" y2="10.22"/><line x1="23" y1="22" x2="1" y2="22"/><polyline points="8 6 12 2 16 6"/></svg>',
+    sunset: '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 18a5 5 0 00-10 0"/><line x1="12" y1="9" x2="12" y2="2"/><line x1="4.22" y1="10.22" x2="5.64" y2="11.64"/><line x1="1" y1="18" x2="3" y2="18"/><line x1="21" y1="18" x2="23" y2="18"/><line x1="18.36" y1="11.64" x2="19.78" y2="10.22"/><line x1="23" y1="22" x2="1" y2="22"/><polyline points="16 6 12 10 8 6"/></svg>',
+    'clipboard-check': '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>',
+    smartphone: '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
+    'calendar-week': '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/></svg>',
+    calendar: '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+    'user-check': '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>',
+    check: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>',
+    x: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+    trash: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>'
 };
 
-// Platform listesi (Tuzla için)
-const PLATFORMS = ['Trendyol', 'Yemek Sepeti', 'Getir Yemek', 'Migros'];
+// İkon getir
+function getIcon(name) {
+    return ICONS[name] || ICONS['clipboard-check'];
+}
 
-// WhatsApp Grup Linkleri
-const WHATSAPP_GROUPS = {
-    'Tuzla Port': 'https://chat.whatsapp.com/I8N0lxcMHyiIHpBjR63Q2h',
-    'Şişli (Merkez)': 'https://chat.whatsapp.com/LP9YKDCIM0k2tnUHHdImyH'
-};
+// Rol adını Türkçe döndür
+function getRoleName(role) {
+    const names = {
+        'yonetici': 'Yönetici',
+        'bolge_muduru': 'Bölge Müdürü',
+        'magaza_muduru': 'Mağaza Müdürü',
+        'mudur_yardimcisi': 'Müdür Yardımcısı',
+        'barista': 'Barista'
+    };
+    return names[role] || role;
+}
 
 // Checklist zamanlama değişkenleri
 let checklistStartTime = null;
@@ -8561,15 +8583,49 @@ let checklistExpectedDuration = 0; // saniye cinsinden
 // Personel-şube eşleştirmesi (Firebase'den yüklenecek)
 let personnelMapping = [];
 
-// Personel eşleştirmesini Firebase'den yükle
-async function loadPersonnelMapping() {
+// Tüm config'i Firebase'den yükle
+async function loadSystemConfig() {
     try {
-        const doc = await db.collection('config').doc('personnel_mapping').get();
-        if (doc.exists) {
-            personnelMapping = doc.data().personnel || [];
+        // Sistem ayarları
+        const sysDoc = await db.collection('config').doc('system').get();
+        if (sysDoc.exists) {
+            SYSTEM_CONFIG = sysDoc.data();
+            WHATSAPP_GROUPS = SYSTEM_CONFIG.whatsappGroups || {};
+            PLATFORMS = SYSTEM_CONFIG.platforms || PLATFORMS;
         }
+        
+        // Checklist türleri
+        const typesDoc = await db.collection('config').doc('checklistTypes').get();
+        if (typesDoc.exists) {
+            const data = typesDoc.data();
+            // updatedAt gibi meta alanları filtrele
+            CHECKLIST_TYPES = {};
+            for (const [key, value] of Object.entries(data)) {
+                if (Array.isArray(value)) {
+                    CHECKLIST_TYPES[key] = value;
+                }
+            }
+        }
+        
+        // Personel eşleştirmesi
+        const persDoc = await db.collection('config').doc('personnel').get();
+        if (persDoc.exists) {
+            personnelMapping = persDoc.data().list || [];
+        }
+        
+        console.log('Sistem config yüklendi:', {
+            branches: Object.keys(CHECKLIST_TYPES),
+            personnel: personnelMapping.length
+        });
     } catch (e) {
-        console.warn('Personel eşleştirmesi yüklenemedi:', e);
+        console.warn('Config yüklenemedi:', e);
+    }
+}
+
+// Personel eşleştirmesini Firebase'den yükle (eski uyumluluk için)
+async function loadPersonnelMapping() {
+    if (personnelMapping.length === 0) {
+        await loadSystemConfig();
     }
 }
 
@@ -8587,8 +8643,8 @@ function getUserNameFromEmail(email) {
 
 // Checklist sayfası başlat
 async function initChecklistPage() {
-    // Personel eşleştirmesini yükle
-    await loadPersonnelMapping();
+    // Önce config'i yükle
+    await loadSystemConfig();
     // Şube dropdown'ı doldur
     const subeSelect = document.getElementById('checklistSube');
     if (!subeSelect) return;
@@ -8636,14 +8692,22 @@ async function initChecklistPage() {
 }
 
 // Checklist türlerini yükle
-function loadChecklistTypes() {
+async function loadChecklistTypes() {
     const branch = document.getElementById('checklistSube')?.value;
     const typeSelect = document.getElementById('checklistType');
     const buttonsContainer = document.getElementById('checklistTypeButtons');
     if (!typeSelect || !branch) return;
     
+    // Config yüklenmemişse yükle
+    if (Object.keys(CHECKLIST_TYPES).length === 0) {
+        await loadSystemConfig();
+    }
+    
     const types = CHECKLIST_TYPES[branch] || [];
     const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
+    
+    // Debug log
+    console.log('Checklist türleri:', branch, types.length, 'adet');
     
     // Hidden select güncelle
     let selectHtml = '<option value="">-- Checklist Seçin --</option>';
@@ -8653,31 +8717,36 @@ function loadChecklistTypes() {
     });
     typeSelect.innerHTML = selectHtml;
     
-    // Butonları oluştur
+    // Butonları oluştur - Modern SVG ikonlar
     let buttonsHtml = '';
     types.forEach(t => {
         if (t.managerOnly && !isManager) return;
+        const iconSvg = getIcon(t.icon || 'clipboard-check');
         buttonsHtml += `
             <button type="button" class="checklist-type-btn" data-type="${t.id}" data-timeslots="${t.timeSlots ? t.timeSlots.join(',') : ''}"
                 onclick="selectChecklistType('${t.id}')"
-                style="padding:10px 16px;border:2px solid var(--cardBorder);background:var(--bg2);color:var(--tx);border-radius:10px;cursor:pointer;font-size:.85rem;font-weight:500;transition:all .2s;display:flex;align-items:center;gap:6px">
-                <span style="font-size:1.1rem">${t.icon || '📋'}</span>
+                style="padding:12px 18px;border:1px solid var(--cardBorder);background:var(--bg2);color:var(--tx);border-radius:10px;cursor:pointer;font-size:.9rem;font-weight:500;transition:all .2s;display:flex;align-items:center;gap:10px">
+                <span style="opacity:.7">${iconSvg}</span>
                 ${t.name}
             </button>
         `;
     });
     
     if (!buttonsHtml) {
-        buttonsHtml = '<div style="color:var(--tx3);font-size:.9rem;padding:10px">Bu şube için checklist bulunamadı</div>';
+        buttonsHtml = '<div style="color:var(--tx3);font-size:.9rem;padding:10px">Bu şube için checklist bulunamadı. Lütfen seed.html ile verileri yükleyin.</div>';
     }
     buttonsContainer.innerHTML = buttonsHtml;
     
     // Formu temizle
     document.getElementById('checklistFormContainer').innerHTML = `
         <div style="text-align:center;padding:60px;color:var(--tx2)">
-            <div style="font-size:4rem;margin-bottom:16px">📋</div>
+            <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="opacity:.4;margin-bottom:16px">
+                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+                <rect x="9" y="3" width="6" height="4" rx="1"/>
+                <path d="M9 14l2 2 4-4"/>
+            </svg>
             <div style="font-size:1.1rem;margin-bottom:8px">Checklist Seçin</div>
-            <div style="font-size:.9rem">Yukarıdan checklist türü seçerek başlayın</div>
+            <div style="font-size:.85rem;opacity:.6">Yukarıdan checklist türü seçerek başlayın</div>
         </div>
     `;
 }
@@ -8799,9 +8868,16 @@ async function loadChecklist() {
         // Eğer hala items boşsa hata göster
         if (!items || items.length === 0) {
             container.innerHTML = `<div style="text-align:center;padding:60px;color:var(--tx2)">
-                <div style="font-size:4rem;margin-bottom:16px">📝</div>
-                <div style="font-size:1.1rem;margin-bottom:8px">Bu checklist için henüz madde yok</div>
-                <div style="font-size:.9rem">Yönetici yeni madde ekleyebilir</div>
+                <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="opacity:.4;margin-bottom:16px">
+                    <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+                </svg>
+                <div style="font-size:1.1rem;margin-bottom:8px;color:var(--tx)">Checklist Verisi Bulunamadı</div>
+                <div style="font-size:.85rem;margin-bottom:16px;max-width:300px;margin-left:auto;margin-right:auto">
+                    <strong>${branch}</strong> şubesi için <strong>${type}</strong> checklist'i henüz yüklenmemiş.
+                </div>
+                <div style="font-size:.8rem;color:var(--tx3)">
+                    Yönetici: <code>seed.html</code> dosyasını açıp verileri yükleyin.
+                </div>
             </div>`;
             return;
         }
@@ -8859,12 +8935,16 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
     
     let typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === type);
     const expectedMinutes = Math.round(checklistExpectedDuration / 60);
+    const iconSvg = getIcon(typeInfo?.icon || 'clipboard-check');
     
     let html = `
         <div class="form-section">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
                 <div>
-                    <div style="font-size:1.3rem;font-weight:700;color:var(--tx)">${typeInfo?.icon || '📋'} ${typeInfo?.name || type}</div>
+                    <div style="font-size:1.3rem;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:10px">
+                        <span style="opacity:.7">${iconSvg}</span>
+                        ${typeInfo?.name || type}
+                    </div>
                     <div style="font-size:.85rem;color:var(--tx2)">${branch} • ${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})}${timeSlot ? ' • ' + timeSlot : ''}</div>
                 </div>
                 <div style="display:flex;gap:8px;align-items:center">
