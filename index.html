@@ -32,7 +32,7 @@
     --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;--mono:'JetBrains Mono',monospace;
     --cardBg:#ffffff;--cardBorder:rgba(0,0,0,.06);
     --sectionBg:#ffffff;
-    --sidebarBg:#006d73;--sidebarTx:#ffffff;--sidebarTx2:#ffffff;--sidebarTx3:rgba(255,255,255,.7);
+    --sidebarBg:#006d73;--sidebarTx:#ffffff;--sidebarTx2:rgba(255,255,255,.8);--sidebarTx3:rgba(255,255,255,.5);
     /* Logolar */
     --logo-dark:url('https://static.wixstatic.com/media/760af2_0e846222ae5b4021930a757e498f30e9~mv2.png');
     --logo-light:url('https://static.wixstatic.com/media/760af2_755f54f13b654f1bb318c97f16a029a3~mv2.png/v1/fill/w_104,h_92,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Moonberry%20Coffee%20Logo.png');
@@ -47,7 +47,7 @@
     --shadow:0 8px 32px rgba(0,0,0,.4);--shadowSm:0 2px 8px rgba(0,0,0,.3);
     --cardBg:rgba(40,40,40,.95);--cardBorder:rgba(255,255,255,.08);
     --sectionBg:linear-gradient(135deg,rgba(30,30,30,.95),rgba(20,20,20,.9));
-    --sidebarBg:#0f0f0f;--sidebarTx:#ffffff;--sidebarTx2:#ffffff;--sidebarTx3:rgba(255,255,255,.5);
+    --sidebarBg:#0f0f0f;--sidebarTx:#ffffff;--sidebarTx2:rgba(255,255,255,.6);--sidebarTx3:rgba(255,255,255,.35);
 }
 [data-theme="dark"] .main{background:var(--bg)!important}
 [data-theme="dark"] .page-title,[data-theme="dark"] .page-subtitle{color:var(--tx)!important}
@@ -86,19 +86,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .logo-text{font-size:1.1rem;font-weight:700;letter-spacing:-.02em;color:var(--sidebarTx)}
 .logo-sub{font-size:.7rem;color:var(--sidebarTx3);margin-top:2px}
 .nav{flex:1;padding:16px 12px;overflow-y:auto}
-.nav-group{margin-bottom:8px}
-.nav-label{font-size:.75rem;color:var(--sidebarTx2);padding:10px 14px;margin-bottom:0;font-weight:500;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border-radius:var(--radiusSm);transition:var(--transition)}
-.nav-label:hover{background:rgba(255,255,255,.1)}
-.nav-label .nav-arrow{transition:transform .2s;font-size:.7rem}
-.nav-label.collapsed .nav-arrow{transform:rotate(-90deg)}
-.nav-items{overflow:hidden;transition:max-height .3s ease;max-height:500px}
-.nav-items.collapsed{max-height:0}
-.nav-item{display:flex;align-items:center;gap:12px;padding:10px 14px 10px 20px;border-radius:var(--radiusSm);cursor:pointer;transition:var(--transition);color:var(--sidebarTx2);font-weight:500;font-size:.85rem;margin-bottom:2px}
+.nav-group{margin-bottom:20px}
+.nav-label{font-size:.65rem;color:var(--sidebarTx3);text-transform:uppercase;letter-spacing:1.5px;padding:0 12px;margin-bottom:8px;font-weight:600}
+.nav-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radiusSm);cursor:pointer;transition:var(--transition);color:var(--sidebarTx2);font-weight:500;font-size:.9rem;margin-bottom:2px}
 .nav-item:hover{background:rgba(255,134,116,.15);color:#fff}
 .nav-item.active{background:linear-gradient(135deg,var(--accent),#ff6b5b);color:#fff;box-shadow:0 4px 20px rgba(255,134,116,.35);font-weight:600}
-.nav-item .icon{font-size:1rem;width:20px;text-align:center;display:flex;align-items:center;justify-content:center}
-.nav-item .icon svg{width:18px;height:18px;stroke:currentColor;stroke-width:2;fill:none}
-.nav-divider{height:1px;background:rgba(255,255,255,.1);margin:12px 12px}
+.nav-item .icon{font-size:1.1rem;width:24px;text-align:center;display:flex;align-items:center;justify-content:center}
+.nav-item .icon svg{width:20px;height:20px;stroke:currentColor;stroke-width:2;fill:none}
+.nav-divider{height:1px;background:rgba(255,255,255,.1);margin:16px 12px}
 
 /* Main Content */
 .main{flex:1;margin-left:260px;background:var(--bg);min-height:100vh;position:relative}
@@ -300,7 +295,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 <body>
     <!-- AUTH GUARD - Giriş yapmamışsa login.html'e yönlendir -->
     <script>
+        // Sayfa yüklenmeden önce hızlı auth kontrolü
         (function() {
+            // Firebase yüklenene kadar bekle
             const checkAuth = setInterval(() => {
                 if (typeof firebase !== 'undefined' && firebase.auth) {
                     clearInterval(checkAuth);
@@ -311,6 +308,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     });
                 }
             }, 50);
+            
+            // 3 saniye içinde yüklenmediyse yine yönlendir
             setTimeout(() => {
                 clearInterval(checkAuth);
                 if (typeof firebase === 'undefined' || !firebase.auth().currentUser) {
@@ -348,100 +347,80 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
             </div>
             <nav class="nav">
-                <!-- Ana Sayfa -->
-                <div class="nav-item active" data-page="dashboard" onclick="goTo('dashboard')">
-                    <span class="icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> Ana Sayfa
-                </div>
-                
-                <!-- Puantaj -->
-                <div class="nav-item" data-page="puantaj" onclick="goTo('puantaj')">
-                    <span class="icon"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span> Puantaj
-                </div>
-                
-                <!-- Shift Planı -->
-                <div class="nav-item" data-page="shift" onclick="goTo('shift')">
-                    <span class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> Shift Planı
-                </div>
-                
-                <!-- Checklist -->
-                <div class="nav-item" data-page="checklist" onclick="goTo('checklist')">
-                    <span class="icon"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span> Checklist
-                </div>
-                
-                <!-- Personel -->
-                <div class="nav-item" data-page="personel" onclick="goTo('personel')">
-                    <span class="icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Personel
-                </div>
-                
-                <div class="nav-divider"></div>
-                
-                <!-- Belgeler (Collapsible - Kapalı başla) -->
                 <div class="nav-group">
-                    <div class="nav-label collapsed" onclick="toggleNavGroup(this)">
-                        📄 Belgeler <span class="nav-arrow">▼</span>
-                    </div>
-                    <div class="nav-items collapsed">
-                        <div class="nav-item" data-page="sozlesme" onclick="goTo('sozlesme')">
-                            <span class="icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span> İş Sözleşmesi
-                        </div>
-                        <div class="nav-item" data-page="tutanak" onclick="goTo('tutanak')">
-                            <span class="icon"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span> Tutanak
-                        </div>
-                        <div class="nav-item" data-page="savunma" onclick="goTo('savunma')">
-                            <span class="icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> Savunma İsteme
-                        </div>
-                        <div class="nav-item" data-page="fesih" onclick="goTo('fesih')">
-                            <span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></span> Fesih
-                        </div>
-                        <div class="nav-item" data-page="istifa" onclick="goTo('istifa')">
-                            <span class="icon"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span> İstifa
-                        </div>
-                        <div class="nav-item" data-page="ibraname" onclick="goTo('ibraname')">
-                            <span class="icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span> İbraname
-                        </div>
+                    <div class="nav-label">Ana Menü</div>
+                    <div class="nav-item active" data-page="dashboard" onclick="goTo('dashboard')">
+                        <span class="icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> Ana Sayfa
                     </div>
                 </div>
-                
-                <!-- Formlar (Collapsible - Kapalı başla) -->
+                <div class="nav-group" id="navChecklist">
+                    <div class="nav-label">Checklist</div>
+                    <div class="nav-item" data-page="checklist" onclick="goTo('checklist')">
+                        <span class="icon"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span> Checklist
+                    </div>
+                </div>
                 <div class="nav-group">
-                    <div class="nav-label collapsed" onclick="toggleNavGroup(this)">
-                        📑 Formlar <span class="nav-arrow">▼</span>
+                    <div class="nav-label">Personel</div>
+                    <div class="nav-item" data-page="personel" onclick="goTo('personel')">
+                        <span class="icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Personel Listesi
                     </div>
-                    <div class="nav-items collapsed">
-                        <div class="nav-item" data-page="borc" onclick="goTo('borc')">
-                            <span class="icon"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span> Borç İkrar
-                        </div>
-                        <div class="nav-item" data-page="avans" onclick="goTo('avans')">
-                            <span class="icon"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Avans Talebi
-                        </div>
-                        <div class="nav-item" data-page="zimmet" onclick="goTo('zimmet')">
-                            <span class="icon"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></span> Zimmet Formu
-                        </div>
+                    <div class="nav-item" data-page="puantaj" onclick="goTo('puantaj')">
+                        <span class="icon"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span> Puantaj
+                    </div>
+                    <div class="nav-item" data-page="shift" onclick="goTo('shift')">
+                        <span class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> Shift Planı
                     </div>
                 </div>
-                
+                <div class="nav-group">
+                    <div class="nav-label">Belgeler</div>
+                    <div class="nav-item" data-page="sozlesme" onclick="goTo('sozlesme')">
+                        <span class="icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> İş Sözleşmeleri
+                    </div>
+                    <div class="nav-item" data-page="tutanak" onclick="goTo('tutanak')">
+                        <span class="icon"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span> Tutanak
+                    </div>
+                    <div class="nav-item" data-page="savunma" onclick="goTo('savunma')">
+                        <span class="icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> Savunma İsteme
+                    </div>
+                    <div class="nav-item" data-page="fesih" onclick="goTo('fesih')">
+                        <span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></span> Fesih
+                    </div>
+                    <div class="nav-item" data-page="istifa" onclick="goTo('istifa')">
+                        <span class="icon"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span> İstifa
+                    </div>
+                    <div class="nav-item" data-page="ibraname" onclick="goTo('ibraname')">
+                        <span class="icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span> İbraname
+                    </div>
+                    <div class="nav-item" data-page="borc" onclick="goTo('borc')">
+                        <span class="icon"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span> Borç İkrar
+                    </div>
+                    <div class="nav-item" data-page="avans" onclick="goTo('avans')">
+                        <span class="icon"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Avans Talebi
+                    </div>
+                    <div class="nav-item" data-page="zimmet" onclick="goTo('zimmet')">
+                        <span class="icon"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></span> Zimmet Formu
+                    </div>
+                </div>
+                <div class="nav-group">
+                    <div class="nav-label">Rehber</div>
+                    <div class="nav-item" data-page="katalog" onclick="goTo('katalog')">
+                        <span class="icon"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span> İhlal Kataloğu
+                    </div>
+                </div>
                 <div class="nav-divider"></div>
-                
-                <!-- İhlal Kataloğu (tek başına) -->
-                <div class="nav-item" data-page="katalog" onclick="goTo('katalog')">
-                    <span class="icon"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span> İhlal Kataloğu
-                </div>
-                
-                <!-- Ayarlar (en altta) -->
-                <div class="nav-item" data-page="admin" onclick="openAdminWithPin()">
-                    <span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Ayarlar
+                <div class="nav-group">
+                    <div class="nav-item" data-page="admin" onclick="openAdminWithPin()">
+                        <span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Yönetim
+                    </div>
                 </div>
                 <!-- Kullanıcı Bilgisi ve Çıkış -->
                 <div style="margin-top:auto;padding:16px 20px;border-top:1px solid rgba(255,255,255,.1)">
                     <!-- Impersonation Banner -->
-                    <div id="impersonationBanner" style="display:none;margin-bottom:12px;padding:10px;background:rgba(255,134,116,.2);border:1px solid rgba(255,134,116,.4);border-radius:8px">
-                        <div style="font-size:.75rem;color:#ff8674;margin-bottom:6px">👁️ Görüntüleme Modu</div>
-                        <div id="impersonationName" style="font-size:.85rem;color:#fff;font-weight:600"></div>
-                        <button onclick="exitImpersonation()" style="margin-top:8px;width:100%;padding:6px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:#fff;font-size:.75rem;cursor:pointer">
-                            ← Geri Dön
-                        </button>
+                    <div id="impersonationBanner" style="display:none;background:rgba(255,134,116,.2);border:1px solid var(--accent);border-radius:8px;padding:10px;margin-bottom:12px;text-align:center">
+                        <div style="font-size:.75rem;color:var(--accent);font-weight:600">👁️ Görüntüleme Modu</div>
+                        <div id="impersonatingAs" style="font-size:.8rem;color:#fff;margin:4px 0"></div>
+                        <button onclick="exitImpersonation()" style="padding:6px 12px;background:var(--accent);border:none;border-radius:6px;color:#fff;font-size:.75rem;cursor:pointer;margin-top:4px">Çıkış</button>
                     </div>
-                    
                     <div id="userInfo" style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
                         <div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600" id="userAvatar">👤</div>
                         <div style="flex:1;overflow:hidden">
@@ -449,13 +428,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <div id="userRole" style="color:var(--sidebarTx2);font-size:.7rem">-</div>
                         </div>
                     </div>
-                    
-                    <!-- Yönetici için Kullanıcı Gözünden Gör butonu -->
-                    <button id="impersonateBtn" onclick="showImpersonationModal()" style="display:none;width:100%;padding:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--sidebarTx2);font-size:.8rem;cursor:pointer;transition:all .2s;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.background='rgba(255,134,116,.15)';this.style.borderColor='rgba(255,134,116,.3)'" onmouseout="this.style.background='rgba(255,255,255,.05)';this.style.borderColor='rgba(255,255,255,.1)'">
+                    <!-- Kullanıcı Değiştir Butonu (Sadece Yönetici) -->
+                    <button id="btnImpersonate" onclick="showImpersonationModal()" style="display:none;width:100%;padding:10px;background:rgba(0,140,149,.15);border:1px solid rgba(0,140,149,.3);border-radius:8px;color:var(--accent2);font-size:.8rem;cursor:pointer;transition:all .2s;margin-bottom:8px;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.background='rgba(0,140,149,.25)'" onmouseout="this.style.background='rgba(0,140,149,.15)'">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                        Kullanıcı Gözünden Gör
+                        👁️ Kullanıcı Gözünden Gör
                     </button>
-                    
                     <button onclick="logout()" style="width:100%;padding:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--sidebarTx2);font-size:.8rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.background='rgba(231,76,60,.2)';this.style.borderColor='rgba(231,76,60,.4)';this.style.color='#e74c3c'" onmouseout="this.style.background='rgba(255,255,255,.1)';this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--sidebarTx2)'">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                         Çıkış Yap
@@ -523,15 +500,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <div>
                                 <div style="font-weight:600;color:var(--tx)">Shift Planı</div>
                                 <div style="font-size:.75rem;color:var(--tx2)">Haftalık Vardiya</div>
-                            </div>
-                        </div>
-                        <div class="dashboard-card" onclick="goTo('checklist')" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:16px">
-                            <div style="width:40px;height:40px;background:linear-gradient(135deg,#00c9a7,#008c95);border-radius:10px;display:flex;align-items:center;justify-content:center">
-                                <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-                            </div>
-                            <div>
-                                <div style="font-weight:600;color:var(--tx)">Checklist</div>
-                                <div style="font-size:.75rem;color:var(--tx2)">Günlük Kontrol</div>
                             </div>
                         </div>
                     </div>
@@ -1064,67 +1032,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
             </div>
 
-            <!-- Checklist -->
-            <div class="page" id="page-checklist">
-                <div class="back-link" onclick="goTo('dashboard')">← Ana Sayfa</div>
-                <div class="page-header">
-                    <div class="page-title" style="display:flex;align-items:center;gap:10px">
-                        <div style="width:36px;height:36px;background:linear-gradient(135deg,#00c9a7,#008c95);border-radius:8px;display:flex;align-items:center;justify-content:center">
-                            <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-                        </div>
-                        Checklist
-                    </div>
-                    <div class="page-subtitle">Günlük kontrol listeleri</div>
-                </div>
-                
-                <!-- Şube ve Tür Seçimi -->
-                <div class="form-section" style="margin-bottom:20px">
-                    <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
-                        <div class="form-group" style="margin-bottom:0;min-width:160px">
-                            <label class="form-label">Şube</label>
-                            <select id="checklistSube" class="form-select" onchange="loadChecklistTypes()"></select>
-                        </div>
-                        <div class="form-group" style="margin-bottom:0;min-width:140px">
-                            <label class="form-label">Tarih</label>
-                            <input type="date" id="checklistDate" class="form-input" onchange="loadChecklist()">
-                        </div>
-                        <div class="form-group" style="margin-bottom:0;min-width:120px;display:none" id="checklistTimeSlotGroup">
-                            <label class="form-label">Saat Dilimi</label>
-                            <select id="checklistTimeSlot" class="form-select" onchange="loadChecklist()">
-                                <option value="">-- Seçin --</option>
-                            </select>
-                        </div>
-                    </div>
-                    <!-- Checklist Türü - Yan Yana Butonlar -->
-                    <div style="margin-top:16px">
-                        <label class="form-label" style="margin-bottom:10px">Checklist Türü</label>
-                        <div id="checklistTypeButtons" style="display:flex;flex-wrap:wrap;gap:8px">
-                            <div style="color:var(--tx3);font-size:.9rem;padding:10px">Önce şube seçin</div>
-                        </div>
-                    </div>
-                    <!-- Hidden select for compatibility -->
-                    <select id="checklistType" style="display:none" onchange="loadChecklist()">
-                        <option value="">-- Seçin --</option>
-                    </select>
-                </div>
-                
-                <!-- Yönetici Butonları -->
-                <div id="checklistAdminButtons" style="display:none;margin-bottom:16px">
-                    <div style="display:flex;gap:8px;flex-wrap:wrap">
-                        <button class="btn btn-sm btn-ghost" onclick="showChecklistHistory()">📊 Geçmiş Kayıtlar</button>
-                    </div>
-                </div>
-                
-                <!-- Checklist Formu -->
-                <div id="checklistFormContainer">
-                    <div style="text-align:center;padding:60px;color:var(--tx2)">
-                        <div style="font-size:4rem;margin-bottom:16px">📋</div>
-                        <div style="font-size:1.1rem;margin-bottom:8px">Checklist Seçin</div>
-                        <div style="font-size:.9rem">Yukarıdan şube ve checklist türü seçerek başlayın</div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Puantaj -->
             <div class="page" id="page-puantaj">
                 <div class="back-link" onclick="goTo('dashboard')">← Ana Sayfa</div>
@@ -1289,6 +1196,63 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
             </div>
 
+            <!-- Checklist Page -->
+            <div class="page" id="page-checklist">
+                <div class="page-header">
+                    <div class="page-title">✅ Checklist</div>
+                    <div class="page-subtitle" id="checklistSubtitle">Günlük kontrol listelerinizi tamamlayın</div>
+                </div>
+                
+                <!-- Şube Seçimi -->
+                <div id="checklistBranchSelect" class="form-section">
+                    <div class="form-section-title">📍 Şube Seçin</div>
+                    <div class="type-cards" id="branchCards"></div>
+                </div>
+                
+                <!-- Checklist Türleri -->
+                <div id="checklistTypeSelect" class="form-section" style="display:none">
+                    <div class="back-link" onclick="showBranchSelect()">← Şube Seçimine Dön</div>
+                    <div class="form-section-title" id="checklistBranchTitle">📋 Checklist Türü Seçin</div>
+                    <div class="type-cards" id="typeCards"></div>
+                </div>
+                
+                <!-- Checklist Formu -->
+                <div id="checklistForm" class="form-section" style="display:none">
+                    <div class="back-link" onclick="showTypeSelect()">← Checklist Türlerine Dön</div>
+                    
+                    <!-- Üst Bilgi Alanı -->
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:20px">
+                        <div>
+                            <div class="form-section-title" id="checklistFormTitle" style="margin:0;padding:0;border:none">Checklist</div>
+                            <div style="font-size:.8rem;color:var(--tx2)" id="checklistEstTime">Tahmini süre: --</div>
+                        </div>
+                        <div style="display:flex;gap:12px;align-items:center">
+                            <!-- Kronometre -->
+                            <div id="checklistTimerBox" style="display:none;background:var(--accentLight);padding:12px 20px;border-radius:var(--radiusSm);text-align:center">
+                                <div style="font-size:.7rem;color:var(--tx2)">Başlangıç: <span id="checklistStartTimeLabel">--:--</span></div>
+                                <div id="checklistTimer" style="font-size:1.4rem;font-weight:700;color:var(--accent);font-family:var(--mono)">00:00:00</div>
+                            </div>
+                            <!-- Tarih Seçimi (Temizlik ve Bakım için) -->
+                            <div id="checklistDatePicker" style="display:none">
+                                <input type="date" id="checklistDate" class="form-input" onchange="filterChecklistByDate()">
+                            </div>
+                            <!-- Tümünü Göster -->
+                            <button id="btnShowAll" class="btn btn-sm btn-ghost" style="display:none" onclick="toggleShowAllItems()">📋 Tümünü Göster</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Checklist Items Container -->
+                    <div id="checklistItems"></div>
+                    
+                    <!-- Butonlar -->
+                    <div class="btn-group" id="checklistActions" style="display:none">
+                        <button class="btn btn-primary" onclick="submitChecklist()">✅ Gönder</button>
+                        <button class="btn btn-ghost" onclick="downloadChecklistPDF()">📥 PDF İndir</button>
+                        <button class="btn btn-secondary" onclick="shareToWhatsApp()">📱 WhatsApp</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Admin Panel -->
             <div class="page" id="page-admin">
                 <div class="back-link" onclick="goTo('dashboard')">← Ana Sayfa</div>
@@ -1298,8 +1262,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
                 <div class="admin-tabs">
                     <button class="admin-tab active" onclick="showAdminTab('genel',this)">Genel</button>
-                    <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">👤 Kullanıcı Yönetimi</button>
+                    <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">Kullanıcılar</button>
                     <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">⏱️ Oturumlar</button>
+                    <button class="admin-tab" id="tab-izinler" onclick="showAdminTab('izinler',this)">🔐 İzinler</button>
                     <button class="admin-tab" onclick="showAdminTab('puantajKurallar',this)">Puantaj Kuralları</button>
                     <button class="admin-tab" onclick="showAdminTab('subeler',this)">Şubeler</button>
                     <button class="admin-tab" onclick="showAdminTab('pozisyonlar',this)">Pozisyonlar</button>
@@ -1333,10 +1298,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                     <!-- Veri Temizleme - Sadece admin görecek -->
                     <div class="admin-card" id="dataCleanupCard" style="margin-top:20px;display:none">
-                        <div class="admin-card-header"><div class="admin-card-title">🧹 Veri Yönetimi</div></div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Verileri yönetin ve Firebase'e yükleyin.</p>
+                        <div class="admin-card-header"><div class="admin-card-title">🧹 Veri Temizleme</div></div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Duplicate kayıtları temizleyin ve veri tutarlılığını sağlayın.</p>
                         <div style="display:flex;gap:12px;flex-wrap:wrap">
-                            <button class="btn btn-primary btn-sm" onclick="window.open('seed.html', '_blank')">📋 Veri Yükleme Programı</button>
                             <button class="btn btn-ghost btn-sm" onclick="cleanDuplicatePersonel()">👥 Duplicate Personel Temizle</button>
                             <button class="btn btn-ghost btn-sm" onclick="cleanDuplicateShifts()">📅 Duplicate Shift Temizle</button>
                         </div>
@@ -1381,75 +1345,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                 </div>
 
-                <!-- Kullanıcı Yönetimi (Kullanıcılar + İzinler birleşik) -->
+                <!-- Kullanıcılar -->
                 <div class="admin-section" id="admin-kullanicilar">
-                    <!-- Sistem Kullanıcıları -->
                     <div class="admin-card">
                         <div class="admin-card-header">
-                            <div class="admin-card-title">👤 Sistem Kullanıcıları</div>
+                            <div class="admin-card-title">Sistem Kullanıcıları</div>
                             <button class="btn btn-sm btn-primary" onclick="showAddUserModal()">+ Yeni Kullanıcı</button>
                         </div>
                         <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Sisteme giriş yapabilecek kullanıcıları yönetin.</p>
                         <div class="admin-list" id="userList">
                             <p style="color:var(--tx2);text-align:center;padding:20px">Kullanıcılar yükleniyor...</p>
-                        </div>
-                    </div>
-                    
-                    <!-- Rol İzinleri -->
-                    <div class="admin-card" style="margin-top:20px">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title">🔐 Rol İzinleri</div>
-                        </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Her rol için sayfa, belge ve yönetim paneli erişim izinlerini yapılandırın.</p>
-                        
-                        <!-- Rol Seçimi -->
-                        <div class="form-group" style="margin-bottom:20px">
-                            <label class="form-label">Rol Seçin</label>
-                            <select id="advRoleSelect" class="form-select" onchange="loadAdvancedPermissions()" style="max-width:300px">
-                                <option value="">-- Rol Seçin --</option>
-                                <option value="barista">🧑‍🍳 Barista</option>
-                                <option value="magaza_muduru">🏪 Mağaza Müdürü</option>
-                                <option value="bolge_muduru">🌍 Bölge Müdürü</option>
-                            </select>
-                        </div>
-                        
-                        <!-- İzin Paneli -->
-                        <div id="advPermissionsPanel" style="display:none">
-                            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px">
-                                <!-- Sayfalar -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
-                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem">📄 Sayfalar</div>
-                                    <div style="display:flex;flex-direction:column;gap:8px" id="pagePermissions"></div>
-                                </div>
-                                
-                                <!-- Belgeler -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
-                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem">📋 Belgeler</div>
-                                    <div style="display:flex;flex-direction:column;gap:8px" id="docPermissions"></div>
-                                </div>
-                                
-                                <!-- Admin Panelleri -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
-                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem">⚙️ Yönetim</div>
-                                    <div style="display:flex;flex-direction:column;gap:8px" id="adminPermissions"></div>
-                                </div>
-                                
-                                <!-- Özel İzinler -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
-                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem">🎯 Özel</div>
-                                    <div style="display:flex;flex-direction:column;gap:8px" id="specialPermissions"></div>
-                                </div>
-                            </div>
-                            
-                            <div class="btn-group" style="margin-top:16px">
-                                <button class="btn btn-primary btn-sm" onclick="saveAdvancedPermissions()">💾 Kaydet</button>
-                                <button class="btn btn-ghost btn-sm" onclick="resetAdvancedPermissions()">🔄 Varsayılan</button>
-                            </div>
-                        </div>
-                        
-                        <div id="advPermissionsEmpty" style="text-align:center;padding:30px;color:var(--tx2)">
-                            <div style="font-size:2rem;margin-bottom:8px">🔐</div>
-                            <div style="font-size:.85rem">Düzenlemek için yukarıdan bir rol seçin</div>
                         </div>
                     </div>
                 </div>
@@ -1528,6 +1433,111 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <div style="text-align:center;padding:40px;color:var(--tx2)">
                                 <div style="font-size:2rem;margin-bottom:12px">📊</div>
                                 <div>Geçmiş yükleniyor...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gelişmiş İzin Yönetimi -->
+                <div class="admin-section" id="admin-izinler">
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">🔐 Gelişmiş İzin Yönetimi</div>
+                        </div>
+                        <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:20px">
+                            Her rol için sayfa, belge ve yönetim paneli erişim izinlerini detaylı olarak yapılandırın.
+                        </p>
+                        
+                        <!-- Rol Seçimi -->
+                        <div class="form-group" style="margin-bottom:24px">
+                            <label class="form-label">Rol Seçin</label>
+                            <select id="advRoleSelect" class="form-select" onchange="loadAdvancedPermissions()" style="max-width:300px">
+                                <option value="">-- Rol Seçin --</option>
+                                <option value="barista">🧑‍🍳 Barista</option>
+                                <option value="magaza_muduru">🏪 Mağaza Müdürü</option>
+                                <option value="bolge_muduru">🌍 Bölge Müdürü</option>
+                            </select>
+                        </div>
+                        
+                        <!-- İzin Paneli -->
+                        <div id="advPermissionsPanel" style="display:none">
+                            <!-- Sayfalar -->
+                            <div style="background:var(--bg3);border-radius:12px;padding:20px;margin-bottom:20px">
+                                <div style="font-weight:600;color:var(--tx);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+                                    <span style="font-size:1.2rem">📄</span> Sayfa İzinleri
+                                </div>
+                                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px" id="pagePermissions">
+                                    <!-- JS ile doldurulacak -->
+                                </div>
+                            </div>
+                            
+                            <!-- Belgeler -->
+                            <div style="background:var(--bg3);border-radius:12px;padding:20px;margin-bottom:20px">
+                                <div style="font-weight:600;color:var(--tx);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+                                    <span style="font-size:1.2rem">📋</span> Belge İzinleri
+                                </div>
+                                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px" id="docPermissions">
+                                    <!-- JS ile doldurulacak -->
+                                </div>
+                            </div>
+                            
+                            <!-- Admin Panelleri -->
+                            <div style="background:var(--bg3);border-radius:12px;padding:20px;margin-bottom:20px">
+                                <div style="font-weight:600;color:var(--tx);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+                                    <span style="font-size:1.2rem">⚙️</span> Yönetim Paneli İzinleri
+                                </div>
+                                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px" id="adminPermissions">
+                                    <!-- JS ile doldurulacak -->
+                                </div>
+                            </div>
+                            
+                            <!-- Özel İzinler -->
+                            <div style="background:linear-gradient(135deg,rgba(255,134,116,.1),rgba(0,140,149,.1));border:1px solid var(--cardBorder);border-radius:12px;padding:20px;margin-bottom:20px">
+                                <div style="font-weight:600;color:var(--tx);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+                                    <span style="font-size:1.2rem">🎯</span> Özel İzinler
+                                </div>
+                                <div style="display:flex;flex-direction:column;gap:12px" id="specialPermissions">
+                                    <!-- JS ile doldurulacak -->
+                                </div>
+                            </div>
+                            
+                            <!-- Kaydet Butonu -->
+                            <div class="btn-group">
+                                <button class="btn btn-primary" onclick="saveAdvancedPermissions()">💾 İzinleri Kaydet</button>
+                                <button class="btn btn-ghost" onclick="resetAdvancedPermissions()">🔄 Varsayılana Dön</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Boş Durum -->
+                        <div id="advPermissionsEmpty" style="text-align:center;padding:40px;color:var(--tx2)">
+                            <div style="font-size:3rem;margin-bottom:16px">🔐</div>
+                            <div>Düzenlemek için yukarıdan bir rol seçin</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Hızlı Referans -->
+                    <div class="admin-card" style="margin-top:16px">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">📚 İzin Referansı</div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+                            <div style="background:var(--bg3);border-radius:10px;padding:16px">
+                                <div style="font-weight:600;color:#27ae60;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                                    <span>👁️</span> Görüntüleme
+                                </div>
+                                <div style="font-size:.85rem;color:var(--tx2)">Kullanıcı sayfayı/belgeyi görebilir ancak değişiklik yapamaz.</div>
+                            </div>
+                            <div style="background:var(--bg3);border-radius:10px;padding:16px">
+                                <div style="font-weight:600;color:#3498db;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                                    <span>✏️</span> Düzenleme
+                                </div>
+                                <div style="font-size:.85rem;color:var(--tx2)">Kullanıcı sayfada/belgede ekleme, düzenleme ve silme yapabilir.</div>
+                            </div>
+                            <div style="background:var(--bg3);border-radius:10px;padding:16px">
+                                <div style="font-weight:600;color:#e74c3c;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                                    <span>🔒</span> Erişim Yok
+                                </div>
+                                <div style="font-size:.85rem;color:var(--tx2)">Kullanıcı bu sayfayı/belgeyi hiçbir şekilde göremez.</div>
                             </div>
                         </div>
                     </div>
@@ -2056,52 +2066,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Kullanıcı bilgilerini Firestore'dan al
                 try {
-                    // Önce config'i yükle (email mapping için)
-                    await loadSystemConfig();
-                    
                     const userDoc = await db.collection('users').doc(user.uid).get();
                     if (userDoc.exists) {
                         currentUser = { id: user.uid, email: user.email, ...userDoc.data() };
                     } else {
-                        // Email'den kullanıcı bilgisi al
-                        const emailMatch = personnelMapping.find(p => p.email?.toLowerCase() === user.email?.toLowerCase());
-                        const isAdmin = user.email === 'admin@moonberrycoffee.com' || user.email === 'tamer@moonberrycoffee.com';
-                        
+                        // İlk admin girişi
+                        const isAdmin = user.email === 'admin@moonberrycoffee.com';
                         currentUser = {
                             id: user.uid,
                             email: user.email,
-                            name: emailMatch?.name || (isAdmin ? 'Yönetici' : user.email.split('@')[0]),
-                            role: emailMatch?.role || (isAdmin ? 'yonetici' : 'barista'),
-                            branch: emailMatch?.branch || (isAdmin ? 'all' : '')
+                            name: isAdmin ? 'Yönetici' : user.email.split('@')[0],
+                            role: isAdmin ? 'yonetici' : 'magaza_muduru',
+                            branch: isAdmin ? 'all' : ''
                         };
-                    }
-                    
-                    // Kullanıcı adını sidebar'da göster
-                    document.getElementById('userName').textContent = currentUser.name || currentUser.email;
-                    document.getElementById('userRole').textContent = getRoleName(currentUser.role);
-                    
-                    // Yönetici için impersonation butonunu göster
-                    const impersonateBtn = document.getElementById('impersonateBtn');
-                    if (impersonateBtn) {
-                        impersonateBtn.style.display = currentUser.role === 'yonetici' ? 'flex' : 'none';
-                    }
-                    
-                    // Session durumunu kontrol et
-                    const sessionValid = await checkSessionValidity();
-                    if (!sessionValid) {
-                        console.log('Session invalid - logging out');
-                        await firebase.auth().signOut();
-                        window.location.replace('login.html');
-                        return;
                     }
                     
                     // Uygulama görünür
                     document.querySelector('.app').style.opacity = '1';
                     applyUserPermissions();
                     loadFirebaseData();
-                    
-                    // Önizleme modunu kontrol et
-                    checkPreviewMode();
                     
                     // Giriş aktivitesini logla
                     logActivity('login', { device: navigator.userAgent });
@@ -2123,156 +2106,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initUI();
 });
 
-// Impersonation (Kullanıcı Gözünden Görme) Sistemi
-let originalUser = null; // Asıl kullanıcı bilgisi
-let isImpersonating = false;
-
-// Impersonation modal'ı göster
-async function showImpersonationModal() {
-    if (currentUser?.role !== 'yonetici') {
-        toast('Bu özellik sadece yöneticiler içindir', 'error');
-        return;
-    }
-    
-    // Personel listesini getir
-    let personnel = [];
-    try {
-        const persDoc = await db.collection('config').doc('personnel').get();
-        if (persDoc.exists) {
-            personnel = persDoc.data().list || [];
-        }
-        
-        // Ayrıca users collection'dan da çek
-        const usersSnap = await db.collection('users').get();
-        usersSnap.forEach(doc => {
-            const userData = doc.data();
-            if (!personnel.find(p => p.email === userData.email)) {
-                personnel.push({
-                    name: userData.name,
-                    email: userData.email,
-                    branch: userData.branch,
-                    role: userData.role
-                });
-            }
-        });
-    } catch (e) {
-        console.error('Personel listesi yüklenemedi:', e);
-    }
-    
-    // Kendini listeden çıkar
-    personnel = personnel.filter(p => p.email !== currentUser.email);
-    
-    let html = `
-        <div style="margin-bottom:16px;padding:12px;background:rgba(255,134,116,.1);border-radius:8px;font-size:.85rem;color:var(--tx2)">
-            ⚠️ Seçtiğiniz kullanıcının gördüğü ekranı göreceksiniz. Değişiklikler o kullanıcı adına kaydedilir.
-        </div>
-        <div style="max-height:400px;overflow-y:auto">
-    `;
-    
-    // Şubelere göre grupla
-    const byBranch = {};
-    personnel.forEach(p => {
-        const branch = p.branch || 'Belirsiz';
-        if (!byBranch[branch]) byBranch[branch] = [];
-        byBranch[branch].push(p);
-    });
-    
-    Object.entries(byBranch).forEach(([branch, users]) => {
-        html += `<div style="font-weight:600;color:var(--tx);margin:16px 0 8px;font-size:.9rem">${branch}</div>`;
-        users.forEach(p => {
-            const roleNames = {
-                'yonetici': 'Yönetici',
-                'bolge_muduru': 'Bölge Müdürü',
-                'magaza_muduru': 'Mağaza Müdürü',
-                'mudur_yardimcisi': 'Müdür Yardımcısı',
-                'barista': 'Barista'
-            };
-            html += `
-                <div onclick="startImpersonation('${p.email}', '${p.name}', '${p.branch || ''}', '${p.role || 'barista'}')" 
-                    style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg3);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all .2s;border:1px solid transparent"
-                    onmouseover="this.style.borderColor='var(--accent)';this.style.background='var(--bg2)'"
-                    onmouseout="this.style.borderColor='transparent';this.style.background='var(--bg3)'">
-                    <div style="width:40px;height:40px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:.9rem">
-                        ${p.name?.charAt(0)?.toUpperCase() || '?'}
-                    </div>
-                    <div style="flex:1">
-                        <div style="font-weight:600;color:var(--tx)">${p.name || p.email}</div>
-                        <div style="font-size:.75rem;color:var(--tx3)">${roleNames[p.role] || p.role || 'Barista'}</div>
-                    </div>
-                    <svg width="20" height="20" fill="none" stroke="var(--tx3)" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
-                </div>
-            `;
-        });
-    });
-    
-    html += '</div>';
-    
-    showModal('👁️ Kullanıcı Gözünden Gör', html, '<button class="btn btn-ghost" onclick="closeModal()">İptal</button>');
-}
-
-// Impersonation başlat
-function startImpersonation(email, name, branch, role) {
-    closeModal();
-    
-    // Orijinal kullanıcıyı sakla
-    originalUser = {...currentUser};
-    
-    // Kullanıcıyı değiştir
-    currentUser = {
-        ...currentUser,
-        email: email,
-        name: name,
-        branch: branch,
-        role: role,
-        isImpersonated: true
-    };
-    
-    isImpersonating = true;
-    
-    // UI güncelle
-    document.getElementById('userName').textContent = name;
-    document.getElementById('userRole').textContent = getRoleName(role) + ' (Görüntüleme)';
-    document.getElementById('userAvatar').textContent = name?.charAt(0)?.toUpperCase() || '?';
-    
-    // Banner göster
-    document.getElementById('impersonationBanner').style.display = 'block';
-    document.getElementById('impersonationName').textContent = name + ' olarak görüntülüyorsunuz';
-    
-    // Impersonate butonunu gizle
-    document.getElementById('impersonateBtn').style.display = 'none';
-    
-    // Sayfayı yenile (kullanıcı yetkilerine göre)
-    goTo('dashboard');
-    toast(`${name} olarak görüntülüyorsunuz`, 'success');
-}
-
-// Impersonation'dan çık
-function exitImpersonation() {
-    if (!originalUser) return;
-    
-    // Orijinal kullanıcıya dön
-    currentUser = {...originalUser};
-    originalUser = null;
-    isImpersonating = false;
-    
-    // UI güncelle
-    document.getElementById('userName').textContent = currentUser.name;
-    document.getElementById('userRole').textContent = getRoleName(currentUser.role);
-    document.getElementById('userAvatar').textContent = currentUser.name?.charAt(0)?.toUpperCase() || '?';
-    
-    // Banner gizle
-    document.getElementById('impersonationBanner').style.display = 'none';
-    
-    // Yönetici ise impersonate butonunu göster
-    if (currentUser.role === 'yonetici') {
-        document.getElementById('impersonateBtn').style.display = 'flex';
-    }
-    
-    // Sayfayı yenile
-    goTo('dashboard');
-    toast('Kendi hesabınıza döndünüz', 'success');
-}
-
 // Çıkış yap fonksiyonu
 async function logout() {
     try {
@@ -2291,9 +2124,6 @@ async function logout() {
             }
         }
         
-        // Session bilgilerini temizle
-        localStorage.removeItem('mb_session_id');
-        
         // Session timeout'ları temizle
         if (sessionTimeoutId) clearTimeout(sessionTimeoutId);
         if (sessionWarningId) clearTimeout(sessionWarningId);
@@ -2306,15 +2136,6 @@ async function logout() {
     } catch (error) {
         console.error('Logout error:', error);
         toast('Çıkış hatası', 'error');
-    }
-}
-
-// Sidebar nav grup toggle
-function toggleNavGroup(label) {
-    label.classList.toggle('collapsed');
-    const items = label.nextElementSibling;
-    if (items) {
-        items.classList.toggle('collapsed');
     }
 }
 
@@ -2427,12 +2248,6 @@ function populateSubeSelect(selectId) {
     // Mağaza müdürü ise kendi şubesini seç
     if (!isAdmin && userBranch) {
         sel.value = userBranch;
-    } else {
-        // Admin/Bölge Müdürü için default: Tuzla Port
-        const tuzlaOption = Array.from(sel.options).find(o => o.value.toLowerCase().includes('tuzla'));
-        if (tuzlaOption) {
-            sel.value = tuzlaOption.value;
-        }
     }
 }
 
@@ -2646,14 +2461,21 @@ function goTo(page) {
     if (page === 'katalog') renderViolations();
     if (page === 'admin') renderAdminLists();
     if (page === 'personel') loadPersonelList();
+    if (page === 'checklist') initChecklistPage();
     if (page === 'puantaj') { 
         populateSubeSelect('puantajSube'); 
         // Şimdiki ay ve yılı seç
         const now = new Date();
         const aySelect = document.getElementById('puantajAy');
         const yilSelect = document.getElementById('puantajYil');
+        const subeSelect = document.getElementById('puantajSube');
         if (aySelect) aySelect.value = String(now.getMonth() + 1).padStart(2, '0');
         if (yilSelect) yilSelect.value = String(now.getFullYear());
+        // Tuzla Port varsayılan şube
+        if (subeSelect) {
+            const tuzlaOption = Array.from(subeSelect.options).find(o => o.value.toLowerCase().includes('tuzla'));
+            if (tuzlaOption) subeSelect.value = tuzlaOption.value;
+        }
         loadPuantaj(); 
     }
     if (page === 'shift') { 
@@ -2673,18 +2495,6 @@ function goTo(page) {
     if (page === 'ibraname') { 
         populateSubeSelect('ibra_sube'); 
         populatePozisyonSelect('ibra_pozisyon');
-    }
-    // Tüm belgeler ve formlar için şube seçimi (Tuzla Port default)
-    if (page === 'sozlesme') populateSubeSelect('soz_sube');
-    if (page === 'tutanak') populateSubeSelect('tut_sube');
-    if (page === 'savunma') populateSubeSelect('sav_sube');
-    if (page === 'fesih') populateSubeSelect('fes_sube');
-    if (page === 'borc') populateSubeSelect('borc_sube');
-    if (page === 'avans') populateSubeSelect('avans_sube');
-    if (page === 'zimmet') populateSubeSelect('zimmet_sube');
-    // Checklist sayfası
-    if (page === 'checklist') {
-        initChecklistPage();
     }
 }
 
@@ -3729,8 +3539,8 @@ function loadAdminFields() {
 
 function renderAdminLists() {
     // Yönetici-only tab'ları kontrol et
-    const adminOnlyTabs = ['tab-kullanicilar', 'tab-oturumlar', 'tab-aktiviteler'];
-    const adminOnlySections = ['admin-kullanicilar', 'admin-oturumlar', 'admin-aktiviteler'];
+    const adminOnlyTabs = ['tab-kullanicilar', 'tab-oturumlar', 'tab-izinler', 'tab-aktiviteler'];
+    const adminOnlySections = ['admin-kullanicilar', 'admin-oturumlar', 'admin-izinler', 'admin-aktiviteler'];
     
     if (currentUser?.role !== 'yonetici') {
         // Tab butonlarını gizle
@@ -3926,62 +3736,7 @@ async function confirmDeleteDuplicateShifts(idsJson) {
 // ========== ROL ÖNİZLEME ==========
 let originalUser = null;
 let isPreviewMode = false;
-
-// Sayfa yüklendiğinde önizleme durumunu kontrol et
-function checkPreviewMode() {
-    const saved = localStorage.getItem('moonberry_preview');
-    if (saved) {
-        try {
-            const data = JSON.parse(saved);
-            if (data.originalUser && data.previewUser) {
-                originalUser = data.originalUser;
-                isPreviewMode = true;
-                currentUser = data.previewUser;
-                
-                // UI güncelle
-                const roleNames = { 'barista': 'Barista', 'bolge_muduru': 'Bölge Müdürü', 'magaza_muduru': 'Mağaza Müdürü', 'yonetici': 'Yönetici' };
-                
-                document.getElementById('previewRoleName').textContent = roleNames[currentUser.role];
-                document.getElementById('previewBranchName').textContent = currentUser.branch || 'Tüm Şubeler';
-                document.getElementById('rolePreviewContent').style.display = 'none';
-                document.getElementById('rolePreviewActive').style.display = 'block';
-                
-                const userNameEl = document.getElementById('userName');
-                if (userNameEl) userNameEl.innerHTML = `<span style="background:var(--yellow);color:#000;padding:2px 6px;border-radius:4px;font-size:.7rem;margin-right:6px">ÖNİZLEME</span>${roleNames[currentUser.role]}`;
-                
-                const userRoleEl = document.getElementById('userRole');
-                if (userRoleEl) userRoleEl.textContent = currentUser.branch || 'Tüm Şubeler';
-                
-                // Üst bar ekle
-                showPreviewTopBar();
-                
-                // Yetkileri uygula
-                applyRolePreviewPermissions(currentUser.role, currentUser.branch);
-            }
-        } catch (e) {
-            localStorage.removeItem('moonberry_preview');
-        }
-    }
-}
-
-// Önizleme üst barı
-function showPreviewTopBar() {
-    if (document.getElementById('previewTopBar')) return;
-    
-    const roleNames = { 'barista': 'Barista', 'bolge_muduru': 'Bölge Müdürü', 'magaza_muduru': 'Mağaza Müdürü', 'yonetici': 'Yönetici' };
-    const bar = document.createElement('div');
-    bar.id = 'previewTopBar';
-    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#f39c12,#e67e22);color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;z-index:10000;font-size:.9rem;box-shadow:0 2px 10px rgba(0,0,0,.3)';
-    bar.innerHTML = `
-        <div style="display:flex;align-items:center;gap:12px">
-            <span style="font-size:1.2rem">👁️</span>
-            <span><strong>Önizleme Modu:</strong> ${roleNames[currentUser.role]} ${currentUser.branch && currentUser.branch !== 'all' ? '• ' + currentUser.branch : ''}</span>
-        </div>
-        <button onclick="stopRolePreview()" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:500">✕ Önizlemeyi Sonlandır</button>
-    `;
-    document.body.prepend(bar);
-    document.body.style.paddingTop = '50px';
-}
+let isImpersonating = false;
 
 function startRolePreview() {
     const role = document.getElementById('previewRoleSelect').value;
@@ -4030,12 +3785,6 @@ function startRolePreview() {
     if (userRoleEl) {
         userRoleEl.textContent = branch || 'Tüm Şubeler';
     }
-    
-    // LocalStorage'a kaydet
-    localStorage.setItem('moonberry_preview', JSON.stringify({ originalUser, previewUser: currentUser }));
-    
-    // Üst bar ekle
-    showPreviewTopBar();
     
     // Yetkileri uygula
     applyRolePreviewPermissions(role, branch);
@@ -4089,14 +3838,6 @@ function stopRolePreview() {
     currentUser = { ...originalUser };
     originalUser = null;
     isPreviewMode = false;
-    
-    // LocalStorage'dan sil
-    localStorage.removeItem('moonberry_preview');
-    
-    // Üst barı kaldır
-    const topBar = document.getElementById('previewTopBar');
-    if (topBar) topBar.remove();
-    document.body.style.paddingTop = '';
     
     // UI'ı sıfırla
     document.getElementById('rolePreviewContent').style.display = 'block';
@@ -6496,7 +6237,7 @@ async function loadActiveSessions() {
                     </td>
                     <td style="padding:12px;text-align:center">
                         ${isCurrentSession ? 
-                            `<button onclick="terminateSession('${doc.id}')" style="background:rgba(243,156,18,.1);border:1px solid rgba(243,156,18,.3);color:#f39c12;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:.8rem;transition:all .2s" onmouseover="this.style.background='rgba(243,156,18,.2)'" onmouseout="this.style.background='rgba(243,156,18,.1)'">⚠️ Çıkış Yap</button>` :
+                            '<span style="font-size:.75rem;color:var(--tx3);background:var(--bg3);padding:4px 10px;border-radius:4px">Bu Oturum</span>' :
                             `<button onclick="terminateSession('${doc.id}')" style="background:rgba(231,76,60,.1);border:none;color:#e74c3c;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:.8rem;transition:all .2s" onmouseover="this.style.background='rgba(231,76,60,.2)'" onmouseout="this.style.background='rgba(231,76,60,.1)'">🚫 Sonlandır</button>`
                         }
                     </td>
@@ -6580,14 +6321,7 @@ async function loadSessionHistory() {
 
 // Oturum sonlandır
 async function terminateSession(sessionId) {
-    // Kendi oturumunu mu sonlandırıyor?
-    const isOwnSession = sessionId === currentUser?.sessionId;
-    
-    if (isOwnSession) {
-        if (!confirm('KENDİ OTURUMUNUZU sonlandırmak üzeresiniz. Çıkış yapılacak. Devam etmek istiyor musunuz?')) return;
-    } else {
-        if (!confirm('Bu oturumu sonlandırmak istediğinize emin misiniz?')) return;
-    }
+    if (!confirm('Bu oturumu sonlandırmak istediğinize emin misiniz?')) return;
     
     try {
         await db.collection('sessions').doc(sessionId).update({
@@ -6596,15 +6330,9 @@ async function terminateSession(sessionId) {
             terminatedBy: currentUser?.id || 'admin'
         });
         
-        if (isOwnSession) {
-            // Kendi oturumunu sonlandırdı - logout yap
-            toast('Oturumunuz sonlandırıldı, çıkış yapılıyor...', 'warning');
-            setTimeout(() => logout(), 1000);
-        } else {
-            toast('Oturum sonlandırıldı', 'success');
-            loadActiveSessions();
-            loadSessionHistory();
-        }
+        toast('Oturum sonlandırıldı', 'success');
+        loadActiveSessions();
+        loadSessionHistory();
     } catch (error) {
         console.error('Oturum sonlandırma hatası:', error);
         toast('Sonlandırma hatası!', 'error');
@@ -6634,64 +6362,6 @@ async function terminateAllSessions(userId, exceptCurrentSession = true) {
     } catch (error) {
         console.error('Toplu oturum sonlandırma hatası:', error);
         return false;
-    }
-}
-
-// Session geçerliliğini kontrol et
-async function checkSessionValidity() {
-    if (!currentUser) return false;
-    
-    try {
-        // LocalStorage'dan session ID'yi al
-        const storedSessionId = localStorage.getItem('mb_session_id');
-        
-        if (!storedSessionId) {
-            // Session ID yok - yeni session oluştur
-            const newSessionId = await createSession();
-            if (newSessionId) {
-                localStorage.setItem('mb_session_id', newSessionId);
-                return true;
-            }
-            return false;
-        }
-        
-        // Session durumunu kontrol et
-        const sessionDoc = await db.collection('sessions').doc(storedSessionId).get();
-        
-        if (!sessionDoc.exists) {
-            // Session bulunamadı - yeni oluştur
-            localStorage.removeItem('mb_session_id');
-            const newSessionId = await createSession();
-            if (newSessionId) {
-                localStorage.setItem('mb_session_id', newSessionId);
-                return true;
-            }
-            return false;
-        }
-        
-        const sessionData = sessionDoc.data();
-        
-        // Session sonlandırılmış mı?
-        if (sessionData.status === 'terminated' || sessionData.status === 'forced_logout' || sessionData.status === 'ended') {
-            console.log('Session was terminated:', sessionData.status);
-            localStorage.removeItem('mb_session_id');
-            return false;
-        }
-        
-        // Session bu kullanıcıya mı ait?
-        if (sessionData.userId !== currentUser.id) {
-            console.log('Session belongs to different user');
-            localStorage.removeItem('mb_session_id');
-            return false;
-        }
-        
-        // Session geçerli
-        currentUser.sessionId = storedSessionId;
-        return true;
-        
-    } catch (error) {
-        console.error('Session validity check error:', error);
-        return true; // Hata durumunda devam et
     }
 }
 
@@ -6737,7 +6407,6 @@ async function createSession() {
         });
         
         currentUser.sessionId = sessionId;
-        localStorage.setItem('mb_session_id', sessionId);
         return sessionId;
     } catch (error) {
         console.error('Oturum oluşturma hatası:', error);
@@ -8704,1739 +8373,580 @@ function getWeekOptions() {
     return options;
 }
 
-// ==================== CHECKLIST MODULE ====================
-// Checklist türleri - şubeye göre
-// Checklist türleri - Firebase'den yüklenecek
+// =====================================================
+// CHECKLIST MODULE - V18 Phase 7
+// =====================================================
+
+// Checklist State
 let CHECKLIST_TYPES = {};
-let SYSTEM_CONFIG = {};
-
-// Platform listesi - Firebase'den yüklenecek
-let PLATFORMS = ['Trendyol', 'Yemek Sepeti', 'Getir Yemek', 'Migros'];
-
-// WhatsApp Grup Linkleri - Firebase'den yüklenecek
-let WHATSAPP_GROUPS = {};
-
-// Modern SVG İkonlar
-const ICONS = {
-    sunrise: '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 18a5 5 0 00-10 0"/><line x1="12" y1="2" x2="12" y2="9"/><line x1="4.22" y1="10.22" x2="5.64" y2="11.64"/><line x1="1" y1="18" x2="3" y2="18"/><line x1="21" y1="18" x2="23" y2="18"/><line x1="18.36" y1="11.64" x2="19.78" y2="10.22"/><line x1="23" y1="22" x2="1" y2="22"/><polyline points="8 6 12 2 16 6"/></svg>',
-    sunset: '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 18a5 5 0 00-10 0"/><line x1="12" y1="9" x2="12" y2="2"/><line x1="4.22" y1="10.22" x2="5.64" y2="11.64"/><line x1="1" y1="18" x2="3" y2="18"/><line x1="21" y1="18" x2="23" y2="18"/><line x1="18.36" y1="11.64" x2="19.78" y2="10.22"/><line x1="23" y1="22" x2="1" y2="22"/><polyline points="16 6 12 10 8 6"/></svg>',
-    'clipboard-check': '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>',
-    smartphone: '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
-    'calendar-week': '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/></svg>',
-    calendar: '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
-    'user-check': '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>',
-    check: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>',
-    x: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
-    trash: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>'
-};
-
-// İkon getir
-function getIcon(name) {
-    return ICONS[name] || ICONS['clipboard-check'];
-}
-
-// Rol adını Türkçe döndür
-function getRoleName(role) {
-    const names = {
-        'yonetici': 'Yönetici',
-        'bolge_muduru': 'Bölge Müdürü',
-        'magaza_muduru': 'Mağaza Müdürü',
-        'mudur_yardimcisi': 'Müdür Yardımcısı',
-        'barista': 'Barista'
-    };
-    return names[role] || role;
-}
-
-// Checklist zamanlama değişkenleri
+let personnelMapping = [];
+let currentChecklistBranch = null;
+let currentChecklistType = null;
 let checklistStartTime = null;
-let checklistFirstItemTime = null;
-let checklistExpectedDuration = 0; // saniye cinsinden
-let checklistTimerInterval = null; // Canlı kronometre interval
+let checklistTimerInterval = null;
+let showAllItems = false;
+let currentChecklistItems = [];
 
-// Canlı kronometre başlat
+// Impersonation - use existing originalUser from role preview system
+let impersonatedUser = null;
+
+// Load System Config from Firebase
+async function loadSystemConfig() {
+    try {
+        // Load checklist types
+        const typesDoc = await db.collection('config').doc('checklistTypes').get();
+        if (typesDoc.exists) {
+            const data = typesDoc.data();
+            CHECKLIST_TYPES = {};
+            if (data['Tuzla Port']) CHECKLIST_TYPES['Tuzla Port'] = data['Tuzla Port'];
+            if (data['Şişli (Merkez)']) CHECKLIST_TYPES['Şişli (Merkez)'] = data['Şişli (Merkez)'];
+        }
+        
+        // Load personnel mapping
+        const personnelDoc = await db.collection('config').doc('personnel').get();
+        if (personnelDoc.exists) {
+            personnelMapping = personnelDoc.data().list || [];
+        }
+        
+        console.log('System config loaded:', { types: Object.keys(CHECKLIST_TYPES), personnel: personnelMapping.length });
+    } catch (error) {
+        console.error('Error loading system config:', error);
+    }
+}
+
+// Initialize Checklist Page
+async function initChecklistPage() {
+    await loadSystemConfig();
+    renderBranchCards();
+    
+    // Show impersonate button for admin
+    if (currentUser && currentUser.role === 'yonetici') {
+        const btn = document.getElementById('btnImpersonate');
+        if (btn) btn.style.display = 'flex';
+    }
+}
+
+// Render Branch Selection Cards
+function renderBranchCards() {
+    const container = document.getElementById('branchCards');
+    if (!container) return;
+    
+    // Get user's branch
+    const userBranch = isImpersonating ? impersonatedUser.branch : (currentUser?.branch || 'all');
+    const branches = userBranch === 'all' ? ['Tuzla Port', 'Şişli (Merkez)'] : [userBranch];
+    
+    container.innerHTML = branches.map(branch => `
+        <div class="type-card" onclick="selectBranch('${branch}')">
+            <div class="type-card-icon">${branch.includes('Tuzla') ? '🏖️' : '🏙️'}</div>
+            <div class="type-card-title">${branch}</div>
+            <div class="type-card-sub">${CHECKLIST_TYPES[branch]?.length || 0} checklist türü</div>
+        </div>
+    `).join('');
+}
+
+// Select Branch
+function selectBranch(branch) {
+    currentChecklistBranch = branch;
+    document.getElementById('checklistBranchSelect').style.display = 'none';
+    document.getElementById('checklistTypeSelect').style.display = 'block';
+    document.getElementById('checklistBranchTitle').innerHTML = `📍 ${branch} - Checklist Türü Seçin`;
+    renderTypeCards(branch);
+}
+
+// Show Branch Select
+function showBranchSelect() {
+    document.getElementById('checklistBranchSelect').style.display = 'block';
+    document.getElementById('checklistTypeSelect').style.display = 'none';
+    document.getElementById('checklistForm').style.display = 'none';
+    stopChecklistTimer();
+}
+
+// Render Type Cards (Güncel Kontrol hariç)
+function renderTypeCards(branch) {
+    const container = document.getElementById('typeCards');
+    if (!container || !CHECKLIST_TYPES[branch]) return;
+    
+    const icons = {
+        'sunrise': '<svg viewBox="0 0 24 24" width="32" height="32" stroke="var(--accent)" fill="none" stroke-width="2"><path d="M17 18a5 5 0 0 0-10 0"/><line x1="12" y1="2" x2="12" y2="9"/><line x1="4.22" y1="10.22" x2="5.64" y2="11.64"/><line x1="1" y1="18" x2="3" y2="18"/><line x1="21" y1="18" x2="23" y2="18"/><line x1="18.36" y1="11.64" x2="19.78" y2="10.22"/><line x1="23" y1="22" x2="1" y2="22"/><polyline points="8 6 12 2 16 6"/></svg>',
+        'sunset': '<svg viewBox="0 0 24 24" width="32" height="32" stroke="var(--accent)" fill="none" stroke-width="2"><path d="M17 18a5 5 0 0 0-10 0"/><line x1="12" y1="9" x2="12" y2="2"/><line x1="4.22" y1="10.22" x2="5.64" y2="11.64"/><line x1="1" y1="18" x2="3" y2="18"/><line x1="21" y1="18" x2="23" y2="18"/><line x1="18.36" y1="11.64" x2="19.78" y2="10.22"/><line x1="23" y1="22" x2="1" y2="22"/><polyline points="16 6 12 10 8 6"/></svg>',
+        'clipboard-check': '<svg viewBox="0 0 24 24" width="32" height="32" stroke="var(--accent)" fill="none" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>',
+        'user-check': '<svg viewBox="0 0 24 24" width="32" height="32" stroke="var(--accent)" fill="none" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>',
+        'smartphone': '<svg viewBox="0 0 24 24" width="32" height="32" stroke="var(--accent)" fill="none" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
+        'calendar-week': '<svg viewBox="0 0 24 24" width="32" height="32" stroke="var(--accent)" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="18"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="16" y1="14" x2="16" y2="18"/></svg>',
+        'calendar': '<svg viewBox="0 0 24 24" width="32" height="32" stroke="var(--accent)" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'
+    };
+    
+    // Filter out 'guncel' (Güncel Kontrol)
+    const types = CHECKLIST_TYPES[branch].filter(t => t.id !== 'guncel');
+    
+    container.innerHTML = types.map(type => `
+        <div class="type-card" onclick="selectChecklistType('${type.id}')">
+            <div class="type-card-icon">${icons[type.icon] || '📋'}</div>
+            <div class="type-card-title">${type.name}</div>
+            <div class="type-card-sub">${type.managerOnly ? '👔 Müdür' : '👥 Herkes'}</div>
+        </div>
+    `).join('');
+}
+
+// Show Type Select
+function showTypeSelect() {
+    document.getElementById('checklistTypeSelect').style.display = 'block';
+    document.getElementById('checklistForm').style.display = 'none';
+    stopChecklistTimer();
+}
+
+// Select Checklist Type
+async function selectChecklistType(typeId) {
+    currentChecklistType = typeId;
+    document.getElementById('checklistTypeSelect').style.display = 'none';
+    document.getElementById('checklistForm').style.display = 'block';
+    
+    // Get type info
+    const typeInfo = CHECKLIST_TYPES[currentChecklistBranch]?.find(t => t.id === typeId);
+    document.getElementById('checklistFormTitle').innerHTML = `${typeInfo?.name || typeId} - ${currentChecklistBranch}`;
+    
+    // Show date picker for aylik (Temizlik ve Bakım)
+    const datePicker = document.getElementById('checklistDatePicker');
+    const btnShowAll = document.getElementById('btnShowAll');
+    if (typeId === 'aylik') {
+        datePicker.style.display = 'block';
+        btnShowAll.style.display = 'block';
+        document.getElementById('checklistDate').value = new Date().toISOString().split('T')[0];
+    } else {
+        datePicker.style.display = 'none';
+        btnShowAll.style.display = 'none';
+    }
+    
+    showAllItems = false;
+    await loadChecklist();
+}
+
+// Load Checklist from Firebase
+async function loadChecklist() {
+    const container = document.getElementById('checklistItems');
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx2)">⏳ Yükleniyor...</div>';
+    
+    try {
+        const docId = currentChecklistBranch.replace(/[^a-zA-Z0-9]/g, '_') + '_' + currentChecklistType;
+        const doc = await db.collection('checklists').doc(docId).get();
+        
+        if (!doc.exists) {
+            container.innerHTML = '<div class="alert alert-warning">Bu checklist için veri bulunamadı.</div>';
+            return;
+        }
+        
+        const items = doc.data().items || [];
+        currentChecklistItems = items;
+        
+        // Filter items for aylik (Temizlik ve Bakım)
+        let filteredItems = items;
+        if (currentChecklistType === 'aylik' && !showAllItems) {
+            filteredItems = filterItemsByDate(items);
+        }
+        
+        renderChecklistForm(filteredItems, items.length);
+        
+    } catch (error) {
+        console.error('Error loading checklist:', error);
+        container.innerHTML = '<div class="alert alert-danger">Checklist yüklenirken hata oluştu.</div>';
+    }
+}
+
+// Filter items by date (for Temizlik ve Bakım)
+function filterItemsByDate(items) {
+    const dateInput = document.getElementById('checklistDate');
+    if (!dateInput) return items;
+    
+    const selectedDate = new Date(dateInput.value);
+    const dayOfMonth = selectedDate.getDate();
+    
+    return items.filter(item => {
+        // Check for date pattern like "(ayın 3, 11, 19)" or "ayın 2-4-6, 18-20-22"
+        const dateMatch = item.text.match(/ayın\s*([\d,\-\s]+)/i);
+        if (!dateMatch) return true; // Show items without date restriction
+        
+        const dateStr = dateMatch[1];
+        // Parse dates like "3, 11, 19" or "2-4-6, 18-20-22"
+        const dates = dateStr.split(/[,\s]+/).flatMap(part => {
+            if (part.includes('-')) {
+                // Handle ranges like "2-4-6" (individual dates, not range)
+                return part.split('-').map(d => parseInt(d.trim()));
+            }
+            return [parseInt(part.trim())];
+        }).filter(d => !isNaN(d));
+        
+        return dates.includes(dayOfMonth);
+    });
+}
+
+// Filter checklist by date (called on date change)
+function filterChecklistByDate() {
+    if (currentChecklistType === 'aylik') {
+        const filteredItems = showAllItems ? currentChecklistItems : filterItemsByDate(currentChecklistItems);
+        renderChecklistForm(filteredItems, currentChecklistItems.length);
+    }
+}
+
+// Toggle show all items
+function toggleShowAllItems() {
+    showAllItems = !showAllItems;
+    const btn = document.getElementById('btnShowAll');
+    btn.textContent = showAllItems ? '📅 Tarihe Göre Filtrele' : '📋 Tümünü Göster';
+    filterChecklistByDate();
+}
+
+// Render Checklist Form
+function renderChecklistForm(items, totalCount) {
+    const container = document.getElementById('checklistItems');
+    
+    // Calculate estimated time
+    const totalSeconds = items.reduce((sum, item) => sum + (item.duration || 60), 0);
+    const estMinutes = Math.ceil(totalSeconds / 60);
+    document.getElementById('checklistEstTime').innerHTML = `Tahmini süre: <strong>${estMinutes} dakika</strong> (${items.length}/${totalCount} madde)`;
+    
+    // Platform check special rendering
+    if (currentChecklistType === 'platform') {
+        renderPlatformChecklist(container, items);
+        return;
+    }
+    
+    // Regular checklist
+    container.innerHTML = items.map((item, idx) => `
+        <div class="checklist-item" style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:var(--surface2);border:1px solid var(--surface3);border-radius:var(--radiusSm);margin-bottom:8px;transition:all .2s">
+            <input type="checkbox" id="chk_${idx}" onchange="onChecklistItemChange(${idx})" style="width:20px;height:20px;margin-top:2px;accent-color:var(--accent);cursor:pointer">
+            <label for="chk_${idx}" style="flex:1;cursor:pointer;font-size:.9rem;color:var(--tx)">${item.text}</label>
+            <span style="font-size:.7rem;color:var(--tx3);white-space:nowrap">${Math.ceil((item.duration || 60) / 60)} dk</span>
+        </div>
+    `).join('');
+    
+    document.getElementById('checklistActions').style.display = 'flex';
+}
+
+// Platform Check Special Render (Table format)
+function renderPlatformChecklist(container, items) {
+    const timeSlots = ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'];
+    const moonberryPlatforms = ['Trendyol', 'Yemek Sepeti', 'Getir Yemek', 'Migros'];
+    const sunberryPlatforms = currentChecklistBranch === 'Tuzla Port' 
+        ? ['Sunberry Trendyol', 'Sunberry Yemek Sepeti', 'Sunberry Getir', 'Sunberry Migros'] 
+        : [];
+    
+    const allPlatforms = [...moonberryPlatforms, ...sunberryPlatforms];
+    
+    let html = `
+        <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:.8rem">
+                <thead>
+                    <tr style="background:var(--accent);color:#fff">
+                        <th style="padding:10px;border:1px solid var(--bg4);text-align:left">Saat</th>
+                        ${moonberryPlatforms.map(p => `<th style="padding:10px;border:1px solid var(--bg4);text-align:center">${p.replace('Yemek Sepeti', 'YS').replace('Getir Yemek', 'Getir')}</th>`).join('')}
+                        ${sunberryPlatforms.length ? sunberryPlatforms.map(p => `<th style="padding:10px;border:1px solid var(--bg4);text-align:center;background:var(--accent2)">${p.replace('Sunberry ', 'SB ')}</th>`).join('') : ''}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${timeSlots.map((slot, rowIdx) => `
+                        <tr style="background:${rowIdx % 2 === 0 ? 'var(--surface)' : 'var(--surface2)'}">
+                            <td style="padding:10px;border:1px solid var(--bg4);font-weight:600">${slot}</td>
+                            ${allPlatforms.map((platform, colIdx) => `
+                                <td style="padding:10px;border:1px solid var(--bg4);text-align:center">
+                                    <input type="checkbox" id="platform_${rowIdx}_${colIdx}" onchange="onChecklistItemChange(0)" style="width:18px;height:18px;accent-color:var(--green);cursor:pointer">
+                                </td>
+                            `).join('')}
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+    document.getElementById('checklistActions').style.display = 'flex';
+}
+
+// On Checklist Item Change (Start timer on first check)
+function onChecklistItemChange(idx) {
+    if (!checklistStartTime) {
+        startChecklistTimer();
+    }
+    
+    // Update item style
+    const checkbox = document.getElementById(`chk_${idx}`);
+    if (checkbox) {
+        const item = checkbox.closest('.checklist-item');
+        if (item) {
+            item.style.background = checkbox.checked ? 'rgba(39, 174, 96, 0.1)' : 'var(--surface2)';
+            item.style.borderColor = checkbox.checked ? 'var(--green)' : 'var(--surface3)';
+        }
+    }
+}
+
+// Start Checklist Timer
 function startChecklistTimer() {
-    if (checklistTimerInterval) clearInterval(checklistTimerInterval);
+    checklistStartTime = new Date();
+    const timerBox = document.getElementById('checklistTimerBox');
+    if (timerBox) {
+        timerBox.style.display = 'block';
+        document.getElementById('checklistStartTimeLabel').textContent = checklistStartTime.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    }
     
     checklistTimerInterval = setInterval(() => {
-        if (!checklistStartTime) return;
-        
         const elapsed = Math.floor((new Date() - checklistStartTime) / 1000);
-        const hours = Math.floor(elapsed / 3600);
-        const minutes = Math.floor((elapsed % 3600) / 60);
-        const seconds = elapsed % 60;
-        
-        const timerDisplay = document.getElementById('checklistElapsedTime');
-        if (timerDisplay) {
-            timerDisplay.textContent = `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
-        }
+        const hours = String(Math.floor(elapsed / 3600)).padStart(2, '0');
+        const minutes = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
+        const seconds = String(elapsed % 60).padStart(2, '0');
+        document.getElementById('checklistTimer').textContent = `${hours}:${minutes}:${seconds}`;
     }, 1000);
 }
 
-// Kronometre durdur
+// Stop Checklist Timer
 function stopChecklistTimer() {
     if (checklistTimerInterval) {
         clearInterval(checklistTimerInterval);
         checklistTimerInterval = null;
     }
-}
-
-// Personel-şube eşleştirmesi (Firebase'den yüklenecek)
-let personnelMapping = [];
-
-// Tüm config'i Firebase'den yükle
-async function loadSystemConfig() {
-    try {
-        // Sistem ayarları
-        const sysDoc = await db.collection('config').doc('system').get();
-        if (sysDoc.exists) {
-            SYSTEM_CONFIG = sysDoc.data();
-            WHATSAPP_GROUPS = SYSTEM_CONFIG.whatsappGroups || {};
-            PLATFORMS = SYSTEM_CONFIG.platforms || PLATFORMS;
-        }
-        
-        // Checklist türleri
-        const typesDoc = await db.collection('config').doc('checklistTypes').get();
-        if (typesDoc.exists) {
-            const data = typesDoc.data();
-            // updatedAt gibi meta alanları filtrele
-            CHECKLIST_TYPES = {};
-            for (const [key, value] of Object.entries(data)) {
-                if (Array.isArray(value)) {
-                    CHECKLIST_TYPES[key] = value;
-                }
-            }
-        }
-        
-        // Personel eşleştirmesi
-        const persDoc = await db.collection('config').doc('personnel').get();
-        if (persDoc.exists) {
-            personnelMapping = persDoc.data().list || [];
-        }
-        
-        console.log('Sistem config yüklendi:', {
-            branches: Object.keys(CHECKLIST_TYPES),
-            personnel: personnelMapping.length
-        });
-    } catch (e) {
-        console.warn('Config yüklenemedi:', e);
+    checklistStartTime = null;
+    const timerBox = document.getElementById('checklistTimerBox');
+    if (timerBox) {
+        timerBox.style.display = 'none';
+        document.getElementById('checklistTimer').textContent = '00:00:00';
     }
 }
 
-// Personel eşleştirmesini Firebase'den yükle (eski uyumluluk için)
-async function loadPersonnelMapping() {
-    if (personnelMapping.length === 0) {
-        await loadSystemConfig();
-    }
-}
-
-// Kullanıcının şubesini email'den al
-function getUserBranchFromEmail(email) {
-    const match = personnelMapping.find(p => p.email?.toLowerCase() === email?.toLowerCase());
-    return match ? match.branch : null;
-}
-
-// Kullanıcının adını email'den al
-function getUserNameFromEmail(email) {
-    const match = personnelMapping.find(p => p.email?.toLowerCase() === email?.toLowerCase());
-    return match ? match.name : null;
-}
-
-// Checklist sayfası başlat
-async function initChecklistPage() {
-    // Önce config'i yükle
-    await loadSystemConfig();
-    // Şube dropdown'ı doldur
-    const subeSelect = document.getElementById('checklistSube');
-    if (!subeSelect) return;
+// Submit Checklist
+async function submitChecklist() {
+    const items = document.querySelectorAll('#checklistItems input[type="checkbox"]');
+    const checkedCount = Array.from(items).filter(i => i.checked).length;
+    const totalCount = items.length;
     
-    const userEmail = currentUser?.email;
-    const emailBranch = getUserBranchFromEmail(userEmail);
-    const userBranch = emailBranch || currentUser?.branch;
-    const isAdmin = currentUser?.role === 'yonetici' || currentUser?.role === 'bolge_muduru';
-    
-    let branches = STATE.branches || [];
-    
-    // Mağaza müdürü/barista sadece kendi şubesini görsün ve değiştiremesin
-    if (!isAdmin && userBranch && userBranch !== 'all') {
-        branches = branches.filter(b => b === userBranch);
-        subeSelect.disabled = true;
-        subeSelect.style.opacity = '0.7';
-        subeSelect.title = 'Şubeniz otomatik seçilmiştir';
-    } else {
-        subeSelect.disabled = false;
-        subeSelect.style.opacity = '1';
-    }
-    
-    subeSelect.innerHTML = branches.map(b => `<option value="${b}">${b}</option>`).join('');
-    
-    // Kullanıcının şubesini seç veya default Tuzla Port
-    if (userBranch && userBranch !== 'all') {
-        const userOption = Array.from(subeSelect.options).find(o => o.value === userBranch);
-        if (userOption) subeSelect.value = userOption.value;
-    } else {
-        const tuzlaOption = Array.from(subeSelect.options).find(o => o.value.toLowerCase().includes('tuzla'));
-        if (tuzlaOption) subeSelect.value = tuzlaOption.value;
-    }
-    
-    // Tarih bugün
-    document.getElementById('checklistDate').value = new Date().toISOString().split('T')[0];
-    
-    // Yönetici butonlarını göster/gizle
-    const adminBtns = document.getElementById('checklistAdminButtons');
-    if (adminBtns) {
-        adminBtns.style.display = (currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru') ? 'block' : 'none';
-    }
-    
-    // Checklist türlerini yükle
-    loadChecklistTypes();
-}
-
-// Checklist türlerini yükle
-async function loadChecklistTypes() {
-    const branch = document.getElementById('checklistSube')?.value;
-    const typeSelect = document.getElementById('checklistType');
-    const buttonsContainer = document.getElementById('checklistTypeButtons');
-    if (!typeSelect || !branch) return;
-    
-    // Config yüklenmemişse yükle
-    if (Object.keys(CHECKLIST_TYPES).length === 0) {
-        await loadSystemConfig();
-    }
-    
-    const types = CHECKLIST_TYPES[branch] || [];
-    const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
-    
-    // Debug log
-    console.log('Checklist türleri:', branch, types.length, 'adet');
-    
-    // Güncel Kontrol'u filtrele (geçici olarak gizli)
-    const filteredTypes = types.filter(t => t.id !== 'guncel');
-    
-    // Hidden select güncelle
-    let selectHtml = '<option value="">-- Checklist Seçin --</option>';
-    filteredTypes.forEach(t => {
-        if (t.managerOnly && !isManager) return;
-        selectHtml += `<option value="${t.id}" data-timeslots="${t.timeSlots ? t.timeSlots.join(',') : ''}">${t.name}</option>`;
-    });
-    typeSelect.innerHTML = selectHtml;
-    
-    // Butonları oluştur - Modern SVG ikonlar
-    let buttonsHtml = '';
-    filteredTypes.forEach(t => {
-        if (t.managerOnly && !isManager) return;
-        const iconSvg = getIcon(t.icon || 'clipboard-check');
-        buttonsHtml += `
-            <button type="button" class="checklist-type-btn" data-type="${t.id}" data-timeslots="${t.timeSlots ? t.timeSlots.join(',') : ''}"
-                onclick="selectChecklistType('${t.id}')"
-                style="padding:12px 18px;border:1px solid var(--cardBorder);background:var(--bg2);color:var(--tx);border-radius:10px;cursor:pointer;font-size:.9rem;font-weight:500;transition:all .2s;display:flex;align-items:center;gap:10px">
-                <span style="opacity:.7">${iconSvg}</span>
-                ${t.name}
-            </button>
-        `;
-    });
-    
-    if (!buttonsHtml) {
-        buttonsHtml = '<div style="color:var(--tx3);font-size:.9rem;padding:10px">Bu şube için checklist bulunamadı. Lütfen seed.html ile verileri yükleyin.</div>';
-    }
-    buttonsContainer.innerHTML = buttonsHtml;
-    
-    // Formu temizle
-    document.getElementById('checklistFormContainer').innerHTML = `
-        <div style="text-align:center;padding:60px;color:var(--tx2)">
-            <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="opacity:.4;margin-bottom:16px">
-                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
-                <rect x="9" y="3" width="6" height="4" rx="1"/>
-                <path d="M9 14l2 2 4-4"/>
-            </svg>
-            <div style="font-size:1.1rem;margin-bottom:8px">Checklist Seçin</div>
-            <div style="font-size:.85rem;opacity:.6">Yukarıdan checklist türü seçerek başlayın</div>
-        </div>
-    `;
-}
-
-// Checklist türü seç (buton)
-function selectChecklistType(typeId) {
-    const typeSelect = document.getElementById('checklistType');
-    typeSelect.value = typeId;
-    
-    // Buton stillerini güncelle
-    document.querySelectorAll('.checklist-type-btn').forEach(btn => {
-        if (btn.dataset.type === typeId) {
-            btn.style.background = 'linear-gradient(135deg, var(--accent), #ff6b5b)';
-            btn.style.color = '#fff';
-            btn.style.borderColor = 'var(--accent)';
-            btn.style.boxShadow = '0 4px 12px rgba(255,134,116,.3)';
-        } else {
-            btn.style.background = 'var(--bg2)';
-            btn.style.color = 'var(--tx)';
-            btn.style.borderColor = 'var(--cardBorder)';
-            btn.style.boxShadow = 'none';
-        }
-    });
-    
-    // Time slot güncelle
-    const selectedBtn = document.querySelector(`.checklist-type-btn[data-type="${typeId}"]`);
-    const timeSlots = selectedBtn?.dataset.timeslots?.split(',').filter(Boolean) || [];
-    const timeSlotGroup = document.getElementById('checklistTimeSlotGroup');
-    const timeSlotSelect = document.getElementById('checklistTimeSlot');
-    
-    if (timeSlots.length > 0) {
-        timeSlotGroup.style.display = 'block';
-        let tsHtml = '<option value="">-- Seçin --</option>';
-        timeSlots.forEach(ts => { tsHtml += `<option value="${ts}">${ts}</option>`; });
-        timeSlotSelect.innerHTML = tsHtml;
-    } else {
-        timeSlotGroup.style.display = 'none';
-        timeSlotSelect.innerHTML = '<option value="">-- Seçin --</option>';
-    }
-    
-    loadChecklist();
-}
-
-// Checklist yükle
-async function loadChecklist() {
-    const branch = document.getElementById('checklistSube')?.value;
-    const type = document.getElementById('checklistType')?.value;
-    const date = document.getElementById('checklistDate')?.value;
-    const container = document.getElementById('checklistFormContainer');
-    
-    if (!branch || !type || !date || !container) return;
-    
-    // Saat dilimi kontrolü
-    const typeOption = document.getElementById('checklistType')?.selectedOptions[0];
-    const timeSlots = typeOption?.dataset.timeslots?.split(',').filter(Boolean) || [];
-    const timeSlotGroup = document.getElementById('checklistTimeSlotGroup');
-    const timeSlotSelect = document.getElementById('checklistTimeSlot');
-    
-    if (timeSlots.length > 0) {
-        timeSlotGroup.style.display = 'block';
-        timeSlotSelect.innerHTML = '<option value="">-- Saat Seçin --</option>' + 
-            timeSlots.map(t => `<option value="${t}">${t}</option>`).join('');
-        
-        // Saat seçilmemişse bekle
-        if (!timeSlotSelect.value) {
-            container.innerHTML = `
-                <div style="text-align:center;padding:60px;color:var(--tx2)">
-                    <div style="font-size:4rem;margin-bottom:16px">⏰</div>
-                    <div style="font-size:1.1rem;margin-bottom:8px">Saat Dilimi Seçin</div>
-                    <div style="font-size:.9rem">Bu checklist günün belirli saatlerinde doldurulur</div>
-                </div>
-            `;
-            return;
-        }
-    } else {
-        timeSlotGroup.style.display = 'none';
-    }
-    
-    const timeSlot = timeSlotSelect?.value || null;
-    
-    // Loading
-    container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--tx2)">
-        <div class="loading-spinner" style="margin:0 auto 16px"></div>
-        Checklist yükleniyor...
-    </div>`;
-    
-    try {
-        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
-        let items = [];
-        
-        // Önce Firebase'den çek
-        try {
-            const checklistDoc = await db.collection('checklists').doc(checklistId).get();
-            if (checklistDoc.exists && checklistDoc.data().items?.length > 0) {
-                items = checklistDoc.data().items;
-            }
-        } catch (dbError) {
-            console.warn('Firestore erişim hatası:', dbError);
-        }
-        
-        // Firebase'de yoksa default maddeleri kullan ve kaydet (ilk kurulum)
-        if (items.length === 0) {
-            items = getDefaultChecklistItems(branch, type);
-            if (items.length > 0) {
-                try {
-                    await db.collection('checklists').doc(checklistId).set({
-                        branch,
-                        type,
-                        items,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    console.log(`İlk kurulum: ${checklistId} Firebase'e kaydedildi`);
-                } catch (e) {
-                    console.warn('İlk kayıt hatası:', e);
-                }
-            }
-        }
-        
-        // Eğer hala items boşsa hata göster
-        if (!items || items.length === 0) {
-            container.innerHTML = `<div style="text-align:center;padding:60px;color:var(--tx2)">
-                <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="opacity:.4;margin-bottom:16px">
-                    <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
-                </svg>
-                <div style="font-size:1.1rem;margin-bottom:8px;color:var(--tx)">Checklist Verisi Bulunamadı</div>
-                <div style="font-size:.85rem;margin-bottom:16px;max-width:300px;margin-left:auto;margin-right:auto">
-                    <strong>${branch}</strong> şubesi için <strong>${type}</strong> checklist'i henüz yüklenmemiş.
-                </div>
-                <div style="font-size:.8rem;color:var(--tx3)">
-                    Yönetici: <code>seed.html</code> dosyasını açıp verileri yükleyin.
-                </div>
-            </div>`;
-            return;
-        }
-        
-        // Daha önce doldurulmuş mu kontrol et
-        let submittedData = null;
-        try {
-            const submissionId = `${checklistId}_${date}${timeSlot ? '_' + timeSlot.replace(':', '') : ''}`;
-            const submissionDoc = await db.collection('checklistSubmissions').doc(submissionId).get();
-            if (submissionDoc.exists) {
-                submittedData = submissionDoc.data();
-            }
-        } catch (subError) {
-            console.warn('Submission kontrol hatası:', subError);
-        }
-        
-        // Temizlik ve Bakım (aylik) için tarih bazlı filtreleme
-        let filteredItems = items;
-        let showAllItems = localStorage.getItem('checklist_showAll_' + type) === 'true';
-        
-        if (type === 'aylik' && !showAllItems) {
-            const today = new Date(date);
-            const dayOfMonth = today.getDate();
-            const hour = new Date().getHours();
-            const isAcilis = hour < 15; // 15:00 öncesi açılış, sonrası kapanış varsayımı
-            
-            filteredItems = items.filter(item => {
-                const text = item.text.toLowerCase();
-                
-                // Tarih kontrolü: "ayın X, Y, Z" veya "(ayın X, Y, Z)" formatı
-                const dateMatch = text.match(/\(?\s*ayın\s+([\d,\s]+)\s*\)?/i);
-                if (dateMatch) {
-                    const days = dateMatch[1].split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d));
-                    if (days.length > 0 && !days.includes(dayOfMonth)) {
-                        return false; // Bu gün için değil
-                    }
-                }
-                
-                // Shift tipi kontrolü: (Açılış) veya (Kapanış)
-                if (text.includes('(açılış)') && !isAcilis) return false;
-                if (text.includes('(kapanış)') && isAcilis) return false;
-                
-                return true;
-            });
-        }
-        
-        // Formu render et
-        renderChecklistForm(filteredItems, branch, type, date, timeSlot, submittedData, items.length, showAllItems);
-        
-    } catch (error) {
-        console.error('Checklist yükleme hatası:', error);
-        container.innerHTML = `<div style="color:var(--red);padding:20px;text-align:center">
-            <div style="font-size:2rem;margin-bottom:8px">⚠️</div>
-            Checklist yüklenirken hata oluştu: ${error.message || 'Bilinmeyen hata'}
-        </div>`;
-    }
-}
-
-// Checklist formunu render et
-let checklistEditMode = false;
-
-function renderChecklistForm(items, branch, type, date, timeSlot, submittedData, totalItemCount, showAllItems) {
-    const container = document.getElementById('checklistFormContainer');
-    const isAdmin = currentUser?.role === 'yonetici' || currentUser?.role === 'bolge_muduru';
-    const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
-    const isSubmitted = !!submittedData;
-    const isAylik = type === 'aylik';
-    const filteredCount = totalItemCount ? totalItemCount - items.length : 0;
-    
-    // Zamanlama sıfırla (yeni checklist)
-    if (!isSubmitted) {
-        checklistStartTime = null;
-        checklistFirstItemTime = null;
-        // Beklenen süreyi hesapla
-        checklistExpectedDuration = items.reduce((sum, item) => sum + (item.duration || 60), 0);
-    }
-    
-    // Kullanıcı adını email'den al
-    const autoPersonName = getUserNameFromEmail(currentUser?.email) || currentUser?.name || '';
-    const isAutoName = !!getUserNameFromEmail(currentUser?.email);
-    
-    // Platform check için özel render
-    if (type === 'platform') {
-        renderPlatformChecklist(container, branch, date, timeSlot, submittedData);
+    if (checkedCount === 0) {
+        alert('En az bir madde işaretlemelisiniz.');
         return;
     }
     
-    let typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === type);
-    const expectedMinutes = Math.round(checklistExpectedDuration / 60);
-    const iconSvg = getIcon(typeInfo?.icon || 'clipboard-check');
-    
-    let html = `
-        <div class="form-section">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
-                <div>
-                    <div style="font-size:1.3rem;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:10px">
-                        <span style="opacity:.7">${iconSvg}</span>
-                        ${typeInfo?.name || type}
-                    </div>
-                    <div style="font-size:.85rem;color:var(--tx2)">${branch} • ${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})}${timeSlot ? ' • ' + timeSlot : ''}</div>
-                </div>
-                <div style="display:flex;gap:8px;align-items:center">
-                    ${isSubmitted ? `
-                        <div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.85rem">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                            Tamamlandı
-                        </div>
-                    ` : ''}
-                    ${isAdmin && !isSubmitted ? `
-                        <button class="btn btn-sm ${checklistEditMode ? 'btn-primary' : 'btn-ghost'}" onclick="toggleChecklistEditMode('${branch}', '${type}', '${date}', '${timeSlot || ''}')">
-                            ${checklistEditMode ? '✓ Düzenleme' : '✏️ Düzenle'}
-                        </button>
-                    ` : ''}
-                </div>
-            </div>
-            ${isSubmitted ? `
-                <div style="font-size:.75rem;color:var(--tx3);margin-bottom:16px">${submittedData.submittedByName} • ${submittedData.submittedAt?.toDate ? new Date(submittedData.submittedAt.toDate()).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'}) : ''}</div>
-            ` : ''}
-            
-            ${isAylik && filteredCount > 0 ? `
-                <!-- Temizlik ve Bakım Filtreleme Bilgisi -->
-                <div style="margin-bottom:16px;padding:12px 16px;background:rgba(0,140,149,.1);border:1px solid rgba(0,140,149,.2);border-radius:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
-                    <div style="font-size:.85rem;color:var(--tx)">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                        ${showAllItems ? 
-                            `Tüm maddeler gösteriliyor (${items.length} madde)` : 
-                            `Bugüne ait ${items.length} madde gösteriliyor (${filteredCount} madde gizli)`
-                        }
-                    </div>
-                    <button onclick="toggleShowAllChecklistItems('${type}')" class="btn btn-sm ${showAllItems ? 'btn-primary' : 'btn-ghost'}" style="padding:6px 12px">
-                        ${showAllItems ? '📅 Tarihe Göre Filtrele' : '📋 Tümünü Göster'}
-                    </button>
-                </div>
-            ` : ''}
-            
-            ${!checklistEditMode ? `
-                <!-- Personel ve Zaman Bilgisi -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
-                    <div style="padding:16px;background:var(--bg3);border-radius:12px">
-                        <label class="form-label" style="margin-bottom:8px;display:flex;align-items:center;gap:6px">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                            Personel
-                        </label>
-                        <input type="text" id="checklistPersonName" class="form-input" 
-                            value="${submittedData?.personName || autoPersonName}" 
-                            ${isSubmitted || isAutoName ? 'disabled style="opacity:0.7;background:var(--bg2)"' : 'placeholder="Adınızı girin"'}>
-                        ${isAutoName && !isSubmitted ? '<div style="font-size:.75rem;color:var(--tx3);margin-top:4px">✓ Otomatik atandı</div>' : ''}
-                    </div>
-                    <div style="padding:16px;background:var(--bg3);border-radius:12px">
-                        <label class="form-label" style="margin-bottom:8px;display:flex;align-items:center;gap:6px">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                            Tahmini Süre
-                        </label>
-                        <div style="font-size:1.1rem;font-weight:600;color:var(--tx)">${expectedMinutes} dakika</div>
-                        <div style="font-size:.75rem;color:var(--tx3)">${items.length} madde</div>
-                    </div>
-                </div>
-                
-                <!-- Başlangıç Zamanı Banner - Canlı Kronometre -->
-                <div id="checklistTimerBanner" style="display:none;margin-bottom:16px;padding:14px 16px;background:linear-gradient(135deg,rgba(0,140,149,.15),rgba(0,140,149,.05));border:1px solid rgba(0,140,149,.3);border-radius:12px">
-                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-                        <div style="display:flex;align-items:center;gap:8px">
-                            <div style="width:8px;height:8px;background:#27ae60;border-radius:50%;animation:pulse 1.5s infinite"></div>
-                            <span style="font-weight:600;color:var(--tx)">Checklist Başladı</span>
-                            <span style="font-size:.85rem;color:var(--tx2)">(<span id="checklistStartTimeDisplay">--:--:--</span>)</span>
-                        </div>
-                        <div style="display:flex;align-items:center;gap:8px">
-                            <svg width="18" height="18" fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                            <span id="checklistElapsedTime" style="font-size:1.2rem;font-weight:700;color:var(--accent);font-family:'JetBrains Mono',monospace">00:00:00</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}</style>
-                
-                <div style="margin-bottom:16px;padding:12px;background:rgba(255,134,116,.1);border-radius:10px;font-size:.85rem;color:var(--tx2)">
-                    ⚠️ <strong>Önemli:</strong> İlk maddeyi işaretlediğinizde süre başlar. Tüm maddeleri dikkatlice kontrol edin.
-                </div>
-            ` : `
-                <div style="margin-bottom:16px;padding:16px;background:rgba(0,140,149,.1);border-radius:12px">
-                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
-                        <div style="font-size:.9rem;color:var(--tx)">
-                            <strong>📝 Düzenleme Modu</strong> - Madde ekle, sil veya toplu işlem yap
-                        </div>
-                        <div style="display:flex;gap:8px;flex-wrap:wrap">
-                            <button class="btn btn-sm btn-primary" onclick="showAddChecklistItemModal()">+ Madde Ekle</button>
-                            <button class="btn btn-sm btn-ghost" onclick="selectAllChecklistItems()">☑️ Tümünü Seç</button>
-                            <button class="btn btn-sm btn-ghost" onclick="deselectAllChecklistItems()">☐ Seçimi Kaldır</button>
-                            <button class="btn btn-sm" style="background:#e74c3c;color:#fff" onclick="deleteSelectedChecklistItems('${branch}', '${type}')">🗑️ Seçilenleri Sil</button>
-                        </div>
-                    </div>
-                </div>
-            `}
-            
-            <div id="checklistItems">
-    `;
-    
-    items.forEach((item, index) => {
-        const isChecked = submittedData?.items?.find(i => i.id === item.id)?.checked;
-        const isNotDone = submittedData?.items?.find(i => i.id === item.id)?.notDone;
-        const itemNum = index + 1;
-        
-        if (checklistEditMode) {
-            // Düzenleme modu - checkbox ile seçim
-            html += `
-                <div class="checklist-item" data-item-id="${item.id}" style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg2);border-radius:10px;margin-bottom:8px;border:1px solid var(--cardBorder)">
-                    <input type="checkbox" class="checklist-select-item" value="${item.id}" style="width:20px;height:20px;cursor:pointer;accent-color:#008c95">
-                    <span style="min-width:28px;height:28px;background:var(--bg3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:600;color:var(--tx2)">${itemNum}</span>
-                    <div style="flex:1;font-size:.9rem;color:var(--tx)">${item.text}</div>
-                    <button onclick="deleteChecklistItem('${item.id}')" style="background:none;border:none;color:#e74c3c;cursor:pointer;padding:6px;border-radius:6px;transition:all .2s" title="Sil" onmouseover="this.style.background='rgba(231,76,60,.1)'" onmouseout="this.style.background='none'">
-                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/></svg>
-                    </button>
-                </div>
-            `;
-        } else {
-            // Normal mod - check/uncheck with auto numbering
-            html += `
-                <div class="checklist-item" style="display:flex;align-items:flex-start;gap:12px;padding:16px;background:var(--bg2);border-radius:10px;margin-bottom:10px;border:1px solid var(--cardBorder)">
-                    <span style="min-width:32px;height:32px;background:var(--bg3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:600;color:var(--tx2);flex-shrink:0">${itemNum}</span>
-                    <div style="display:flex;gap:8px;flex-shrink:0">
-                        <label class="check-option" style="display:flex;align-items:center;gap:6px;cursor:${isSubmitted ? 'default' : 'pointer'}">
-                            <input type="radio" name="check_${item.id}" value="done" 
-                                ${isChecked ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''}
-                                style="display:none">
-                            <span class="check-btn done ${isChecked ? 'active' : ''}" onclick="${isSubmitted ? '' : `selectCheckOption(this, '${item.id}', 'done')`}"
-                                style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;
-                                background:${isChecked ? 'rgba(39,174,96,.2)' : 'var(--bg3)'};
-                                border:2px solid ${isChecked ? '#27ae60' : 'var(--cardBorder)'};
-                                color:${isChecked ? '#27ae60' : 'var(--tx3)'};
-                                transition:all .2s">✓</span>
-                        </label>
-                        <label class="check-option" style="display:flex;align-items:center;gap:6px;cursor:${isSubmitted ? 'default' : 'pointer'}">
-                            <input type="radio" name="check_${item.id}" value="notdone" 
-                                ${isNotDone ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''}
-                                style="display:none">
-                            <span class="check-btn notdone ${isNotDone ? 'active' : ''}" onclick="${isSubmitted ? '' : `selectCheckOption(this, '${item.id}', 'notdone')`}"
-                                style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;
-                                background:${isNotDone ? 'rgba(231,76,60,.2)' : 'var(--bg3)'};
-                                border:2px solid ${isNotDone ? '#e74c3c' : 'var(--cardBorder)'};
-                                color:${isNotDone ? '#e74c3c' : 'var(--tx3)'};
-                                transition:all .2s">✗</span>
-                        </label>
-                    </div>
-                    <div style="flex:1">
-                        <div style="font-size:.9rem;color:var(--tx);line-height:1.5">${item.text}</div>
-                    </div>
-                </div>
-            `;
-        }
-    });
-    
-    html += `
-            </div>
-            
-            ${!checklistEditMode && !isSubmitted ? `
-                <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap">
-                    <button class="btn btn-ghost" onclick="downloadChecklistPDF('${branch}', '${type}', '${date}', '${timeSlot || ''}', false)">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:6px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        PDF İndir
-                    </button>
-                    <button class="btn btn-ghost" onclick="loadChecklist()">🔄 Yenile</button>
-                    <button class="btn btn-primary" onclick="submitChecklist('${branch}', '${type}', '${date}', '${timeSlot || ''}')">
-                        ✅ Checklist'i Tamamla
-                    </button>
-                </div>
-            ` : ''}
-            ${!checklistEditMode && isSubmitted ? `
-                <div style="margin-top:24px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-                    <button class="btn btn-ghost" onclick="downloadChecklistPDF('${branch}', '${type}', '${date}', '${timeSlot || ''}', true)">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:6px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        PDF İndir
-                    </button>
-                    <span style="color:var(--tx2);display:flex;align-items:center">Bu checklist zaten tamamlanmış</span>
-                </div>
-            ` : ''}
-            ${checklistEditMode ? `
-                <div style="margin-top:24px;text-align:center">
-                    <div style="font-size:.85rem;color:var(--tx2)">Toplam ${items.length} madde</div>
-                </div>
-            ` : ''}
-        </div>
-    `;
-    
-    container.innerHTML = html;
-}
-
-// Düzenleme modunu aç/kapat
-function toggleChecklistEditMode(branch, type, date, timeSlot) {
-    checklistEditMode = !checklistEditMode;
-    loadChecklist();
-}
-
-// Temizlik ve Bakım için Tümünü Göster toggle
-function toggleShowAllChecklistItems(type) {
-    const key = 'checklist_showAll_' + type;
-    const current = localStorage.getItem(key) === 'true';
-    localStorage.setItem(key, (!current).toString());
-    loadChecklist();
-}
-
-// Tümünü seç
-function selectAllChecklistItems() {
-    document.querySelectorAll('.checklist-select-item').forEach(cb => cb.checked = true);
-}
-
-// Seçimi kaldır
-function deselectAllChecklistItems() {
-    document.querySelectorAll('.checklist-select-item').forEach(cb => cb.checked = false);
-}
-
-// Seçilenleri sil
-async function deleteSelectedChecklistItems(branch, type) {
-    const selected = Array.from(document.querySelectorAll('.checklist-select-item:checked')).map(cb => cb.value);
-    
-    if (selected.length === 0) {
-        toast('Silmek için madde seçin', 'error');
-        return;
-    }
-    
-    if (!confirm(`${selected.length} madde silinecek. Emin misiniz?`)) return;
-    
-    try {
-        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
-        const checklistRef = db.collection('checklists').doc(checklistId);
-        const doc = await checklistRef.get();
-        
-        if (doc.exists) {
-            const items = doc.data().items.filter(i => !selected.includes(i.id));
-            await checklistRef.update({
-                items,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        }
-        
-        toast(`${selected.length} madde silindi`, 'success');
-        loadChecklist();
-        
-    } catch (error) {
-        console.error('Toplu silme hatası:', error);
-        toast('Silme hatası!', 'error');
-    }
-}
-
-// Check seçeneği seç
-function selectCheckOption(btn, itemId, value) {
-    const parent = btn.closest('.checklist-item');
-    const doneBtn = parent.querySelector('.check-btn.done');
-    const notdoneBtn = parent.querySelector('.check-btn.notdone');
-    const doneInput = parent.querySelector('input[value="done"]');
-    const notdoneInput = parent.querySelector('input[value="notdone"]');
-    
-    // İlk madde işaretlendiğinde zamanlayıcıyı başlat
-    if (!checklistFirstItemTime) {
-        checklistFirstItemTime = new Date();
-        checklistStartTime = new Date();
-        
-        // Banner'ı göster
-        const banner = document.getElementById('checklistTimerBanner');
-        if (banner) {
-            banner.style.display = 'block';
-            const timeDisplay = document.getElementById('checklistStartTimeDisplay');
-            if (timeDisplay) {
-                timeDisplay.textContent = checklistStartTime.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
-            }
-        }
-        
-        // Canlı kronometre başlat
-        startChecklistTimer();
-        
-        // Bildirim göster
-        const typeSelect = document.getElementById('checklistType');
-        const typeName = typeSelect?.selectedOptions?.[0]?.text || 'Checklist';
-        showToast(`${typeName} başladı! Başlangıç: ${checklistStartTime.toLocaleTimeString('tr-TR')}`, 'success');
-    }
-    
-    // Reset
-    doneBtn.style.background = 'var(--bg3)';
-    doneBtn.style.borderColor = 'var(--cardBorder)';
-    doneBtn.style.color = 'var(--tx3)';
-    notdoneBtn.style.background = 'var(--bg3)';
-    notdoneBtn.style.borderColor = 'var(--cardBorder)';
-    notdoneBtn.style.color = 'var(--tx3)';
-    
-    if (value === 'done') {
-        doneInput.checked = true;
-        doneBtn.style.background = 'rgba(39,174,96,.2)';
-        doneBtn.style.borderColor = '#27ae60';
-        doneBtn.style.color = '#27ae60';
-    } else {
-        notdoneInput.checked = true;
-        notdoneBtn.style.background = 'rgba(231,76,60,.2)';
-        notdoneBtn.style.borderColor = '#e74c3c';
-        notdoneBtn.style.color = '#e74c3c';
-    }
-    
-    // Tüm maddeler işaretlendi mi kontrol et
-    checkAllItemsMarked();
-}
-
-// Tüm maddelerin işaretlenip işaretlenmediğini kontrol et
-function checkAllItemsMarked() {
-    const items = document.querySelectorAll('#checklistItems .checklist-item');
-    let allMarked = true;
-    let markedCount = 0;
-    
-    items.forEach(item => {
-        const doneInput = item.querySelector('input[value="done"]');
-        const notdoneInput = item.querySelector('input[value="notdone"]');
-        if (doneInput?.checked || notdoneInput?.checked) {
-            markedCount++;
-        } else {
-            allMarked = false;
-        }
-    });
-    
-    // İlerleme göstergesi güncelle (opsiyonel)
-    const progress = Math.round((markedCount / items.length) * 100);
-    
-    // Submit butonu aktifliği
-    const submitBtn = document.querySelector('button[onclick*="submitChecklist"]');
-    if (submitBtn) {
-        if (allMarked) {
-            submitBtn.classList.remove('btn-ghost');
-            submitBtn.classList.add('btn-primary');
-            submitBtn.innerHTML = '✅ Checklist\'i Tamamla';
-        }
-    }
-}
-
-// Platform checklist render - Tablo Formatı (Tüm Gün Görünümü)
-async function renderPlatformChecklist(container, branch, date, timeSlot, submittedData) {
-    const autoPersonName = getUserNameFromEmail(currentUser?.email) || currentUser?.name || '';
-    
-    // Tuzla için SUNBERRY platformları ekle
-    const moonberryPlatforms = ['Trendyol', 'Yemek Sepeti', 'Getir Yemek', 'Migros'];
-    const sunberryPlatforms = branch.toLowerCase().includes('tuzla') ? ['Sunberry Trendyol', 'Sunberry Yemek Sepeti', 'Sunberry Getir', 'Sunberry Migros'] : [];
-    const allPlatforms = [...moonberryPlatforms, ...sunberryPlatforms];
-    
-    // Saatler
-    const timeSlots = ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'];
-    
-    // Tüm saatler için submission verilerini çek
-    const submissions = {};
-    try {
-        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_platform`;
-        for (const ts of timeSlots) {
-            const submissionId = `${checklistId}_${date}_${ts.replace(':', '')}`;
-            const doc = await db.collection('checklistSubmissions').doc(submissionId).get();
-            if (doc.exists) {
-                submissions[ts] = doc.data();
-            }
-        }
-    } catch (e) {
-        console.warn('Platform submissions yüklenemedi:', e);
-    }
-    
-    let html = `
-        <div class="form-section">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
-                <div>
-                    <div style="font-size:1.3rem;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:10px">
-                        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-                        Platform Check
-                    </div>
-                    <div style="font-size:.85rem;color:var(--tx2)">${branch} • ${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})}</div>
-                </div>
-            </div>
-            
-            <!-- Seçili saat için işaretleme -->
-            ${timeSlot ? `
-                <div style="margin-bottom:16px;padding:14px 16px;background:linear-gradient(135deg,rgba(0,140,149,.15),rgba(0,140,149,.05));border:1px solid rgba(0,140,149,.3);border-radius:12px">
-                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-                        <div>
-                            <span style="font-weight:600;color:var(--tx)">Seçili Saat: ${timeSlot}</span>
-                            <span style="font-size:.85rem;color:var(--tx2);margin-left:8px">(${autoPersonName})</span>
-                        </div>
-                        ${submissions[timeSlot] ? `
-                            <span style="color:#27ae60;font-size:.85rem">✓ ${submissions[timeSlot].personName} tarafından tamamlandı</span>
-                        ` : ''}
-                    </div>
-                </div>
-            ` : ''}
-            
-            <div style="overflow-x:auto;margin-bottom:20px">
-                <table style="width:100%;border-collapse:collapse;min-width:600px;background:var(--bg2);border-radius:12px;overflow:hidden;border:1px solid var(--cardBorder)">
-                    <thead>
-                        <tr style="background:var(--bg3)">
-                            <th style="padding:12px;text-align:left;font-weight:600;color:var(--tx);border-bottom:2px solid var(--cardBorder);width:80px">Saat</th>
-                            ${moonberryPlatforms.length > 0 ? `
-                                <th colspan="${moonberryPlatforms.length}" style="padding:12px;text-align:center;font-weight:700;color:var(--accent);border-bottom:2px solid var(--cardBorder);background:rgba(255,134,116,.1)">
-                                    MOONBERRY
-                                </th>
-                            ` : ''}
-                            ${sunberryPlatforms.length > 0 ? `
-                                <th colspan="${sunberryPlatforms.length}" style="padding:12px;text-align:center;font-weight:700;color:#008c95;border-bottom:2px solid var(--cardBorder);background:rgba(0,140,149,.1)">
-                                    SUNBERRY
-                                </th>
-                            ` : ''}
-                        </tr>
-                        <tr style="background:var(--bg3)">
-                            <th style="padding:8px;border-bottom:1px solid var(--cardBorder)"></th>
-                            ${moonberryPlatforms.map(p => `
-                                <th style="padding:8px;text-align:center;font-size:.75rem;color:var(--tx2);border-bottom:1px solid var(--cardBorder);min-width:80px">${p.replace('Yemek Sepeti', 'YS').replace('Getir Yemek', 'Getir')}</th>
-                            `).join('')}
-                            ${sunberryPlatforms.map(p => `
-                                <th style="padding:8px;text-align:center;font-size:.75rem;color:var(--tx2);border-bottom:1px solid var(--cardBorder);min-width:80px">${p.replace('Sunberry ', '').replace('Yemek Sepeti', 'YS')}</th>
-                            `).join('')}
-                        </tr>
-                    </thead>
-                    <tbody>
-    `;
-    
-    timeSlots.forEach(ts => {
-        const sub = submissions[ts];
-        const isCurrentSlot = ts === timeSlot;
-        const rowBg = isCurrentSlot ? 'rgba(0,140,149,.05)' : 'transparent';
-        
-        html += `
-            <tr style="border-bottom:1px solid var(--cardBorder);background:${rowBg}">
-                <td style="padding:12px;font-weight:600;color:var(--tx);vertical-align:middle">
-                    ${ts}
-                    ${isCurrentSlot ? '<span style="color:var(--accent);font-size:.7rem;display:block">▶ Aktif</span>' : ''}
-                </td>
-        `;
-        
-        allPlatforms.forEach(platform => {
-            const platformKey = platform.replace(/\s/g, '_');
-            const platformData = sub?.platforms?.find(p => p.name === platform || p.name === platform.replace('Sunberry ', ''));
-            const isOpen = platformData?.isOpen === true;
-            const isClosed = platformData?.isOpen === false;
-            const checkedBy = sub?.personName || '';
-            const canEdit = isCurrentSlot && !sub;
-            
-            html += `
-                <td style="padding:8px;text-align:center;vertical-align:middle">
-                    ${sub ? `
-                        <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-                            <span style="font-size:1.2rem;color:${isOpen ? '#27ae60' : isClosed ? '#e74c3c' : '#999'}">${isOpen ? '✓' : isClosed ? '✗' : '-'}</span>
-                            <span style="font-size:.65rem;color:var(--tx3);max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${checkedBy}">${checkedBy.split(' ')[0] || ''}</span>
-                        </div>
-                    ` : canEdit ? `
-                        <div style="display:flex;gap:4px;justify-content:center">
-                            <button onclick="markPlatformCell('${ts}', '${platform}', true)" class="platform-btn" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--cardBorder);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:.9rem;transition:all .2s" onmouseover="this.style.background='rgba(39,174,96,.2)';this.style.color='#27ae60'" onmouseout="this.style.background='var(--bg3)';this.style.color='var(--tx3)'">✓</button>
-                            <button onclick="markPlatformCell('${ts}', '${platform}', false)" class="platform-btn" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--cardBorder);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:.9rem;transition:all .2s" onmouseover="this.style.background='rgba(231,76,60,.2)';this.style.color='#e74c3c'" onmouseout="this.style.background='var(--bg3)';this.style.color='var(--tx3)'">✗</button>
-                        </div>
-                    ` : `
-                        <span style="color:var(--tx3);font-size:.8rem">-</span>
-                    `}
-                </td>
-            `;
-        });
-        
-        html += `</tr>`;
-    });
-    
-    html += `
-                    </tbody>
-                </table>
-            </div>
-            
-            ${timeSlot && !submissions[timeSlot] ? `
-                <div style="margin-top:20px;display:flex;gap:12px;justify-content:flex-end">
-                    <button class="btn btn-primary" onclick="submitPlatformChecklistNew('${branch}', '${date}', '${timeSlot}')">
-                        ✅ ${timeSlot} Kontrolünü Tamamla
-                    </button>
-                </div>
-            ` : ''}
-        </div>
-    `;
-    
-    container.innerHTML = html;
-    
-    // Platform state'i sakla
-    window._platformCheckState = {
-        branch,
-        date,
-        timeSlot,
-        platforms: allPlatforms,
-        selections: {}
-    };
-}
-
-// Tek bir platform hücresini işaretle
-function markPlatformCell(timeSlot, platform, isOpen) {
-    const state = window._platformCheckState;
-    if (!state) return;
-    
-    const key = `${timeSlot}_${platform}`;
-    state.selections[key] = isOpen;
-    
-    // UI güncelle - ilgili butonları bul
-    const buttons = document.querySelectorAll(`button[onclick*="markPlatformCell('${timeSlot}', '${platform}'"]`);
-    buttons.forEach(btn => {
-        const btnIsOpen = btn.onclick.toString().includes('true)');
-        if (btnIsOpen === isOpen) {
-            btn.style.background = isOpen ? 'rgba(39,174,96,.3)' : 'rgba(231,76,60,.3)';
-            btn.style.color = isOpen ? '#27ae60' : '#e74c3c';
-            btn.style.borderColor = isOpen ? '#27ae60' : '#e74c3c';
-        } else {
-            btn.style.background = 'var(--bg3)';
-            btn.style.color = 'var(--tx3)';
-            btn.style.borderColor = 'var(--cardBorder)';
-        }
-    });
-}
-
-// Yeni platform check gönder
-async function submitPlatformChecklistNew(branch, date, timeSlot) {
-    const state = window._platformCheckState;
-    if (!state) return;
-    
-    const personName = getUserNameFromEmail(currentUser?.email) || currentUser?.name;
-    if (!personName) {
-        toast('Personel adı belirlenemedi', 'error');
-        return;
-    }
-    
-    // Seçimleri kontrol et - en az bir seçim olmalı
-    const relevantSelections = Object.entries(state.selections).filter(([key]) => key.startsWith(timeSlot + '_'));
-    
-    if (relevantSelections.length === 0) {
-        toast('Lütfen en az bir platform durumu seçin', 'error');
-        return;
-    }
-    
-    // Tüm platformlar için seçim yapılmış mı?
-    const allSelected = state.platforms.every(p => {
-        const key = `${timeSlot}_${p}`;
-        return state.selections[key] !== undefined;
-    });
-    
-    if (!allSelected) {
-        if (!confirm('Bazı platformlar işaretlenmemiş. Yine de kaydetmek istiyor musunuz?')) {
-            return;
-        }
-    }
-    
-    try {
-        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_platform`;
-        const submissionId = `${checklistId}_${date}_${timeSlot.replace(':', '')}`;
-        
-        const platforms = state.platforms.map(p => ({
-            name: p,
-            isOpen: state.selections[`${timeSlot}_${p}`] ?? null
-        }));
-        
-        await db.collection('checklistSubmissions').doc(submissionId).set({
-            checklistId,
-            branch,
-            type: 'platform',
-            date,
-            timeSlot,
-            personName,
-            submittedBy: currentUser?.id,
-            submittedByName: currentUser?.name || personName,
-            submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            platforms
-        });
-        
-        toast(`${timeSlot} platform check kaydedildi!`, 'success');
-        loadChecklist();
-        
-    } catch (error) {
-        console.error('Platform check kayıt hatası:', error);
-        toast('Kayıt hatası: ' + error.message, 'error');
-    }
-}
-                            background:${isClosed ? 'rgba(231,76,60,.2)' : 'var(--bg3)'};
-                            border:2px solid ${isClosed ? '#e74c3c' : 'transparent'};
-                            color:${isClosed ? '#e74c3c' : 'var(--tx3)'};
-                            transition:all .2s">✗</span>
-                    </label>
-                </td>
-            </tr>
-        `;
-    });
-    
-    html += `
-                    </tbody>
-                </table>
-            </div>
-            
-            ${!isSubmitted ? `
-                <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
-                    <button class="btn btn-primary" onclick="submitPlatformChecklist('${branch}', '${date}', '${timeSlot}')">
-                        ✅ Platform Check'i Tamamla
-                    </button>
-                </div>
-            ` : ''}
-        </div>
-    `;
-    
-    container.innerHTML = html;
-}
-
-// Platform status seç
-function selectPlatformStatus(btn, platformKey, isOpen) {
-    const row = btn.closest('tr');
-    const openSpan = row.querySelector('td:nth-child(2) span');
-    const closedSpan = row.querySelector('td:nth-child(3) span');
-    const openInput = row.querySelector('input[value="open"]');
-    const closedInput = row.querySelector('input[value="closed"]');
-    
-    // Reset
-    openSpan.style.background = 'var(--bg3)';
-    openSpan.style.borderColor = 'transparent';
-    openSpan.style.color = 'var(--tx3)';
-    closedSpan.style.background = 'var(--bg3)';
-    closedSpan.style.borderColor = 'transparent';
-    closedSpan.style.color = 'var(--tx3)';
-    
-    if (isOpen) {
-        openInput.checked = true;
-        openSpan.style.background = 'rgba(39,174,96,.2)';
-        openSpan.style.borderColor = '#27ae60';
-        openSpan.style.color = '#27ae60';
-    } else {
-        closedInput.checked = true;
-        closedSpan.style.background = 'rgba(231,76,60,.2)';
-        closedSpan.style.borderColor = '#e74c3c';
-        closedSpan.style.color = '#e74c3c';
-    }
-}
-
-// Checklist gönder
-async function submitChecklist(branch, type, date, timeSlot) {
-    const personName = document.getElementById('checklistPersonName')?.value?.trim();
-    if (!personName) {
-        toast('Lütfen personel adını girin', 'error');
-        return;
-    }
-    
-    // Tüm maddelerin cevaplandığını kontrol et
-    const items = document.querySelectorAll('#checklistItems .checklist-item');
-    const responses = [];
-    let allAnswered = true;
-    let doneCount = 0;
-    
-    items.forEach(item => {
-        const doneInput = item.querySelector('input[value="done"]');
-        const notdoneInput = item.querySelector('input[value="notdone"]');
-        const itemId = doneInput?.name?.replace('check_', '');
-        
-        if (!doneInput?.checked && !notdoneInput?.checked) {
-            allAnswered = false;
-            item.style.borderColor = '#e74c3c';
-        } else {
-            item.style.borderColor = 'var(--cardBorder)';
-            if (doneInput?.checked) doneCount++;
-            responses.push({
-                id: itemId,
-                checked: doneInput?.checked || false,
-                notDone: notdoneInput?.checked || false
-            });
-        }
-    });
-    
-    if (!allAnswered) {
-        toast('Lütfen tüm maddeleri işaretleyin', 'error');
-        return;
-    }
-    
-    // Süre hesapla
     const endTime = new Date();
-    const actualDuration = checklistStartTime ? Math.round((endTime - checklistStartTime) / 1000) : 0;
-    const actualMinutes = Math.round(actualDuration / 60);
-    const expectedMinutes = Math.round(checklistExpectedDuration / 60);
-    const minExpectedMinutes = Math.round(expectedMinutes * 0.3); // Minimum %30
+    const duration = checklistStartTime ? Math.floor((endTime - checklistStartTime) / 1000) : 0;
     
-    // Süre uyarısı göster
-    if (actualDuration > 0 && actualMinutes < minExpectedMinutes) {
-        showCompletionConfirmModal(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, items.length);
-        return;
-    }
-    
-    // Doğrudan kaydet
-    await saveChecklistAndShare(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, items.length);
-}
-
-// Tamamlama onay modal'ı
-function showCompletionConfirmModal(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, totalCount) {
-    const typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === type);
-    const typeName = typeInfo?.name || type;
-    
-    const modal = document.createElement('div');
-    modal.id = 'completionConfirmModal';
-    modal.innerHTML = `
-        <div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px">
-            <div style="background:var(--bg2);border-radius:20px;max-width:420px;width:100%;padding:32px;text-align:center;border:1px solid var(--cardBorder)">
-                <div style="width:64px;height:64px;background:rgba(255,134,116,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
-                    <svg width="32" height="32" fill="none" stroke="#ff8674" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                </div>
-                <h3 style="font-size:1.3rem;font-weight:700;color:var(--tx);margin-bottom:12px">Süre Kontrolü</h3>
-                <p style="color:var(--tx2);margin-bottom:24px;line-height:1.6">
-                    <strong>${typeName}</strong> için tahmini süre <strong>${expectedMinutes} dakika</strong> iken, 
-                    siz <strong>${actualMinutes} dakikada</strong> tamamladınız.<br><br>
-                    Tüm kontrolleri gerçekleştirdiğinizden emin misiniz?
-                </p>
-                <div style="display:flex;gap:12px;justify-content:center">
-                    <button onclick="document.getElementById('completionConfirmModal').remove()" class="btn btn-ghost" style="padding:12px 24px">
-                        ← Geri Dön
-                    </button>
-                    <button onclick="confirmAndSaveChecklist('${branch}', '${type}', '${date}', '${timeSlot || ''}', '${personName}', ${actualMinutes}, ${expectedMinutes}, ${doneCount}, ${totalCount})" class="btn btn-primary" style="padding:12px 24px">
-                        ✓ Evet, Tamamla
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    
-    // Responses'u geçici sakla
-    window._pendingResponses = responses;
-}
-
-// Onaylı kaydet
-async function confirmAndSaveChecklist(branch, type, date, timeSlot, personName, actualMinutes, expectedMinutes, doneCount, totalCount) {
-    document.getElementById('completionConfirmModal')?.remove();
-    const responses = window._pendingResponses || [];
-    await saveChecklistAndShare(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, totalCount);
-}
-
-// Checklist'i kaydet ve paylaş
-async function saveChecklistAndShare(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, totalCount) {
-    // Kronometreyi durdur
-    stopChecklistTimer();
+    const userName = isImpersonating ? impersonatedUser.name : currentUser?.displayName;
+    const userEmail = isImpersonating ? impersonatedUser.email : currentUser?.email;
     
     try {
-        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
-        const submissionId = `${checklistId}_${date}${timeSlot ? '_' + timeSlot.replace(':', '') : ''}`;
-        
-        const submissionData = {
-            checklistId,
-            branch,
-            type,
-            date,
-            timeSlot: timeSlot || null,
-            personName,
-            submittedBy: currentUser?.id,
-            submittedByName: currentUser?.name || personName,
-            submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            startTime: checklistStartTime?.toISOString() || null,
-            endTime: new Date().toISOString(),
-            actualDurationMinutes: actualMinutes,
-            expectedDurationMinutes: expectedMinutes,
-            completionRate: Math.round((doneCount / totalCount) * 100),
-            items: responses
-        };
-        
-        await db.collection('checklistSubmissions').doc(submissionId).set(submissionData);
-        
-        // Başarı modal'ı göster
-        showChecklistCompleteModal(branch, type, date, timeSlot, personName, actualMinutes, expectedMinutes, doneCount, totalCount);
-        
-    } catch (error) {
-        console.error('Checklist kayıt hatası:', error);
-        toast('Kayıt hatası!', 'error');
-    }
-}
-
-// Checklist tamamlandı modal'ı - WhatsApp paylaşımı ile
-function showChecklistCompleteModal(branch, type, date, timeSlot, personName, actualMinutes, expectedMinutes, doneCount, totalCount) {
-    const typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === type);
-    const typeName = typeInfo?.name || type;
-    const completionRate = Math.round((doneCount / totalCount) * 100);
-    const dateStr = new Date(date).toLocaleDateString('tr-TR', {day: 'numeric', month: 'long', year: 'numeric'});
-    const timeStr = new Date().toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'});
-    
-    const modal = document.createElement('div');
-    modal.id = 'checklistCompleteModal';
-    modal.innerHTML = `
-        <div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px">
-            <div style="background:var(--bg2);border-radius:20px;max-width:480px;width:100%;padding:32px;text-align:center;border:1px solid var(--cardBorder)">
-                <div style="width:80px;height:80px;background:linear-gradient(135deg,rgba(39,174,96,.2),rgba(39,174,96,.1));border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px">
-                    <svg width="40" height="40" fill="none" stroke="#27ae60" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                </div>
-                <h3 style="font-size:1.5rem;font-weight:700;color:var(--tx);margin-bottom:8px">Checklist Tamamlandı!</h3>
-                <p style="color:var(--tx2);margin-bottom:24px">${typeName} • ${branch}</p>
-                
-                <div style="background:var(--bg3);border-radius:12px;padding:20px;margin-bottom:24px;text-align:left">
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-                        <div>
-                            <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Personel</div>
-                            <div style="font-weight:600;color:var(--tx)">${personName}</div>
-                        </div>
-                        <div>
-                            <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Tarih</div>
-                            <div style="font-weight:600;color:var(--tx)">${dateStr}</div>
-                        </div>
-                        <div>
-                            <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Süre</div>
-                            <div style="font-weight:600;color:var(--tx)">${actualMinutes} dk <span style="color:var(--tx3);font-weight:400">(tahmini ${expectedMinutes} dk)</span></div>
-                        </div>
-                        <div>
-                            <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Tamamlama</div>
-                            <div style="font-weight:600;color:#27ae60">${completionRate}% (${doneCount}/${totalCount})</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-                    <button onclick="closeCompleteModalAndRefresh()" class="btn btn-ghost" style="padding:12px 20px">
-                        ✓ Tamam
-                    </button>
-                    <button onclick="shareChecklistToWhatsApp('${branch}', '${typeName}', '${personName}', '${dateStr}', '${timeStr}', ${actualMinutes}, ${completionRate}, ${doneCount}, ${totalCount})" class="btn btn-primary" style="padding:12px 20px;background:linear-gradient(135deg,#25D366,#128C7E)">
-                        <svg width="18" height="18" fill="#fff" viewBox="0 0 24 24" style="margin-right:6px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                        WhatsApp'ta Paylaş
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-}
-
-// Modal kapat ve yenile
-function closeCompleteModalAndRefresh() {
-    document.getElementById('checklistCompleteModal')?.remove();
-    loadChecklist();
-}
-
-// WhatsApp'ta paylaş
-function shareChecklistToWhatsApp(branch, typeName, personName, dateStr, timeStr, duration, rate, done, total) {
-    const whatsappLink = WHATSAPP_GROUPS[branch];
-    
-    const message = `✅ *CHECKLIST TAMAMLANDI*
-
-📋 *${typeName}*
-📍 ${branch}
-👤 ${personName}
-📅 ${dateStr} - ${timeStr}
-
-⏱️ Süre: ${duration} dakika
-✓ Tamamlanan: ${done}/${total} (%${rate})
-
-_Moonberry İK Sistemi_`;
-
-    const encodedMessage = encodeURIComponent(message);
-    
-    // WhatsApp grup linkini aç
-    if (whatsappLink) {
-        // Önce mesajı kopyala
-        navigator.clipboard?.writeText(message).then(() => {
-            toast('Mesaj kopyalandı! WhatsApp grubu açılıyor...', 'success');
-        }).catch(() => {});
-        
-        // Grup linkini aç
-        setTimeout(() => {
-            window.open(whatsappLink, '_blank');
-        }, 500);
-    } else {
-        // Genel WhatsApp paylaşımı
-        window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
-    }
-    
-    document.getElementById('checklistCompleteModal')?.remove();
-    loadChecklist();
-}
-
-// Platform checklist gönder
-async function submitPlatformChecklist(branch, date, timeSlot) {
-    const personName = document.getElementById('checklistPersonName')?.value?.trim();
-    if (!personName) {
-        toast('Lütfen personel adını girin', 'error');
-        return;
-    }
-    
-    const platforms = [];
-    let allAnswered = true;
-    
-    PLATFORMS.forEach(platform => {
-        const key = platform.replace(/\s/g, '_');
-        const openInput = document.querySelector(`input[name="platform_${key}"][value="open"]`);
-        const closedInput = document.querySelector(`input[name="platform_${key}"][value="closed"]`);
-        
-        if (!openInput?.checked && !closedInput?.checked) {
-            allAnswered = false;
-        } else {
-            platforms.push({
-                name: platform,
-                isOpen: openInput?.checked || false
-            });
-        }
-    });
-    
-    if (!allAnswered) {
-        toast('Lütfen tüm platformları işaretleyin', 'error');
-        return;
-    }
-    
-    try {
-        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_platform`;
-        const submissionId = `${checklistId}_${date}_${timeSlot.replace(':', '')}`;
-        
-        await db.collection('checklistSubmissions').doc(submissionId).set({
-            checklistId,
-            branch,
-            type: 'platform',
-            date,
-            timeSlot,
-            personName,
-            submittedBy: currentUser?.id,
-            submittedByName: currentUser?.name || personName,
-            submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            platforms
+        await db.collection('checklistSubmissions').add({
+            branch: currentChecklistBranch,
+            type: currentChecklistType,
+            checkedCount,
+            totalCount,
+            completionRate: Math.round((checkedCount / totalCount) * 100),
+            startTime: checklistStartTime,
+            endTime: endTime,
+            duration: duration,
+            submittedBy: userName,
+            submittedByEmail: userEmail,
+            submittedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        toast('Platform check kaydedildi!', 'success');
-        loadChecklist();
+        stopChecklistTimer();
+        alert(`✅ Checklist gönderildi!\n\nTamamlanan: ${checkedCount}/${totalCount}\nSüre: ${Math.floor(duration / 60)} dakika ${duration % 60} saniye`);
+        showBranchSelect();
         
     } catch (error) {
-        console.error('Platform check kayıt hatası:', error);
-        toast('Kayıt hatası!', 'error');
+        console.error('Error submitting checklist:', error);
+        alert('Checklist gönderilirken hata oluştu.');
     }
 }
 
-// Checklist PDF İndir
-async function downloadChecklistPDF(branch, type, date, timeSlot, isSubmitted) {
-    const typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === type);
-    const typeName = typeInfo?.name || type;
-    const personName = document.getElementById('checklistPersonName')?.value || currentUser?.name || '-';
-    const dateStr = new Date(date).toLocaleDateString('tr-TR', {day: 'numeric', month: 'long', year: 'numeric', weekday: 'long'});
+// Download Checklist as PDF
+function downloadChecklistPDF() {
+    const items = document.querySelectorAll('#checklistItems .checklist-item');
+    const typeInfo = CHECKLIST_TYPES[currentChecklistBranch]?.find(t => t.id === currentChecklistType);
+    const now = new Date();
+    const userName = isImpersonating ? impersonatedUser.name : currentUser?.displayName;
     
-    // Maddeler ve durumları
-    const items = [];
-    document.querySelectorAll('#checklistItems .checklist-item').forEach((item, index) => {
-        const textEl = item.querySelector('div[style*="flex:1"]');
-        const text = textEl?.textContent?.trim() || '';
-        const doneInput = item.querySelector('input[value="done"]');
-        const notdoneInput = item.querySelector('input[value="notdone"]');
-        
-        let status = 'İşaretlenmedi';
-        let color = '#999999';
-        if (doneInput?.checked) {
-            status = 'Yapıldı';
-            color = '#27ae60';
-        } else if (notdoneInput?.checked) {
-            status = 'Yapılmadı';
-            color = '#e74c3c';
+    const checkedItems = [];
+    const uncheckedItems = [];
+    
+    items.forEach((item, idx) => {
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        const label = item.querySelector('label');
+        if (checkbox && label) {
+            const text = label.textContent.trim();
+            if (checkbox.checked) {
+                checkedItems.push({ text, status: '✓ Yapıldı' });
+            } else {
+                uncheckedItems.push({ text, status: '✗ Yapılmadı' });
+            }
         }
-        
-        items.push({num: index + 1, text, status, color});
     });
     
-    // Süre bilgileri
-    const startTimeStr = checklistStartTime ? checklistStartTime.toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit', second:'2-digit'}) : '-';
-    const endTimeStr = new Date().toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-    const elapsedSeconds = checklistStartTime ? Math.floor((new Date() - checklistStartTime) / 1000) : 0;
-    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
-    const elapsedSecs = elapsedSeconds % 60;
-    const totalTimeStr = `${elapsedMinutes} dk ${elapsedSecs} sn`;
+    const duration = checklistStartTime ? Math.floor((now - checklistStartTime) / 1000) : 0;
+    const durationStr = `${Math.floor(duration / 60)} dk ${duration % 60} sn`;
     
-    // Tamamlama oranı
-    const doneCount = items.filter(i => i.status === 'Yapıldı').length;
-    const notDoneCount = items.filter(i => i.status === 'Yapılmadı').length;
-    const completionRate = items.length > 0 ? Math.round((doneCount / items.length) * 100) : 0;
-    
-    // PDF oluştur
     const docDefinition = {
         pageSize: 'A4',
         pageMargins: [40, 60, 40, 60],
         content: [
-            {text: 'MOONBERRY COFFEE', style: 'brand', alignment: 'center'},
-            {text: 'Checklist Raporu', style: 'subtitle', alignment: 'center', margin: [0, 0, 0, 20]},
-            
-            // Bilgi kutusu
-            {
-                table: {
-                    widths: ['*', '*'],
-                    body: [
-                        [{text: 'Checklist Türü', style: 'label'}, {text: typeName, style: 'value'}],
-                        [{text: 'Şube', style: 'label'}, {text: branch, style: 'value'}],
-                        [{text: 'Tarih', style: 'label'}, {text: dateStr, style: 'value'}],
-                        [{text: 'Personel', style: 'label'}, {text: personName, style: 'value'}],
-                        [{text: 'Başlangıç Saati', style: 'label'}, {text: startTimeStr, style: 'value'}],
-                        [{text: 'Bitiş Saati', style: 'label'}, {text: endTimeStr, style: 'value'}],
-                        [{text: 'Toplam Süre', style: 'label'}, {text: totalTimeStr, style: 'value'}],
-                        [{text: 'Tamamlama Oranı', style: 'label'}, {text: `%${completionRate} (${doneCount}/${items.length})`, style: 'value', color: completionRate === 100 ? '#27ae60' : '#f39c12'}]
-                    ]
-                },
-                layout: 'lightHorizontalLines',
-                margin: [0, 0, 0, 20]
-            },
-            
-            {text: 'Kontrol Maddeleri', style: 'sectionHeader', margin: [0, 10, 0, 10]},
-            
-            // Maddeler tablosu
-            {
-                table: {
-                    headerRows: 1,
-                    widths: [30, '*', 70],
-                    body: [
-                        [
-                            {text: '#', style: 'tableHeader'},
-                            {text: 'Madde', style: 'tableHeader'},
-                            {text: 'Durum', style: 'tableHeader'}
-                        ],
-                        ...items.map(item => [
-                            {text: item.num.toString(), alignment: 'center'},
-                            {text: item.text, fontSize: 9},
-                            {text: item.status, color: item.color, bold: true, alignment: 'center'}
-                        ])
-                    ]
-                },
-                layout: {
-                    hLineWidth: () => 0.5,
-                    vLineWidth: () => 0.5,
-                    hLineColor: () => '#e0e0e0',
-                    vLineColor: () => '#e0e0e0',
-                    paddingLeft: () => 8,
-                    paddingRight: () => 8,
-                    paddingTop: () => 6,
-                    paddingBottom: () => 6
-                }
-            },
-            
-            // Özet
+            { text: 'MOONBERRY COFFEE', style: 'header', alignment: 'center' },
+            { text: `${typeInfo?.name || currentChecklistType} - ${currentChecklistBranch}`, style: 'subheader', alignment: 'center' },
+            { text: ' ', margin: [0, 10] },
             {
                 columns: [
-                    {text: `Yapıldı: ${doneCount}`, color: '#27ae60', bold: true},
-                    {text: `Yapılmadı: ${notDoneCount}`, color: '#e74c3c', bold: true},
-                    {text: `Toplam: ${items.length}`, bold: true}
-                ],
-                margin: [0, 15, 0, 0]
+                    { text: `Tarih: ${now.toLocaleDateString('tr-TR')}`, style: 'info' },
+                    { text: `Saat: ${now.toLocaleTimeString('tr-TR')}`, style: 'info', alignment: 'right' }
+                ]
             },
-            
-            // Footer
-            {text: `Oluşturulma: ${new Date().toLocaleString('tr-TR')}`, style: 'footer', margin: [0, 30, 0, 0]}
+            {
+                columns: [
+                    { text: `Personel: ${userName}`, style: 'info' },
+                    { text: `Süre: ${durationStr}`, style: 'info', alignment: 'right' }
+                ]
+            },
+            { text: ' ', margin: [0, 10] },
+            { text: `Tamamlanan: ${checkedItems.length}/${checkedItems.length + uncheckedItems.length}`, style: 'summary' },
+            { text: ' ', margin: [0, 10] },
+            ...checkedItems.map(item => ({
+                text: `✓ ${item.text}`,
+                style: 'itemDone',
+                margin: [0, 4]
+            })),
+            ...uncheckedItems.map(item => ({
+                text: `✗ ${item.text}`,
+                style: 'itemNotDone',
+                margin: [0, 4]
+            }))
         ],
         styles: {
-            brand: {fontSize: 18, bold: true, color: '#ff8674'},
-            subtitle: {fontSize: 14, color: '#666'},
-            label: {fontSize: 10, color: '#666', margin: [0, 4, 0, 4]},
-            value: {fontSize: 10, bold: true, margin: [0, 4, 0, 4]},
-            sectionHeader: {fontSize: 12, bold: true, color: '#008c95'},
-            tableHeader: {fontSize: 10, bold: true, fillColor: '#f5f5f5', color: '#333'},
-            footer: {fontSize: 8, color: '#999', alignment: 'center'}
+            header: { fontSize: 18, bold: true, color: '#008c95' },
+            subheader: { fontSize: 14, bold: true, color: '#ff8674', margin: [0, 10] },
+            info: { fontSize: 10, color: '#555' },
+            summary: { fontSize: 12, bold: true, color: '#1a1a1a' },
+            itemDone: { fontSize: 9, color: '#27ae60' },
+            itemNotDone: { fontSize: 9, color: '#e74c3c' }
         }
     };
     
-    // PDF oluştur ve indir
-    pdfMake.createPdf(docDefinition).download(`checklist_${branch.replace(/\s/g, '_')}_${type}_${date}.pdf`);
-    toast('PDF indiriliyor...', 'success');
+    pdfMake.createPdf(docDefinition).download(`Checklist_${currentChecklistType}_${now.toISOString().split('T')[0]}.pdf`);
 }
 
-// Checklist madde ekle modal
-function showAddChecklistItemModal() {
-    const branch = document.getElementById('checklistSube')?.value;
-    const type = document.getElementById('checklistType')?.value;
+// Share to WhatsApp
+async function shareToWhatsApp() {
+    // Get WhatsApp group link from config
+    let groupLink = '';
+    try {
+        const configDoc = await db.collection('config').doc('system').get();
+        if (configDoc.exists) {
+            const groups = configDoc.data().whatsappGroups || {};
+            groupLink = groups[currentChecklistBranch] || '';
+        }
+    } catch (e) {
+        console.error('Error getting WhatsApp group:', e);
+    }
     
-    if (!branch || !type) {
-        toast('Önce checklist seçin', 'error');
+    const items = document.querySelectorAll('#checklistItems input[type="checkbox"]');
+    const checkedCount = Array.from(items).filter(i => i.checked).length;
+    const totalCount = items.length;
+    const typeInfo = CHECKLIST_TYPES[currentChecklistBranch]?.find(t => t.id === currentChecklistType);
+    const userName = isImpersonating ? impersonatedUser.name : currentUser?.displayName;
+    
+    const message = encodeURIComponent(
+        `✅ ${typeInfo?.name || currentChecklistType} Tamamlandı!\n\n` +
+        `📍 ${currentChecklistBranch}\n` +
+        `👤 ${userName}\n` +
+        `📊 ${checkedCount}/${totalCount} madde\n` +
+        `🕐 ${new Date().toLocaleTimeString('tr-TR')}`
+    );
+    
+    if (groupLink) {
+        window.open(groupLink, '_blank');
+    } else {
+        window.open(`https://wa.me/?text=${message}`, '_blank');
+    }
+}
+
+// =====================================================
+// IMPERSONATION (Kullanıcı Gözünden Gör)
+// =====================================================
+
+function showImpersonationModal() {
+    if (!currentUser || currentUser.role !== 'yonetici') {
+        alert('Bu özellik sadece yöneticiler için aktif.');
         return;
     }
     
-    showModal('Yeni Madde Ekle', `
-        <div class="form-group">
-            <label class="form-label">Madde Metni</label>
-            <textarea id="newChecklistItemText" class="form-input" rows="3" placeholder="Kontrol maddesi..."></textarea>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Ceza (opsiyonel)</label>
-            <input type="text" id="newChecklistItemPenalty" class="form-input" placeholder="örn: -100 puan">
-        </div>
-    `, `
-        <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
-        <button class="btn btn-primary" onclick="addChecklistItem('${branch}', '${type}')">Ekle</button>
-    `);
-}
-
-// Checklist madde ekle
-async function addChecklistItem(branch, type) {
-    const text = document.getElementById('newChecklistItemText')?.value?.trim();
-    const penalty = document.getElementById('newChecklistItemPenalty')?.value?.trim();
+    const modal = document.createElement('div');
+    modal.id = 'impersonationModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:9999';
     
-    if (!text) {
-        toast('Madde metni gerekli', 'error');
-        return;
-    }
-    
-    try {
-        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
-        const checklistRef = db.collection('checklists').doc(checklistId);
-        const doc = await checklistRef.get();
-        
-        const newItem = {
-            id: 'item_' + Date.now(),
-            text,
-            penalty: penalty || null,
-            order: (doc.exists ? doc.data().items?.length : 0) + 1
-        };
-        
-        if (doc.exists) {
-            await checklistRef.update({
-                items: firebase.firestore.FieldValue.arrayUnion(newItem),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        } else {
-            await checklistRef.set({
-                branch,
-                type,
-                items: [newItem],
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        }
-        
-        closeModal();
-        toast('Madde eklendi', 'success');
-        loadChecklist();
-        
-    } catch (error) {
-        console.error('Madde ekleme hatası:', error);
-        toast('Ekleme hatası!', 'error');
-    }
-}
-
-// Checklist madde sil
-async function deleteChecklistItem(itemId) {
-    if (!confirm('Bu maddeyi silmek istediğinize emin misiniz?')) return;
-    
-    const branch = document.getElementById('checklistSube')?.value;
-    const type = document.getElementById('checklistType')?.value;
-    
-    try {
-        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
-        const checklistRef = db.collection('checklists').doc(checklistId);
-        const doc = await checklistRef.get();
-        
-        if (doc.exists) {
-            const items = doc.data().items.filter(i => i.id !== itemId);
-            await checklistRef.update({
-                items,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        }
-        
-        toast('Madde silindi', 'success');
-        loadChecklist();
-        
-    } catch (error) {
-        console.error('Madde silme hatası:', error);
-        toast('Silme hatası!', 'error');
-    }
-}
-
-// Checklist geçmişi göster
-async function showChecklistHistory() {
-    const branch = document.getElementById('checklistSube')?.value;
-    const type = document.getElementById('checklistType')?.value;
-    
-    if (!branch) {
-        toast('Önce şube seçin', 'error');
-        return;
-    }
-    
-    try {
-        let query = db.collection('checklistSubmissions')
-            .where('branch', '==', branch)
-            .orderBy('submittedAt', 'desc')
-            .limit(50);
-        
-        if (type) {
-            query = db.collection('checklistSubmissions')
-                .where('branch', '==', branch)
-                .where('type', '==', type)
-                .orderBy('submittedAt', 'desc')
-                .limit(50);
-        }
-        
-        const snapshot = await query.get();
-        
-        let html = '<div style="max-height:400px;overflow-y:auto">';
-        
-        if (snapshot.empty) {
-            html += '<p style="color:var(--tx2);text-align:center;padding:20px">Henüz checklist kaydı yok</p>';
-        } else {
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                const typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === data.type);
-                const date = data.submittedAt?.toDate ? new Date(data.submittedAt.toDate()) : new Date();
-                
-                // Tamamlanma oranı
-                let completionRate = 100;
-                if (data.items) {
-                    const done = data.items.filter(i => i.checked).length;
-                    completionRate = Math.round((done / data.items.length) * 100);
-                }
-                
-                html += `
-                    <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg2);border-radius:10px;margin-bottom:8px">
-                        <div style="width:44px;height:44px;background:${completionRate === 100 ? 'rgba(39,174,96,.15)' : 'rgba(243,156,18,.15)'};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem">
-                            ${typeInfo?.icon || '📋'}
-                        </div>
-                        <div style="flex:1">
-                            <div style="font-weight:600;color:var(--tx)">${typeInfo?.name || data.type}</div>
-                            <div style="font-size:.8rem;color:var(--tx2)">${data.personName} • ${date.toLocaleDateString('tr-TR')} ${date.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'})}</div>
-                        </div>
-                        <div style="text-align:right">
-                            <div style="font-weight:600;color:${completionRate === 100 ? '#27ae60' : '#f39c12'}">${completionRate}%</div>
-                            <div style="font-size:.75rem;color:var(--tx3)">${data.timeSlot || ''}</div>
-                        </div>
+    modal.innerHTML = `
+        <div style="background:var(--surface);border-radius:var(--radius);padding:24px;max-width:400px;width:90%;max-height:80vh;overflow-y:auto">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                <h3 style="margin:0;color:var(--tx)">👁️ Kullanıcı Gözünden Gör</h3>
+                <button onclick="document.getElementById('impersonationModal').remove()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--tx3)">&times;</button>
+            </div>
+            <div style="font-size:.85rem;color:var(--tx2);margin-bottom:16px">Bir kullanıcı seçerek onun gördüğü ekranı görüntüleyin:</div>
+            <div id="personnelList" style="display:flex;flex-direction:column;gap:8px">
+                ${personnelMapping.filter(p => p.email !== currentUser.email).map(p => `
+                    <div onclick="startImpersonation('${p.email}', '${p.name}', '${p.branch}', '${p.role}')" 
+                         style="padding:12px;background:var(--surface2);border:1px solid var(--surface3);border-radius:var(--radiusSm);cursor:pointer;transition:all .2s"
+                         onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--surface3)'">
+                        <div style="font-weight:600;color:var(--tx)">${p.name}</div>
+                        <div style="font-size:.75rem;color:var(--tx2)">${p.branch} • ${getRoleLabel(p.role)}</div>
                     </div>
-                `;
-            });
-        }
-        
-        html += '</div>';
-        
-        showModal('📊 Checklist Geçmişi', html, '<button class="btn btn-ghost" onclick="closeModal()">Kapat</button>');
-        
-    } catch (error) {
-        console.error('Geçmiş yükleme hatası:', error);
-        toast('Geçmiş yüklenemedi', 'error');
-    }
-}
-
-// Checklist ayarları
-function showChecklistSettings() {
-    const branch = document.getElementById('checklistSube')?.value;
-    if (!branch) {
-        toast('Önce şube seçin', 'error');
-        return;
-    }
-    
-    const types = CHECKLIST_TYPES[branch] || [];
-    
-    let html = `
-        <p style="color:var(--tx2);margin-bottom:16px">${branch} için checklist ayarları</p>
-        <div style="display:flex;flex-direction:column;gap:12px">
+                `).join('')}
+            </div>
+        </div>
     `;
     
-    types.forEach(t => {
-        html += `
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border-radius:10px">
-                <div style="display:flex;align-items:center;gap:10px">
-                    <span style="font-size:1.2rem">${t.icon}</span>
-                    <span style="font-weight:500">${t.name}</span>
-                </div>
-                <div style="font-size:.8rem;color:var(--tx2)">
-                    ${t.timeSlots ? t.timeSlots.join(', ') : 'Tek seferlik'}
-                </div>
-            </div>
-        `;
-    });
-    
-    html += '</div>';
-    
-    showModal('⚙️ Checklist Ayarları', html, '<button class="btn btn-ghost" onclick="closeModal()">Kapat</button>');
+    document.body.appendChild(modal);
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 }
 
-// Default checklist maddeleri - TÜM EXCEL MADDELERİ
-function getDefaultChecklistItems(branch, type) {
-    // Veriler artık Firebase'den yükleniyor
-    // seed.html programı ile veritabanına yüklendi
-    return [];
+function getRoleLabel(role) {
+    const labels = { yonetici: 'Yönetici', bolge_muduru: 'Bölge Müdürü', magaza_muduru: 'Mağaza Müdürü', barista: 'Barista' };
+    return labels[role] || role;
 }
+
+function startImpersonation(email, name, branch, role) {
+    if (!isImpersonating) {
+        originalUser = { ...currentUser };
+    }
+    
+    isImpersonating = true;
+    impersonatedUser = { email, name, branch, role };
+    
+    // Update UI
+    document.getElementById('impersonationBanner').style.display = 'block';
+    document.getElementById('impersonatingAs').textContent = `${name} (${getRoleLabel(role)})`;
+    document.getElementById('userName').textContent = name;
+    document.getElementById('userRole').textContent = getRoleLabel(role);
+    
+    // Close modal
+    const modal = document.getElementById('impersonationModal');
+    if (modal) modal.remove();
+    
+    // Refresh checklist view
+    if (document.getElementById('page-checklist').classList.contains('active')) {
+        showBranchSelect();
+        renderBranchCards();
+    }
+}
+
+function exitImpersonation() {
+    isImpersonating = false;
+    impersonatedUser = null;
+    
+    // Restore original user
+    if (originalUser) {
+        document.getElementById('userName').textContent = originalUser.displayName || originalUser.email;
+        document.getElementById('userRole').textContent = getRoleLabel(originalUser.role);
+    }
+    
+    document.getElementById('impersonationBanner').style.display = 'none';
+    
+    // Refresh checklist view
+    if (document.getElementById('page-checklist').classList.contains('active')) {
+        showBranchSelect();
+        renderBranchCards();
+    }
+}
+
     </script>
 </body>
 </html>
