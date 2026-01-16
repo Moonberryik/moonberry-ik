@@ -561,7 +561,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             </div>
                             <div>
                                 <div style="font-weight:600;color:var(--tx)">Puantaj</div>
-                                <div style="font-size:.75rem;color:var(--tx2)">Performans</div>
+                                <div style="font-size:.75rem;color:var(--tx2)">Performans Sistemi</div>
                             </div>
                         </div>
                         <div class="dashboard-card" onclick="goTo('shift')" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:16px">
@@ -650,7 +650,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
                 
                 <!-- Formlar -->
-                <div class="dashboard-section" style="margin-bottom:28px">
+                <div class="dashboard-section" id="dashboard-formlar-section" style="margin-bottom:28px">
                     <div style="font-size:.8rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;padding-left:4px">📑 Formlar</div>
                     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
                         <div class="dashboard-card" onclick="goTo('borc')" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:16px">
@@ -1070,7 +1070,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                     <!-- Aksiyon Butonları - Modern Minimalist -->
                     <div id="shiftActionButtons" style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
-                        <button class="btn" onclick="showNewShiftModal()" style="padding:10px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:500;cursor:pointer">
+                        <button id="btnCreateShiftWeek" class="btn" onclick="showNewShiftModal()" style="padding:10px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:500;cursor:pointer">
                             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
                             Yeni Hafta
                         </button>
@@ -1581,12 +1581,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                                 </div>
                                 
                                 <!-- Özel Yetkiler -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px;grid-column:span 2">
+                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
                                     <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem;display:flex;align-items:center;gap:8px">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                                         Özel Yetkiler
                                     </div>
-                                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px" id="specialPermissions"></div>
+                                    <div style="display:flex;flex-direction:column;gap:8px" id="specialPermissions"></div>
+                                </div>
+                                
+                                <!-- Limitler -->
+                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
+                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem;display:flex;align-items:center;gap:8px">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                        Limitler
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;gap:8px" id="limitsPermissions"></div>
                                 </div>
                             </div>
                             
@@ -2634,13 +2643,9 @@ function applyBaristaRestrictions() {
         userRoleEl.innerHTML = '<span style="background:var(--accent);color:#fff;padding:2px 8px;border-radius:10px;font-size:.65rem">SALT OKUNUR</span> Barista';
     }
     
-    // Dashboard'da FORMLAR bölümünü de gizle
-    document.querySelectorAll('.dashboard-section, [style*="FORMLAR"], h3, div').forEach(el => {
-        if (el.textContent && (el.textContent.includes('FORMLAR') || el.textContent.includes('Formlar'))) {
-            const section = el.closest('.dashboard-section') || el.parentElement;
-            if (section) section.style.display = 'none';
-        }
-    });
+    // Dashboard'da FORMLAR bölümünü gizle (ID ile)
+    const formlarSection = document.getElementById('dashboard-formlar-section');
+    if (formlarSection) formlarSection.style.display = 'none';
     
     console.log('✅ Barista kısıtlamaları uygulandı');
 }
@@ -6691,11 +6696,16 @@ const PERMISSION_STRUCTURE = {
     ],
     special: [
         { id: 'print_shift', label: 'Shift planını yazdırabilir' },
+        { id: 'create_shift_week', label: 'Yeni shift haftası oluşturabilir' },
         { id: 'view_checklist_history', label: 'Geçmiş checklisti görebilir' },
+        { id: 'fill_others_checklist', label: 'Başkasının checklistini doldurabilir' },
         { id: 'view_salary', label: 'Maaş bilgilerini görebilir' },
         { id: 'export_data', label: 'Veri dışa aktarabilir' },
         { id: 'delete_records', label: 'Kayıt silebilir' },
         { id: 'assign_password', label: 'Şifre atayabilir' }
+    ],
+    limits: [
+        { id: 'shift_history_weeks', label: 'Shift geçmiş limiti (hafta)', type: 'number', options: [1, 5, 52, 999] }
     ]
 };
 
@@ -6705,28 +6715,32 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: false, edit: false }, tutanak: { view: false, edit: false }, savunma: { view: false, edit: false }, fesih: { view: false, edit: false }, istifa: { view: false, edit: false }, ibraname: { view: false, edit: false } },
         forms: { borc: { view: false, edit: false }, avans: { view: false, edit: false }, zimmet: { view: false, edit: false } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: false, admin_sablonlar: false, admin_oturumlar: false },
-        special: { print_shift: true, view_checklist_history: false, view_salary: false, export_data: false, delete_records: false, assign_password: false }
+        special: { print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false },
+        limits: { shift_history_weeks: 1 }
     },
     magaza_mudur_yardimcisi: {
         pages: { dashboard: { view: true, edit: false }, personel: { view: true, edit: false }, puantaj: { view: true, edit: false }, shift: { view: true, edit: false }, checklist: { view: true, edit: true }, katalog: { view: true, edit: false } },
         documents: { sozlesme: { view: true, edit: false }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: false, edit: false }, istifa: { view: true, edit: false }, ibraname: { view: true, edit: false } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false },
-        special: { print_shift: true, view_checklist_history: true, view_salary: false, export_data: false, delete_records: false, assign_password: false }
+        special: { print_shift: true, create_shift_week: false, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: false, delete_records: false, assign_password: false },
+        limits: { shift_history_weeks: 5 }
     },
     magaza_muduru: {
         pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false },
-        special: { print_shift: true, view_checklist_history: true, view_salary: false, export_data: true, delete_records: false, assign_password: false }
+        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
+        limits: { shift_history_weeks: 5 }
     },
     bolge_muduru: {
         pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: true }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: true, admin_kullanicilar: false, admin_puantaj: true, admin_subeler: true, admin_pozisyonlar: true, admin_ihlaller: true, admin_sablonlar: true, admin_oturumlar: true },
-        special: { print_shift: true, view_checklist_history: true, view_salary: true, export_data: true, delete_records: true, assign_password: true }
+        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true },
+        limits: { shift_history_weeks: 999 }
     }
 };
 
@@ -6786,6 +6800,9 @@ async function loadRolePermissions(role) {
     
     // Özel izinler
     renderSpecialPermissions(perms.special || {});
+    
+    // Limitler
+    renderLimitsPermissions(perms.limits || {});
 }
 
 async function loadAdvancedPermissions() {
@@ -6827,6 +6844,9 @@ async function loadAdvancedPermissions() {
     
     // Özel izinler
     renderSpecialPermissions(perms.special || {});
+    
+    // Limitler
+    renderLimitsPermissions(perms.limits || {});
 }
 
 function renderPagePermissions(perms) {
@@ -6951,6 +6971,36 @@ function renderSpecialPermissions(perms) {
     container.innerHTML = html;
 }
 
+function renderLimitsPermissions(perms) {
+    const container = document.getElementById('limitsPermissions');
+    if (!container) return;
+    let html = '';
+    
+    const limitLabels = {
+        'shift_history_weeks': { label: 'Shift Geçmiş Görüntüleme', unit: 'hafta', options: [1, 5, 12, 999] }
+    };
+    
+    if (PERMISSION_STRUCTURE.limits) {
+        PERMISSION_STRUCTURE.limits.forEach(l => {
+            const value = perms[l.id] || 1;
+            const info = limitLabels[l.id] || { label: l.label, unit: '', options: [1, 5, 12, 999] };
+            
+            html += `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg2);border-radius:8px;border:1px solid var(--cardBorder)">
+                    <span style="font-weight:500;color:var(--tx);font-size:.85rem">${info.label}</span>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <select class="perm-limit" data-id="${l.id}" style="padding:6px 10px;border-radius:6px;border:1px solid var(--cardBorder);background:var(--bg);color:var(--tx);font-size:.8rem">
+                            ${info.options.map(opt => `<option value="${opt}" ${value === opt ? 'selected' : ''}>${opt === 999 ? 'Sınırsız' : opt + ' ' + info.unit}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+            `;
+        });
+    }
+    
+    container.innerHTML = html || '<p style="color:var(--tx2);font-size:.8rem;text-align:center">Limit ayarı yok</p>';
+}
+
 async function saveAdvancedPermissions() {
     const role = selectedRoleForPerm || document.getElementById('advRoleSelect')?.value;
     if (!role) {
@@ -6963,7 +7013,8 @@ async function saveAdvancedPermissions() {
         documents: {},
         forms: {},
         admin: {},
-        special: {}
+        special: {},
+        limits: {}
     };
     
     // Tüm checkbox'ları topla
@@ -6980,6 +7031,12 @@ async function saveAdvancedPermissions() {
         } else if (cat === 'special') {
             permissions.special[id] = cb.checked;
         }
+    });
+    
+    // Limits değerlerini topla
+    document.querySelectorAll('.perm-limit').forEach(input => {
+        const id = input.dataset.id;
+        permissions.limits[id] = parseInt(input.value) || 1;
     });
     
     try {
@@ -7181,6 +7238,30 @@ function applyAdvancedPermissions() {
             userRoleEl.innerHTML = '<span style="background:var(--accent);color:#fff;padding:2px 8px;border-radius:10px;font-size:.65rem">SALT OKUNUR</span> ' + userRoleEl.textContent;
         }
     }
+    
+    // Yeni Hafta Oluşturma yetkisi
+    if (!perms.special?.create_shift_week) {
+        const btnCreateWeek = document.getElementById('btnCreateShiftWeek');
+        if (btnCreateWeek) btnCreateWeek.style.display = 'none';
+    }
+    
+    // Shift silme yetkisi
+    if (!perms.special?.delete_records) {
+        const btnDeleteShift = document.getElementById('deleteShiftBtn');
+        if (btnDeleteShift) btnDeleteShift.style.display = 'none';
+    }
+    
+    // Shift geçmiş limiti - global değişkene ata
+    window.userShiftHistoryWeeks = perms.limits?.shift_history_weeks || 1;
+    
+    // Checklist başkasının doldurma yetkisi
+    window.userCanFillOthersChecklist = perms.special?.fill_others_checklist || false;
+    
+    console.log('✅ Gelişmiş izinler uygulandı', { 
+        createWeek: perms.special?.create_shift_week,
+        historyWeeks: window.userShiftHistoryWeeks,
+        fillOthers: window.userCanFillOthersChecklist
+    });
 }
 
 
@@ -8146,7 +8227,7 @@ async function loadShiftList() {
     
     try {
         const snapshot = await db.collection('shifts').get();
-        const weeks = [];
+        let weeks = [];
         
         snapshot.forEach(doc => {
             const d = doc.data();
@@ -8157,6 +8238,25 @@ async function loadShiftList() {
         
         // Tarihe göre sırala (en yeni önce)
         weeks.sort((a, b) => (b.weekStart || '').localeCompare(a.weekStart || ''));
+        
+        // HAFTA LİMİTİ - Kullanıcı yetkisine göre
+        const maxWeeks = window.userShiftHistoryWeeks || 999;
+        const isYonetici = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
+        
+        if (!isYonetici && maxWeeks < 999) {
+            // Bugünün haftasını bul
+            const today = new Date();
+            const todayWeekStart = getWeekStart(today);
+            const todayWeekKey = formatDateLocal(todayWeekStart);
+            
+            // Limit uygula
+            weeks = weeks.filter(w => {
+                if (!w.weekStart) return false;
+                const weekDate = new Date(w.weekStart);
+                const diffWeeks = Math.floor((todayWeekStart - weekDate) / (7 * 24 * 60 * 60 * 1000));
+                return diffWeeks <= maxWeeks;
+            });
+        }
         
         // Hafta dropdown'ını doldur
         if (weeks.length === 0) {
@@ -13133,6 +13233,32 @@ async function submitChecklist(branch, type, date, timeSlot) {
         return;
     }
     
+    // SORUMLU PERSONEL KONTROLÜ
+    const canFillOthers = window.userCanFillOthersChecklist || ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
+    
+    if (!canFillOthers) {
+        // Sorumlu personel listesini al
+        const responsibleEl = document.getElementById('responsiblePersonnelList');
+        const responsibleNames = responsibleEl ? 
+            Array.from(responsibleEl.querySelectorAll('span[style*="background"]')).map(s => s.textContent.trim().toLowerCase()) : [];
+        
+        // Giriş yapan kullanıcının adı
+        const currentUserName = currentUser?.name?.toLowerCase() || '';
+        const enteredName = personName.toLowerCase();
+        
+        // Kontrol - girilen isim sorumlu listesinde mi veya giriş yapan kullanıcı mı?
+        const isResponsible = responsibleNames.some(n => 
+            enteredName.includes(n) || n.includes(enteredName) ||
+            currentUserName.includes(n) || n.includes(currentUserName)
+        ) || responsibleNames.length === 0;
+        
+        if (!isResponsible && responsibleNames.length > 0) {
+            // Uyarı modal göster
+            showNotResponsibleWarning(branch, type, date, timeSlot, personName, responsibleNames);
+            return;
+        }
+    }
+    
     // Tüm maddelerin cevaplandığını kontrol et
     const items = document.querySelectorAll('#checklistItems .checklist-item');
     const responses = [];
@@ -13178,6 +13304,33 @@ async function submitChecklist(branch, type, date, timeSlot) {
     
     // Doğrudan kaydet
     await saveChecklistAndShare(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, items.length);
+}
+
+// Sorumlu olmayan personel uyarısı
+function showNotResponsibleWarning(branch, type, date, timeSlot, personName, responsibleNames) {
+    const modal = document.createElement('div');
+    modal.id = 'notResponsibleModal';
+    modal.innerHTML = `
+        <div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px">
+            <div style="background:var(--bg2);border-radius:20px;max-width:420px;width:100%;padding:32px;text-align:center;border:1px solid var(--cardBorder)">
+                <div style="width:64px;height:64px;background:rgba(255,193,7,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+                    <svg width="32" height="32" fill="none" stroke="#ffc107" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <h3 style="font-size:1.3rem;font-weight:700;color:var(--tx);margin-bottom:12px">Sorumlu Personel Değilsiniz</h3>
+                <p style="color:var(--tx2);margin-bottom:16px;line-height:1.6">
+                    Bu checklist için sorumlu personeller:<br>
+                    <strong style="color:var(--tx)">${responsibleNames.join(', ')}</strong>
+                </p>
+                <p style="color:var(--tx2);font-size:.85rem;margin-bottom:24px">
+                    Sadece sorumlu personeller checklist doldurabilir. Yardım için müdürünüzle iletişime geçin.
+                </p>
+                <button onclick="document.getElementById('notResponsibleModal').remove()" class="btn btn-primary" style="padding:12px 32px">
+                    Tamam
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
 }
 
 // Tamamlama onay modal'ı
