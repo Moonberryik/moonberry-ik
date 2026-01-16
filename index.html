@@ -393,7 +393,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <div class="nav-divider"></div>
                 
                 <!-- Belgeler (Collapsible - Kapalı başla) -->
-                <div class="nav-group">
+                <div class="nav-group" id="nav-belgeler">
                     <div class="nav-label collapsed" onclick="toggleNavGroup(this)">
                         📄 Belgeler <span class="nav-arrow">▼</span>
                     </div>
@@ -420,7 +420,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
                 
                 <!-- Formlar (Collapsible - Kapalı başla) -->
-                <div class="nav-group">
+                <div class="nav-group" id="nav-formlar">
                     <div class="nav-label collapsed" onclick="toggleNavGroup(this)">
                         📑 Formlar <span class="nav-arrow">▼</span>
                     </div>
@@ -2562,7 +2562,7 @@ function applyUserPermissions() {
 // Barista kısıtlamaları
 function applyBaristaRestrictions() {
     // İzin verilen sayfalar
-    const allowedPages = ['dashboard', 'puantaj', 'shift'];
+    const allowedPages = ['dashboard', 'puantaj', 'shift', 'checklist'];
     
     // Navbar menülerini kısıtla
     document.querySelectorAll('.nav-item[data-page]').forEach(item => {
@@ -2571,6 +2571,12 @@ function applyBaristaRestrictions() {
             item.style.display = 'none';
         }
     });
+    
+    // Belgeler ve Formlar menülerini tamamen gizle
+    const navBelgeler = document.getElementById('nav-belgeler');
+    const navFormlar = document.getElementById('nav-formlar');
+    if (navBelgeler) navBelgeler.style.display = 'none';
+    if (navFormlar) navFormlar.style.display = 'none';
     
     // Nav gruplarını kontrol et - boş olanları gizle
     document.querySelectorAll('.nav-group').forEach(group => {
@@ -2583,7 +2589,7 @@ function applyBaristaRestrictions() {
     // Dashboard kartlarını kısıtla
     document.querySelectorAll('.dashboard-card').forEach(card => {
         const onclick = card.getAttribute('onclick') || '';
-        const allowedCards = ['puantaj', 'shift'];
+        const allowedCards = ['puantaj', 'shift', 'checklist'];
         const isAllowed = allowedCards.some(p => onclick.includes(`'${p}'`));
         if (!isAllowed && onclick.includes('goTo')) {
             card.style.display = 'none';
@@ -2601,11 +2607,21 @@ function applyBaristaRestrictions() {
         }
     });
     
+    // Personel ve Ayarlar gizle
+    const navPersonel = document.querySelector('.nav-item[data-page="personel"]');
+    const navAdmin = document.querySelector('.nav-item[data-page="admin"]');
+    const navKatalog = document.querySelector('.nav-item[data-page="katalog"]');
+    if (navPersonel) navPersonel.style.display = 'none';
+    if (navAdmin) navAdmin.style.display = 'none';
+    if (navKatalog) navKatalog.style.display = 'none';
+    
     // Barista badge'i ekle
     const userRoleEl = document.getElementById('userRole');
     if (userRoleEl) {
         userRoleEl.innerHTML = '<span style="background:var(--accent);color:#fff;padding:2px 8px;border-radius:10px;font-size:.65rem">SALT OKUNUR</span> Barista';
     }
+    
+    console.log('✅ Barista kısıtlamaları uygulandı');
 }
 
 async function loadFirebaseData() {
@@ -5066,7 +5082,7 @@ async function savePersonel() {
     const name = document.getElementById('personelName').value.trim();
     const tc = document.getElementById('personelTC').value.trim();
     let codeName = document.getElementById('personelCodeName').value.trim();
-    const email = document.getElementById('personelEmail').value.trim();
+    const email = document.getElementById('personelEmail').value.trim().toLowerCase();
     const password = document.getElementById('personelPassword')?.value || '';
     const position = document.getElementById('personelPosition').value;
     
@@ -5076,7 +5092,7 @@ async function savePersonel() {
     }
     
     // Yeni kullanıcı ve email + şifre girildiyse şifre kontrolü
-    if (!editId && email && password && password.length < 6) {
+    if (email && password && password.length < 6) {
         toast('Şifre en az 6 karakter olmalı', 'error');
         return;
     }
@@ -5125,7 +5141,39 @@ async function savePersonel() {
     }
     
     try {
-        // Email ve şifre varsa users koleksiyonunu da güncelle
+        // Email ve şifre varsa Firebase Auth'ta kullanıcı oluştur
+        if (email && password) {
+            try {
+                // Secondary app ile kullanıcı oluştur (mevcut oturumu bozmaz)
+                const secondaryApp = firebase.initializeApp(firebase.app().options, 'Secondary');
+                const secondaryAuth = secondaryApp.auth();
+                
+                await secondaryAuth.createUserWithEmailAndPassword(email, password);
+                console.log('Firebase Auth kullanıcısı oluşturuldu:', email);
+                
+                // Secondary app'i temizle
+                await secondaryApp.delete();
+                
+                // Şifreyi Firestore'dan kaldır (artık Auth'ta)
+                delete data.password;
+                data.hasFirebaseAuth = true;
+                
+                toast('Kullanıcı hesabı oluşturuldu ✓', 'success');
+            } catch (authError) {
+                if (authError.code === 'auth/email-already-in-use') {
+                    console.log('Kullanıcı zaten mevcut:', email);
+                    // Şifreyi Firestore'da tut (login'de migrate edilecek)
+                } else if (authError.code === 'auth/app/duplicate-app') {
+                    // Secondary app zaten var, devam et
+                    console.log('Secondary app zaten mevcut');
+                } else {
+                    console.error('Auth hatası:', authError);
+                    // Şifreyi Firestore'da sakla, login'de migrate edilir
+                }
+            }
+        }
+        
+        // Email varsa users koleksiyonunu da güncelle
         if (email) {
             await db.collection('users').doc(email).set({
                 email,
@@ -6970,6 +7018,11 @@ function applyAdvancedPermissions() {
     // Belgeler bölümünü kontrol et
     const hasAnyDocAccess = Object.values(perms.documents || {}).some(d => d.view);
     if (!hasAnyDocAccess) {
+        // Sidebar'daki Belgeler menüsünü gizle
+        const navBelgeler = document.getElementById('nav-belgeler');
+        if (navBelgeler) navBelgeler.style.display = 'none';
+        
+        // Dashboard'daki Belgeler section'ını gizle
         document.querySelectorAll('.dashboard-section').forEach(section => {
             const header = section.querySelector('div');
             if (header && header.textContent.includes('Belgeler')) {
@@ -6978,9 +7031,19 @@ function applyAdvancedPermissions() {
         });
     }
     
+    // Formlar menüsünü de gizle (belgeler erişimi yoksa formlar da kapalı)
+    if (!hasAnyDocAccess) {
+        const navFormlar = document.getElementById('nav-formlar');
+        if (navFormlar) navFormlar.style.display = 'none';
+    }
+    
     // Admin paneli erişimini kontrol et
     const hasAnyAdminAccess = Object.values(perms.admin || {}).some(a => a);
     if (!hasAnyAdminAccess) {
+        // Ayarlar menüsünü gizle
+        const navAdmin = document.querySelector('.nav-item[data-page="admin"]');
+        if (navAdmin) navAdmin.style.display = 'none';
+        
         document.querySelectorAll('.dashboard-section').forEach(section => {
             const header = section.querySelector('div');
             if (header && header.textContent.includes('Sistem')) {
