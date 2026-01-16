@@ -1355,7 +1355,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <div class="admin-tabs">
                     <button class="admin-tab active" onclick="showAdminTab('genel',this)">Genel</button>
                     <button class="admin-tab" onclick="showAdminTab('tumCheckler',this)">📊 Tüm Checkler</button>
-                    <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">👤 Kullanıcı Yönetimi</button>
+                    <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">👥 Personel & Yetkiler</button>
                     <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">⏱️ Oturumlar</button>
                     <button class="admin-tab" onclick="showAdminTab('magazaSaatleri',this)">🕐 Mağaza Saatleri</button>
                     <button class="admin-tab" onclick="showAdminTab('checkKurallari',this)">📋 Check Kuralları</button>
@@ -1494,36 +1494,39 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                 </div>
 
-                <!-- Kullanıcı Yönetimi (Kullanıcılar + İzinler birleşik) -->
+                <!-- Kullanıcı Yönetimi → Personel'e Yönlendir -->
                 <div class="admin-section" id="admin-kullanicilar">
-                    <!-- Sistem Kullanıcıları -->
+                    <!-- Personel Yönlendirme -->
                     <div class="admin-card">
                         <div class="admin-card-header">
-                            <div class="admin-card-title">👤 Kullanıcı Yönetimi</div>
-                            <div style="display:flex;gap:8px">
-                                <button class="btn btn-sm btn-ghost" onclick="syncRolesFromPersonnel()" title="Personel listesindeki rolleri kullanıcılara uygula">🔄 Senkronize Et</button>
-                                <button class="btn btn-sm btn-primary" onclick="showNewUserModal()">+ Yeni Kullanıcı</button>
-                            </div>
+                            <div class="admin-card-title">👥 Personel & Kullanıcı Yönetimi</div>
                         </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Sisteme giriş yapabilen kullanıcıları yönetin. Kullanıcı adı@moonberrycoffee.com formatında giriş yapılır.</p>
-                        <div class="admin-list" id="userList">
-                            <p style="color:var(--tx2);text-align:center;padding:20px">Yükleniyor...</p>
+                        <div style="text-align:center;padding:40px 20px">
+                            <div style="font-size:3rem;margin-bottom:16px">👥</div>
+                            <h3 style="color:var(--tx);margin-bottom:8px">Tüm personel işlemleri tek yerden!</h3>
+                            <p style="color:var(--tx2);font-size:.9rem;margin-bottom:24px">
+                                Personel ekleme, düzenleme, şifre atama ve giriş yetkileri<br>
+                                artık <strong>Personel</strong> sayfasından yönetiliyor.
+                            </p>
+                            <button class="btn btn-primary" onclick="goTo('page-personel')" style="padding:14px 32px;font-size:1rem">
+                                📋 Personel Yönetimine Git
+                            </button>
                         </div>
                     </div>
                     
-                    <!-- Rol İzinleri -->
+                    <!-- Pozisyon Yetkileri -->
                     <div class="admin-card" style="margin-top:20px">
                         <div class="admin-card-header">
-                            <div class="admin-card-title">🔐 Rol İzinleri</div>
+                            <div class="admin-card-title">🔐 Pozisyon Yetkileri</div>
                         </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Her rol için sayfa, belge ve yönetim paneli erişim izinlerini yapılandırın.</p>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Her pozisyon için sayfa ve özellik erişim izinlerini yapılandırın.</p>
                         
-                        <!-- Rol Seçimi -->
+                        <!-- Pozisyon Seçimi -->
                         <div class="form-group" style="margin-bottom:20px">
-                            <label class="form-label">Rol Seçin</label>
+                            <label class="form-label">Pozisyon Seçin</label>
                             <select id="advRoleSelect" class="form-select" onchange="loadAdvancedPermissions()" style="max-width:300px">
-                                <option value="">-- Rol Seçin --</option>
-                                <option value="barista">🧑‍🍳 Barista</option>
+                                <option value="">-- Pozisyon Seçin --</option>
+                                <option value="barista">🧑‍🍳 Barista / Servis</option>
                                 <option value="magaza_muduru">🏪 Mağaza Müdürü</option>
                                 <option value="bolge_muduru">🌍 Bölge Müdürü</option>
                             </select>
@@ -1565,7 +1568,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         
                         <div id="advPermissionsEmpty" style="text-align:center;padding:30px;color:var(--tx2)">
                             <div style="font-size:2rem;margin-bottom:8px">🔐</div>
-                            <div style="font-size:.85rem">Düzenlemek için yukarıdan bir rol seçin</div>
+                            <div style="font-size:.85rem">Düzenlemek için yukarıdan bir pozisyon seçin</div>
                         </div>
                     </div>
                 </div>
