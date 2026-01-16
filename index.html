@@ -9361,6 +9361,12 @@ function renderPlatformChecklist(container, branch, date, timeSlot, submittedDat
     const isSubmitted = !!submittedData;
     const userName = currentUser?.name || currentUser?.email?.split('@')[0] || 'Personel';
     
+    // Şubeye göre renk belirle - Moonberry (Şişli) = teal, Sunberry (Tuzla) = coral
+    const isMoonberry = branch.includes('Şişli') || branch.includes('Merkez');
+    const brandColor = isMoonberry ? '#008c95' : '#ff8674';
+    const brandColorRgba = isMoonberry ? 'rgba(0,140,149,.2)' : 'rgba(255,134,116,.2)';
+    const brandName = isMoonberry ? 'Moonberry' : 'Sunberry';
+    
     // Tahmini süre - 8 platform x 30 saniye = ~4 dakika
     const platformCount = PLATFORMS.length;
     const estimatedMinutes = Math.ceil(platformCount * 0.5);
@@ -9369,16 +9375,16 @@ function renderPlatformChecklist(container, branch, date, timeSlot, submittedDat
         <div class="form-section">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
                 <div>
-                    <div style="font-size:1.3rem;font-weight:700;color:var(--tx)">📱 Platform Check</div>
-                    <div style="font-size:.85rem;color:var(--tx2)">${branch} • ${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})} • ${timeSlot}</div>
+                    <div style="font-size:1.3rem;font-weight:700;color:var(--tx)">📱 Platform Check <span style="color:${brandColor};font-size:1rem">(${brandName})</span></div>
+                    <div style="font-size:.85rem;color:var(--tx2)">${branch} • ${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})}</div>
                 </div>
                 <div style="display:flex;gap:12px;align-items:center">
                     <div style="text-align:right">
                         <div style="font-size:.8rem;color:var(--tx2)">👤 ${userName}</div>
-                        <div style="font-size:.75rem;color:var(--accent2)">⏱️ Tahmini: ${estimatedMinutes} dk</div>
+                        <div style="font-size:.75rem;color:${brandColor}">⏱️ Tahmini: ${estimatedMinutes} dk</div>
                     </div>
                     ${isSubmitted ? `
-                        <div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.85rem">
+                        <div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:${brandColorRgba};color:${brandColor};border-radius:20px;font-size:.85rem;font-weight:600">
                             ✓ Tamamlandı
                         </div>
                     ` : ''}
@@ -9386,7 +9392,7 @@ function renderPlatformChecklist(container, branch, date, timeSlot, submittedDat
             </div>
             
             <!-- Uyarı Banner -->
-            <div style="margin-bottom:16px;padding:12px 16px;background:rgba(255,134,116,.12);border:1px solid rgba(255,134,116,.3);border-radius:10px;font-size:.85rem;color:var(--tx)">
+            <div style="margin-bottom:16px;padding:12px 16px;background:${brandColorRgba};border:1px solid ${brandColor}40;border-radius:10px;font-size:.85rem;color:var(--tx)">
                 <strong>⚠️ Önemli:</strong> Her platformu telefon/tabletten açıp kontrol edin. Hızlı geçişler tespit edilir ve puantaja yansır.
             </div>
             
@@ -9398,12 +9404,12 @@ function renderPlatformChecklist(container, branch, date, timeSlot, submittedDat
             </div>
             
             <div style="background:var(--bg2);border-radius:12px;overflow:hidden;border:1px solid var(--cardBorder)">
-                <table style="width:100%;border-collapse:collapse">
+                <table style="width:100%;border-collapse:collapse" data-brand-color="${brandColor}" data-brand-rgba="${brandColorRgba}">
                     <thead>
-                        <tr style="background:var(--bg3)">
+                        <tr style="background:${brandColorRgba}">
                             <th style="padding:12px;text-align:left;font-weight:600;color:var(--tx)">Platform</th>
-                            <th style="padding:12px;text-align:center;font-weight:600;color:var(--tx)">Açık ✓</th>
-                            <th style="padding:12px;text-align:center;font-weight:600;color:var(--tx)">Kapalı ✗</th>
+                            <th style="padding:12px;text-align:center;font-weight:600;color:${brandColor}">Açık ✓</th>
+                            <th style="padding:12px;text-align:center;font-weight:600;color:#e74c3c">Kapalı ✗</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -9421,12 +9427,12 @@ function renderPlatformChecklist(container, branch, date, timeSlot, submittedDat
                         <input type="radio" name="platform_${platform.replace(/\s/g, '_')}" value="open" 
                             ${isOpen ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''}
                             style="display:none">
-                        <span onclick="${isSubmitted ? '' : `selectPlatformStatus(this, '${platform.replace(/\s/g, '_')}', true)`}"
+                        <span class="platform-check-btn" onclick="${isSubmitted ? '' : `selectPlatformStatus(this, '${platform.replace(/\s/g, '_')}', true)`}"
                             style="display:inline-flex;width:40px;height:40px;border-radius:10px;align-items:center;justify-content:center;font-size:1.3rem;
-                            background:${isOpen ? 'rgba(39,174,96,.2)' : 'var(--bg3)'};
-                            border:2px solid ${isOpen ? '#27ae60' : 'transparent'};
-                            color:${isOpen ? '#27ae60' : 'var(--tx3)'};
-                            transition:all .2s">✓</span>
+                            background:${isOpen ? brandColorRgba : 'var(--bg3)'};
+                            border:2px solid ${isOpen ? brandColor : 'transparent'};
+                            color:${isOpen ? brandColor : 'var(--tx3)'};
+                            transition:all .2s;cursor:pointer">✓</span>
                     </label>
                 </td>
                 <td style="padding:12px;text-align:center">
@@ -9434,12 +9440,12 @@ function renderPlatformChecklist(container, branch, date, timeSlot, submittedDat
                         <input type="radio" name="platform_${platform.replace(/\s/g, '_')}" value="closed" 
                             ${isClosed ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''}
                             style="display:none">
-                        <span onclick="${isSubmitted ? '' : `selectPlatformStatus(this, '${platform.replace(/\s/g, '_')}', false)`}"
+                        <span class="platform-check-btn" onclick="${isSubmitted ? '' : `selectPlatformStatus(this, '${platform.replace(/\s/g, '_')}', false)`}"
                             style="display:inline-flex;width:40px;height:40px;border-radius:10px;align-items:center;justify-content:center;font-size:1.3rem;
                             background:${isClosed ? 'rgba(231,76,60,.2)' : 'var(--bg3)'};
                             border:2px solid ${isClosed ? '#e74c3c' : 'transparent'};
                             color:${isClosed ? '#e74c3c' : 'var(--tx3)'};
-                            transition:all .2s">✗</span>
+                            transition:all .2s;cursor:pointer">✗</span>
                     </label>
                 </td>
             </tr>
@@ -9453,7 +9459,7 @@ function renderPlatformChecklist(container, branch, date, timeSlot, submittedDat
             
             ${!isSubmitted ? `
                 <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
-                    <button class="btn btn-primary" onclick="submitPlatformChecklist('${branch}', '${date}', '${timeSlot}')">
+                    <button class="btn btn-primary" style="background:${brandColor}" onclick="submitPlatformChecklist('${branch}', '${date}', '${timeSlot}')">
                         ✅ Platform Check'i Tamamla
                     </button>
                 </div>
@@ -9467,10 +9473,15 @@ function renderPlatformChecklist(container, branch, date, timeSlot, submittedDat
 // Platform status seç
 function selectPlatformStatus(btn, platformKey, isOpen) {
     const row = btn.closest('tr');
+    const table = row.closest('table');
     const openSpan = row.querySelector('td:nth-child(2) span');
     const closedSpan = row.querySelector('td:nth-child(3) span');
     const openInput = row.querySelector('input[value="open"]');
     const closedInput = row.querySelector('input[value="closed"]');
+    
+    // Şube rengini table'dan al
+    const brandColor = table.dataset.brandColor || '#008c95';
+    const brandColorRgba = table.dataset.brandRgba || 'rgba(0,140,149,.2)';
     
     // Reset
     openSpan.style.background = 'var(--bg3)';
@@ -9482,9 +9493,9 @@ function selectPlatformStatus(btn, platformKey, isOpen) {
     
     if (isOpen) {
         openInput.checked = true;
-        openSpan.style.background = 'rgba(39,174,96,.2)';
-        openSpan.style.borderColor = '#27ae60';
-        openSpan.style.color = '#27ae60';
+        openSpan.style.background = brandColorRgba;
+        openSpan.style.borderColor = brandColor;
+        openSpan.style.color = brandColor;
     } else {
         closedInput.checked = true;
         closedSpan.style.background = 'rgba(231,76,60,.2)';
