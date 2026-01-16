@@ -9227,17 +9227,28 @@ let CHECK_RULES = {
     platform: {
         name: 'Platform Check',
         window: { before: 60, after: 60 },
-        lateWindow: 0,
-        points: { onTime: 0, late: 0, missed: -1 }
+        lateWindow: 60,
+        points: { onTime: 1, late: -1, missed: -2 }
+    },
+    acilis: {
+        name: 'Açılış',
+        deadline: '11:00',
+        window: { before: 0, after: 120 },
+        points: { onTime: 1, late: -1, missed: -2 }
+    },
+    kapanis: {
+        name: 'Kapanış',
+        deadline: '23:59',
+        window: { before: 120, after: 0 },
+        points: { onTime: 1, late: -1, missed: -2 }
     },
     mudur: {
         name: 'Müdür Kontrol',
         deadline: '21:00',
         points: { onTime: 1, late: -1, missed: -2 }
     },
-    temizlik: {
-        name: 'Temizlik',
-        windows: { sabah: { start: '10:00', end: '16:00' }, kapanis: { start: '00:00', end: '02:00' } },
+    aylik: {
+        name: 'Temizlik ve Bakım',
         points: { onTime: 0, late: -1, missed: -1 }
     },
     haftalik: {
@@ -9847,6 +9858,99 @@ async function loadTodayChecks() {
                 }
             }
             
+            // Açılış Check (sabah 11:00'e kadar)
+            if (checkType.id === 'acilis') {
+                const deadline = '11:00';
+                const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_acilis_${todayStr}`;
+                let isCompleted = false;
+                
+                try {
+                    const doc = await db.collection('checklistSubmissions').doc(submissionId).get();
+                    isCompleted = doc.exists;
+                } catch (e) {}
+                
+                const now = new Date();
+                const deadlineMinutes = timeToMinutes(deadline);
+                const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                const isMissed = currentMinutes > deadlineMinutes && !isCompleted;
+                const isActive = currentMinutes <= deadlineMinutes;
+                
+                // Sadece ilgili durumları göster
+                if (!isAdmin && isMissed) continue;
+                if (!isAdmin && !isActive && !isCompleted) continue;
+                
+                const responsiblePersonnel = getShiftPersonnel(branch, 'acilis');
+                
+                hasActiveChecks = true;
+                const remainingMinutes = deadlineMinutes - currentMinutes;
+                const remainingText = isActive && !isCompleted && remainingMinutes > 0 ? 
+                    (remainingMinutes > 60 ? `${Math.floor(remainingMinutes / 60)} saat ${remainingMinutes % 60} dk` : `${remainingMinutes} dk`) : '';
+                
+                const rules = CHECK_RULES.acilis;
+                html += renderSimpleCheckCard(checkType.name, deadline, branch, isCompleted, isMissed, isActive, remainingText, responsiblePersonnel, rules, 'sunrise');
+            }
+            
+            // Kapanış Check (gece yarısına kadar)
+            if (checkType.id === 'kapanis') {
+                const deadline = '23:59';
+                const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_kapanis_${todayStr}`;
+                let isCompleted = false;
+                
+                try {
+                    const doc = await db.collection('checklistSubmissions').doc(submissionId).get();
+                    isCompleted = doc.exists;
+                } catch (e) {}
+                
+                const now = new Date();
+                const currentHour = now.getHours();
+                // Kapanış: saat 18'den sonra aktif
+                const isActive = currentHour >= 18;
+                const isMissed = false; // Gece yarısına kadar
+                
+                if (!isAdmin && !isActive && !isCompleted) continue;
+                
+                const responsiblePersonnel = getShiftPersonnel(branch, 'kapanis');
+                
+                if (isActive || isCompleted) {
+                    hasActiveChecks = true;
+                    const remainingHours = 24 - currentHour;
+                    const remainingText = isActive && !isCompleted ? `${remainingHours} saat` : '';
+                    
+                    const rules = CHECK_RULES.kapanis;
+                    html += renderSimpleCheckCard(checkType.name, 'Kapanış', branch, isCompleted, isMissed, isActive, remainingText, responsiblePersonnel, rules, 'sunset');
+                }
+            }
+            
+            // Temizlik ve Bakım (aylik) - Sabah/Akşam vardiyasına göre
+            if (checkType.id === 'aylik') {
+                const now = new Date();
+                const currentHour = now.getHours();
+                const dayOfMonth = now.getDate();
+                
+                // Sabah vardiyası: 10:00-16:00 arası
+                // Akşam vardiyası: 20:00-02:00 arası
+                const isSabah = currentHour >= 9 && currentHour < 16;
+                const isAksam = currentHour >= 20 || currentHour < 2;
+                
+                if (isSabah || isAksam) {
+                    const shiftType = isSabah ? 'sabah' : 'aksam';
+                    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_aylik_${todayStr}_${shiftType}`;
+                    let isCompleted = false;
+                    
+                    try {
+                        const doc = await db.collection('checklistSubmissions').doc(submissionId).get();
+                        isCompleted = doc.exists;
+                    } catch (e) {}
+                    
+                    const responsiblePersonnel = getShiftPersonnel(branch, isSabah ? 'acilis' : 'kapanis');
+                    const deadline = isSabah ? '16:00' : '02:00';
+                    
+                    hasActiveChecks = true;
+                    const rules = CHECK_RULES.aylik;
+                    html += renderSimpleCheckCard(`Temizlik (${isSabah ? 'Sabah' : 'Akşam'})`, deadline, branch, isCompleted, false, true, '', responsiblePersonnel, rules, 'calendar');
+                }
+            }
+            
             // Müdür Kontrol (managerOnly)
             if (checkType.managerOnly) {
                 const rules = CHECK_RULES.mudur || CHECK_RULES[checkType.id];
@@ -9976,6 +10080,76 @@ function startDashboardCountdown() {
             }
         });
     }, 1000);
+}
+
+// Basit check kartı render (Açılış, Kapanış, Temizlik için)
+function renderSimpleCheckCard(name, deadline, branch, isCompleted, isMissed, isActive, remainingText, responsiblePersonnel, rules, iconType) {
+    const isMoonberry = branch.includes('Şişli') || branch.includes('Merkez');
+    const brandColor = isMoonberry ? '#008c95' : '#ff8674';
+    const brandBg = isMoonberry ? 'rgba(0,140,149,.08)' : 'rgba(255,134,116,.08)';
+    
+    const missedPoints = rules?.points?.missed || -2;
+    const onTimePoints = rules?.points?.onTime || 1;
+    
+    let bgColor = 'var(--bg3)';
+    let accentColor = 'var(--tx3)';
+    let icon = '○';
+    let statusText = '';
+    let pulseClass = '';
+    let riskText = '';
+    
+    if (isCompleted) {
+        bgColor = 'rgba(39,174,96,.06)';
+        accentColor = '#27ae60';
+        icon = '●';
+        statusText = 'Tamam';
+    } else if (isMissed) {
+        bgColor = 'var(--bg3)';
+        accentColor = '#9ca3af';
+        icon = '○';
+        statusText = `${missedPoints} puan`;
+        riskText = 'Süre doldu';
+    } else if (isActive) {
+        bgColor = brandBg;
+        accentColor = brandColor;
+        icon = '●';
+        statusText = 'Aktif';
+        pulseClass = 'check-pulse-active';
+        riskText = onTimePoints > 0 ? `+${onTimePoints} puan` : '';
+    }
+    
+    // Icon SVG
+    const iconSvg = iconType === 'sunrise' ? '🌅' : iconType === 'sunset' ? '🌇' : '📋';
+    
+    // Personel
+    let personnelHtml = '';
+    if (responsiblePersonnel && responsiblePersonnel.length > 0) {
+        const names = responsiblePersonnel.slice(0, 2).map(p => p.split(' ')[0]).join(', ');
+        personnelHtml = `<span style="font-size:.7rem;color:var(--tx2);margin-left:4px">• ${names}</span>`;
+    }
+    
+    // Kalan süre
+    let timeHtml = '';
+    if (!isCompleted && remainingText && isActive) {
+        timeHtml = `<span style="font-size:.7rem;color:var(--tx2);display:flex;align-items:center;gap:4px">
+            <span style="font-weight:500">${remainingText}</span>
+            <span style="color:${accentColor};font-size:.65rem">${riskText}</span>
+        </span>`;
+    }
+    
+    return `
+        <div class="${pulseClass}" style="background:${bgColor};border-left:3px solid ${accentColor};border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:8px;transition:all .2s;opacity:${isMissed ? '0.6' : '1'}" onclick="goTo('checklist')">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font-size:1rem">${iconSvg}</span>
+                <span style="font-weight:600;font-size:.85rem;color:var(--tx)">${name}</span>
+                ${personnelHtml}
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+                ${timeHtml}
+                <span style="font-size:.75rem;font-weight:600;color:${accentColor};padding:3px 10px;background:${isCompleted ? 'rgba(39,174,96,.1)' : isMissed ? 'var(--bg3)' : bgColor};border-radius:6px">${statusText}</span>
+            </div>
+        </div>
+    `;
 }
 
 // Check kartı render helper - kompakt versiyon
@@ -12014,9 +12188,39 @@ async function renderPlatformChecklistWithStatus(container, branch, date) {
 }
 
 // Platform checklist render
-function renderPlatformChecklist(container, branch, date, timeSlot, submittedData) {
+async function renderPlatformChecklist(container, branch, date, timeSlot, submittedData) {
     const isSubmitted = !!submittedData;
-    const userName = currentUser?.name || currentUser?.email?.split('@')[0] || 'Personel';
+    
+    // Shift'ten personel al
+    let shiftPersonnel = [];
+    try {
+        const today = new Date(date);
+        const weekStart = getWeekStart(today);
+        const weekKey = formatDateLocal(weekStart);
+        let dayIndex = today.getDay() - 1;
+        if (dayIndex < 0) dayIndex = 6;
+        
+        const shiftsSnapshot = await db.collection('shifts').where('branch', '==', branch).get();
+        const allShifts = [];
+        shiftsSnapshot.forEach(doc => allShifts.push(doc.data()));
+        allShifts.sort((a, b) => (b.weekStart || '').localeCompare(a.weekStart || ''));
+        
+        const targetShift = allShifts.find(s => s.weekStart === weekKey) || allShifts[0];
+        
+        if (targetShift && targetShift.personelShifts) {
+            for (const [name, days] of Object.entries(targetShift.personelShifts)) {
+                const todayShift = days[dayIndex] || '';
+                const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
+                if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-' && cleanShift !== 'X') {
+                    shiftPersonnel.push(name);
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Platform check shift alınamadı:', e.message);
+    }
+    
+    const autoPersonName = shiftPersonnel.length > 0 ? shiftPersonnel[0] : (currentUser?.name || 'Personel');
     
     // Saatler
     const TIME_SLOTS = ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'];
@@ -12032,16 +12236,22 @@ function renderPlatformChecklist(container, branch, date, timeSlot, submittedDat
                     <div style="font-size:.85rem;color:var(--tx2)">${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})}</div>
                 </div>
                 <div style="display:flex;gap:12px;align-items:center">
-                    <div style="font-size:.8rem;color:var(--tx2)">👤 ${userName}</div>
                     ${isSubmitted ? `<div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.85rem;font-weight:600">✓ Tamamlandı</div>` : ''}
                 </div>
             </div>
             
             <div style="margin-bottom:20px;padding:16px;background:var(--bg3);border-radius:12px">
-                <label class="form-label" style="margin-bottom:8px">👤 Personel Adı</label>
-                <input type="text" id="checklistPersonName" class="form-input" placeholder="Adınızı girin" 
-                    value="${submittedData?.personName || currentUser?.name || ''}" 
-                    ${isSubmitted ? 'disabled' : ''}>
+                <label class="form-label" style="margin-bottom:8px">👤 Sorumlu Personel</label>
+                ${shiftPersonnel.length > 1 && !isSubmitted ? `
+                    <select id="checklistPersonName" class="form-select" style="background:var(--bg2);border-color:var(--cardBorder)" autocomplete="off">
+                        ${shiftPersonnel.map(p => `<option value="${p}">${p}</option>`).join('')}
+                    </select>
+                    <div style="font-size:.75rem;color:#008c95;margin-top:4px">✓ Shift'ten ${shiftPersonnel.length} personel</div>
+                ` : `
+                    <div style="font-size:1.1rem;font-weight:600;color:var(--tx);padding:8px 0">${submittedData?.personName || autoPersonName}</div>
+                    <input type="hidden" id="checklistPersonName" value="${submittedData?.personName || autoPersonName}" autocomplete="off">
+                    ${!isSubmitted && shiftPersonnel.length > 0 ? '<div style="font-size:.75rem;color:#008c95;margin-top:4px">✓ Shift\'ten otomatik atandı</div>' : ''}
+                `}
             </div>
             
             <!-- Yan yana tablolar -->
