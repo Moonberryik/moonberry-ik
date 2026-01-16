@@ -8428,8 +8428,8 @@ function showNewShiftModal() {
         sunday.setDate(monday.getDate() + 6);
         
         const label = `${monday.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - ${sunday.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}`;
-        const monStr = monday.toISOString().split('T')[0];
-        const sunStr = sunday.toISOString().split('T')[0];
+        const monStr = formatDateLocal(monday);  // Timezone-safe
+        const sunStr = formatDateLocal(sunday);  // Timezone-safe
         const isCurrent = i === 0;
         const isNext = i === 1;
         
@@ -9174,7 +9174,7 @@ function getWeekOptions() {
         const sunday = new Date(monday);
         sunday.setDate(monday.getDate() + 6);
         const label = `${monday.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} - ${sunday.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}`;
-        const value = monday.toISOString().split('T')[0];
+        const value = formatDateLocal(monday);  // Timezone-safe
         options.push({ value, label, monday, sunday, isCurrent: i === 0 });
     }
     return options;
@@ -9304,12 +9304,12 @@ function getClosingShiftStart(branch, date = new Date()) {
 
 // Personelin bugünkü shift'ini tespit et
 async function getCurrentShiftForPerson(personId, branch, date = new Date()) {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatDateLocal(date);  // Timezone-safe
     
     try {
         // Haftalık shift planından kontrol et
         const weekStart = getWeekStart(date);
-        const weekKey = weekStart.toISOString().split('T')[0];
+        const weekKey = formatDateLocal(weekStart);  // Timezone-safe
         
         const shiftDoc = await db.collection('shiftPlans').doc(`${branch}_${weekKey}`).get();
         if (shiftDoc.exists) {
@@ -9332,6 +9332,15 @@ async function getCurrentShiftForPerson(personId, branch, date = new Date()) {
 }
 
 // Hafta başlangıcını al (Pazartesi)
+// Tarihi YYYY-MM-DD formatında döndür (LOCAL timezone)
+function formatDateLocal(date) {
+    const d = date instanceof Date ? date : new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 function getWeekStart(date = new Date()) {
     const d = new Date(date);
     const day = d.getDay();
@@ -9496,7 +9505,7 @@ async function loadTodayChecks() {
     if (!section || !container) return;
     
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = formatDateLocal(today);  // Timezone-safe
     const isAdmin = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
     const userName = currentUser?.name || 'Personel';
     
@@ -9528,7 +9537,7 @@ async function loadTodayChecks() {
         if (!isAdmin) {
             try {
                 const weekStart = getWeekStart(today);
-                const weekKey = weekStart.toISOString().split('T')[0];
+                const weekKey = formatDateLocal(weekStart);  // Timezone-safe
                 const shiftDoc = await db.collection('shiftPlans').doc(`${primaryBranch}_${weekKey}`).get();
                 if (shiftDoc.exists) {
                     const plan = shiftDoc.data();
@@ -9618,7 +9627,7 @@ async function loadTodayChecks() {
     try {
         // Haftanın pazartesi gününü bul
         const weekStart = getWeekStart(today);
-        const weekKey = weekStart.toISOString().split('T')[0];
+        const weekKey = formatDateLocal(weekStart);  // Timezone-safe
         
         // Günün index'i (Pazartesi = 0, Pazar = 6)
         let dayIndex = today.getDay() - 1;
@@ -9940,17 +9949,17 @@ async function loadAllChecksOverview() {
         let startDate, endDate;
         
         if (dateFilter === 'today') {
-            startDate = today.toISOString().split('T')[0];
+            startDate = formatDateLocal(today);  // Timezone-safe
             endDate = startDate;
         } else if (dateFilter === 'yesterday') {
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
-            startDate = yesterday.toISOString().split('T')[0];
+            startDate = formatDateLocal(yesterday);  // Timezone-safe
             endDate = startDate;
         } else if (dateFilter === 'week') {
             const weekStart = getWeekStart(today);
-            startDate = weekStart.toISOString().split('T')[0];
-            endDate = today.toISOString().split('T')[0];
+            startDate = formatDateLocal(weekStart);  // Timezone-safe
+            endDate = formatDateLocal(today);  // Timezone-safe
         }
         
         // Şubeleri belirle
@@ -10717,7 +10726,7 @@ async function loadChecklistTodayPanel() {
     if (!panel || !container) return;
     
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = formatDateLocal(today);  // Timezone-safe
     const isAdmin = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
     
     // Şubeleri belirle
@@ -10733,7 +10742,7 @@ async function loadChecklistTodayPanel() {
     
     try {
         const weekStart = getWeekStart(today);
-        const weekKey = weekStart.toISOString().split('T')[0];
+        const weekKey = formatDateLocal(weekStart);  // Timezone-safe
         let dayIndex = today.getDay() - 1;
         if (dayIndex < 0) dayIndex = 6;
         
