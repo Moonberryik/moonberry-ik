@@ -8909,18 +8909,36 @@ async function loadChecklist() {
 // Checklist formunu render et
 let checklistEditMode = false;
 
+// Temizlik ve Bakım için tümünü göster flag'i
+let showAllAylikItems = false;
+
 function renderChecklistForm(items, branch, type, date, timeSlot, submittedData) {
     const container = document.getElementById('checklistFormContainer');
     const isAdmin = currentUser?.role === 'yonetici' || currentUser?.role === 'bolge_muduru';
     const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
     const isSubmitted = !!submittedData;
+    const isAylik = type === 'aylik';
+    
+    // Temizlik ve Bakım için tarih filtreleme
+    const selectedDate = new Date(date);
+    const dayOfMonth = selectedDate.getDate();
+    
+    let filteredItems = items;
+    let totalItemCount = items.length;
+    
+    if (isAylik && !showAllAylikItems) {
+        filteredItems = items.filter(item => {
+            if (!item.dates || item.dates.length === 0) return true; // Her gün
+            return item.dates.includes(dayOfMonth);
+        });
+    }
     
     // Zamanlama sıfırla (yeni checklist)
     if (!isSubmitted) {
         checklistStartTime = null;
         checklistFirstItemTime = null;
-        // Beklenen süreyi hesapla
-        checklistExpectedDuration = items.reduce((sum, item) => sum + (item.duration || 60), 0);
+        // Beklenen süreyi sadece görünen maddeler için hesapla
+        checklistExpectedDuration = filteredItems.reduce((sum, item) => sum + (item.duration || 60), 0);
     }
     
     // Kullanıcı adını email'den al
@@ -8948,16 +8966,19 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
                     <div style="font-size:.85rem;color:var(--tx2)">${branch} • ${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})}${timeSlot ? ' • ' + timeSlot : ''}</div>
                 </div>
                 <div style="display:flex;gap:8px;align-items:center">
+                    ${isAylik ? `
+                        <button class="btn btn-sm btn-ghost" onclick="toggleShowAllAylikItems()" style="font-size:.8rem">
+                            ${showAllAylikItems ? '📅 Bugünü Göster' : '📋 Hepsini Göster'}
+                        </button>
+                        <span style="font-size:.75rem;color:var(--tx3);background:var(--bg3);padding:4px 10px;border-radius:12px">
+                            ${filteredItems.length}/${totalItemCount} görev
+                        </span>
+                    ` : ''}
                     ${isSubmitted ? `
                         <div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.85rem">
                             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                             Tamamlandı
                         </div>
-                    ` : ''}
-                    ${isAdmin && !isSubmitted ? `
-                        <button class="btn btn-sm ${checklistEditMode ? 'btn-primary' : 'btn-ghost'}" onclick="toggleChecklistEditMode('${branch}', '${type}', '${date}', '${timeSlot || ''}')">
-                            ${checklistEditMode ? '✓ Düzenleme' : '✏️ Düzenle'}
-                        </button>
                     ` : ''}
                 </div>
             </div>
@@ -8972,14 +8993,21 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
                         <div style="font-size:.85rem;color:var(--tx);display:flex;align-items:center;gap:8px">
                             <span style="font-size:1.1rem">📝</span>
                             <strong>Düzenleme Modu</strong>
-                            <span style="font-size:.7rem;color:var(--tx2);background:var(--bg3);padding:2px 8px;border-radius:8px">Madde ekle, sil veya toplu işlem</span>
                         </div>
-                        <div style="display:flex;gap:6px;flex-wrap:wrap">
+                        <div style="display:flex;gap:8px;flex-wrap:wrap">
                             <button class="btn btn-sm btn-primary" onclick="showAddChecklistItemModal()">+ Madde Ekle</button>
-                            <button class="btn btn-sm btn-ghost" onclick="showAddChecklistTypeModal()">📋 Tür Ekle</button>
-                            <button class="btn btn-sm btn-ghost" onclick="selectAllChecklistItems()">☑️ Tümünü Seç</button>
-                            <button class="btn btn-sm btn-ghost" onclick="deselectAllChecklistItems()">☐ Seçimi Kaldır</button>
-                            <button class="btn btn-sm" style="background:#e74c3c;color:#fff" onclick="deleteSelectedChecklistItems('${branch}', '${type}')">🗑️ Seçilenleri Sil</button>
+                            <button class="btn btn-sm btn-ghost" onclick="selectAllChecklistItems()" style="display:flex;align-items:center;gap:4px">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12l2 2 4-4"/></svg>
+                                Tümünü Seç
+                            </button>
+                            <button class="btn btn-sm btn-ghost" onclick="deselectAllChecklistItems()" style="display:flex;align-items:center;gap:4px">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                                Seçimi Kaldır
+                            </button>
+                            <button class="btn btn-sm" style="background:#e74c3c;color:#fff;display:flex;align-items:center;gap:4px" onclick="deleteSelectedChecklistItems('${branch}', '${type}')">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                                Seçilenleri Sil
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -9004,7 +9032,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
                             Tahmini Süre
                         </label>
                         <div style="font-size:1.1rem;font-weight:600;color:var(--tx)">${expectedMinutes} dakika</div>
-                        <div style="font-size:.75rem;color:var(--tx3)">${items.length} madde</div>
+                        <div style="font-size:.75rem;color:var(--tx3)">${filteredItems.length} madde</div>
                     </div>
                 </div>
                 
@@ -9026,46 +9054,51 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
                 <div style="margin-bottom:16px;padding:12px;background:rgba(255,134,116,.1);border-radius:10px;font-size:.85rem;color:var(--tx2)">
                     ⚠️ <strong>Önemli:</strong> İlk maddeyi işaretlediğinizde süre başlar. Tüm maddeleri dikkatlice kontrol edin.
                 </div>
-            ` : `
-                <div style="margin-bottom:16px;padding:16px;background:rgba(0,140,149,.1);border-radius:12px">
-                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
-                        <div style="font-size:.9rem;color:var(--tx)">
-                            <strong>📝 Düzenleme Modu</strong> - Madde ekle, sil veya toplu işlem yap
-                        </div>
-                        <div style="display:flex;gap:8px;flex-wrap:wrap">
-                            <button class="btn btn-sm btn-primary" onclick="showAddChecklistItemModal()">+ Madde Ekle</button>
-                            <button class="btn btn-sm btn-ghost" onclick="selectAllChecklistItems()">☑️ Tümünü Seç</button>
-                            <button class="btn btn-sm btn-ghost" onclick="deselectAllChecklistItems()">☐ Seçimi Kaldır</button>
-                            <button class="btn btn-sm" style="background:#e74c3c;color:#fff" onclick="deleteSelectedChecklistItems('${branch}', '${type}')">🗑️ Seçilenleri Sil</button>
-                        </div>
-                    </div>
-                </div>
-            `}
+            ` : ''}
             
             <div id="checklistItems">
     `;
     
-    items.forEach((item, index) => {
+    // Item'ları render et
+    filteredItems.forEach((item, index) => {
         const isChecked = submittedData?.items?.find(i => i.id === item.id)?.checked;
         const isNotDone = submittedData?.items?.find(i => i.id === item.id)?.notDone;
         const itemNum = index + 1;
         
+        // Renk bilgisi (Temizlik ve Bakım için)
+        const hasColor = item.color && isAylik;
+        const itemColor = item.color || 'var(--cardBorder)';
+        const responsibleLabel = item.responsible || '';
+        
+        // Tarih badge (sadece hepsini göster modunda)
+        const datesBadge = isAylik && showAllAylikItems && item.dates && item.dates.length > 0 ? 
+            `<span style="font-size:.7rem;padding:2px 8px;border-radius:6px;background:var(--bg3);color:var(--tx3)">📅 ${item.dates.slice(0,4).join(', ')}${item.dates.length > 4 ? '...' : ''}</span>` : 
+            (isAylik && showAllAylikItems && (!item.dates || item.dates.length === 0) ? 
+            `<span style="font-size:.7rem;padding:2px 8px;border-radius:6px;background:var(--bg3);color:var(--tx3)">🔄 Her gün</span>` : '');
+        
         if (checklistEditMode) {
-            // Düzenleme modu - checkbox ile seçim
+            // Düzenleme modu
             html += `
-                <div class="checklist-item" data-item-id="${item.id}" style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg2);border-radius:10px;margin-bottom:8px;border:1px solid var(--cardBorder)">
+                <div class="checklist-item" data-item-id="${item.id}" style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg2);border-radius:10px;margin-bottom:8px;border-left:4px solid ${itemColor};border:1px solid var(--cardBorder);border-left:4px solid ${itemColor}">
                     <input type="checkbox" class="checklist-select-item" value="${item.id}" style="width:20px;height:20px;cursor:pointer;accent-color:#008c95">
                     <span style="min-width:28px;height:28px;background:var(--bg3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:600;color:var(--tx2)">${itemNum}</span>
-                    <div style="flex:1;font-size:.9rem;color:var(--tx)">${item.text}</div>
-                    <button onclick="deleteChecklistItem('${item.id}')" style="background:none;border:none;color:#e74c3c;cursor:pointer;padding:6px;border-radius:6px;transition:all .2s" title="Sil" onmouseover="this.style.background='rgba(231,76,60,.1)'" onmouseout="this.style.background='none'">
+                    <div style="flex:1">
+                        <div style="font-size:.9rem;color:var(--tx)">${item.text}</div>
+                        ${hasColor ? `<div style="margin-top:4px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                            <span style="font-size:.7rem;padding:2px 8px;border-radius:6px;background:${itemColor}20;color:${itemColor};font-weight:600;border:1px solid ${itemColor}40">${responsibleLabel}</span>
+                            ${datesBadge}
+                        </div>` : ''}
+                    </div>
+                    <button onclick="deleteChecklistItem('${item.id}')" style="background:none;border:none;color:#e74c3c;cursor:pointer;padding:6px;border-radius:6px" title="Sil">
                         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/></svg>
                     </button>
                 </div>
             `;
         } else {
-            // Normal mod - check/uncheck with auto numbering (✓ yeşil, ✗ kırmızı her zaman görünür)
+            // Normal mod
             html += `
-                <div class="checklist-item" style="display:flex;align-items:flex-start;gap:12px;padding:16px;background:var(--bg2);border-radius:10px;margin-bottom:10px;border:1px solid var(--cardBorder)">
+                <div class="checklist-item" style="display:flex;align-items:flex-start;gap:12px;padding:16px;background:var(--bg2);border-radius:10px;margin-bottom:10px;border:1px solid var(--cardBorder);border-left:4px solid ${itemColor}">
+                    ${isManager && !isSubmitted ? `<input type="checkbox" class="checklist-select-item" value="${item.id}" style="width:18px;height:18px;cursor:pointer;accent-color:#008c95;flex-shrink:0;margin-top:8px">` : ''}
                     <span style="min-width:32px;height:32px;background:var(--bg3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:600;color:var(--tx2);flex-shrink:0">${itemNum}</span>
                     <div style="display:flex;gap:8px;flex-shrink:0">
                         <label class="check-option" style="display:flex;align-items:center;gap:6px;cursor:${isSubmitted ? 'default' : 'pointer'}">
@@ -9093,6 +9126,10 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
                     </div>
                     <div style="flex:1">
                         <div style="font-size:.9rem;color:var(--tx);line-height:1.5">${item.text}</div>
+                        ${hasColor ? `<div style="margin-top:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                            <span style="font-size:.7rem;padding:3px 10px;border-radius:6px;background:${itemColor}20;color:${itemColor};font-weight:600;border:1px solid ${itemColor}40">${responsibleLabel}</span>
+                            ${datesBadge}
+                        </div>` : ''}
                     </div>
                 </div>
             `;
@@ -9117,13 +9154,19 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
             ` : ''}
             ${checklistEditMode ? `
                 <div style="margin-top:24px;text-align:center">
-                    <div style="font-size:.85rem;color:var(--tx2)">Toplam ${items.length} madde</div>
+                    <div style="font-size:.85rem;color:var(--tx2)">Toplam ${filteredItems.length} madde</div>
                 </div>
             ` : ''}
         </div>
     `;
     
     container.innerHTML = html;
+}
+
+// Temizlik ve Bakım - Hepsini/Bugünü Göster toggle
+function toggleShowAllAylikItems() {
+    showAllAylikItems = !showAllAylikItems;
+    loadChecklist();
 }
 
 // Düzenleme modunu aç/kapat
