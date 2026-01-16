@@ -8865,7 +8865,23 @@ async function loadChecklist() {
             }
         }
         
-        // Eğer hala items boşsa hata göster
+        // Platform check için özel render (items olmadan çalışır)
+        if (type === 'platform') {
+            let submittedData = null;
+            try {
+                const submissionId = `${checklistId}_${date}${timeSlot ? '_' + timeSlot.replace(':', '') : ''}`;
+                const submissionDoc = await db.collection('checklistSubmissions').doc(submissionId).get();
+                if (submissionDoc.exists) {
+                    submittedData = submissionDoc.data();
+                }
+            } catch (subError) {
+                console.warn('Submission kontrol hatası:', subError);
+            }
+            renderPlatformChecklist(container, branch, date, timeSlot, submittedData);
+            return;
+        }
+        
+        // Eğer hala items boşsa hata göster (platform hariç diğer checklistler için)
         if (!items || items.length === 0) {
             container.innerHTML = `<div style="text-align:center;padding:60px;color:var(--tx2)">
                 <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="opacity:.4;margin-bottom:16px">
@@ -8944,12 +8960,6 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
     // Kullanıcı adını email'den al
     const autoPersonName = getUserNameFromEmail(currentUser?.email) || currentUser?.name || '';
     const isAutoName = !!getUserNameFromEmail(currentUser?.email);
-    
-    // Platform check için özel render
-    if (type === 'platform') {
-        renderPlatformChecklist(container, branch, date, timeSlot, submittedData);
-        return;
-    }
     
     let typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === type);
     const expectedMinutes = Math.round(checklistExpectedDuration / 60);
