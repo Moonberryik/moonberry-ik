@@ -433,12 +433,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
                 <!-- Kullanıcı Bilgisi ve Çıkış -->
                 <div style="margin-top:auto;padding:16px 20px;border-top:1px solid rgba(255,255,255,.1)">
-                    <!-- Impersonation Banner -->
-                    <div id="impersonationBanner" style="display:none;background:rgba(255,134,116,.2);border:1px solid var(--accent);border-radius:8px;padding:10px;margin-bottom:12px;text-align:center">
-                        <div style="font-size:.75rem;color:var(--accent);font-weight:600">👁️ Görüntüleme Modu</div>
-                        <div id="impersonatingAs" style="font-size:.8rem;color:#fff;margin:4px 0"></div>
-                        <button onclick="exitImpersonation()" style="padding:6px 12px;background:var(--accent);border:none;border-radius:6px;color:#fff;font-size:.75rem;cursor:pointer;margin-top:4px">Çıkış</button>
-                    </div>
                     <div id="userInfo" style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
                         <div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600" id="userAvatar">👤</div>
                         <div style="flex:1;overflow:hidden">
@@ -446,10 +440,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <div id="userRole" style="color:var(--sidebarTx2);font-size:.7rem">-</div>
                         </div>
                     </div>
-                    <!-- Kullanıcı Değiştir Butonu (Sadece Yönetici) -->
-                    <button id="btnImpersonate" onclick="showImpersonationModal()" style="display:none;width:100%;padding:10px;background:rgba(0,140,149,.15);border:1px solid rgba(0,140,149,.3);border-radius:8px;color:var(--accent2);font-size:.8rem;cursor:pointer;transition:all .2s;margin-bottom:8px;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.background='rgba(0,140,149,.25)'" onmouseout="this.style.background='rgba(0,140,149,.15)'">
-                        👁️ Kullanıcı Gözünden Gör
-                    </button>
                     <button onclick="logout()" style="width:100%;padding:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--sidebarTx2);font-size:.8rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.background='rgba(231,76,60,.2)';this.style.borderColor='rgba(231,76,60,.4)';this.style.color='#e74c3c'" onmouseout="this.style.background='rgba(255,255,255,.1)';this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--sidebarTx2)'">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                         Çıkış Yap
@@ -1080,7 +1070,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                         <div class="form-group" style="margin-bottom:0;min-width:140px">
                             <label class="form-label">Tarih</label>
-                            <input type="date" id="checklistDate" class="form-input" disabled style="background:var(--bg3);cursor:not-allowed">
+                            <input type="date" id="checklistDate" class="form-input" onchange="loadChecklist()">
                         </div>
                         <div class="form-group" style="margin-bottom:0;min-width:120px;display:none" id="checklistTimeSlotGroup">
                             <label class="form-label">Saat Dilimi</label>
@@ -1703,92 +1693,309 @@ let db = null;
 let currentUser = null;
 
 // Varsayılan puantaj kuralları
+const DEFAULT_PUANTAJ_RULES = [
+    { id: 'R01', title: '5x "1 Yıldız"', effect: 'prim_yok', desc: 'Aynı ay içinde 5 kez 1 yıldız alan personel prim hakkını kaybeder' },
+    { id: 'R02', title: 'Online ≤2 Yıldız', effect: '-1', desc: 'Online platformlarda (Google, Yemeksepeti vb.) 2 veya altı yıldız alınması' },
+    { id: 'R03', title: 'Mazeretsiz Devamsızlık', effect: '-2', desc: 'Mazeretsiz devamsızlık yapılması' },
+    { id: 'R04', title: 'Müşteri Şikayeti', effect: '-1', desc: 'Doğrulanmış müşteri şikayeti' }
+];
 
-// ==================== CONFIG FROM FIREBASE ====================
-// Tüm config verileri Firebase'den yüklenir
-// HTML kaynağında hassas veri bulunmaz
+// ==================== DEFAULT STATE ====================
+const DEFAULT_STATE = {
+    company: {
+        name: 'TAMASLAN KAFE RESTORAN VE GIDA HİZMETLERİ SANAYİ İÇ VE DIŞ TİCARET LİMİTED ŞİRKETİ',
+        short: 'MOONBERRY COFFEE',
+        mersis: '0817072351000001',
+        address: 'DUATEPE MAH. ERGENEKON CAD. KONAK APT NO: 109 C ŞİŞLİ / İSTANBUL',
+        tel: '+90 533 486 63 66',
+        email: 'info@moonberrycoffee.com',
+        vergiNo: '8170723510',
+        vergiDairesi: 'Şişli',
+        kep: 'tamaslan@hs01.kep.tr'
+    },
+    branches: ['Şişli (Merkez)', 'Tuzla Port'],
+    branchCodes: {'Şişli (Merkez)': 'SIS', 'Tuzla Port': 'TZL'},
+    positions: [
+        {id: 'barista', name: 'Barista / Servis', type: 'Mavi Yaka'},
+        {id: 'mudur_yardimcisi', name: 'Müdür Yardımcısı', type: 'Gri Yaka'},
+        {id: 'magaza_muduru', name: 'Mağaza Müdürü', type: 'Beyaz Yaka'},
+        {id: 'bolge_muduru', name: 'Bölge Müdürü', type: 'Stratejik'}
+    ],
+    violations: [
+        {id:'V01',title:'Telefon Kullanımı',risk:'low',legal:'İş K. 25/II-h',steps:['Sözlü uyarı','Yazılı uyarı','İhtar'],desc:'Mesai saatinde telefon kullanımı'},
+        {id:'V02',title:'Geç Kalma (<30dk)',risk:'low',legal:'İş K. 25/II-h',steps:['Sözlü uyarı','Tekrarda yazılı','İhtar'],desc:'30 dakika altı geç kalma'},
+        {id:'V03',title:'Geç Kalma (>30dk)',risk:'medium',legal:'İş K. 25/II-g',steps:['Tutanak','Savunma','İhtar','Fesih'],desc:'30 dakika üstü geç kalma'},
+        {id:'V04',title:'1 Gün Devamsızlık',risk:'medium',legal:'İş K. 25/II-g',steps:['Tutanak','Savunma','İhtar'],desc:'Mazeretsiz 1 gün devamsızlık'},
+        {id:'V05',title:'2+ Gün Devamsızlık',risk:'high',legal:'İş K. 25/II-g',steps:['Her gün tutanak','Savunma','6 iş günü içinde fesih'],desc:'Ardı ardına 2+ gün mazeretsiz devamsızlık - Haklı fesih sebebi'},
+        {id:'V06',title:'Kasa Açığı',risk:'medium',legal:'TBK 407',steps:['Sayım tutanağı','Savunma','Borç İkrar'],desc:'Kasada nakit eksikliği tespit edilmesi'},
+        {id:'V07',title:'Ürün Götürme',risk:'high',legal:'İş K. 25/II-e',steps:['Tutanak','Kamera kayıt','Savunma','Fesih'],desc:'İzinsiz ürün götürme - Güveni kötüye kullanma'},
+        {id:'V08',title:'Müşteriye Hakaret',risk:'high',legal:'İş K. 25/II-d',steps:['Tutanak','Şikayet kaydı','Savunma','Fesih'],desc:'Müşteriye kaba davranış veya hakaret'},
+        {id:'V09',title:'İşyerinde Kavga',risk:'high',legal:'İş K. 25/II-d',steps:['İki taraf tutanak','Şahit ifadeleri','Savunma','Fesih'],desc:'İşyerinde fiziksel veya sözlü kavga'},
+        {id:'V10',title:'Hijyen İhlali',risk:'high',legal:'İş K. 25/II-ı',steps:['Tutanak','Savunma','Derhal fesih'],desc:'El yıkamama, SKT ihlali, çapraz bulaşma'},
+        {id:'V11',title:'Alkol/Uyuşturucu',risk:'high',legal:'İş K. 25/II-d',steps:['Tutanak (2 şahit)','Derhal fesih'],desc:'İşe alkollü veya uyuşturucu etkisinde gelme'},
+        {id:'V12',title:'İş Reddi',risk:'medium',legal:'İş K. 25/II-h',steps:['Tutanak','Savunma','İhtar','Fesih'],desc:'Verilen görevi reddetme - "Benim işim değil" tutumu'},
+        {id:'V13',title:'Ticari Sır İfşası',risk:'high',legal:'TCK 239',steps:['Delil toplama','Tutanak','Fesih + Suç duyurusu'],desc:'Reçete, maliyet, tedarikçi bilgisi paylaşımı'},
+        {id:'V14',title:'Sosyal Medya İhlali',risk:'medium',legal:'İş K. 25/II-b',steps:['Ekran görüntüsü','Tutanak','Savunma'],desc:'İşveren aleyhine sosyal medya paylaşımı'},
+        {id:'V15',title:'İmzadan İmtina',risk:'low',legal:'Yargıtay içtihatı',steps:['İmtina tutanağı','2 şahit imzası'],desc:'Belge imzalamaktan kaçınma'},
+        {id:'V16',title:'Kılık Kıyafet',risk:'low',legal:'İş K. 25/II-h',steps:['Sözlü uyarı','Yazılı uyarı','İhtar'],desc:'Üniforma giymeme veya uygunsuz kıyafet'},
+        {id:'V17',title:'Demirbaş Hasarı',risk:'medium',legal:'TBK 407',steps:['Hasar tutanağı','Savunma','Borç İkrar'],desc:'POS, tablet, ekipman hasarı'},
+        {id:'V18',title:'Yetkisiz İndirim',risk:'high',legal:'İş K. 25/II-e',steps:['POS kaydı kontrolü','Tutanak','Fesih'],desc:'İzinsiz ücretsiz ürün verme veya indirim yapma'},
+        {id:'V19',title:'Hırsızlık',risk:'high',legal:'İş K. 25/II-e + TCK 141',steps:['Tutanak','Kamera kayıt','Kolluk bildirimi','Derhal fesih + Suç duyurusu'],desc:'İşyerinden para, ürün veya malzeme çalma'},
+        {id:'V20',title:'Zimmet',risk:'high',legal:'TCK 247',steps:['Mali denetim','Tutanak','Fesih + Suç duyurusu'],desc:'Kendisine tevdi edilen şirket malını sahiplenme'},
+        {id:'V21',title:'Sahte Belge',risk:'high',legal:'TCK 204 + İş K. 25/II-a',steps:['Belge incelemesi','Tutanak','Fesih + Suç duyurusu'],desc:'Sahte rapor, diploma veya evrak sunma'},
+        {id:'V22',title:'İzinsiz İşten Ayrılma',risk:'high',legal:'İş K. 25/II-g',steps:['Devamsızlık tutanağı','Noter ihtarı','Fesih'],desc:'Haber vermeden işi terk etme'},
+        {id:'V23',title:'Cinsel Taciz',risk:'high',legal:'İş K. 25/II-c + TCK 105',steps:['Şikayet kaydı','İfade alma','Fesih + Suç duyurusu'],desc:'İşyerinde cinsel taciz'},
+        {id:'V24',title:'Sözlü Taciz',risk:'medium',legal:'İş K. 25/II-d',steps:['Tutanak','Şahit ifadeleri','Savunma','Fesih'],desc:'Sözlü sarkıntılık, uygunsuz espri veya laf atma'},
+        {id:'V25',title:'Tehdit',risk:'high',legal:'İş K. 25/II-d + TCK 106',steps:['Tutanak','Şahit ifadeleri','Fesih + Suç duyurusu'],desc:'İş arkadaşı veya yöneticiye tehdit'},
+        {id:'V26',title:'Mobbing Uygulama',risk:'high',legal:'İş K. 25/II-d + TBK 417',steps:['Şikayet kaydı','Soruşturma','Savunma','Fesih'],desc:'Sistematik psikolojik baskı uygulama'},
+        {id:'V27',title:'Güvenlik Kuralı İhlali',risk:'high',legal:'İş K. 25/II-ı',steps:['Tutanak','Savunma','İhtar veya Fesih'],desc:'İş güvenliği kurallarını ihlal etme'},
+        {id:'V28',title:'Yangın Güvenliği İhlali',risk:'high',legal:'İş K. 25/II-ı',steps:['Tutanak','Savunma','Derhal fesih'],desc:'Yangın çıkışını engelleme, yangın söndürücü ile oynama'},
+        {id:'V29',title:'İş Kazası Gizleme',risk:'high',legal:'5510 SK + İş K. 25/II',steps:['Tutanak','SGK bildirimi','Savunma','Fesih'],desc:'İş kazasını bildirmeme veya gizleme'},
+        {id:'V30',title:'Müşteri Verisi Paylaşma',risk:'high',legal:'KVKK + İş K. 25/II-e',steps:['Delil toplama','Tutanak','Fesih'],desc:'Müşteri bilgilerini izinsiz paylaşma'},
+        {id:'V31',title:'Rüşvet/Komisyon',risk:'high',legal:'TCK 252 + İş K. 25/II-e',steps:['Delil toplama','Tutanak','Fesih + Suç duyurusu'],desc:'Tedarikçi veya müşteriden rüşvet/komisyon alma'},
+        {id:'V32',title:'Rakiple İşbirliği',risk:'high',legal:'TBK 396 + İş K. 25/II-e',steps:['Delil toplama','Tutanak','Fesih'],desc:'Rakip firma ile gizli işbirliği'},
+        {id:'V33',title:'Dedikodu/Fitne',risk:'low',legal:'İş K. 25/II-d',steps:['Sözlü uyarı','Tutanak','Savunma','İhtar'],desc:'İşyeri huzurunu bozucu dedikodu yayma'},
+        {id:'V34',title:'Mal Kabul Usulsüzlüğü',risk:'high',legal:'İş K. 25/II-e',steps:['Stok kontrolü','Tutanak','Fesih'],desc:'Teslim alınmayan malı kabul etmiş gibi gösterme'},
+        {id:'V35',title:'Eğitime Katılmama',risk:'low',legal:'İş K. 25/II-h',steps:['Sözlü uyarı','Yazılı uyarı','İhtar'],desc:'Zorunlu eğitimlere mazeretsiz katılmama'},
+        {id:'V36',title:'İzinsiz Fotoğraf/Video',risk:'medium',legal:'KVKK + İş K. 25/II-e',steps:['Tutanak','Savunma','İhtar veya Fesih'],desc:'İşyerinde izinsiz fotoğraf veya video çekme'},
+        {id:'V37',title:'Mesai Saati Manipülasyonu',risk:'high',legal:'İş K. 25/II-e',steps:['PDKS kaydı','Tutanak','Fesih'],desc:'Giriş-çıkış saatlerini manipüle etme'},
+        {id:'V38',title:'Sahte Mazeret',risk:'medium',legal:'İş K. 25/II-a',steps:['Belge doğrulama','Tutanak','Savunma','Fesih'],desc:'Gerçek dışı mazeret beyan etme'}
+    ],
+    templates: {
+        barista: `<div class="doc-article"><div class="doc-article-title">MADDE 2: GÖREV TANIMI, YETKİ VE SORUMLULUKLAR</div><div class="doc-article-content">
+<p><strong>2.1. Pozisyonun Niteliği:</strong> Personel, işletmede "BARİSTA VE MAĞAZA OPERASYON SORUMLUSU" unvanı ile istihdam edilmiştir. Taraflar, bu pozisyonun doğası gereği sadece içecek hazırlamayı değil; mağazanın genel düzenini, hijyenini, lojistiğini ve operasyonel akışını sağlamayı kapsayan bütünleşik bir görev olduğu konusunda mutabıktır.</p>
+<p><strong>2.2. Asli Görevler (Çok Yönlü Çalışma Taahhüdü):</strong> Personel, aşağıda belirtilen görevlerin iş tanımının asli unsurları olduğunu, bu görevlerin kendisinden talep edilmesinin 4857 sayılı İş Kanunu'nun 22. maddesi kapsamında "çalışma koşullarında esaslı değişiklik" sayılmayacağını peşinen kabul ve taahhüt eder:</p>
+<p>a) <strong>Üretim ve Servis:</strong> İşletmenin standart reçetelerine (gramaj, ısı, sunum) birebir uyarak kahve, soğuk/sıcak içecek ve yiyecek hazırlamak; müşteriyi karşılamak, sipariş almak, masaya servis yapmak ve boşları toplamak.</p>
+<p>b) <strong>Sanitasyon ve Temizlik:</strong> Gıda güvenliği (HACCP) ve işletme standartları gereği; bar istasyonu, espresso makinesi, müşteri masaları, zeminler, depo alanları, camlar ve mağaza tuvaletlerinin (WC) hijyen planına uygun olarak periyodik temizliğini, dezenfeksiyonunu ve kontrolünü bizzat yapmak.</p>
+<p>c) <strong>Lojistik ve Stok:</strong> Mal kabulü yapmak, kolileri taşımak, rafları düzenlemek, FIFO (İlk Giren İlk Çıkar) kuralına göre stok takibi ve Son Kullanma Tarihi (SKT) kontrollerini gerçekleştirmek.</p>
+<p>d) <strong>Destek Hizmetleri (Kurye/Valet):</strong> İşverenin talep etmesi ve Personelin gerekli yasal ehliyet ve yetkinlik belgelerine (Sürücü Belgesi, SRC, Psikoteknik vb.) sahip olması kaydıyla; paket servis lojistiği ve otopark düzeni konularında destek vermek. Personel, bu görevleri ifa ederken Karayolları Trafik Kanunu'na ve İSG kurallarına tam uyum sağlamakla yükümlüdür.</p>
+<p><strong>2.3. Nakil Yetkisi:</strong> İşveren, operasyonel gereklilikler halinde Personel'i, aynı il sınırları içerisindeki mevcut veya ileride açılacak diğer "Moonberry Coffee" şubelerinde, unvanı ve ücreti korunmak kaydıyla geçici veya sürekli olarak görevlendirme hakkına sahiptir. Personel, bu değişikliği peşinen kabul eder.</p>
+</div></div>
 
-let CONFIG = {
-    company: {},
-    branches: [],
-    branchCodes: {},
-    positions: [],
-    violations: [],
-    puantajRules: [],
-    fesihDayanaklari: {},
-    documentTemplates: {},
-    contractTemplates: {}
-};
+<div class="doc-article"><div class="doc-article-title">MADDE 3: ÇALIŞMA SÜRESİ, FAZLA MESAİ VE ÜCRET</div><div class="doc-article-content">
+<p><strong>3.1. Çalışma Süresi:</strong> Haftalık çalışma süresi yasal sınır olan 45 saattir. İşveren, bu süreyi işyerinin açılış-kapanış saatlerine ve yoğunluğuna göre, günde 11 saati aşmamak kaydıyla haftanın çalışılan günlerine farklı şekillerde bölebilir. İşveren, İş Kanunu m. 63 uyarınca 2 (iki) aylık süreler içinde "Denkleştirme" uygulayabilir.</p>
+<p><strong>3.2. Ücret ve Fazla Mesai (Yıllık 270 Saat Dahil):</strong></p>
+<p>a) Personelin aylık maktu brüt ücreti {{UCRET}} TL'dir.</p>
+<p>b) Belirlenen bu ücret, yasal asgari ücretin üzerinde (emsal ücret) tespit edilmiştir. Taraflar; İş Kanunu'nun 41. maddesi uyarınca yapılabilecek yıllık 270 saate kadar olan fazla çalışmaların ile ulusal bayram ve genel tatil günlerindeki çalışmaların karşılığının, kararlaştırılan bu aylık ücrete dahil olduğu hususunda mutabık kalmışlardır.</p>
+<p>c) Personel, yıllık 270 saati aşmayan bu çalışmalar için aylık maaşı dışında ayrıca bir fazla mesai ücreti talep etmeyeceğini beyan eder.</p>
+<p>d) Yıllık 270 saati aşan fazla çalışmaların ücreti, İş Kanunu hükümleri uyarınca ayrıca ödenir veya mevzuata uygun olarak serbest zaman şeklinde kullandırılır.</p>
+</div></div>
 
-// Firebase'den config yükle
-async function loadConfigFromFirebase() {
-    try {
-        const configDocs = [
-            'company', 'branches', 'positions', 'violations',
-            'puantajRules', 'fesihDayanaklari', 'documentTemplates',
-            'contractTemplates', 'system', 'checklistTypes'
-        ];
-        
-        const promises = configDocs.map(doc => 
-            db.collection('config').doc(doc).get()
-        );
-        
-        const results = await Promise.all(promises);
-        
-        results.forEach((snap, i) => {
-            if (snap.exists) {
-                const data = snap.data();
-                const docName = configDocs[i];
-                
-                switch(docName) {
-                    case 'company':
-                        CONFIG.company = data;
-                        break;
-                    case 'branches':
-                        CONFIG.branches = data.list || [];
-                        CONFIG.branchCodes = data.codes || {};
-                        break;
-                    case 'positions':
-                        CONFIG.positions = data.list || [];
-                        break;
-                    case 'violations':
-                        CONFIG.violations = data.list || [];
-                        break;
-                    case 'puantajRules':
-                        CONFIG.puantajRules = data.list || [];
-                        break;
-                    case 'fesihDayanaklari':
-                        CONFIG.fesihDayanaklari = {
-                            hakli: data.hakli || [],
-                            gecerli: data.gecerli || [],
-                            deneme: data.deneme || []
-                        };
-                        break;
-                    case 'documentTemplates':
-                        CONFIG.documentTemplates = data;
-                        break;
-                    case 'contractTemplates':
-                        CONFIG.contractTemplates = data;
-                        break;
-                    case 'system':
-                        SYSTEM_CONFIG = data;
-                        PLATFORMS = data.platforms || [];
-                        WHATSAPP_GROUPS = data.whatsappGroups || {};
-                        break;
-                    case 'checklistTypes':
-                        CHECKLIST_TYPES = data;
-                        break;
-                }
-            }
-        });
-        
-        console.log('✅ Config Firebase\'den yüklendi');
-        return true;
-    } catch (error) {
-        console.error('❌ Config yükleme hatası:', error);
-        return false;
+<div class="doc-article"><div class="doc-article-title">MADDE 4: KASA TAZMİNATI VE AÇIKLAR (TBK m. 407/2 Uyumlu)</div><div class="doc-article-content">
+<p><strong>4.1. Kasa Tazminatı:</strong> Kasa sorumluluğu verilen Personele, üstlendiği finansal riskin ve özen borcunun karşılığı olarak, aylık ücret bordrosunda "Kasa Tazminatı" adı altında ayrı bir ek ödeme yapılır.</p>
+<p><strong>4.2. Açıkların Mahsubu:</strong> Kasada oluşacak nakit veya hesaben açıklar, öncelikle ve münhasıran o ay Personele tahakkuk ettirilen Kasa Tazminatı tutarından mahsup edilir.</p>
+<p><strong>4.3. Tazminatı Aşan Açıklar:</strong> Kasa açığının, ödenen kasa tazminatı tutarını aşması halinde; Personel, söz konusu açığın kendi kusurundan veya ihmalinden (hatalı işlem, eksik tahsilat, kayıp vb.) kaynaklandığını kabul ettiği takdirde, ilgili tutarın ücretinin yasal olarak haczedilebilir kısmından (1/4 oranında) kesilmesine her somut olayda ayrıca yazılı onay verecektir. Personelin rızasının olmadığı veya kasıt/ağır ihmal şüphesinin bulunduğu durumlarda İşverenin yasal yollara başvurma hakkı saklıdır.</p>
+<p><strong>4.4. Bahşiş (Tip) Politikası:</strong> İşletmede müşteriler tarafından bırakılan bahşişler (tip), İşveren tarafından verilen bir ücret veya ücret eki değildir. İşveren, kredi kartı veya nakit olarak toplanan bahşişlerin personele dağıtılmasında sadece "aracı" sıfatına sahiptir. Bahşiş gelirleri, kıdem ve ihbar tazminatı hesabına dahil edilen giydirilmiş ücret kavramına dahil edilmez.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 5: EĞİTİM GİDERLERİ VE CEZAİ ŞART</div><div class="doc-article-content">
+<p><strong>5.1.</strong> İşveren tarafından Personele, mesleki gelişimini sağlamak amacıyla verilecek olan sertifikalı barista eğitimleri, özel kahve teknikleri kursları ve benzeri yüksek maliyetli eğitimler karşılığında; Personel, eğitimin tamamlandığı tarihten itibaren en az 12 (on iki) ay süreyle İşveren nezdinde çalışmayı taahhüt eder.</p>
+<p><strong>5.2.</strong> Personelin, bu süre dolmadan haklı bir neden olmaksızın istifa etmesi veya İşveren tarafından haklı nedenle (İş K. m. 25/II - Ahlak ve iyi niyet kurallarına aykırılık) işten çıkarılması halinde; Personel, kendisine yapılan belgelendirilmiş eğitim masraflarını (eğitmen ücreti, kurs bedeli, materyal vb.), kalan çalışma süresiyle orantılı olarak İşverene nakden ve defaten ödemeyi kabul ve taahhüt eder.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 6: YASAKLAR VE FESİH NEDENLERİ</div><div class="doc-article-content">
+<p><strong>6.1. Artık Ürün (Leftover/Waste):</strong> İşyerinde satılamayan, zayi olan veya müşteriden dönen ürünlerin (waste) Personel tarafından izinsiz tüketilmesi, eve götürülmesi veya üçüncü şahıslara ikram edilmesi kesinlikle yasaktır. Bu eylem, değeri ne olursa olsun "İşverenin Güvenini Kötüye Kullanma" (İş K. m. 25/II-e) ve TCK m. 155 kapsamında suç teşkil eder; tazminatsız derhal fesih sebebidir.</p>
+<p><strong>6.2. Tıbbi Gizleme:</strong> Personel, gıda güvenliğini tehdit eden bulaşıcı hastalıkları (sarılık, tüberküloz, açık yara, ishal vb.) derhal işverene bildirmek zorundadır. Bu durumun gizlenerek çalışmaya devam edilmesi, halk sağlığını tehlikeye attığı gerekçesiyle haklı fesih nedenidir.</p>
+<p><strong>6.3. Kişisel Veriler ve Sır Saklama:</strong> Personel, işyeri sınırları içerisinde (mutfak, bar, depo vb.) izinsiz fotoğraf veya video çekemez. İşletmenin reçetelerini, operasyonel sırlarını veya müşterileri içeren görsellerin sosyal medyada paylaşılması "Sadakat Borcuna Aykırılık" sayılır ve haklı fesih nedenidir.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 7: İŞYERİ GÜVENLİĞİ VE KAMERA KAYDI (KVKK AYDINLATMA)</div><div class="doc-article-content">
+<p><strong>7.1.</strong> İşyeri güvenliği, gıda güvenliği süreçlerinin takibi, iş sağlığı ve güvenliği ile hırsızlık gibi suçların önlenmesi amacıyla; işyerinin ortak alanlarında, üretim bölümlerinde, kasa noktalarında ve depo alanlarında 7/24 görüntü (CCTV/Video) kaydı yapılmaktadır.</p>
+<p><strong>7.2.</strong> İşyerinde, yasal zorunluluklar ve istisnalar saklı kalmak kaydıyla, ses (audio) kaydı alınmamaktadır. Tuvalet, soyunma odası gibi mahremiyet içeren alanlarda kesinlikle izleme yapılmaz.</p>
+<p><strong>7.3.</strong> PERSONEL, işyerinde güvenlik kameralarının bulunduğunu bildiğini, bu verilerin işlenmesine ilişkin KVKK Aydınlatma Metni'nin kendisine tebliğ edildiğini ve İşverenin meşru menfaati kapsamında görüntü kaydı alınmasına rıza gösterdiğini kabul eder.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 8: DENEME SÜRESİ VE YÜRÜRLÜK</div><div class="doc-article-content">
+<p><strong>8.1.</strong> İşbu sözleşmede deneme süresi 2 (İki) aydır. Taraflar bu süre içinde iş sözleşmesini bildirim süresine gerek olmaksızın ve tazminatsız feshedebilir.</p>
+<p><strong>8.2.</strong> 8 (Sekiz) maddeden ve 3 (üç) sayfadan ibaret işbu sözleşme, {{BASLAMA}} tarihinde taraflarca okunarak, içeriği tam olarak anlaşılmak suretiyle tek nüsha olarak imzalanmış ve aslı İşverende kalmak üzere, bir sureti (fotokopisi) PERSONEL'e elden teslim edilmiştir.</p>
+</div></div>`,
+        mudur_yardimcisi: `<div class="doc-article"><div class="doc-article-title">MADDE 2: SÖZLEŞMENİN KONUSU VE HUKUKİ STATÜ</div><div class="doc-article-content">
+<p>İşbu sözleşmenin konusu, PERSONEL'in İŞVEREN'e ait "Moonberry Coffee" markalı işyerlerinde "Mağaza Müdür Yardımcısı" unvanı ile, aşağıda belirtilen görev tanımı, 4857 sayılı İş Kanunu, 6098 sayılı Türk Borçlar Kanunu ve işletme prosedürleri çerçevesinde iş görme edimini; İŞVEREN'in de buna karşılık ücret ödeme edimini yerine getirmesidir. PERSONEL, kendisine bağlı alt ekipler (barista, servis elemanı, temizlik personeli vb.) üzerinde yönetim, denetim, vardiya düzenleme ve talimat verme yetkisine sahip olup; işletmenin işleyişinden sorumlu yönetici sıfatını haizdir.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 3: GÖREV TANIMI VE "HİBRİT ÇALIŞMA" ESASI</div><div class="doc-article-content">
+<p><strong>3.1. Entegre ve Çok Yönlü Görev Tanımı:</strong> PERSONEL, bu pozisyonun sadece "idari/masa başı" bir yöneticilik olmadığını; perakende ve hizmet sektörünün doğası gereği hem yönetimsel hem de operasyonel (fiili) görevleri kapsadığını kabul eder. Aşağıdaki görevlerin tamamı PERSONEL'in "Asli İşi" sayılır ve bu görevlerin talep edilmesi "çalışma koşullarında esaslı değişiklik" (İş K. m. 22) teşkil etmez:</p>
+<p>a) <strong>Yönetim ve Temsil:</strong> Mağaza Müdürü'nün bulunmadığı zamanlarda işletmeyi tam yetkili olarak sevk ve idare etmek, vardiya çizelgelerini (shift plan) yasal mevzuata ve operasyonel verimliliğe uygun hazırlamak, personelin kılık-kıyafet, mesai ve hijyen denetimini yapmak.</p>
+<p>b) <strong>Fiili Operasyonel Destek:</strong> İşletmenin yoğun olduğu saatlerde, personel eksikliğinde, mola değişimlerinde veya işin gerektirdiği hallerde; bizzat bar arkasına geçerek ürün hazırlamak, servis yapmak, masaları toplamak, bulaşık alanını koordine etmek ve kasaya bakmak.</p>
+<p>c) <strong>Sanitasyon ve Denetim:</strong> Gıda güvenliği (HACCP) standartlarının uygulanmasını denetlemek ve bizzat sağlamak. Gerektiğinde; müşteri tuvaletleri, zemin, depo ve üretim alanlarının temizlik kontrollerini yapmak ve temizlik operasyonuna fiilen katılmak.</p>
+<p>d) <strong>Stok ve Maliyet Kontrolü:</strong> Günlük, haftalık ve aylık stok sayımlarını bizzat yönetmek; zayi (waste) oranlarını raporlamak, Son Kullanma Tarihi (SKT) kontrollerini yapmak, mal kabul süreçlerini yürütmek.</p>
+<p><strong>3.2. Görev Yeri ve Nakil Yetkisi:</strong> İŞVEREN, işletmesel gereklilik halinde PERSONEL'i, aynı il sınırları (Büyükşehir Belediyesi sınırları dahil) içerisindeki mevcut veya açılacak diğer şubelerinde, personelin ikametgahına makul ulaşım imkanları gözetilerek aynı veya eşdeğer bir pozisyonda görevlendirme hakkına sahiptir. PERSONEL, bu nakil yetkisini peşinen kabul ettiğini beyan eder.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 4: ÇALIŞMA SÜRELERİ, FAZLA MESAİ VE ÜCRET SİSTEMİ</div><div class="doc-article-content">
+<p><strong>4.1. Çalışma Düzeni:</strong> Haftalık çalışma süresi yasal sınır olan 45 saattir. PERSONEL, yönetici sıfatıyla mağazanın açılış-kapanış, sayım ve raporlama süreçlerinden sorumlu olduğundan, mesai saatleri bu gerekliliklere göre İŞVEREN tarafından düzenlenir. İŞVEREN, İş Kanunu m. 63 uyarınca 2 (iki) aylık denkleştirme uygulayabilir.</p>
+<p><strong>4.2. Yıllık 270 Saat Fazla Mesainin Ücrete Dahil Olması:</strong> PERSONEL'in aylık brüt ücreti, üstlendiği yönetim sorumluluğu ve operasyonel yük dikkate alınarak yasal asgari ücretin üzerinde (emsal ücret) tespit edilmiştir. Taraflar, yıllık 270 saate kadar (aylık ortalama 22,5 saat) yapılacak fazla çalışma ücretlerinin, kararlaştırılan aylık ücrete dahil olduğu hususunda mutabık kalmışlardır. PERSONEL, yıllık 270 saati aşmayan fazla çalışmalar için ayrıca bir ücret talep etmeyeceğini kabul eder. (Not: Ulusal Bayram ve Genel Tatil günlerinde yapılan çalışmalar ile hafta tatili çalışmaları bu 270 saatlik kapsama dahil olmayıp, çalışılması halinde ayrıca ödenir.)</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 5: ÜCRET, YAN HAKLAR VE MALİ SORUMLULUK</div><div class="doc-article-content">
+<p><strong>5.1. Ücret:</strong> PERSONEL'e aylık Brüt {{UCRET}} TL ücret ödenecektir. Ücret ödemeleri banka kanalıyla yapılır. Varsa yol ve yemek yardımları şirket politikalarına göre ayni veya nakdi olarak ayrıca belirlenir.</p>
+<p><strong>5.2. Kasa Tazminatı ve Mali Sorumluluk:</strong> Nakit, stok ve zimmet güvenliğini yönetmesi sebebiyle PERSONEL'e, aylık ücretine ek olarak (bordroda belirtilmek suretiyle) "Mali Sorumluluk / Kasa Tazminatı" ödenir. PERSONEL, kendi görev alanı ve denetim sorumluluğundaki kasa açıklarından ve stok kayıplarından (hırsızlık, kayıp, usulsüz ikram vb.), kusurunun tespiti halinde şahsen sorumludur. Tespit edilen ve PERSONEL'in kusuruna (kasıt, ihmal veya dikkatsizlik) dayanan zararlar; öncelikle olay bazında alınacak yazılı onayı ile kasa tazminatından ve hakedişinden mahsup edilir. Personelin onay vermemesi halinde İŞVEREN'in Borçlar Kanunu ve İş Kanunu hükümleri uyarınca yasal takip ve tazminat talep etme hakkı saklıdır.</p>
+<p><strong>5.3. Bahşiş (Tip) Politikası:</strong> İşletmede müşteriler tarafından bırakılan bahşişler, ücretin bir parçası olmayıp, İŞVEREN sadece dağıtım için aracı konumundadır. PERSONEL, bahşişlerin kıdem/ihbar tazminatı hesabına dahil edilmeyeceğini kabul eder.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 6: GİZLİLİK VE REKABET YASAĞI</div><div class="doc-article-content">
+<p><strong>6.1. Ticari Sırlar:</strong> PERSONEL, görevi gereği eriştiği; mağaza ciro bilgileri, karlılık raporları, tedarikçi fiyatları, özel ürün reçeteleri, personel maaş bilgileri ve müşteri datalarını "Ticari Sır" olarak saklamakla yükümlüdür. Bu bilgilerin rakip firmalarla veya yetkisiz üçüncü kişilerle paylaşılması, TCK m. 239 kapsamında suç duyurusu ve haklı nedenle derhal fesih sebebidir.</p>
+<p><strong>6.2. Rekabet Yasağı (Sınırlı):</strong> PERSONEL, iş sözleşmesi herhangi bir nedenle sona erdikten sonra 1 (bir) yıl süreyle, son görev yaptığı şubenin bulunduğu ilçe sınırları içerisinde, Moonberry Coffee ile doğrudan rakip olan (benzer konseptteki kahve zincirleri) bir işletmede yönetici, ortak veya danışman olarak çalışmamayı taahhüt eder. Bu yasağın ihlali halinde, son brüt maaşının 3 (üç) katı tutarında cezai şartı İŞVEREN'e ödemeyi kabul ve taahhüt eder.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 7: YASAKLAR VE FESİH NEDENLERİ</div><div class="doc-article-content">
+<p>Aşağıdaki haller, İŞVEREN için 4857 sayılı İş Kanunu m. 25/II kapsamında haklı nedenle derhal fesih sebebidir:</p>
+<p>a) Kasa işlemlerinde usulsüzlük (fişsiz satış, hileli iptal/iade, zimmet).</p>
+<p>b) İşletme ürünlerinin (yemek, kahve, pasta vb.) izinsiz tüketilmesi, dışarı çıkarılması veya üçüncü şahıslara bedelsiz ikram edilmesi (Güveni Kötüye Kullanma).</p>
+<p>c) Astı konumundaki personele mobbing uygulamak, hakaret etmek, ayrımcılık yapmak veya cinsel tacizde bulunmak.</p>
+<p>d) Gıda güvenliğini (HACCP) tehlikeye atacak hijyen ihlallerine göz yumulması veya bizzat yapılması.</p>
+<p>e) İş Sağlığı ve Güvenliği (İSG) talimatlarına uymamak, kişisel koruyucu donanım kullanmamak, işyerini ve müşterileri tehlikeye düşürecek davranışlarda bulunmak.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 8: KİŞİSEL VERİLER, KAMERA KAYDI VE TEBLİGAT</div><div class="doc-article-content">
+<p><strong>8.1. Kamera Kaydı:</strong> İşyeri güvenliği, hırsızlık olaylarının önlenmesi ve operasyonel standartların takibi amacıyla; işyerinin ortak alanlarında, ofis, depo ve kasa noktalarında 7/24 görüntü kaydı (CCTV) yapılmaktadır. Ses kaydı yapılmamaktadır. PERSONEL, işyerinde güvenlik kameralarının bulunduğunu bildiğini, bu kayıtların KVKK ve İŞVEREN'in meşru menfaati kapsamında işlendiğini kabul eder.</p>
+<p><strong>8.2. Tebligat:</strong> Tarafların Madde 1'de belirtilen adresleri yasal tebligat adresleridir. Adres değişikliği yazılı olarak bildirilmediği sürece, bu adreslere yapılacak tebligatlar geçerli sayılacaktır.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 9: DENEME SÜRESİ VE YÜRÜRLÜK</div><div class="doc-article-content">
+<p><strong>9.1.</strong> İşbu sözleşmede deneme süresi 2 (İki) aydır. Taraflar bu süre içinde iş sözleşmesini bildirim süresine gerek olmaksızın ve tazminatsız feshedebilir.</p>
+<p><strong>9.2.</strong> İşbu sözleşme, 9 maddeden ibaret olup, {{BASLAMA}} tarihinde taraflarca okunarak, içeriği tam olarak anlaşılmak suretiyle tek nüsha olarak imzalanmış ve aslı İŞVEREN'de kalmak üzere bir kopyası PERSONEL'e teslim edilmiştir.</p>
+</div></div>`,
+        magaza_muduru: `<div class="doc-article"><div class="doc-article-title">MADDE 2: GÖREV TANIMI, YETKİ VE İŞVEREN VEKİLLİĞİ STATÜSÜ</div><div class="doc-article-content">
+<p><strong>2.1. Görev Tanımı:</strong> YÖNETİCİ, ŞİRKET'e ait "Moonberry Coffee" mağazasında MAĞAZA MÜDÜRÜ unvanı ile görev yapacaktır. YÖNETİCİ; mağazanın ticari başarısından, operasyonel standartlarından, yasal mevzuata uyumundan (Gıda güvenliği, İSG vb.) ve ekibin sevk ve idaresinden tam yetkili ve sorumludur.</p>
+<p><strong>2.2. İşveren Vekilliği (Hukuki Statü):</strong> Taraflar; YÖNETİCİ'nin işyerindeki konumu itibarıyla, 4857 sayılı İş Kanunu'nun 2. maddesi ve 18. maddesinin son fıkrası anlamında "İşyerinin bütününü sevk ve idare eden ve işçiyi işe alma ve işten çıkarma yetkisi bulunan İŞVEREN VEKİLİ" statüsünde olduğunu kabul ve beyan ederler. Bu statünün gereği olarak YÖNETİCİ;</p>
+<p>• Mağaza personel kadrosunu belirleme,</p>
+<p>• Adaylarla mülakat yapıp işe alma kararını tek başına verme,</p>
+<p>• Performans düşüklüğü, disiplin suçları veya işletme gerekleri nedeniyle alt kademe personelin iş sözleşmelerini tek başına ve nihai karar verici olarak feshetme yetkisine haizdir.</p>
+<p>YÖNETİCİ, bu nitelikli yetkileri haiz olması sebebiyle, 4857 sayılı Kanun'un iş güvencesi (işe iade davası) hükümlerinden yararlanamayacağını bildiğini gayrikabili rücu kabul eder.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 3: ÇALIŞMA SÜRESİ VE FAZLA MESAİ DÜZENLEMESİ</div><div class="doc-article-content">
+<p><strong>3.1. Mesaiyi Belirleme Serbestisi:</strong> YÖNETİCİ, işyerinin en üst düzey amiri sıfatıyla; görev ve sorumluluklarının gerektirdiği şekilde mesai saatlerini, işe başlama-bitiş zamanlarını, ara dinlenmelerini ve izin düzenini şahsen belirleme ve tanzim etme yetkisine sahiptir. YÖNETİCİ'ye kart basma veya saatlik puantaj zorunluluğu uygulanmaz; esas olan sonuç odaklı yönetimdir.</p>
+<p><strong>3.2. Fazla Çalışma Ücrete Dahildir:</strong> YÖNETİCİ'ye ödenen aylık ücret, üstlendiği idari sorumluluk, bağımsız karar alma yetkisi ve mesaisini kendisinin belirlemesi hususları dikkate alınarak, yasal asgari ücretin ve emsal ücretlerin üzerinde (nitelikli ücret) tespit edilmiştir. Bu sebeple;</p>
+<p>• Yasal haftalık 45 saati aşan çalışmaların (Fazla Mesai),</p>
+<p>• Hafta tatili çalışmalarının,</p>
+<p>• Ulusal Bayram ve Genel Tatil günlerinde yapılan çalışmaların,</p>
+<p>karşılığı olan ücretler, YÖNETİCİ'nin kararlaştırılan aylık ücretine dahildir. YÖNETİCİ, yıllık 270 saate kadar olan bu tür çalışmaları için ayrıca bir ücret, zamlı ödeme veya serbest zaman talep etmeyeceğini kabul ve taahhüt eder.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 4: ÜCRET VE YAN HAKLAR</div><div class="doc-article-content">
+<p><strong>4.1. Kök Ücret:</strong> YÖNETİCİ'ye, yukarıdaki çalışma şartları karşılığında aylık Brüt {{UCRET}} TL ücret ödenecektir.</p>
+<p><strong>4.2. Mali Sorumluluk (Kasa) Tazminatı:</strong> YÖNETİCİ'ye, mağazadaki nakit akışı, stok, emtia ve demirbaşların korunması riskini üstlenmesi karşılığında, aylık kök ücretine ek olarak ve bordroda ayrı bir kalem olarak gösterilmek suretiyle her ay "Mali Sorumluluk (Kasa) Tazminatı" ödenir.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 5: MALİ SORUMLULUK, ZAYİAT VE KESİNTİLER</div><div class="doc-article-content">
+<p><strong>5.1. Zararın Tazmini ve Mahsup:</strong> Mağaza kasasında, stok sayımlarında veya zimmetli demirbaşlarda; hırsızlık, dikkatsizlik, prosedür hatası veya YÖNETİCİ'nin özen borcuna aykırılığı nedeniyle oluşan noksanlıklar (açıklar/zararlar), öncelikle ve münhasıran YÖNETİCİ'ye o ay ödenen "Mali Sorumluluk Tazminatı"ndan mahsup edilir.</p>
+<p><strong>5.2. Tazminatı Aşan Zararlar:</strong> Oluşan zarar miktarının, ödenen Mali Sorumluluk Tazminatını aşması durumunda; aşan kısım için YÖNETİCİ'nin kusuru oranında rücu edilir. YÖNETİCİ, tazminatı aşan zararların tahsili için olayın vuku bulduğu tarihte düzenlenecek mutabakat tutanağı ile ücretinden kesinti yapılmasını veya borcu def'aten ödemeyi kabul eder.</p>
+<p><strong>5.3. Kasıtlı Haller:</strong> Zimmet, emniyeti suistimal, hırsızlık veya ŞİRKET'e kasten zarar verme halleri, tazminat limitine bakılmaksızın 4857 sayılı İş Kanunu m. 25/II uyarınca haklı nedenle derhal fesih sebebidir ve oluşan tüm zarar yasal yollarla YÖNETİCİ'den tahsil edilir.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 6: PERFORMANS, REKABET YASAĞI VE GİZLİLİK</div><div class="doc-article-content">
+<p><strong>6.1. Performans Hedefleri:</strong> YÖNETİCİ, kendisine tebliğ edilen ciro, kârlılık (P&L), fire/zayi oranı ve denetim puanı hedeflerini (KPI) tutturmakla yükümlüdür. Makul mazeret (mücbir sebep) olmaksızın hedeflerin süreklilik arz edecek şekilde tutturulamaması, "Performans Düşüklüğü/Yetersizlik" sayılır. ŞİRKET, bu durumda YÖNETİCİ'den yazılı savunma almak kaydıyla iş sözleşmesini geçerli nedenle feshedebilir.</p>
+<p><strong>6.2. Rekabet Yasağı:</strong> YÖNETİCİ, iş sözleşmesi herhangi bir nedenle sona erdikten sonra 1 (Bir) yıl süreyle; son görev yaptığı mağazanın bulunduğu ilçe sınırları içerisinde, Moonberry Coffee ile doğrudan rakip olan (Kahve Zinciri/Kafe/Restoran) işletmelerde çalışmamayı, ortak olmamayı veya danışmanlık yapmamayı taahhüt eder.</p>
+<p><strong>6.3. Cezai Şart (Karşılıklılık Esası):</strong> YÖNETİCİ'nin Rekabet Yasağını (Madde 6.2) ihlal etmesi halinde, son brüt ücretinin 6 (Altı) katı tutarında cezai şartı ŞİRKET'e ödemeyi kabul eder. ŞİRKET'in iş sözleşmesini haksız yere feshetmesi durumunda da, ŞİRKET aynı tutarda (6 brüt maaş) cezai şartı YÖNETİCİ'ye ödemeyi taahhüt eder. (TBK m. 420 ve Yargıtay içtihatları gereği karşılıklılık ilkesi).</p>
+<p><strong>6.4. Gizlilik:</strong> ŞİRKET'e ait kahve reçeteleri, tedarikçi sözleşmeleri, personel ücret bilgileri, mali veriler ve müşteri veri tabanı "Ticari Sır" niteliğindedir. Bu bilgilerin üçüncü kişilerle veya rakip firmalarla paylaşılması, tazminatsız derhal fesih nedenidir ve ayrıca cezai sorumluluk (TCK m. 239) doğurur.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 7: İŞYERİ GÜVENLİĞİ VE KİŞİSEL VERİLER (KVKK)</div><div class="doc-article-content">
+<p><strong>7.1. Görüntü Kaydı (CCTV):</strong> İşyeri güvenliği, iş sağlığı ve güvenliği ile operasyonel denetim amacıyla mağaza genelinde, kasa noktalarında ve çalışma alanlarında (tuvalet/giyinme kabini hariç) 7/24 Görüntü Kaydı (Video) yapılmaktadır. YÖNETİCİ, bu uygulamanın KVKK m. 5/2-f (Meşru Menfaat) kapsamında olduğunu bilir, kabul eder ve mağaza genelinde bu sistemin sürekli çalışır durumda olmasını sağlamakla yükümlüdür.</p>
+<p><strong>7.2. Ses Kaydı Yasağı:</strong> Türk Ceza Kanunu'nun 133. maddesi ve KVKK ilkeleri gereği, işyerinde çalışanların ve müşterilerin özel hayatının gizliliğini ihlal edecek şekilde genel ve sürekli ses kaydı yapılmamaktadır. YÖNETİCİ, mağaza içinde izinsiz ses kaydı alan cihazların kullanılmasını engellemekle sorumludur.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 8: SON HÜKÜMLER</div><div class="doc-article-content">
+<p><strong>8.1. Delil Sözleşmesi:</strong> İşbu sözleşmeden doğacak uyuşmazlıklarda ŞİRKET'in ticari defterleri, bordroları, banka kayıtları, e-posta yazışmaları ve kamera görüntüleri HMK m. 193 uyarınca kesin delil niteliğindedir.</p>
+<p><strong>8.2. Yürürlük:</strong> İşbu sözleşme, 2 (iki) sayfa ve 8 (sekiz) maddeden ibaret olup, {{BASLAMA}} tarihinde taraflarca okunup, müzakere edilerek tam bir mutabakatla imzalanmış ve bir nüshası YÖNETİCİ'ye teslim edilmiştir.</p>
+</div></div>`,
+        bolge_muduru: `<div class="doc-article"><div class="doc-article-title">MADDE 2: GÖREV TANIMI VE "İŞVEREN VEKİLİ" STATÜSÜ</div><div class="doc-article-content">
+<p><strong>2.1. Görev:</strong> PERSONEL, ŞİRKET bünyesinde "BÖLGE MÜDÜRÜ" unvanı ile istihdam edilmiştir. Sorumluluk alanı, Şirket tarafından kendisine yazılı olarak veya şirket veri sistemleri üzerinden bildirilen coğrafi bölge ve bu bölgedeki tüm şubelerdir.</p>
+<p><strong>2.2. Hukuki Statü (İşveren Vekilliği):</strong> PERSONEL, kendisine bağlı bölgedeki işyerlerini (şubeleri) sevk ve idare eden, işletmenin stratejik hedeflerine yön veren ve sorumluluk bölgesindeki alt kademe çalışanları (Şube Müdürü, Barista, Servis Elemanı vb.) işe alma, işten çıkarma, terfi ettirme ve disiplin cezası verme yetkisine müstakil olarak (tek başına) sahip olan yöneticidir. Taraflar; PERSONEL'in bu yetki ve sorumlulukları gereği, 4857 sayılı İş Kanunu'nun 18. maddesinin son fıkrası ve 2. maddesi anlamında "İşletmenin Bütününü Sevk ve İdare Eden İşveren Vekili Yardımcısı" veya "İşyerinin Bütününü Sevk ve İdare Eden ve İşçi Alma/Çıkarma Yetkisi Bulunan İşveren Vekili" statüsünde olduğunu ve bu statünün yasal sonuçlarını (iş güvencesi hükümlerinin uygulanmayacağını) bildiğini kabul ve beyan ederler.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 3: GÖREV, YETKİ VE SORUMLULUKLAR</div><div class="doc-article-content">
+<p>PERSONEL, sorumluluk alanındaki bölgenin kârlılığı, büyümesi ve marka standartlarının korunmasından tam sorumludur. Asli görevleri şunlardır:</p>
+<p>a) <strong>Stratejik Yönetim:</strong> Bölgedeki şubelerin ciro, kârlılık (P&L) ve büyüme hedeflerini belirlemek, bütçeyi yönetmek ve Genel Müdürlük stratejilerini sahada bizzat uygulamak.</p>
+<p>b) <strong>İK ve Organizasyon Yönetimi:</strong> Bölge kadrosunu oluşturmak, norm kadro çalışmaları yapmak, Şube Müdürlerini atamak, performanslarını değerlendirmek, işe alım ve fesih kararlarını nihai merci olarak vermek.</p>
+<p>c) <strong>Denetim ve Standartlar:</strong> Şubelerin operasyonel standartlara (hijyen, servis kalitesi, ürün reçeteleri, Moonberry marka kimliği) uygunluğunu denetlemek, "Gizli Müşteri" skorlarını yükseltmek.</p>
+<p>d) <strong>Yasal Temsil:</strong> Bölgesindeki resmi kurumlar, belediyeler ve tedarikçiler nezdinde ŞİRKET'i temsil etmek, gerekli ruhsat ve izin süreçlerini yönetmek.</p>
+<p>e) <strong>Kriz Yönetimi:</strong> Bölgesinde oluşabilecek operasyonel krizleri (gıda güvenliği, iş kazası, sosyal medya krizi vb.) yönetmek.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 4: ÇALIŞMA SÜRELERİ VE FAZLA ÇALIŞMA DÜZENİ</div><div class="doc-article-content">
+<p><strong>4.1. Mesai Düzeni (Time Sovereignty):</strong> PERSONEL, "Üst Düzey Yönetici" konumunda olup; görev ve sorumluluklarının gerektirdiği şekilde mesai saatlerini, şube ziyaret planlarını ve çalışma düzenini işin gerekliliklerine göre bizzat kendisi belirleme yetkisine sahiptir. İŞVEREN, PERSONEL'e günlük kart basma/imza atma zorunluluğu uygulamaz; esas olan hedeflerin gerçekleşmesidir.</p>
+<p><strong>4.2. Ücretin Kapsamı:</strong> PERSONEL'in aylık brüt ücreti, üstlendiği yönetim sorumluluğu, yetkileri ve mesaisini kendisinin belirlemesi hususları dikkate alınarak, asgari ücretten ve emsal çalışanlardan belirgin şekilde yüksek tespit edilmiştir. Bu çerçevede; yasal sınır olan yıllık 270 saate kadar yapılacak fazla çalışmalar, hafta tatili çalışmaları ve ulusal bayram/genel tatil günü çalışmaları kararlaştırılan aylık ücrete dahildir. PERSONEL, bu çalışmalar için ayrıca ücret talep etmeyeceğini kabul eder.</p>
+<p><strong>4.3. Denkleştirme ve Serbest Zaman:</strong> Yıllık 270 saati aşan bir fazla çalışma yapılması ve bunun yazılı delillerle ispatlanması durumunda; aşan kısmın karşılığı nakdi ücret olarak değil, 4857 sayılı İş Kanunu'nun 41. maddesi uyarınca zamlı oran üzerinden hesaplanacak "Serbest Zaman" (İzin) olarak kullandırılacaktır.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 5: ÜCRET VE YAN HAKLAR</div><div class="doc-article-content">
+<p><strong>5.1. Ücret:</strong> PERSONEL'e aylık Brüt {{UCRET}} TL ücret ödenecektir. Ücret, her ayın sonunda PERSONEL'in banka hesabına yatırılır.</p>
+<p><strong>5.2. Performans Primi:</strong> İŞVEREN, tek taraflı inisiyatifi ile belirleyeceği yıllık hedeflerin (KPI) tutturulması halinde PERSONEL'e prim ödemesi yapabilir. Prim uygulaması, "İşyeri Şartı" niteliğinde olmayıp, İŞVEREN tarafından her dönem değiştirilebilir veya tamamen kaldırılabilir.</p>
+<p><strong>5.3. Araç ve Ekipman:</strong> Görev gereği tahsis edilen şirket aracı, bilgisayar ve telefon, sadece iş amaçlı kullanım içindir. İş sözleşmesinin sona ermesi veya İŞVEREN'in talebi halinde bu ekipmanlar derhal ve eksiksiz iade edilecektir.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 6: ŞİRKET ARACI KULLANIMI VE TRAFİK CEZALARI</div><div class="doc-article-content">
+<p><strong>6.1. Sorumluluk:</strong> PERSONEL, kendisine tahsis edilen şirket aracını Karayolları Trafik Kanunu'na ve iş güvenliği kurallarına uygun kullanmakla yükümlüdür.</p>
+<p><strong>6.2. Cezaların Rücu Edilmesi:</strong> PERSONEL'in kullanımında iken (ister mesai içinde ister dışında) araca kesilen trafik cezalarından (hız, park, kırmızı ışık vb.) PERSONEL şahsen sorumludur. ŞİRKET, yasal zorunluluk gereği cezayı ödemek zorunda kalırsa; PERSONEL, ödenen tutarı ilk yazılı bildirimde ŞİRKET'e nakden ödemeyi veya ilgili tutarın ücretinden mahsup edilmesi için her olay özelinde ayrıca muvafakatname vermeyi kabul ve taahhüt eder.</p>
+<p><strong>6.3. Disiplin:</strong> PERSONEL'in kusurlu davranışı sonucu oluşan trafik cezalarını ödemekten imtina etmesi veya rücu işlemine onay vermemesi, işverene zarar verme kastı taşıdığından, İş Kanunu m. 25/II kapsamında haklı fesih nedeni sayılabilecektir.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 7: REKABET YASAĞI, GİZLİLİK VE CEZAİ ŞART</div><div class="doc-article-content">
+<p><strong>7.1. Gizlilik ve Ticari Sır:</strong> PERSONEL; ŞİRKET'in maliyet yapıları, franchise koşulları, tedarikçi anlaşmaları, müşteri veritabanı, özel tarifeleri ve büyüme stratejileri gibi "Ticari Sır" niteliğindeki bilgilere vakıftır. Bu bilgilerin sözleşme süresince veya sona erdikten sonra üçüncü kişilerle paylaşılması, TCK m. 239 kapsamında suç teşkil eder ve tazminatsız derhal fesih nedenidir.</p>
+<p><strong>7.2. Rekabet Yasağı (TBK 444-447):</strong> PERSONEL, iş sözleşmesi herhangi bir nedenle (işverenin haklı feshi veya personelin istifası/haksız feshi ile) sona erdikten sonra 2 (iki) yıl süreyle; son görev yaptığı il sınırları içerisinde, "Kahve Zinciri, Kafe-Restoran ve Gıda Perakendeciliği" sektöründe faaliyet gösteren rakip bir firmada çalışmamayı, ortak olmamayı veya danışmanlık yapmamayı taahhüt eder.</p>
+<p><strong>7.3. Cezai Şart:</strong> PERSONEL'in işbu 7. maddede düzenlenen rekabet yasağını ihlal etmesi halinde; ŞİRKET'in uğradığı zararın miktarını ispat etmesine gerek kalmaksızın, PERSONEL, son brüt maaşının 6 (Altı) katı tutarında cezai şartı İŞVEREN'e derhal ve nakden ödemeyi kabul ve taahhüt eder. İŞVEREN'in bu miktarı aşan zararlarını talep hakkı ve TBK m. 446/2 uyarınca rekabet edici davranışa son verilmesini talep hakkı saklıdır.</p>
+<p><strong>7.4. Ayartma Yasağı (Non-Solicitation):</strong> PERSONEL, işten ayrıldıktan sonra 2 yıl süreyle, ŞİRKET çalışanlarını yeni işyerine transfer etmeyeceğini, onlara iş teklifinde bulunmayacağını taahhüt eder.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 8: FİKRİ MÜLKİYET HAKLARININ DEVRİ</div><div class="doc-article-content">
+<p>PERSONEL, işbu sözleşme kapsamında görevi sırasında veya görevi nedeniyle meydana getirdiği/getireceği her türlü fikir, sanat eseri, rapor, operasyonel süreç tasarımı, eğitim materyali, bilgisayar programı, veri tabanı ve iş geliştirme projeleri üzerindeki 5846 sayılı FSEK kapsamındaki tüm mali hakları (işleme, çoğaltma, yayma, temsil, umuma iletim) yer, süre ve sayı sınırı olmaksızın, işbu sözleşmedeki ücret karşılığında münhasıran ŞİRKET'e devrettiğini; bu hakların kullanımı ve devri konusunda ŞİRKET'in tam yetkili olduğunu kabul ve beyan eder.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 9: ÜCRETLİ UZAKLAŞTIRMA (GARDEN LEAVE)</div><div class="doc-article-content">
+<p>İş sözleşmesinin herhangi bir nedenle feshi ihbarında bulunulması halinde (taraflardan hangisinin ihbar ettiğine bakılmaksızın); ŞİRKET, ihbar süresinin tamamında veya bir kısmında PERSONEL'i işyerine gelmekten, iş görme borcunu ifa etmekten ve şirket sistemlerine erişmekten muaf tutma (Garden Leave) hakkına sahiptir. Bu süre zarfında PERSONEL'in ücret ve yan hakları (prim hariç) ödenmeye devam eder. PERSONEL, bu süre içinde başka bir işverene hizmet veremez, rekabet edemez ve sadakat borcuna aykırı davranamaz.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 10: KİŞİSEL VERİLERİN KORUNMASI (KVKK) VE İZLEME</div><div class="doc-article-content">
+<p><strong>10.1.</strong> ŞİRKET; iş sağlığı güvenliği, operasyonel verimlilik, şirket varlıklarının korunması ve yasal yükümlülükler (işin ifası ve meşru menfaat) sebepleriyle; işyerlerinde, ofislerde kamera ile görüntü kaydı ve şirket araçlarında GPS (Konum) takip sistemi kullanmaktadır.</p>
+<p><strong>10.2.</strong> PERSONEL, bu veri işleme faaliyetleri, kameraların bulunduğu yerler ve araç takip sisteminin çalışma prensipleri hakkında kendisine ayrıca tebliğ edilen "Çalışan Aydınlatma Metni" ile 6698 sayılı KVKK kapsamında detaylıca bilgilendirildiğini, mesai saatleri dışında şirket aracının kullanımı durumunda da (özel kullanım izni varsa) GPS kaydının devam edebileceğini bildiğini beyan eder.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 11: MOBBİNG VE ETİK HAT</div><div class="doc-article-content">
+<p>PERSONEL, işyerinde karşılaşabileceği her türlü etik dışı davranış, ayrımcılık veya psikolojik taciz (mobbing) iddiasını, yasal yollara başvurmadan önce ivedilikle Şirket Yönetim Kurulu'na veya varsa "Etik Hattı"na yazılı olarak bildirmeyi kabul eder. ŞİRKET, bu başvuruları gizlilik içinde inceleyip sonuçlandıracağını taahhüt eder.</p>
+</div></div>
+
+<div class="doc-article"><div class="doc-article-title">MADDE 12: SON HÜKÜMLER VE YÜRÜRLÜK</div><div class="doc-article-content">
+<p><strong>12.1.</strong> İşbu sözleşmede hüküm bulunmayan hallerde 4857 sayılı İş Kanunu, 6098 sayılı TBK ve ilgili mevzuat hükümleri uygulanır.</p>
+<p><strong>12.2.</strong> Uyuşmazlık halinde İstanbul (Çağlayan) Mahkemeleri ve İcra Daireleri yetkilidir.</p>
+<p><strong>12.3.</strong> İki sayfadan ve 12 maddeden ibaret işbu sözleşme, {{BASLAMA}} tarihinde taraflarca okunarak, içeriği müzakere edilip tam olarak anlaşılarak serbest iradeleriyle imzalanmış ve bir nüshası PERSONEL'e teslim edilmiştir.</p>
+</div></div>`
+    },
+    fesihDayanaklari: {
+        hakli: [
+            {v:'25_2_a',t:'25/II-a: Yanıltma'},
+            {v:'25_2_b',t:'25/II-b: Hakaret'},
+            {v:'25_2_d',t:'25/II-d: Sataşma/Sarhoşluk'},
+            {v:'25_2_e',t:'25/II-e: Güveni kötüye kullanma'},
+            {v:'25_2_g',t:'25/II-g: Devamsızlık'},
+            {v:'25_2_h',t:'25/II-h: Görev reddi'},
+            {v:'25_2_i',t:'25/II-ı: İş güvenliği'}
+        ],
+        gecerli: [
+            {v:'18_y',t:'Yetersizlik'},
+            {v:'18_d',t:'Davranış'},
+            {v:'18_i',t:'İşletme gerekleri'}
+        ],
+        deneme: [{v:'deneme',t:'Deneme değerlendirmesi'}]
+    },
+    documentTemplates: {
+        tutanak: {
+            olay: '<p><strong>OLAY:</strong></p><p>{{TARIH}} tarihinde saat {{SAAT}} sıralarında, {{SUBE}} şubesinde görevli {{PERSONEL}} ({{TC}}) aşağıda açıklanan olayı gerçekleştirmiştir:</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #ff8674;margin:15px 0">{{ACIKLAMA}}</p><p>İşbu tutanak, olayın tespiti amacıyla düzenlenmiş olup, ilgili personele tebliğ edilmiştir.</p>',
+            devamsizlik: '<p><strong>DEVAMSIZLIK TESPİTİ:</strong></p><p>{{PERSONEL}} ({{TC}}), {{TARIH}} tarihinde {{SUBE}} şubesinde göreve gelmemiştir.</p><p>Yapılan araştırmada herhangi bir mazeret bildirimi tespit edilememiştir.</p><p style="background:#fef9e7;padding:12px;border-radius:6px;margin:15px 0">⚠️ İş Kanunu Md. 25/II-g: Ardı ardına 2 iş günü veya ay içinde 3 iş günü devamsızlık haklı fesih sebebidir.</p>',
+            kasa: '<p><strong>KASA SAYIM TESPİTİ:</strong></p><p>{{TARIH}} tarihinde saat {{SAAT}} itibarıyla {{SUBE}} şubesinde yapılan kasa sayımında aşağıdaki tespit yapılmıştır:</p><p>Sorumlu personel: {{PERSONEL}} ({{TC}})</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #ff8674;margin:15px 0">{{ACIKLAMA}}</p><p>TBK Md. 407/2 uyarınca personelin yazılı muvafakati ile ücretinden kesinti yapılabilir.</p>',
+            imza: '<p><strong>İMZADAN İMTİNA TESPİTİ:</strong></p><p>{{TARIH}} tarihinde {{PERSONEL}} ({{TC}}) adlı personele tebliğ edilmek istenen belgeyi imzalamaktan imtina etmiştir.</p><p>İmtina edilen belge: {{ACIKLAMA}}</p><p style="background:#ebf5fb;padding:12px;border-radius:6px;margin:15px 0">📌 Yargıtay içtihadı gereği, 2 şahit huzurunda düzenlenen imtina tutanağı tebliğ yerine geçer.</p>'
+        },
+        savunma: '<p>Şirketimiz {{SUBE}} şubesinde {{POZISYON}} olarak görev yapmaktasınız.</p><p><strong>{{TARIH}}</strong> tarihinde gerçekleştirdiğiniz aşağıdaki davranış/eylem nedeniyle savunmanız istenmektedir:</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #ff8674;margin:15px 0">{{ACIKLAMA}}</p><p>Bu davranış <strong>{{DAYANAK}}</strong> kapsamında değerlendirilmektedir.</p><p style="background:#fef9e7;padding:12px;border-radius:6px;margin:15px 0">⚠️ Savunmanızı bu yazının tebliğinden itibaren <strong>{{SURE}}</strong> içinde yazılı olarak vermeniz gerekmektedir. Süresinde savunma verilmemesi, savunma hakkından vazgeçilmiş sayılacaktır.</p>',
+        fesih: {
+            hakli: '<p>{{TARIH}} tarihinde gerçekleştirdiğiniz aşağıdaki eylem/davranış nedeniyle iş sözleşmeniz <strong>4857 sayılı İş Kanunu\'nun {{DAYANAK}} maddesi</strong> uyarınca haklı nedenle ve derhal feshedilmiştir:</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #c0392b;margin:15px 0">{{ACIKLAMA}}</p><p>Bu fesih işlemi sonucunda kıdem ve ihbar tazminatı ödenmeyecektir.</p>',
+            gecerli: '<p>Aşağıda belirtilen nedenlerle iş sözleşmeniz <strong>4857 sayılı İş Kanunu\'nun 17. ve 18. maddeleri</strong> uyarınca geçerli nedenle feshedilmiştir:</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #ff8674;margin:15px 0">{{ACIKLAMA}}</p><p>İhbar süreniz: {{IHBAR_SURE}}<br>Son çalışma gününüz: {{SON_GUN}}</p><p>Kıdem tazminatı ve diğer yasal haklarınız ödenecektir.</p>',
+            deneme: '<p>{{BASLAMA}} tarihinde başlayan iş sözleşmeniz, 2 aylık deneme süresi içinde <strong>4857 sayılı İş Kanunu\'nun 15. maddesi</strong> uyarınca sona erdirilmiştir.</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #3498db;margin:15px 0">{{ACIKLAMA}}</p><p>Deneme süresi içinde fesih bildirim süresine ve tazminata tabi değildir.</p>'
+        },
+        borc: '<p>Ben {{PERSONEL}}, {{TARIH}} tarihli olayda kusurum nedeniyle <strong>{{TUTAR}} TL</strong> borcu kabul ediyorum.</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #ff8674;margin:15px 0">{{ACIKLAMA}}</p><p>TBK Md. 407/2 uyarınca bu borcun {{ODEME_SEKLI}} kabul ve taahhüt ediyorum.</p><p>Baskı altında olmadığımı, borcumu ve kesinti koşullarını anladığımı beyan ederim.</p>'
     }
-}
+};
 
 // ==================== STATE MANAGEMENT ====================
 let STATE = {};
@@ -1797,32 +2004,20 @@ let previousPage = 'dashboard';
 let selectedTypes = {sozlesme: 'barista', tutanak: null, fesih: null};
 
 function loadState() {
-    // STATE artık CONFIG'dan besleniyor
-    // CONFIG Firebase'den yüklendikten sonra STATE'e aktarılır
-    STATE = {
-        company: CONFIG.company || {},
-        branches: CONFIG.branches || [],
-        branchCodes: CONFIG.branchCodes || {},
-        positions: CONFIG.positions || [],
-        violations: CONFIG.violations || [],
-        templates: CONFIG.contractTemplates || {},
-        fesihDayanaklari: CONFIG.fesihDayanaklari || {},
-        documentTemplates: CONFIG.documentTemplates || {}
-    };
-    
-    // LocalStorage'dan kullanıcı tercihlerini yükle
     const saved = localStorage.getItem('moonberry_state');
     if (saved) {
         try {
             const parsed = JSON.parse(saved);
-            // Sadece kullanıcı tercihlerini merge et, config verilerini değil
-            if (parsed.preferences) {
-                STATE.preferences = parsed.preferences;
-            }
+            // Deep merge for nested objects like company
+            STATE = {...DEFAULT_STATE, ...parsed};
+            STATE.company = {...DEFAULT_STATE.company, ...parsed.company};
         } catch(e) {
-            console.log('LocalStorage parse hatası');
+            STATE = {...DEFAULT_STATE};
         }
+    } else {
+        STATE = {...DEFAULT_STATE};
     }
+    saveState();
 }
 
 function saveState() {
@@ -2093,7 +2288,7 @@ async function initializeDefaultData() {
         const rulesRef = db.collection('puantajRules');
         const rulesSnapshot = await rulesRef.get();
         if (rulesSnapshot.empty) {
-            for (const rule of CONFIG.puantajRules) {
+            for (const rule of DEFAULT_PUANTAJ_RULES) {
                 await rulesRef.doc(rule.id).set(rule);
             }
             console.log('Varsayılan puantaj kuralları oluşturuldu');
@@ -2168,26 +2363,17 @@ function applyUserPermissions() {
         userAvatarEl.textContent = currentUser.name.charAt(0).toUpperCase();
     }
     
-    // Yönetici her şeye erişebilir + Kullanıcı Gözünden Gör butonu
-    if (currentUser.role === 'yonetici') {
-        const btn = document.getElementById('btnImpersonate');
-        if (btn) btn.style.display = 'flex';
-        return;
-    }
-    
-    // Barista kısıtlamaları
-    if (currentUser.role === 'barista') {
-        applyBaristaRestrictions();
-    }
+    // Yönetici her şeye erişebilir
+    if (currentUser.role === 'yonetici') return;
     
     // Gelişmiş izin sistemini yükle ve uygula
     loadUserAdvancedPermissions();
 }
 
-// Barista kısıtlamaları - Puantaj, Shift, Checklist (sadece görüntüleme ve checklist doldurma)
+// Barista kısıtlamaları
 function applyBaristaRestrictions() {
-    // İzin verilen sayfalar - Barista bunları görebilir
-    const allowedPages = ['dashboard', 'puantaj', 'shift', 'checklist'];
+    // İzin verilen sayfalar
+    const allowedPages = ['dashboard', 'puantaj', 'shift'];
     
     // Navbar menülerini kısıtla
     document.querySelectorAll('.nav-item[data-page]').forEach(item => {
@@ -2208,14 +2394,14 @@ function applyBaristaRestrictions() {
     // Dashboard kartlarını kısıtla
     document.querySelectorAll('.dashboard-card').forEach(card => {
         const onclick = card.getAttribute('onclick') || '';
-        const allowedCards = ['puantaj', 'shift', 'checklist'];
+        const allowedCards = ['puantaj', 'shift'];
         const isAllowed = allowedCards.some(p => onclick.includes(`'${p}'`));
         if (!isAllowed && onclick.includes('goTo')) {
             card.style.display = 'none';
         }
     });
     
-    // Dashboard section'ları kontrol et - Belgeler ve Sistem bölümlerini gizle
+    // Dashboard section'ları kontrol et - Belgeler bölümünü tamamen gizle
     document.querySelectorAll('.dashboard-section').forEach(section => {
         const header = section.querySelector('div');
         if (header && header.textContent.includes('Belgeler')) {
@@ -4106,7 +4292,7 @@ function importCode() {
                 throw new Error('Invalid structure');
             }
             
-            STATE = {...CONFIG, ...data};
+            STATE = {...DEFAULT_STATE, ...data};
             saveState();
             initUI();
             document.getElementById('importCode').value = '';
@@ -4157,7 +4343,7 @@ function uploadBackup(event) {
                     throw new Error('Invalid structure');
                 }
                 
-                STATE = {...CONFIG, ...data};
+                STATE = {...DEFAULT_STATE, ...data};
                 saveState();
                 initUI();
                 successModal('Yedek başarıyla yüklendi!');
@@ -4262,12 +4448,12 @@ function loadDocTemplate(category, subType) {
     currentDocTemplateSubType = subType;
     
     let template = '';
-    const templates = STATE.documentTemplates || CONFIG.documentTemplates;
+    const templates = STATE.documentTemplates || DEFAULT_STATE.documentTemplates;
     
     if (subType && templates[category] && typeof templates[category] === 'object') {
-        template = templates[category][subType] || CONFIG.documentTemplates[category][subType] || '';
+        template = templates[category][subType] || DEFAULT_STATE.documentTemplates[category][subType] || '';
     } else {
-        template = templates[category] || CONFIG.documentTemplates[category] || '';
+        template = templates[category] || DEFAULT_STATE.documentTemplates[category] || '';
     }
     
     const textarea = document.getElementById('doc_template_content');
@@ -4302,7 +4488,7 @@ function saveDocTemplate() {
     
     // documentTemplates yoksa oluştur
     if (!STATE.documentTemplates) {
-        STATE.documentTemplates = JSON.parse(JSON.stringify(CONFIG.documentTemplates));
+        STATE.documentTemplates = JSON.parse(JSON.stringify(DEFAULT_STATE.documentTemplates));
     }
     
     if (currentDocTemplateSubType && typeof STATE.documentTemplates[currentDocTemplateCategory] === 'object') {
@@ -4322,10 +4508,10 @@ function resetDocTemplate() {
     confirmModal('Varsayılana Dön', 'Bu şablonu varsayılan haline döndürmek istediğinize emin misiniz?', () => {
         let defaultTemplate = '';
         
-        if (currentDocTemplateSubType && typeof CONFIG.documentTemplates[currentDocTemplateCategory] === 'object') {
-            defaultTemplate = CONFIG.documentTemplates[currentDocTemplateCategory][currentDocTemplateSubType];
+        if (currentDocTemplateSubType && typeof DEFAULT_STATE.documentTemplates[currentDocTemplateCategory] === 'object') {
+            defaultTemplate = DEFAULT_STATE.documentTemplates[currentDocTemplateCategory][currentDocTemplateSubType];
         } else {
-            defaultTemplate = CONFIG.documentTemplates[currentDocTemplateCategory];
+            defaultTemplate = DEFAULT_STATE.documentTemplates[currentDocTemplateCategory];
         }
         
         const textarea = document.getElementById('doc_template_content');
@@ -4334,7 +4520,7 @@ function resetDocTemplate() {
             
             // STATE'i de güncelle
             if (!STATE.documentTemplates) {
-                STATE.documentTemplates = JSON.parse(JSON.stringify(CONFIG.documentTemplates));
+                STATE.documentTemplates = JSON.parse(JSON.stringify(DEFAULT_STATE.documentTemplates));
             }
             
             if (currentDocTemplateSubType && typeof STATE.documentTemplates[currentDocTemplateCategory] === 'object') {
@@ -5379,7 +5565,7 @@ function showAddUserModal(editId = null) {
             <div class="form-group"><label class="form-label">Şifre ${isEdit ? '(boş bırakılırsa değişmez)' : '*'}</label><input type="password" id="modalUserPassword" class="form-input" minlength="6"></div>
             <div class="form-group">
                 <label class="form-label">Rol *</label>
-                <select id="modalUserRole" class="form-select">
+                <select id="modalUserRoleSelect" class="form-select">
                     <option value="barista">☕ Barista</option>
                     <option value="magaza_muduru">🏪 Mağaza Müdürü</option>
                     <option value="bolge_muduru">🏢 Bölge Müdürü</option>
@@ -5415,7 +5601,7 @@ async function loadUserForEdit(id) {
             const u = doc.data();
             document.getElementById('modalUserName').value = id;
             document.getElementById('modalUserDisplayName').value = u.name || '';
-            document.getElementById('modalUserRole').value = u.role || 'barista';
+            document.getElementById('modalUserRoleSelect').value = u.role || 'barista';
             document.getElementById('modalUserBranch').value = u.branch || 'all';
         }
     } catch (error) {
@@ -5428,7 +5614,7 @@ async function saveUser() {
     const username = document.getElementById('modalUserName').value.trim().toLowerCase();
     const password = document.getElementById('modalUserPassword').value;
     const displayName = document.getElementById('modalUserDisplayName').value.trim();
-    const role = document.getElementById('modalUserRole').value;
+    const role = document.getElementById('modalUserRoleSelect').value;
     const branch = document.getElementById('modalUserBranch').value;
     
     if (!username) {
@@ -8400,8 +8586,26 @@ let personnelMapping = [];
 // Tüm config'i Firebase'den yükle
 async function loadSystemConfig() {
     try {
-        // Önce tüm config'i Firebase'den yükle
-        await loadConfigFromFirebase();
+        // Sistem ayarları
+        const sysDoc = await db.collection('config').doc('system').get();
+        if (sysDoc.exists) {
+            SYSTEM_CONFIG = sysDoc.data();
+            WHATSAPP_GROUPS = SYSTEM_CONFIG.whatsappGroups || {};
+            PLATFORMS = SYSTEM_CONFIG.platforms || PLATFORMS;
+        }
+        
+        // Checklist türleri
+        const typesDoc = await db.collection('config').doc('checklistTypes').get();
+        if (typesDoc.exists) {
+            const data = typesDoc.data();
+            // updatedAt gibi meta alanları filtrele
+            CHECKLIST_TYPES = {};
+            for (const [key, value] of Object.entries(data)) {
+                if (Array.isArray(value)) {
+                    CHECKLIST_TYPES[key] = value;
+                }
+            }
+        }
         
         // Personel eşleştirmesi
         const persDoc = await db.collection('config').doc('personnel').get();
@@ -8409,17 +8613,12 @@ async function loadSystemConfig() {
             personnelMapping = persDoc.data().list || [];
         }
         
-        // STATE'i CONFIG'dan doldur
-        loadState();
-        
-        console.log('✅ Sistem config yüklendi:', {
+        console.log('Sistem config yüklendi:', {
             branches: Object.keys(CHECKLIST_TYPES),
-            personnel: personnelMapping.length,
-            violations: CONFIG.violations?.length || 0,
-            contractTemplates: Object.keys(CONFIG.contractTemplates || {}).length
+            personnel: personnelMapping.length
         });
     } catch (e) {
-        console.warn('❌ Config yüklenemedi:', e);
+        console.warn('Config yüklenemedi:', e);
     }
 }
 
@@ -8505,16 +8704,14 @@ async function loadChecklistTypes() {
     }
     
     const types = CHECKLIST_TYPES[branch] || [];
-    // Güncel Kontrol'u filtrele (veriler korunuyor, sadece menüden kaldırıldı)
-    const filteredTypes = types.filter(t => t.id !== 'guncel');
     const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
     
     // Debug log
-    console.log('Checklist türleri:', branch, filteredTypes.length, 'adet');
+    console.log('Checklist türleri:', branch, types.length, 'adet');
     
     // Hidden select güncelle
     let selectHtml = '<option value="">-- Checklist Seçin --</option>';
-    filteredTypes.forEach(t => {
+    types.forEach(t => {
         if (t.managerOnly && !isManager) return;
         selectHtml += `<option value="${t.id}" data-timeslots="${t.timeSlots ? t.timeSlots.join(',') : ''}">${t.name}</option>`;
     });
@@ -8522,7 +8719,7 @@ async function loadChecklistTypes() {
     
     // Butonları oluştur - Modern SVG ikonlar
     let buttonsHtml = '';
-    filteredTypes.forEach(t => {
+    types.forEach(t => {
         if (t.managerOnly && !isManager) return;
         const iconSvg = getIcon(t.icon || 'clipboard-check');
         buttonsHtml += `
@@ -8574,17 +8771,13 @@ function selectChecklistType(typeId) {
         }
     });
     
-    // Time slot güncelle - Platform check için saat seçimi YOK
+    // Time slot güncelle
     const selectedBtn = document.querySelector(`.checklist-type-btn[data-type="${typeId}"]`);
     const timeSlots = selectedBtn?.dataset.timeslots?.split(',').filter(Boolean) || [];
     const timeSlotGroup = document.getElementById('checklistTimeSlotGroup');
     const timeSlotSelect = document.getElementById('checklistTimeSlot');
     
-    // Platform check için saat seçimi gösterme
-    if (typeId === 'platform') {
-        timeSlotGroup.style.display = 'none';
-        timeSlotSelect.innerHTML = '<option value="">-- Seçin --</option>';
-    } else if (timeSlots.length > 0) {
+    if (timeSlots.length > 0) {
         timeSlotGroup.style.display = 'block';
         let tsHtml = '<option value="">-- Seçin --</option>';
         timeSlots.forEach(ts => { tsHtml += `<option value="${ts}">${ts}</option>`; });
@@ -8606,30 +8799,7 @@ async function loadChecklist() {
     
     if (!branch || !type || !date || !container) return;
     
-    // Platform Check için özel render - saat seçimi yok
-    if (type === 'platform') {
-        container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--tx2)">
-            <div class="loading-spinner" style="margin:0 auto 16px"></div>
-            Platform Check yükleniyor...
-        </div>`;
-        
-        // Platform Check kaydedilmiş verileri al
-        let submittedData = null;
-        try {
-            const docId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_platform_${date}`;
-            const doc = await db.collection('platformChecks').doc(docId).get();
-            if (doc.exists) {
-                submittedData = doc.data();
-            }
-        } catch (e) {
-            console.warn('Platform Check verisi alınamadı:', e);
-        }
-        
-        renderPlatformChecklist(container, branch, date, null, submittedData);
-        return;
-    }
-    
-    // Saat dilimi kontrolü (Platform check hariç diğerleri için)
+    // Saat dilimi kontrolü
     const typeOption = document.getElementById('checklistType')?.selectedOptions[0];
     const timeSlots = typeOption?.dataset.timeslots?.split(',').filter(Boolean) || [];
     const timeSlotGroup = document.getElementById('checklistTimeSlotGroup');
@@ -8712,88 +8882,6 @@ async function loadChecklist() {
             return;
         }
         
-        // Temizlik ve Bakım için renk ve tarih bilgisi mapping
-        if (type === 'aylik') {
-            const aylikMapping = {
-                // AÇILIŞÇI (Mavi)
-                'bulaşık makinesi kireç': { color: '#00B0F0', responsible: 'AÇILIŞÇI', dates: [3, 11, 19, 27] },
-                'şurup ve sosların': { color: '#00B0F0', responsible: 'AÇILIŞÇI', dates: [2, 4, 6, 8, 10, 12, 18, 20, 22, 24, 26, 28] },
-                // HER SHIFT (Sarı)
-                'kuvings': { color: '#FFFF00', responsible: 'HER SHIFT', dates: [] },
-                'blender': { color: '#FFFF00', responsible: 'HER SHIFT', dates: [] },
-                'yasomi': { color: '#FFFF00', responsible: 'HER SHIFT', dates: [] },
-                'çamaşır sulu paspas': { color: '#FFFF00', responsible: 'HER SHIFT', dates: [] },
-                'mikrodalga': { color: '#FFFF00', responsible: 'HER SHIFT', dates: [] },
-                // ARACI (Kırmızı)
-                'mutfak tüm zeminler': { color: '#C00000', responsible: 'ARACI', dates: [2, 4, 6, 8, 10, 12, 18, 20, 22, 24, 26, 28] },
-                'beyaz duvarlar': { color: '#C00000', responsible: 'ARACI', dates: [1, 3, 5, 7, 9, 11, 17, 19, 21, 23, 25, 27] },
-                'bar rafları': { color: '#C00000', responsible: 'ARACI', dates: [1, 3, 5, 7, 9, 11, 17, 19, 21, 23, 25, 27] },
-                'dolap iç ve dış': { color: '#C00000', responsible: 'ARACI', dates: [1, 3, 5, 7, 9, 11, 17, 19, 21, 23, 25, 27] },
-                'dolap rayları': { color: '#C00000', responsible: 'ARACI', dates: [1, 3, 5, 7, 9, 11, 17, 19, 21, 23, 25, 27] },
-                // KAPANIŞÇI (Turuncu)
-                'bardaklar': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [2, 4, 6, 8, 10, 12, 18, 20, 22, 24, 26, 28] },
-                'tabaklar': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [2, 4, 6, 8, 10, 12, 18, 20, 22, 24, 26, 28] },
-                'kaşık': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [2, 4, 6, 8, 10, 12, 18, 20, 22, 24, 26, 28] },
-                'dolap camları': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [1, 3, 5, 7, 9, 11, 17, 19, 21, 23, 25, 27] },
-                'espresso makinası kaşık': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [] },
-                'espresso makinası detaylı': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [2, 4, 6, 8, 10, 12, 18, 20, 22, 24, 26, 28] },
-                'çay demlikleri': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [1, 3, 5, 7, 9, 11, 17, 19, 21, 23, 25, 27] },
-                'dış mekan camları': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [5, 27] },
-                'beyaz minderler': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [14, 25] },
-                'buz makinası': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [12, 28] },
-                'tv üstü': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [11, 20] }
-            };
-            
-            // Her item'a mapping'den renk ve tarih bilgisi ekle
-            items = items.map(item => {
-                if (item.color && item.dates) return item; // Zaten yeni formatta
-                
-                const textLower = (item.text || '').toLowerCase();
-                for (const [key, value] of Object.entries(aylikMapping)) {
-                    if (textLower.includes(key)) {
-                        return { ...item, ...value };
-                    }
-                }
-                return item;
-            });
-        }
-        
-        // Temizlik ve Bakım (aylik) için tarih filtreleme
-        let filteredItems = items;
-        let totalItemCount = items.length;
-        let showAllItems = false;
-        
-        if (type === 'aylik') {
-            const selectedDate = new Date(date);
-            const dayOfMonth = selectedDate.getDate();
-            
-            filteredItems = items.filter(item => {
-                // Yeni format: item.dates dizisi varsa kullan
-                if (item.dates && Array.isArray(item.dates)) {
-                    // Boş dizi = her gün göster (HER SHIFT gibi)
-                    if (item.dates.length === 0) return true;
-                    return item.dates.includes(dayOfMonth);
-                }
-                
-                // Eski format: text içindeki tarihleri parse et
-                const text = item.text || '';
-                const dateMatch = text.match(/ayın\s*([\d,\-\s]+)/i);
-                if (!dateMatch) return true;
-                
-                const dateStr = dateMatch[1];
-                const dates = dateStr.split(/[,\s]+/).flatMap(part => {
-                    if (part.includes('-')) {
-                        return part.split('-').map(d => parseInt(d.trim()));
-                    }
-                    return [parseInt(part.trim())];
-                }).filter(d => !isNaN(d));
-                
-                return dates.includes(dayOfMonth);
-            });
-            
-            console.log(`Temizlik ve Bakım: ${filteredItems.length}/${totalItemCount} madde (Ayın ${dayOfMonth})`);
-        }
-        
         // Daha önce doldurulmuş mu kontrol et
         let submittedData = null;
         try {
@@ -8807,7 +8895,7 @@ async function loadChecklist() {
         }
         
         // Formu render et
-        renderChecklistForm(filteredItems, branch, type, date, timeSlot, submittedData, totalItemCount);
+        renderChecklistForm(items, branch, type, date, timeSlot, submittedData);
         
     } catch (error) {
         console.error('Checklist yükleme hatası:', error);
@@ -8821,18 +8909,17 @@ async function loadChecklist() {
 // Checklist formunu render et
 let checklistEditMode = false;
 
-function renderChecklistForm(items, branch, type, date, timeSlot, submittedData, totalItemCount = null) {
+function renderChecklistForm(items, branch, type, date, timeSlot, submittedData) {
     const container = document.getElementById('checklistFormContainer');
     const isAdmin = currentUser?.role === 'yonetici' || currentUser?.role === 'bolge_muduru';
     const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
     const isSubmitted = !!submittedData;
-    const actualTotalCount = totalItemCount || items.length;
     
     // Zamanlama sıfırla (yeni checklist)
     if (!isSubmitted) {
         checklistStartTime = null;
         checklistFirstItemTime = null;
-        // Beklenen süreyi sadece GÖRÜNEN maddeler için hesapla
+        // Beklenen süreyi hesapla
         checklistExpectedDuration = items.reduce((sum, item) => sum + (item.duration || 60), 0);
     }
     
@@ -8846,77 +8933,53 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
         return;
     }
     
-    // Haftalık görevler için özel render
-    if (type === 'haftalik') {
-        renderHaftalikGorevler(container, items, branch, date, submittedData);
-        return;
-    }
-    
     let typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === type);
     const expectedMinutes = Math.round(checklistExpectedDuration / 60);
     const iconSvg = getIcon(typeInfo?.icon || 'clipboard-check');
     
-    // Sticky toolbar için data attribute
-    const toolbarData = `data-branch="${branch}" data-type="${type}" data-date="${date}" data-timeslot="${timeSlot || ''}"`;
-    
     let html = `
         <div class="form-section">
-            <!-- Sticky Toolbar -->
-            <div id="checklistToolbar" class="checklist-toolbar" ${toolbarData} style="position:sticky;top:0;z-index:100;background:var(--bg);padding:12px 0;margin:-12px -16px 16px;padding:12px 16px;border-bottom:1px solid var(--cardBorder)">
-                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
-                    <div>
-                        <div style="font-size:1.2rem;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:10px">
-                            <span style="opacity:.7">${iconSvg}</span>
-                            ${typeInfo?.name || type}
-                            ${type === 'aylik' && items.length < actualTotalCount ? `<span style="font-size:.75rem;background:var(--accent);color:#fff;padding:2px 8px;border-radius:10px">${items.length}/${actualTotalCount}</span>` : ''}
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+                <div>
+                    <div style="font-size:1.3rem;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:10px">
+                        <span style="opacity:.7">${iconSvg}</span>
+                        ${typeInfo?.name || type}
+                    </div>
+                    <div style="font-size:.85rem;color:var(--tx2)">${branch} • ${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})}${timeSlot ? ' • ' + timeSlot : ''}</div>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center">
+                    ${isSubmitted ? `
+                        <div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.85rem">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            Tamamlandı
                         </div>
-                        <div style="font-size:.8rem;color:var(--tx2)">${branch} • ${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})}${timeSlot ? ' • ' + timeSlot : ''}</div>
-                    </div>
-                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                        ${type === 'aylik' ? `
-                            <button class="btn btn-sm btn-ghost" onclick="toggleShowAllAylikItems('${branch}', '${type}', '${date}', '${timeSlot || ''}')">
-                                📋 Tümünü Göster
-                            </button>
-                        ` : ''}
-                        ${isSubmitted ? `
-                            <div style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:16px;font-size:.8rem">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                                Tamamlandı
-                            </div>
-                        ` : ''}
-                        ${isAdmin && !isSubmitted ? `
-                            <button class="btn btn-sm ${checklistEditMode ? 'btn-primary' : 'btn-ghost'}" onclick="toggleChecklistEditMode('${branch}', '${type}', '${date}', '${timeSlot || ''}')">
-                                ${checklistEditMode ? '✓ Düzenleme' : '✏️ Düzenle'}
-                            </button>
-                        ` : ''}
-                    </div>
+                    ` : ''}
+                    ${isAdmin && !isSubmitted ? `
+                        <button class="btn btn-sm ${checklistEditMode ? 'btn-primary' : 'btn-ghost'}" onclick="toggleChecklistEditMode('${branch}', '${type}', '${date}', '${timeSlot || ''}')">
+                            ${checklistEditMode ? '✓ Düzenleme' : '✏️ Düzenle'}
+                        </button>
+                    ` : ''}
                 </div>
             </div>
-            
             ${isSubmitted ? `
                 <div style="font-size:.75rem;color:var(--tx3);margin-bottom:16px">${submittedData.submittedByName} • ${submittedData.submittedAt?.toDate ? new Date(submittedData.submittedAt.toDate()).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'}) : ''}</div>
             ` : ''}
             
-            ${type === 'aylik' && !checklistEditMode ? `
-                <!-- Temizlik ve Bakım - Sorumlu Renk Açıklaması -->
-                <div style="margin-bottom:20px;padding:14px;background:var(--bg3);border-radius:12px">
-                    <div style="font-size:.75rem;color:var(--tx2);margin-bottom:10px;font-weight:600">🎨 KİM SORUMLU?</div>
-                    <div style="display:flex;flex-wrap:wrap;gap:12px">
-                        <div style="display:flex;align-items:center;gap:6px">
-                            <span style="width:16px;height:16px;background:#00B0F0;border-radius:4px"></span>
-                            <span style="font-size:.8rem;color:var(--tx)">AÇILIŞÇI</span>
+            ${isManager && !isSubmitted ? `
+                <!-- Düzenleme Toolbar - Sticky -->
+                <div id="editToolbar" style="position:sticky;top:60px;z-index:99;margin-bottom:16px;padding:12px 16px;background:var(--bg);border:1px solid var(--cardBorder);border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.08)">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+                        <div style="font-size:.85rem;color:var(--tx);display:flex;align-items:center;gap:8px">
+                            <span style="font-size:1.1rem">📝</span>
+                            <strong>Düzenleme Modu</strong>
+                            <span style="font-size:.7rem;color:var(--tx2);background:var(--bg3);padding:2px 8px;border-radius:8px">Madde ekle, sil veya toplu işlem</span>
                         </div>
-                        <div style="display:flex;align-items:center;gap:6px">
-                            <span style="width:16px;height:16px;background:#FFFF00;border-radius:4px;border:1px solid #ccc"></span>
-                            <span style="font-size:.8rem;color:var(--tx)">HER SHIFT</span>
-                        </div>
-                        <div style="display:flex;align-items:center;gap:6px">
-                            <span style="width:16px;height:16px;background:#C00000;border-radius:4px"></span>
-                            <span style="font-size:.8rem;color:var(--tx)">ARACI</span>
-                        </div>
-                        <div style="display:flex;align-items:center;gap:6px">
-                            <span style="width:16px;height:16px;background:#FFC000;border-radius:4px"></span>
-                            <span style="font-size:.8rem;color:var(--tx)">KAPANIŞÇI</span>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap">
+                            <button class="btn btn-sm btn-primary" onclick="showAddChecklistItemModal()">+ Madde Ekle</button>
+                            <button class="btn btn-sm btn-ghost" onclick="showAddChecklistTypeModal()">📋 Tür Ekle</button>
+                            <button class="btn btn-sm btn-ghost" onclick="selectAllChecklistItems()">☑️ Tümünü Seç</button>
+                            <button class="btn btn-sm btn-ghost" onclick="deselectAllChecklistItems()">☐ Seçimi Kaldır</button>
+                            <button class="btn btn-sm" style="background:#e74c3c;color:#fff" onclick="deleteSelectedChecklistItems('${branch}', '${type}')">🗑️ Seçilenleri Sil</button>
                         </div>
                     </div>
                 </div>
@@ -8932,8 +8995,8 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                         </label>
                         <input type="text" id="checklistPersonName" class="form-input" 
                             value="${submittedData?.personName || autoPersonName}" 
-                            disabled style="opacity:0.7;background:var(--bg2);cursor:not-allowed">
-                        <div style="font-size:.75rem;color:var(--tx3);margin-top:4px">🔒 Giriş yapan kullanıcı</div>
+                            ${isSubmitted || isAutoName ? 'disabled style="opacity:0.7;background:var(--bg2)"' : 'placeholder="Adınızı girin"'}>
+                        ${isAutoName && !isSubmitted ? '<div style="font-size:.75rem;color:var(--tx3);margin-top:4px">✓ Otomatik atandı</div>' : ''}
                     </div>
                     <div style="padding:16px;background:var(--bg3);border-radius:12px">
                         <label class="form-label" style="margin-bottom:8px;display:flex;align-items:center;gap:6px">
@@ -8987,74 +9050,49 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
         const isNotDone = submittedData?.items?.find(i => i.id === item.id)?.notDone;
         const itemNum = index + 1;
         
-        // Temizlik ve Bakım için renk ve sorumlu bilgisi
-        const hasColor = item.color;
-        const isAylik = type === 'aylik';
-        const colorStyle = hasColor ? `border-left:5px solid ${item.color};` : '';
-        const bgColor = hasColor ? `background:${item.color}08;` : '';
-        
-        // Sorumlu badge
-        const responsibleBadge = hasColor && item.responsible ? `
-            <span style="font-size:.65rem;padding:3px 8px;border-radius:12px;background:${item.color};color:#fff;font-weight:600;white-space:nowrap;text-shadow:0 1px 1px rgba(0,0,0,.2)">${item.responsible}</span>
-        ` : '';
-        
-        // Tarih badge (sadece aylik için ve tarih varsa)
-        const datesBadge = isAylik && item.dates && item.dates.length > 0 ? `
-            <span style="font-size:.65rem;padding:2px 6px;border-radius:8px;background:var(--bg4);color:var(--tx2);white-space:nowrap">📅 Ayın ${item.dates.slice(0,4).join(', ')}${item.dates.length > 4 ? '...' : ''}</span>
-        ` : (isAylik && (!item.dates || item.dates.length === 0) ? `
-            <span style="font-size:.65rem;padding:2px 6px;border-radius:8px;background:var(--bg4);color:var(--tx2);white-space:nowrap">🔄 Her gün</span>
-        ` : '');
-        
         if (checklistEditMode) {
             // Düzenleme modu - checkbox ile seçim
             html += `
-                <div class="checklist-item" data-item-id="${item.id}" style="display:flex;align-items:center;gap:12px;padding:14px;${bgColor}border-radius:10px;margin-bottom:8px;border:1px solid var(--cardBorder);${colorStyle}">
+                <div class="checklist-item" data-item-id="${item.id}" style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg2);border-radius:10px;margin-bottom:8px;border:1px solid var(--cardBorder)">
                     <input type="checkbox" class="checklist-select-item" value="${item.id}" style="width:20px;height:20px;cursor:pointer;accent-color:#008c95">
-                    <span style="min-width:28px;height:28px;background:${hasColor ? item.color : 'var(--bg3)'};border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:600;color:${hasColor ? '#fff' : 'var(--tx2)'}">${itemNum}</span>
-                    <div style="flex:1">
-                        <div style="font-size:.9rem;color:var(--tx)">${item.text}</div>
-                        ${isAylik ? `<div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">${responsibleBadge}${datesBadge}</div>` : ''}
-                    </div>
-                    <button onclick="editChecklistItem('${item.id}')" style="background:none;border:none;color:var(--accent2);cursor:pointer;padding:6px;border-radius:6px;transition:all .2s" title="Düzenle">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    </button>
-                    <button onclick="deleteChecklistItem('${item.id}')" style="background:none;border:none;color:#e74c3c;cursor:pointer;padding:6px;border-radius:6px;transition:all .2s" title="Sil">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/></svg>
+                    <span style="min-width:28px;height:28px;background:var(--bg3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:600;color:var(--tx2)">${itemNum}</span>
+                    <div style="flex:1;font-size:.9rem;color:var(--tx)">${item.text}</div>
+                    <button onclick="deleteChecklistItem('${item.id}')" style="background:none;border:none;color:#e74c3c;cursor:pointer;padding:6px;border-radius:6px;transition:all .2s" title="Sil" onmouseover="this.style.background='rgba(231,76,60,.1)'" onmouseout="this.style.background='none'">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/></svg>
                     </button>
                 </div>
             `;
         } else {
-            // Normal mod - check/uncheck with auto numbering
+            // Normal mod - check/uncheck with auto numbering (✓ yeşil, ✗ kırmızı her zaman görünür)
             html += `
-                <div class="checklist-item" style="display:flex;align-items:flex-start;gap:12px;padding:16px;${bgColor}border-radius:10px;margin-bottom:10px;border:1px solid var(--cardBorder);${colorStyle}">
-                    <span style="min-width:32px;height:32px;background:${hasColor ? item.color : 'var(--bg3)'};border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:600;color:${hasColor ? '#fff' : 'var(--tx2)'};flex-shrink:0">${itemNum}</span>
+                <div class="checklist-item" style="display:flex;align-items:flex-start;gap:12px;padding:16px;background:var(--bg2);border-radius:10px;margin-bottom:10px;border:1px solid var(--cardBorder)">
+                    <span style="min-width:32px;height:32px;background:var(--bg3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:600;color:var(--tx2);flex-shrink:0">${itemNum}</span>
                     <div style="display:flex;gap:8px;flex-shrink:0">
                         <label class="check-option" style="display:flex;align-items:center;gap:6px;cursor:${isSubmitted ? 'default' : 'pointer'}">
                             <input type="radio" name="check_${item.id}" value="done" 
                                 ${isChecked ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''}
                                 style="display:none">
                             <span class="check-btn done ${isChecked ? 'active' : ''}" onclick="${isSubmitted ? '' : `selectCheckOption(this, '${item.id}', 'done')`}"
-                                style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;
-                                background:${isChecked ? 'rgba(39,174,96,.2)' : 'var(--bg3)'};
-                                border:2px solid ${isChecked ? '#27ae60' : 'var(--cardBorder)'};
-                                color:${isChecked ? '#27ae60' : 'var(--tx3)'};
-                                transition:all .2s">✓</span>
+                                style="width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;
+                                background:${isChecked ? '#27ae60' : 'rgba(39,174,96,.15)'};
+                                border:2px solid ${isChecked ? '#27ae60' : 'rgba(39,174,96,.5)'};
+                                color:${isChecked ? '#fff' : '#27ae60'};
+                                transition:all .2s;font-weight:bold">✓</span>
                         </label>
                         <label class="check-option" style="display:flex;align-items:center;gap:6px;cursor:${isSubmitted ? 'default' : 'pointer'}">
                             <input type="radio" name="check_${item.id}" value="notdone" 
                                 ${isNotDone ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''}
                                 style="display:none">
                             <span class="check-btn notdone ${isNotDone ? 'active' : ''}" onclick="${isSubmitted ? '' : `selectCheckOption(this, '${item.id}', 'notdone')`}"
-                                style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;
-                                background:${isNotDone ? 'rgba(231,76,60,.2)' : 'var(--bg3)'};
-                                border:2px solid ${isNotDone ? '#e74c3c' : 'var(--cardBorder)'};
-                                color:${isNotDone ? '#e74c3c' : 'var(--tx3)'};
-                                transition:all .2s">✗</span>
+                                style="width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;
+                                background:${isNotDone ? '#e74c3c' : 'rgba(231,76,60,.15)'};
+                                border:2px solid ${isNotDone ? '#e74c3c' : 'rgba(231,76,60,.5)'};
+                                color:${isNotDone ? '#fff' : '#e74c3c'};
+                                transition:all .2s;font-weight:bold">✗</span>
                         </label>
                     </div>
                     <div style="flex:1">
                         <div style="font-size:.9rem;color:var(--tx);line-height:1.5">${item.text}</div>
-                        ${isAylik ? `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${responsibleBadge}${datesBadge}</div>` : ''}
                     </div>
                 </div>
             `;
@@ -9065,9 +9103,8 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
             </div>
             
             ${!checklistEditMode && !isSubmitted ? `
-                <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap">
+                <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
                     <button class="btn btn-ghost" onclick="loadChecklist()">🔄 Yenile</button>
-                    <button class="btn btn-ghost" onclick="downloadChecklistPDF()">📥 PDF İndir</button>
                     <button class="btn btn-primary" onclick="submitChecklist('${branch}', '${type}', '${date}', '${timeSlot || ''}')">
                         ✅ Checklist'i Tamamla
                     </button>
@@ -9223,70 +9260,92 @@ function checkAllItemsMarked() {
 
 // Platform checklist render
 function renderPlatformChecklist(container, branch, date, timeSlot, submittedData) {
+    const isSubmitted = !!submittedData;
     const userName = currentUser?.name || currentUser?.email?.split('@')[0] || 'Personel';
-    const isTuzla = branch.toLowerCase().includes('tuzla');
     
-    // Saatler ve platformlar
-    const timeSlots = ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'];
-    const moonberryPlatforms = ['Trendyol', 'Yemek Sepeti', 'Getir Yemek', 'Migros'];
-    const sunberryPlatforms = isTuzla ? ['Trendyol', 'Yemek Sepeti', 'Getir Yemek', 'Migros'] : [];
-    
-    // Daha önce kaydedilmiş veri
-    const savedData = submittedData?.platformData || {};
+    // Tahmini süre - 8 platform x 30 saniye = ~4 dakika
+    const platformCount = PLATFORMS.length;
+    const estimatedMinutes = Math.ceil(platformCount * 0.5);
     
     let html = `
         <div class="form-section">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
                 <div>
-                    <div style="font-size:1.3rem;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:10px">
-                        <span style="font-size:1.5rem">📱</span> Platform Check
-                    </div>
-                    <div style="font-size:.85rem;color:var(--tx2)">${branch} • ${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})}</div>
+                    <div style="font-size:1.3rem;font-weight:700;color:var(--tx)">📱 Platform Check</div>
+                    <div style="font-size:.85rem;color:var(--tx2)">${branch} • ${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})} • ${timeSlot}</div>
                 </div>
-                <div style="font-size:.8rem;color:var(--tx2);text-align:right">
-                    <div>👤 ${userName}</div>
+                <div style="display:flex;gap:12px;align-items:center">
+                    <div style="text-align:right">
+                        <div style="font-size:.8rem;color:var(--tx2)">👤 ${userName}</div>
+                        <div style="font-size:.75rem;color:var(--accent2)">⏱️ Tahmini: ${estimatedMinutes} dk</div>
+                    </div>
+                    ${isSubmitted ? `
+                        <div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.85rem">
+                            ✓ Tamamlandı
+                        </div>
+                    ` : ''}
                 </div>
             </div>
             
-            <!-- Platform Check Tablosu -->
-            <div style="overflow-x:auto;border-radius:12px;border:1px solid var(--cardBorder)">
-                <table style="width:100%;border-collapse:collapse;min-width:800px">
+            <!-- Uyarı Banner -->
+            <div style="margin-bottom:16px;padding:12px 16px;background:rgba(255,134,116,.12);border:1px solid rgba(255,134,116,.3);border-radius:10px;font-size:.85rem;color:var(--tx)">
+                <strong>⚠️ Önemli:</strong> Her platformu telefon/tabletten açıp kontrol edin. Hızlı geçişler tespit edilir ve puantaja yansır.
+            </div>
+            
+            <div style="margin-bottom:20px;padding:16px;background:var(--bg3);border-radius:12px">
+                <label class="form-label" style="margin-bottom:8px">👤 Personel Adı</label>
+                <input type="text" id="checklistPersonName" class="form-input" placeholder="Adınızı girin" 
+                    value="${submittedData?.personName || currentUser?.name || ''}" 
+                    ${isSubmitted ? 'disabled' : ''}>
+            </div>
+            
+            <div style="background:var(--bg2);border-radius:12px;overflow:hidden;border:1px solid var(--cardBorder)">
+                <table style="width:100%;border-collapse:collapse">
                     <thead>
-                        <tr>
-                            <th rowspan="2" style="padding:12px;background:var(--bg3);border:1px solid var(--cardBorder);font-weight:600;color:var(--tx);width:70px">SAAT</th>
-                            <th colspan="${moonberryPlatforms.length}" style="padding:10px;background:linear-gradient(135deg,#008C95,#00b5a0);color:#fff;text-align:center;font-weight:700;border:1px solid var(--cardBorder)">MOONBERRY</th>
-                            ${isTuzla ? `<th colspan="${sunberryPlatforms.length}" style="padding:10px;background:linear-gradient(135deg,#ff8674,#ff6b5b);color:#fff;text-align:center;font-weight:700;border:1px solid var(--cardBorder)">SUNBERRY</th>` : ''}
-                        </tr>
-                        <tr>
-                            ${moonberryPlatforms.map(p => `<th style="padding:8px;background:rgba(0,140,149,.15);font-size:.75rem;font-weight:600;color:var(--tx);border:1px solid var(--cardBorder);min-width:90px">${p}</th>`).join('')}
-                            ${isTuzla ? sunberryPlatforms.map(p => `<th style="padding:8px;background:rgba(255,134,116,.15);font-size:.75rem;font-weight:600;color:var(--tx);border:1px solid var(--cardBorder);min-width:90px">${p}</th>`).join('') : ''}
+                        <tr style="background:var(--bg3)">
+                            <th style="padding:12px;text-align:left;font-weight:600;color:var(--tx)">Platform</th>
+                            <th style="padding:12px;text-align:center;font-weight:600;color:var(--tx)">Açık ✓</th>
+                            <th style="padding:12px;text-align:center;font-weight:600;color:var(--tx)">Kapalı ✗</th>
                         </tr>
                     </thead>
                     <tbody>
     `;
     
-    timeSlots.forEach(time => {
-        html += `<tr>
-            <td style="padding:10px;background:var(--bg3);font-weight:600;color:var(--tx);text-align:center;border:1px solid var(--cardBorder)">${time}</td>
+    PLATFORMS.forEach(platform => {
+        const isOpen = submittedData?.platforms?.find(p => p.name === platform)?.isOpen;
+        const isClosed = submittedData?.platforms?.find(p => p.name === platform)?.isOpen === false;
+        
+        html += `
+            <tr style="border-top:1px solid var(--cardBorder)">
+                <td style="padding:12px;font-weight:500;color:var(--tx)">${platform}</td>
+                <td style="padding:12px;text-align:center">
+                    <label style="cursor:${isSubmitted ? 'default' : 'pointer'}">
+                        <input type="radio" name="platform_${platform.replace(/\s/g, '_')}" value="open" 
+                            ${isOpen ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''}
+                            style="display:none">
+                        <span onclick="${isSubmitted ? '' : `selectPlatformStatus(this, '${platform.replace(/\s/g, '_')}', true)`}"
+                            style="display:inline-flex;width:40px;height:40px;border-radius:10px;align-items:center;justify-content:center;font-size:1.3rem;
+                            background:${isOpen ? 'rgba(39,174,96,.2)' : 'var(--bg3)'};
+                            border:2px solid ${isOpen ? '#27ae60' : 'transparent'};
+                            color:${isOpen ? '#27ae60' : 'var(--tx3)'};
+                            transition:all .2s">✓</span>
+                    </label>
+                </td>
+                <td style="padding:12px;text-align:center">
+                    <label style="cursor:${isSubmitted ? 'default' : 'pointer'}">
+                        <input type="radio" name="platform_${platform.replace(/\s/g, '_')}" value="closed" 
+                            ${isClosed ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''}
+                            style="display:none">
+                        <span onclick="${isSubmitted ? '' : `selectPlatformStatus(this, '${platform.replace(/\s/g, '_')}', false)`}"
+                            style="display:inline-flex;width:40px;height:40px;border-radius:10px;align-items:center;justify-content:center;font-size:1.3rem;
+                            background:${isClosed ? 'rgba(231,76,60,.2)' : 'var(--bg3)'};
+                            border:2px solid ${isClosed ? '#e74c3c' : 'transparent'};
+                            color:${isClosed ? '#e74c3c' : 'var(--tx3)'};
+                            transition:all .2s">✗</span>
+                    </label>
+                </td>
+            </tr>
         `;
-        
-        // Moonberry platformları
-        moonberryPlatforms.forEach(platform => {
-            const cellKey = `moonberry_${time}_${platform}`.replace(/[:\s]/g, '_');
-            const cellData = savedData[cellKey];
-            html += renderPlatformCell(cellKey, cellData, 'moonberry');
-        });
-        
-        // Sunberry platformları (sadece Tuzla)
-        if (isTuzla) {
-            sunberryPlatforms.forEach(platform => {
-                const cellKey = `sunberry_${time}_${platform}`.replace(/[:\s]/g, '_');
-                const cellData = savedData[cellKey];
-                html += renderPlatformCell(cellKey, cellData, 'sunberry');
-            });
-        }
-        
-        html += `</tr>`;
     });
     
     html += `
@@ -9294,133 +9353,46 @@ function renderPlatformChecklist(container, branch, date, timeSlot, submittedDat
                 </table>
             </div>
             
-            <div style="margin-top:16px;display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap">
-                <div style="display:flex;gap:16px;font-size:.8rem;color:var(--tx2)">
-                    <span style="display:flex;align-items:center;gap:4px"><span style="color:#27ae60;font-size:1.1rem">✓</span> Açık</span>
-                    <span style="display:flex;align-items:center;gap:4px"><span style="color:#e74c3c;font-size:1.1rem">✗</span> Kapalı</span>
+            ${!isSubmitted ? `
+                <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
+                    <button class="btn btn-primary" onclick="submitPlatformChecklist('${branch}', '${date}', '${timeSlot}')">
+                        ✅ Platform Check'i Tamamla
+                    </button>
                 </div>
-                <button class="btn btn-primary" onclick="savePlatformCheck('${branch}', '${date}')">
-                    💾 Kaydet
-                </button>
-            </div>
+            ` : ''}
         </div>
     `;
     
     container.innerHTML = html;
 }
 
-// Platform hücre render
-function renderPlatformCell(cellKey, cellData, brand) {
-    const bgColor = brand === 'moonberry' ? 'rgba(255,134,116,.05)' : 'rgba(0,140,149,.05)';
-    
-    if (cellData) {
-        // Daha önce işaretlenmiş
-        const isOpen = cellData.status === 'open';
-        const statusColor = isOpen ? '#27ae60' : '#e74c3c';
-        const statusBg = isOpen ? 'rgba(39,174,96,.15)' : 'rgba(231,76,60,.15)';
-        const statusIcon = isOpen ? '✓' : '✗';
-        return `
-            <td style="padding:6px;border:1px solid var(--cardBorder);background:${statusBg};text-align:center;vertical-align:top">
-                <div style="font-size:1.2rem;color:${statusColor};font-weight:bold">${statusIcon}</div>
-                <div style="font-size:.65rem;color:var(--tx2);margin-top:2px">${cellData.person || ''}</div>
-                <div style="font-size:.6rem;color:var(--tx3)">${cellData.time || ''}</div>
-            </td>
-        `;
-    }
-    
-    // Boş hücre - seçim yapılabilir
-    return `
-        <td style="padding:4px;border:1px solid var(--cardBorder);background:${bgColor};text-align:center" data-cell="${cellKey}">
-            <div style="display:flex;gap:4px;justify-content:center">
-                <button onclick="setPlatformStatus('${cellKey}', 'open')" 
-                    style="width:32px;height:32px;border-radius:6px;border:1px solid var(--cardBorder);background:var(--bg2);color:var(--tx3);cursor:pointer;font-size:1rem;transition:all .2s"
-                    onmouseover="this.style.background='rgba(39,174,96,.2)';this.style.color='#27ae60';this.style.borderColor='#27ae60'"
-                    onmouseout="this.style.background='var(--bg2)';this.style.color='var(--tx3)';this.style.borderColor='var(--cardBorder)'">✓</button>
-                <button onclick="setPlatformStatus('${cellKey}', 'closed')" 
-                    style="width:32px;height:32px;border-radius:6px;border:1px solid var(--cardBorder);background:var(--bg2);color:var(--tx3);cursor:pointer;font-size:1rem;transition:all .2s"
-                    onmouseover="this.style.background='rgba(231,76,60,.2)';this.style.color='#e74c3c';this.style.borderColor='#e74c3c'"
-                    onmouseout="this.style.background='var(--bg2)';this.style.color='var(--tx3)';this.style.borderColor='var(--cardBorder)'">✗</button>
-            </div>
-        </td>
-    `;
-}
-
-// Platform status set
-let platformCheckData = {};
-
-function setPlatformStatus(cellKey, status) {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'});
-    const userName = currentUser?.name || currentUser?.email?.split('@')[0] || 'Personel';
-    
-    platformCheckData[cellKey] = {
-        status: status,
-        person: userName,
-        time: timeStr
-    };
-    
-    // Hücreyi güncelle
-    const cell = document.querySelector(`td[data-cell="${cellKey}"]`);
-    if (cell) {
-        const isOpen = status === 'open';
-        const statusColor = isOpen ? '#27ae60' : '#e74c3c';
-        const statusBg = isOpen ? 'rgba(39,174,96,.15)' : 'rgba(231,76,60,.15)';
-        const statusIcon = isOpen ? '✓' : '✗';
-        
-        cell.innerHTML = `
-            <div style="font-size:1.2rem;color:${statusColor};font-weight:bold">${statusIcon}</div>
-            <div style="font-size:.65rem;color:var(--tx2);margin-top:2px">${userName}</div>
-            <div style="font-size:.6rem;color:var(--tx3)">${timeStr}</div>
-        `;
-        cell.style.background = statusBg;
-        cell.removeAttribute('data-cell');
-    }
-    
-    toast(`Platform ${status === 'open' ? 'açık' : 'kapalı'} olarak işaretlendi`, 'success');
-}
-
-// Platform Check kaydet
-async function savePlatformCheck(branch, date) {
-    if (Object.keys(platformCheckData).length === 0) {
-        toast('Henüz hiçbir platform işaretlenmedi', 'error');
-        return;
-    }
-    
-    try {
-        const docId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_platform_${date}`;
-        
-        // Mevcut veriyi al ve birleştir
-        let existingData = {};
-        try {
-            const doc = await db.collection('platformChecks').doc(docId).get();
-            if (doc.exists) {
-                existingData = doc.data().platformData || {};
-            }
-        } catch (e) {}
-        
-        const mergedData = { ...existingData, ...platformCheckData };
-        
-        await db.collection('platformChecks').doc(docId).set({
-            branch,
-            date,
-            platformData: mergedData,
-            lastUpdatedBy: currentUser?.name || currentUser?.email,
-            lastUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-        
-        toast('Platform Check kaydedildi!', 'success');
-        platformCheckData = {}; // Reset
-        
-    } catch (error) {
-        console.error('Platform Check kayıt hatası:', error);
-        toast('Kayıt hatası: ' + error.message, 'error');
-    }
-}
-
-// Platform status seç (eski fonksiyon - uyumluluk için)
+// Platform status seç
 function selectPlatformStatus(btn, platformKey, isOpen) {
-    // Eski versiyon uyumluluğu
-    setPlatformStatus(platformKey, isOpen ? 'open' : 'closed');
+    const row = btn.closest('tr');
+    const openSpan = row.querySelector('td:nth-child(2) span');
+    const closedSpan = row.querySelector('td:nth-child(3) span');
+    const openInput = row.querySelector('input[value="open"]');
+    const closedInput = row.querySelector('input[value="closed"]');
+    
+    // Reset
+    openSpan.style.background = 'var(--bg3)';
+    openSpan.style.borderColor = 'transparent';
+    openSpan.style.color = 'var(--tx3)';
+    closedSpan.style.background = 'var(--bg3)';
+    closedSpan.style.borderColor = 'transparent';
+    closedSpan.style.color = 'var(--tx3)';
+    
+    if (isOpen) {
+        openInput.checked = true;
+        openSpan.style.background = 'rgba(39,174,96,.2)';
+        openSpan.style.borderColor = '#27ae60';
+        openSpan.style.color = '#27ae60';
+    } else {
+        closedInput.checked = true;
+        closedSpan.style.background = 'rgba(231,76,60,.2)';
+        closedSpan.style.borderColor = '#e74c3c';
+        closedSpan.style.color = '#e74c3c';
+    }
 }
 
 // Checklist gönder
@@ -9713,7 +9685,108 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
 }
 
 // Checklist madde ekle modal
-function showAddChecklistItemModal(editItem = null) {
+// Yeni checklist türü ekleme modal
+function showAddChecklistTypeModal() {
+    const branch = document.getElementById('checklistSube')?.value;
+    
+    if (!branch) {
+        toast('Önce şube seçin', 'error');
+        return;
+    }
+    
+    showModal('Yeni Checklist Türü Ekle', `
+        <div class="form-group">
+            <label class="form-label">Şube</label>
+            <input type="text" class="form-input" value="${branch}" disabled>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Tür ID *</label>
+            <input type="text" id="newChecklistTypeId" class="form-input" placeholder="örn: ogle_kontrol">
+            <div style="font-size:.75rem;color:var(--tx3);margin-top:4px">Küçük harf, boşluksuz, Türkçe karakter olmadan</div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Tür Adı *</label>
+            <input type="text" id="newChecklistTypeName" class="form-input" placeholder="örn: Öğle Kontrol">
+        </div>
+        <div class="form-group">
+            <label class="form-label">İkon</label>
+            <select id="newChecklistTypeIcon" class="form-select">
+                <option value="clipboard-check">📋 Checklist</option>
+                <option value="sun">☀️ Güneş (Açılış)</option>
+                <option value="moon">🌙 Ay (Kapanış)</option>
+                <option value="clock">🕐 Saat</option>
+                <option value="calendar">📅 Takvim</option>
+                <option value="refresh-cw">🔄 Güncel</option>
+                <option value="coffee">☕ Kahve</option>
+                <option value="truck">🚚 Araç</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Saat Dilimleri (opsiyonel)</label>
+            <input type="text" id="newChecklistTypeTimeSlots" class="form-input" placeholder="örn: 10:00,14:00,18:00">
+            <div style="font-size:.75rem;color:var(--tx3);margin-top:4px">Virgülle ayırın, boş bırakılırsa saat dilimi olmaz</div>
+        </div>
+    `, `
+        <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
+        <button class="btn btn-primary" onclick="addChecklistType('${branch}')">Ekle</button>
+    `);
+}
+
+// Yeni checklist türü ekle
+async function addChecklistType(branch) {
+    const typeId = document.getElementById('newChecklistTypeId')?.value?.trim().toLowerCase().replace(/\s+/g, '_');
+    const typeName = document.getElementById('newChecklistTypeName')?.value?.trim();
+    const icon = document.getElementById('newChecklistTypeIcon')?.value || 'clipboard-check';
+    const timeSlotsRaw = document.getElementById('newChecklistTypeTimeSlots')?.value?.trim();
+    
+    if (!typeId || !typeName) {
+        toast('Tür ID ve adı gerekli', 'error');
+        return;
+    }
+    
+    if (!/^[a-z0-9_]+$/.test(typeId)) {
+        toast('Tür ID sadece küçük harf, rakam ve alt çizgi içerebilir', 'error');
+        return;
+    }
+    
+    const timeSlots = timeSlotsRaw ? timeSlotsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+    
+    try {
+        const configRef = db.collection('config').doc('checklistTypes');
+        const configDoc = await configRef.get();
+        
+        let checklistTypes = configDoc.exists ? configDoc.data() : {};
+        
+        if (!checklistTypes[branch] || !Array.isArray(checklistTypes[branch])) {
+            checklistTypes[branch] = [];
+        }
+        
+        if (checklistTypes[branch].some(t => t.id === typeId)) {
+            toast('Bu ID zaten mevcut', 'error');
+            return;
+        }
+        
+        const newType = { id: typeId, name: typeName, icon };
+        if (timeSlots.length > 0) {
+            newType.timeSlots = timeSlots;
+        }
+        
+        checklistTypes[branch].push(newType);
+        await configRef.set(checklistTypes);
+        
+        CHECKLIST_TYPES[branch] = checklistTypes[branch];
+        
+        closeModal();
+        toast('Checklist türü eklendi', 'success');
+        loadChecklistTypes();
+        
+    } catch (error) {
+        console.error('Tür ekleme hatası:', error);
+        toast('Ekleme hatası!', 'error');
+    }
+}
+
+function showAddChecklistItemModal() {
     const branch = document.getElementById('checklistSube')?.value;
     const type = document.getElementById('checklistType')?.value;
     
@@ -9722,110 +9795,30 @@ function showAddChecklistItemModal(editItem = null) {
         return;
     }
     
-    const isAylik = type === 'aylik';
-    const isEdit = !!editItem;
-    const title = isEdit ? 'Madde Düzenle' : 'Yeni Madde Ekle';
-    
-    // Tarih seçenekleri (1-31)
-    const dateOptions = Array.from({length: 31}, (_, i) => i + 1);
-    const selectedDates = editItem?.dates || [];
-    
-    showModal(title, `
+    showModal('Yeni Madde Ekle', `
         <div class="form-group">
-            <label class="form-label">Madde Metni *</label>
-            <textarea id="newChecklistItemText" class="form-input" rows="3" placeholder="Kontrol maddesi...">${editItem?.text || ''}</textarea>
+            <label class="form-label">Madde Metni</label>
+            <textarea id="newChecklistItemText" class="form-input" rows="3" placeholder="Kontrol maddesi..."></textarea>
         </div>
         <div class="form-group">
-            <label class="form-label">Tahmini Süre (saniye)</label>
-            <input type="number" id="newChecklistItemDuration" class="form-input" placeholder="örn: 300" value="${editItem?.duration || 60}">
+            <label class="form-label">Ceza (opsiyonel)</label>
+            <input type="text" id="newChecklistItemPenalty" class="form-input" placeholder="örn: -100 puan">
         </div>
-        ${isAylik ? `
-            <div class="form-group">
-                <label class="form-label">Sorumlu</label>
-                <select id="newChecklistItemResponsible" class="form-select">
-                    <option value="">-- Seçin --</option>
-                    <option value="AÇILIŞÇI" ${editItem?.responsible === 'AÇILIŞÇI' ? 'selected' : ''}>🔵 AÇILIŞÇI</option>
-                    <option value="HER SHIFT" ${editItem?.responsible === 'HER SHIFT' ? 'selected' : ''}>🟡 HER SHIFT</option>
-                    <option value="ARACI" ${editItem?.responsible === 'ARACI' ? 'selected' : ''}>🔴 ARACI</option>
-                    <option value="KAPANIŞÇI" ${editItem?.responsible === 'KAPANIŞÇI' ? 'selected' : ''}>🟠 KAPANIŞÇI</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Yapılacak Günler (boş = her gün)</label>
-                <div style="display:flex;flex-wrap:wrap;gap:4px;max-height:150px;overflow-y:auto;padding:8px;background:var(--bg3);border-radius:8px">
-                    ${dateOptions.map(d => `
-                        <label style="display:flex;align-items:center;gap:4px;padding:4px 8px;background:var(--bg2);border-radius:6px;cursor:pointer;font-size:.8rem">
-                            <input type="checkbox" class="newItemDate" value="${d}" ${selectedDates.includes(d) ? 'checked' : ''}>
-                            ${d}
-                        </label>
-                    `).join('')}
-                </div>
-                <div style="font-size:.75rem;color:var(--tx3);margin-top:4px">Hiç seçilmezse her gün gösterilir</div>
-            </div>
-        ` : `
-            <div class="form-group">
-                <label class="form-label">Ceza (opsiyonel)</label>
-                <input type="text" id="newChecklistItemPenalty" class="form-input" placeholder="örn: -100 puan" value="${editItem?.penalty || ''}">
-            </div>
-        `}
-        <input type="hidden" id="editChecklistItemId" value="${editItem?.id || ''}">
     `, `
         <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
-        <button class="btn btn-primary" onclick="addChecklistItem('${branch}', '${type}')">${isEdit ? 'Güncelle' : 'Ekle'}</button>
+        <button class="btn btn-primary" onclick="addChecklistItem('${branch}', '${type}')">Ekle</button>
     `);
 }
 
-// Checklist madde düzenle
-function editChecklistItem(itemId) {
-    const branch = document.getElementById('checklistSube')?.value;
-    const type = document.getElementById('checklistType')?.value;
-    
-    // Firebase'den maddeyi bul
-    const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
-    db.collection('checklists').doc(checklistId).get().then(doc => {
-        if (doc.exists) {
-            const item = doc.data().items?.find(i => i.id === itemId);
-            if (item) {
-                showAddChecklistItemModal(item);
-            }
-        }
-    });
-}
-
-// Checklist madde ekle/güncelle
+// Checklist madde ekle
 async function addChecklistItem(branch, type) {
     const text = document.getElementById('newChecklistItemText')?.value?.trim();
-    const duration = parseInt(document.getElementById('newChecklistItemDuration')?.value) || 60;
-    const editId = document.getElementById('editChecklistItemId')?.value;
-    const isEdit = !!editId;
+    const penalty = document.getElementById('newChecklistItemPenalty')?.value?.trim();
     
     if (!text) {
         toast('Madde metni gerekli', 'error');
         return;
     }
-    
-    // Temizlik ve bakım için ek alanlar
-    const isAylik = type === 'aylik';
-    let responsible = '';
-    let dates = [];
-    let color = '';
-    
-    if (isAylik) {
-        responsible = document.getElementById('newChecklistItemResponsible')?.value || '';
-        const dateCheckboxes = document.querySelectorAll('.newItemDate:checked');
-        dates = Array.from(dateCheckboxes).map(cb => parseInt(cb.value));
-        
-        // Sorumluya göre renk ata
-        const colorMap = {
-            'AÇILIŞÇI': '#00B0F0',
-            'HER SHIFT': '#FFFF00',
-            'ARACI': '#C00000',
-            'KAPANIŞÇI': '#FFC000'
-        };
-        color = colorMap[responsible] || '';
-    }
-    
-    const penalty = document.getElementById('newChecklistItemPenalty')?.value?.trim() || null;
     
     try {
         const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
@@ -9833,28 +9826,17 @@ async function addChecklistItem(branch, type) {
         const doc = await checklistRef.get();
         
         const newItem = {
-            id: isEdit ? editId : 'item_' + Date.now(),
+            id: 'item_' + Date.now(),
             text,
-            duration,
-            ...(isAylik && { responsible, dates, color }),
-            ...(!isAylik && penalty && { penalty }),
+            penalty: penalty || null,
             order: (doc.exists ? doc.data().items?.length : 0) + 1
         };
         
-        if (isEdit && doc.exists) {
-            // Güncelleme
-            const items = doc.data().items.map(i => i.id === editId ? newItem : i);
-            await checklistRef.update({
-                items,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            toast('Madde güncellendi', 'success');
-        } else if (doc.exists) {
+        if (doc.exists) {
             await checklistRef.update({
                 items: firebase.firestore.FieldValue.arrayUnion(newItem),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-            toast('Madde eklendi', 'success');
         } else {
             await checklistRef.set({
                 branch,
@@ -9862,15 +9844,15 @@ async function addChecklistItem(branch, type) {
                 items: [newItem],
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-            toast('Madde eklendi', 'success');
         }
         
         closeModal();
+        toast('Madde eklendi', 'success');
         loadChecklist();
         
     } catch (error) {
         console.error('Madde ekleme hatası:', error);
-        toast('İşlem hatası!', 'error');
+        toast('Ekleme hatası!', 'error');
     }
 }
 
@@ -10013,470 +9995,6 @@ function getDefaultChecklistItems(branch, type) {
     // Veriler artık Firebase'den yükleniyor
     // seed.html programı ile veritabanına yüklendi
     return [];
-}
-
-// =====================================================
-// IMPERSONATION (Kullanıcı Gözünden Gör)
-// =====================================================
-let isImpersonating = false;
-let impersonatedUser = null;
-let originalUserData = null;
-
-// Sayfa yüklendiğinde yönetici için butonu göster
-function checkImpersonateButton() {
-    if (currentUser && currentUser.role === 'yonetici') {
-        const btn = document.getElementById('btnImpersonate');
-        if (btn) btn.style.display = 'flex';
-    }
-}
-
-// Impersonation modal göster
-async function showImpersonationModal() {
-    if (!currentUser || currentUser.role !== 'yonetici') {
-        toast('Bu özellik sadece yöneticiler için aktif.', 'error');
-        return;
-    }
-    
-    // Personel listesini Firebase'den al
-    let personnel = [];
-    try {
-        const personnelDoc = await db.collection('config').doc('personnel').get();
-        if (personnelDoc.exists) {
-            personnel = personnelDoc.data().list || [];
-        }
-    } catch (e) {
-        console.error('Personel listesi alınamadı:', e);
-    }
-    
-    const roleLabels = { yonetici: 'Yönetici', bolge_muduru: 'Bölge Müdürü', magaza_muduru: 'Mağaza Müdürü', barista: 'Barista' };
-    
-    const html = `
-        <div style="font-size:.85rem;color:var(--tx2);margin-bottom:16px">Bir kullanıcı seçerek onun gördüğü ekranı görüntüleyin:</div>
-        <div style="display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto">
-            ${personnel.filter(p => p.email !== currentUser.email).map(p => `
-                <div onclick="startImpersonation('${p.email}', '${p.name}', '${p.branch}', '${p.role}')" 
-                     style="padding:12px;background:var(--bg3);border:1px solid var(--cardBorder);border-radius:8px;cursor:pointer;transition:all .2s"
-                     onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--cardBorder)'">
-                    <div style="font-weight:600;color:var(--tx)">${p.name}</div>
-                    <div style="font-size:.75rem;color:var(--tx2)">${p.branch} • ${roleLabels[p.role] || p.role}</div>
-                </div>
-            `).join('')}
-        </div>
-    `;
-    
-    showModal('👁️ Kullanıcı Gözünden Gör', html, '<button class="btn btn-ghost" onclick="closeModal()">Kapat</button>');
-}
-
-// Impersonation başlat
-function startImpersonation(email, name, branch, role) {
-    if (!isImpersonating) {
-        originalUserData = { ...currentUser };
-    }
-    
-    isImpersonating = true;
-    impersonatedUser = { email, name, branch, role };
-    
-    // Geçici olarak currentUser'ı değiştir (read-only işlemler için)
-    currentUser.branch = branch;
-    currentUser.role = role;
-    currentUser.name = name;
-    currentUser.email = email;
-    
-    // UI güncelle
-    document.getElementById('impersonationBanner').style.display = 'block';
-    document.getElementById('impersonatingAs').textContent = `${name} (${getRoleName(role)})`;
-    document.getElementById('userName').textContent = name;
-    document.getElementById('userRole').textContent = getRoleName(role);
-    
-    // Modal kapat
-    closeModal();
-    
-    // Sayfayı yenile
-    applyPermissions();
-    if (document.getElementById('page-checklist').classList.contains('active')) {
-        loadChecklistTypes();
-    }
-    
-    toast(`${name} olarak görüntüleniyor`, 'success');
-}
-
-// Impersonation çıkış
-function exitImpersonation() {
-    if (!isImpersonating || !originalUserData) return;
-    
-    isImpersonating = false;
-    
-    // Orijinal kullanıcıya geri dön
-    currentUser.branch = originalUserData.branch;
-    currentUser.role = originalUserData.role;
-    currentUser.name = originalUserData.name;
-    currentUser.email = originalUserData.email;
-    
-    impersonatedUser = null;
-    
-    // UI güncelle
-    document.getElementById('impersonationBanner').style.display = 'none';
-    document.getElementById('userName').textContent = originalUserData.name || originalUserData.email;
-    document.getElementById('userRole').textContent = getRoleName(originalUserData.role);
-    
-    // Sayfayı yenile
-    applyPermissions();
-    if (document.getElementById('page-checklist').classList.contains('active')) {
-        loadChecklistTypes();
-    }
-    
-    toast('Normal görünüme dönüldü', 'success');
-}
-
-// =====================================================
-// PDF İNDİRME FONKSİYONU
-// =====================================================
-function downloadChecklistPDF() {
-    const branch = document.getElementById('checklistSube')?.value;
-    const type = document.getElementById('checklistType')?.value;
-    const date = document.getElementById('checklistDate')?.value;
-    const timeSlot = document.getElementById('checklistTimeSlot')?.value;
-    
-    if (!branch || !type || !date) {
-        toast('Lütfen önce checklist seçin', 'error');
-        return;
-    }
-    
-    const items = document.querySelectorAll('#checklistFormContainer .checklist-item-row');
-    if (items.length === 0) {
-        toast('İndirilecek checklist bulunamadı', 'error');
-        return;
-    }
-    
-    const typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === type);
-    const now = new Date();
-    const userName = isImpersonating ? impersonatedUser.name : (currentUser?.name || currentUser?.email);
-    
-    const checkedItems = [];
-    const uncheckedItems = [];
-    
-    items.forEach(item => {
-        const checkbox = item.querySelector('input[type="checkbox"]');
-        const textEl = item.querySelector('.checklist-item-text');
-        if (checkbox && textEl) {
-            const text = textEl.textContent.trim();
-            if (checkbox.checked) {
-                checkedItems.push({ text, status: '✓ Yapıldı' });
-            } else {
-                uncheckedItems.push({ text, status: '✗ Yapılmadı' });
-            }
-        }
-    });
-    
-    const docDefinition = {
-        pageSize: 'A4',
-        pageMargins: [40, 60, 40, 60],
-        content: [
-            { text: 'MOONBERRY COFFEE', style: 'header', alignment: 'center' },
-            { text: `${typeInfo?.name || type} - ${branch}`, style: 'subheader', alignment: 'center' },
-            { text: ' ', margin: [0, 10] },
-            {
-                columns: [
-                    { text: `Tarih: ${new Date(date).toLocaleDateString('tr-TR')}${timeSlot ? ' ' + timeSlot : ''}`, style: 'info' },
-                    { text: `Oluşturulma: ${now.toLocaleString('tr-TR')}`, style: 'info', alignment: 'right' }
-                ]
-            },
-            { text: `Personel: ${userName}`, style: 'info' },
-            { text: ' ', margin: [0, 10] },
-            { text: `Tamamlanan: ${checkedItems.length}/${checkedItems.length + uncheckedItems.length}`, style: 'summary' },
-            { text: ' ', margin: [0, 15] },
-            { text: 'TAMAMLANAN MADDELER', style: 'sectionTitle' },
-            ...checkedItems.map(item => ({ text: `✓ ${item.text}`, style: 'itemDone', margin: [0, 3] })),
-            { text: ' ', margin: [0, 10] },
-            { text: 'TAMAMLANMAYAN MADDELER', style: 'sectionTitle' },
-            ...uncheckedItems.map(item => ({ text: `✗ ${item.text}`, style: 'itemNotDone', margin: [0, 3] }))
-        ],
-        styles: {
-            header: { fontSize: 18, bold: true, color: '#008c95' },
-            subheader: { fontSize: 14, bold: true, color: '#ff8674', margin: [0, 10] },
-            info: { fontSize: 10, color: '#555' },
-            summary: { fontSize: 12, bold: true, color: '#1a1a1a' },
-            sectionTitle: { fontSize: 11, bold: true, color: '#333', margin: [0, 5] },
-            itemDone: { fontSize: 9, color: '#27ae60' },
-            itemNotDone: { fontSize: 9, color: '#e74c3c' }
-        }
-    };
-    
-    pdfMake.createPdf(docDefinition).download(`Checklist_${type}_${date}.pdf`);
-    toast('PDF indiriliyor...', 'success');
-}
-
-// Sayfa yüklendiğinde impersonate butonunu kontrol et
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(checkImpersonateButton, 1000);
-});
-
-// Temizlik ve Bakım - Tümünü Göster/Filtrele
-let showAllAylikItems = false;
-
-async function toggleShowAllAylikItems(branch, type, date, timeSlot) {
-    showAllAylikItems = !showAllAylikItems;
-    
-    const container = document.getElementById('checklistFormContainer');
-    container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--tx2)">
-        <div class="loading-spinner" style="margin:0 auto 16px"></div>
-        Yeniden yükleniyor...
-    </div>`;
-    
-    try {
-        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
-        const checklistDoc = await db.collection('checklists').doc(checklistId).get();
-        
-        if (!checklistDoc.exists) return;
-        
-        let items = checklistDoc.data().items || [];
-        const totalItemCount = items.length;
-        
-        // Filtreleme
-        if (!showAllAylikItems) {
-            const selectedDate = new Date(date);
-            const dayOfMonth = selectedDate.getDate();
-            
-            items = items.filter(item => {
-                const text = item.text || '';
-                const dateMatch = text.match(/ayın\s*([\d,\-\s]+)/i);
-                if (!dateMatch) return true;
-                
-                const dateStr = dateMatch[1];
-                const dates = dateStr.split(/[,\s]+/).flatMap(part => {
-                    if (part.includes('-')) {
-                        return part.split('-').map(d => parseInt(d.trim()));
-                    }
-                    return [parseInt(part.trim())];
-                }).filter(d => !isNaN(d));
-                
-                return dates.includes(dayOfMonth);
-            });
-        }
-        
-        // Submission kontrol
-        let submittedData = null;
-        try {
-            const submissionId = `${checklistId}_${date}${timeSlot ? '_' + timeSlot.replace(':', '') : ''}`;
-            const submissionDoc = await db.collection('checklistSubmissions').doc(submissionId).get();
-            if (submissionDoc.exists) submittedData = submissionDoc.data();
-        } catch (e) {}
-        
-        renderChecklistForm(items, branch, type, date, timeSlot, submittedData, totalItemCount);
-        
-        toast(showAllAylikItems ? 'Tüm maddeler gösteriliyor' : 'Bugüne göre filtrelendi', 'success');
-        
-    } catch (error) {
-        console.error('Hata:', error);
-        toast('Yüklenirken hata oluştu', 'error');
-    }
-}
-
-// =====================================================
-// HAFTALIK GÖREVLER - Personel Atama Sistemi
-// =====================================================
-async function renderHaftalikGorevler(container, items, branch, date) {
-    const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
-    const currentWeek = getWeekNumber(new Date(date));
-    const weekDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_haftalik_${currentWeek.year}_W${currentWeek.week}`;
-    
-    // Personel listesi (şubeye göre)
-    const branchPersonnel = personnelMapping.filter(p => 
-        p.branch === branch || currentUser?.role === 'yonetici'
-    );
-    
-    // Bu haftaki atamalar
-    let weeklyAssignments = {};
-    try {
-        const doc = await db.collection('weeklyAssignments').doc(weekDocId).get();
-        if (doc.exists) {
-            weeklyAssignments = doc.data().assignments || {};
-        }
-    } catch (e) {
-        console.warn('Haftalık atama verisi alınamadı:', e);
-    }
-    
-    let html = `
-        <div class="form-section">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-                <div>
-                    <div style="font-size:1.3rem;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:10px">
-                        <span style="font-size:1.5rem">📋</span> Haftalık Görevler
-                    </div>
-                    <div style="font-size:.85rem;color:var(--tx2)">${branch} • Hafta ${currentWeek.week} (${currentWeek.year})</div>
-                </div>
-                ${isManager ? `
-                    <button class="btn btn-sm btn-ghost" onclick="toggleHaftalikEditMode()">
-                        ✏️ Görev Ata
-                    </button>
-                ` : ''}
-            </div>
-            
-            <div id="haftalikGorevlerContent">
-    `;
-    
-    // Görev listesi
-    items.forEach((item, idx) => {
-        const assignment = weeklyAssignments[idx];
-        const assignedTo = assignment?.assignedTo;
-        const isCompleted = assignment?.completed;
-        const completedBy = assignment?.completedBy;
-        const completedAt = assignment?.completedAt;
-        
-        // Kullanıcı bu görevi yapabilir mi?
-        const canComplete = assignedTo === currentUser?.email || assignedTo === currentUser?.name;
-        
-        html += `
-            <div class="haftalik-gorev-item" style="padding:14px;background:var(--bg3);border-radius:10px;margin-bottom:10px;border-left:4px solid ${isCompleted ? '#27ae60' : (assignedTo ? 'var(--accent)' : 'var(--cardBorder)')}">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
-                    <div style="flex:1">
-                        <div style="font-weight:500;color:var(--tx);margin-bottom:4px">${item.text}</div>
-                        ${assignedTo ? `
-                            <div style="font-size:.8rem;color:var(--tx2);display:flex;align-items:center;gap:6px">
-                                <span>👤 ${assignedTo}</span>
-                                ${isCompleted ? `
-                                    <span style="color:#27ae60">• ✓ Tamamlandı ${completedAt || ''}</span>
-                                ` : ''}
-                            </div>
-                        ` : `
-                            <div style="font-size:.8rem;color:var(--tx3)">Henüz atanmadı</div>
-                        `}
-                    </div>
-                    <div>
-                        ${canComplete && !isCompleted ? `
-                            <button onclick="completeHaftalikGorev('${weekDocId}', ${idx})" 
-                                class="btn btn-sm btn-primary" style="padding:8px 16px">
-                                ✓ Tamamla
-                            </button>
-                        ` : ''}
-                        ${isCompleted ? `
-                            <span style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:6px;font-size:.8rem">
-                                ✓ Yapıldı
-                            </span>
-                        ` : ''}
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-    
-    html += `
-            </div>
-        </div>
-    `;
-    
-    container.innerHTML = html;
-}
-
-// Hafta numarası hesapla
-function getWeekNumber(date) {
-    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-    return { week: weekNo, year: d.getUTCFullYear() };
-}
-
-// Haftalık görev tamamla
-async function completeHaftalikGorev(weekDocId, taskIndex) {
-    try {
-        const now = new Date();
-        const timeStr = now.toLocaleString('tr-TR', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'});
-        
-        await db.collection('weeklyAssignments').doc(weekDocId).set({
-            [`assignments.${taskIndex}.completed`]: true,
-            [`assignments.${taskIndex}.completedBy`]: currentUser?.name || currentUser?.email,
-            [`assignments.${taskIndex}.completedAt`]: timeStr
-        }, { merge: true });
-        
-        toast('Görev tamamlandı!', 'success');
-        loadChecklist(); // Yenile
-        
-    } catch (error) {
-        console.error('Görev tamamlama hatası:', error);
-        toast('Hata: ' + error.message, 'error');
-    }
-}
-
-// Haftalık görev atama modalı
-async function showHaftalikAtamaModal(branch, items) {
-    const currentWeek = getWeekNumber(new Date());
-    const weekDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_haftalik_${currentWeek.year}_W${currentWeek.week}`;
-    
-    // Şube personelleri
-    const branchPersonnel = personnelMapping.filter(p => p.branch === branch);
-    
-    // Mevcut atamalar
-    let weeklyAssignments = {};
-    try {
-        const doc = await db.collection('weeklyAssignments').doc(weekDocId).get();
-        if (doc.exists) {
-            weeklyAssignments = doc.data().assignments || {};
-        }
-    } catch (e) {}
-    
-    let html = `
-        <div style="max-height:500px;overflow-y:auto">
-            <div style="font-size:.85rem;color:var(--tx2);margin-bottom:16px">
-                Her görev için bir personel seçin. Hafta ${currentWeek.week}
-            </div>
-    `;
-    
-    items.forEach((item, idx) => {
-        const currentAssignment = weeklyAssignments[idx]?.assignedTo || '';
-        html += `
-            <div style="padding:12px;background:var(--bg3);border-radius:8px;margin-bottom:10px">
-                <div style="font-size:.9rem;color:var(--tx);margin-bottom:8px">${item.text}</div>
-                <select id="haftalikAtama_${idx}" class="form-select" style="font-size:.85rem">
-                    <option value="">-- Personel Seç --</option>
-                    ${branchPersonnel.map(p => `
-                        <option value="${p.name}" ${currentAssignment === p.name ? 'selected' : ''}>${p.name}</option>
-                    `).join('')}
-                </select>
-            </div>
-        `;
-    });
-    
-    html += `</div>`;
-    
-    showModal('📋 Haftalık Görev Atama', html, `
-        <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
-        <button class="btn btn-primary" onclick="saveHaftalikAtamalar('${weekDocId}', ${items.length})">💾 Kaydet</button>
-    `);
-}
-
-// Haftalık atamaları kaydet
-async function saveHaftalikAtamalar(weekDocId, itemCount) {
-    try {
-        const assignments = {};
-        
-        for (let i = 0; i < itemCount; i++) {
-            const select = document.getElementById(`haftalikAtama_${i}`);
-            if (select && select.value) {
-                assignments[i] = {
-                    assignedTo: select.value,
-                    assignedAt: new Date().toISOString(),
-                    assignedBy: currentUser?.name || currentUser?.email,
-                    completed: false
-                };
-            }
-        }
-        
-        await db.collection('weeklyAssignments').doc(weekDocId).set({
-            assignments,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedBy: currentUser?.name || currentUser?.email
-        }, { merge: true });
-        
-        closeModal();
-        toast('Görevler atandı!', 'success');
-        loadChecklist();
-        
-    } catch (error) {
-        console.error('Atama kayıt hatası:', error);
-        toast('Hata: ' + error.message, 'error');
-    }
 }
     </script>
 </body>
