@@ -1471,15 +1471,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <!-- Sistem Kullanıcıları -->
                     <div class="admin-card">
                         <div class="admin-card-header">
-                            <div class="admin-card-title">👤 Sistem Kullanıcıları</div>
+                            <div class="admin-card-title">👤 Personel Giriş Yönetimi</div>
                             <div style="display:flex;gap:8px">
                                 <button class="btn btn-sm btn-ghost" onclick="syncRolesFromPersonnel()" title="Personel listesindeki rolleri kullanıcılara uygula">🔄 Rolleri Senkronize Et</button>
-                                <button class="btn btn-sm btn-primary" onclick="showAddUserModal()">+ Yeni Kullanıcı</button>
                             </div>
                         </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Sisteme giriş yapabilecek kullanıcıları yönetin.</p>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Personel listesindeki kişilere sistem girişi tanımlayın. Login tanımlı personeller sisteme giriş yapabilir.</p>
                         <div class="admin-list" id="userList">
-                            <p style="color:var(--tx2);text-align:center;padding:20px">Kullanıcılar yükleniyor...</p>
+                            <p style="color:var(--tx2);text-align:center;padding:20px">Yükleniyor...</p>
                         </div>
                     </div>
                     
@@ -5757,47 +5756,218 @@ async function loadUserList() {
     const container = document.getElementById('userList');
     if (!container) return;
     
+    container.innerHTML = '<p style="color:var(--tx2);text-align:center;padding:20px">Yükleniyor...</p>';
+    
     try {
-        const snapshot = await db.collection('users').get();
+        // Personel listesini al
+        const personnelDoc = await db.collection('config').doc('personnel').get();
+        const personnelList = personnelDoc.exists ? (personnelDoc.data().list || []) : [];
         
-        if (snapshot.empty) {
-            container.innerHTML = '<p style="color:var(--tx2);text-align:center;padding:20px">Kullanıcı bulunamadı</p>';
+        // Users collection'ını al (login bilgileri için)
+        const usersSnapshot = await db.collection('users').get();
+        const usersMap = {};
+        usersSnapshot.forEach(doc => {
+            usersMap[doc.id] = doc.data();
+        });
+        
+        if (personnelList.length === 0) {
+            container.innerHTML = '<p style="color:var(--tx2);text-align:center;padding:20px">Personel listesi boş. Önce personel ekleyin.</p>';
             return;
         }
         
+        // Rol etiketleri
+        const roleLabels = {
+            'yonetici': '👑 Yönetici',
+            'bolge_muduru': '🏢 Bölge Müdürü',
+            'magaza_muduru': '🏪 Mağaza Müdürü',
+            'magaza_mudur_yardimcisi': '🏪 Müdür Yardımcısı',
+            'mudur_yardimcisi': '🏪 Müdür Yardımcısı',
+            'barista': '☕ Barista'
+        };
+        
         let html = '';
-        snapshot.forEach(doc => {
-            const u = doc.data();
-            // Tüm roller için doğru etiket
-            const roleLabels = {
-                'yonetici': '👑 Yönetici',
-                'bolge_muduru': '🏢 Bölge Müdürü',
-                'magaza_muduru': '🏪 Mağaza Müdürü',
-                'magaza_mudur_yardimcisi': '🏪 Müdür Yardımcısı',
-                'mudur_yardimcisi': '🏪 Müdür Yardımcısı',
-                'barista': '☕ Barista'
-            };
-            const roleLabel = roleLabels[u.role] || `📋 ${u.role || 'Bilinmiyor'}`;
-            html += `
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg3);border-radius:var(--radiusSm);margin-bottom:8px">
-                    <div>
-                        <strong style="color:var(--tx)">${u.name || doc.id}</strong>
-                        <span style="margin-left:8px;font-size:.75rem;background:var(--accentLight);color:var(--accent);padding:2px 8px;border-radius:4px">${roleLabel}</span>
-                        <div style="font-size:.8rem;color:var(--tx2)">@${doc.id} ${u.branch !== 'all' ? '• ' + u.branch : ''}</div>
+        
+        // Önce login'i olan kullanıcılar
+        html += '<div style="margin-bottom:16px"><div style="font-size:.75rem;font-weight:600;color:var(--tx2);margin-bottom:8px;text-transform:uppercase">🔓 Giriş Yapabilen Personel</div>';
+        
+        let hasLoginUsers = false;
+        for (const p of personnelList) {
+            const username = p.email ? p.email.split('@')[0] : null;
+            const userData = username ? usersMap[username] : null;
+            
+            if (userData) {
+                hasLoginUsers = true;
+                const roleLabel = roleLabels[p.role] || `📋 ${p.role || 'Bilinmiyor'}`;
+                const branchText = p.branch && p.branch !== 'all' ? p.branch : 'Tüm Şubeler';
+                
+                html += `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg3);border-radius:var(--radiusSm);margin-bottom:8px;border-left:3px solid #27ae60">
+                        <div>
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <strong style="color:var(--tx)">${p.name}</strong>
+                                <span style="font-size:.75rem;background:var(--accentLight);color:var(--accent);padding:2px 8px;border-radius:4px">${roleLabel}</span>
+                                <span style="font-size:.65rem;background:rgba(39,174,96,.15);color:#27ae60;padding:2px 6px;border-radius:4px">✓ Aktif</span>
+                            </div>
+                            <div style="font-size:.8rem;color:var(--tx2)">${p.email} • ${branchText}</div>
+                        </div>
+                        <div style="display:flex;gap:8px">
+                            <button class="btn btn-sm btn-ghost" onclick="showLoginModal('${username}', '${p.name}', '${p.email}', '${p.role}', '${p.branch}')" title="Login Düzenle">🔑</button>
+                            <button class="btn btn-sm" style="background:var(--red);color:#fff" onclick="removeUserLogin('${username}')" title="Login'i Kaldır">🗑️</button>
+                        </div>
                     </div>
-                    <div style="display:flex;gap:8px">
-                        ${doc.id !== 'admin' ? `
-                            <button class="btn btn-sm btn-ghost" onclick="editUser('${doc.id}')">✏️</button>
-                            <button class="btn btn-sm" style="background:var(--red);color:#fff" onclick="deleteUser('${doc.id}')">🗑️</button>
-                        ` : '<span style="font-size:.75rem;color:var(--tx3)">Sistem hesabı</span>'}
+                `;
+            }
+        }
+        
+        if (!hasLoginUsers) {
+            html += '<p style="color:var(--tx3);font-size:.85rem;padding:8px">Henüz login tanımlı personel yok.</p>';
+        }
+        html += '</div>';
+        
+        // Login'i olmayan personel
+        html += '<div><div style="font-size:.75rem;font-weight:600;color:var(--tx2);margin-bottom:8px;text-transform:uppercase">🔒 Giriş Tanımlı Değil</div>';
+        
+        let hasNoLoginUsers = false;
+        for (const p of personnelList) {
+            const username = p.email ? p.email.split('@')[0] : null;
+            const userData = username ? usersMap[username] : null;
+            
+            if (!userData) {
+                hasNoLoginUsers = true;
+                const roleLabel = roleLabels[p.role] || `📋 ${p.role || 'Bilinmiyor'}`;
+                const branchText = p.branch && p.branch !== 'all' ? p.branch : 'Tüm Şubeler';
+                
+                html += `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg3);border-radius:var(--radiusSm);margin-bottom:8px;opacity:.7">
+                        <div>
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <strong style="color:var(--tx)">${p.name}</strong>
+                                <span style="font-size:.75rem;background:var(--accentLight);color:var(--accent);padding:2px 8px;border-radius:4px">${roleLabel}</span>
+                            </div>
+                            <div style="font-size:.8rem;color:var(--tx2)">${p.email || 'E-posta yok'} • ${branchText}</div>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-primary" onclick="showLoginModal('${username || ''}', '${p.name}', '${p.email || ''}', '${p.role}', '${p.branch}')" title="Login Tanımla">🔑 Login Ekle</button>
+                        </div>
                     </div>
-                </div>
-            `;
-        });
+                `;
+            }
+        }
+        
+        if (!hasNoLoginUsers) {
+            html += '<p style="color:var(--tx3);font-size:.85rem;padding:8px">Tüm personele login tanımlanmış.</p>';
+        }
+        html += '</div>';
+        
         container.innerHTML = html;
+        
     } catch (error) {
         console.error('Kullanıcı yükleme hatası:', error);
         container.innerHTML = '<p style="color:var(--red);text-align:center;padding:20px">Yükleme hatası!</p>';
+    }
+}
+
+// Login tanımlama modal'ı
+function showLoginModal(username, name, email, role, branch) {
+    const isEdit = username && username !== 'null' && username !== '';
+    const title = isEdit ? '🔑 Login Düzenle' : '🔑 Login Tanımla';
+    
+    const body = `
+        <div style="padding:8px 0">
+            <div style="background:var(--bg3);border-radius:12px;padding:16px;margin-bottom:20px">
+                <div style="font-weight:600;color:var(--tx);margin-bottom:4px">${name}</div>
+                <div style="font-size:.85rem;color:var(--tx2)">${email || 'E-posta tanımlı değil'}</div>
+            </div>
+            
+            <input type="hidden" id="loginPersonelName" value="${name}">
+            <input type="hidden" id="loginPersonelRole" value="${role}">
+            <input type="hidden" id="loginPersonelBranch" value="${branch}">
+            
+            <div class="form-group">
+                <label class="form-label">Kullanıcı Adı (E-posta'nın @ öncesi)</label>
+                <input type="text" id="loginUsername" class="form-input" value="${username || ''}" ${isEdit ? 'readonly style="background:var(--bg3)"' : ''} placeholder="ornek">
+                <div style="font-size:.75rem;color:var(--tx3);margin-top:4px">Giriş yaparken kullanılacak: kullanici@moonberrycoffee.com</div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Şifre ${isEdit ? '(boş bırakılırsa değişmez)' : ''}</label>
+                <input type="password" id="loginPassword" class="form-input" minlength="6" placeholder="En az 6 karakter">
+            </div>
+        </div>
+    `;
+    
+    const footer = `
+        <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
+        <button class="btn btn-primary" onclick="saveUserLogin(${isEdit})">💾 Kaydet</button>
+    `;
+    
+    showModal(title, body, footer);
+}
+
+// Login kaydet
+async function saveUserLogin(isEdit) {
+    const username = document.getElementById('loginUsername')?.value?.trim();
+    const password = document.getElementById('loginPassword')?.value;
+    const name = document.getElementById('loginPersonelName')?.value;
+    const role = document.getElementById('loginPersonelRole')?.value;
+    const branch = document.getElementById('loginPersonelBranch')?.value;
+    
+    if (!username) {
+        toast('Kullanıcı adı gerekli', 'error');
+        return;
+    }
+    
+    if (!isEdit && !password) {
+        toast('Şifre gerekli', 'error');
+        return;
+    }
+    
+    if (password && password.length < 6) {
+        toast('Şifre en az 6 karakter olmalı', 'error');
+        return;
+    }
+    
+    try {
+        const userData = {
+            name: name,
+            role: role || 'barista',
+            branch: branch || 'Tuzla Port',
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        if (password) {
+            userData.password = password; // Gerçek uygulamada hash'lenmeli
+        }
+        
+        if (!isEdit) {
+            userData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        }
+        
+        await db.collection('users').doc(username).set(userData, { merge: true });
+        
+        toast(isEdit ? 'Login güncellendi' : 'Login oluşturuldu', 'success');
+        closeModal();
+        loadUserList();
+        
+    } catch (error) {
+        console.error('Kayıt hatası:', error);
+        toast('Kayıt hatası!', 'error');
+    }
+}
+
+// Login'i kaldır
+async function removeUserLogin(username) {
+    if (!confirm('Bu kullanıcının giriş yetkisi kaldırılacak. Devam etmek istiyor musunuz?')) {
+        return;
+    }
+    
+    try {
+        await db.collection('users').doc(username).delete();
+        toast('Login kaldırıldı', 'success');
+        loadUserList();
+    } catch (error) {
+        console.error('Silme hatası:', error);
+        toast('Silme hatası!', 'error');
     }
 }
 
@@ -9185,9 +9355,18 @@ async function loadTodayChecks() {
     
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
-    const branch = currentUser?.branch && currentUser.branch !== 'all' ? currentUser.branch : 'Tuzla Port';
     const isAdmin = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
     const userName = currentUser?.name || 'Personel';
+    
+    // Yönetici için tüm şubeler, diğerleri için kendi şubesi
+    let branches = [];
+    if (isAdmin || currentUser?.branch === 'all') {
+        branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+    } else {
+        branches = [currentUser?.branch || 'Tuzla Port'];
+    }
+    
+    const primaryBranch = branches[0];
     
     // Karşılama kartını doldur
     if (welcomeCard) {
@@ -9200,44 +9379,43 @@ async function loadTodayChecks() {
         
         document.getElementById('welcomeDate').textContent = dateStr;
         document.getElementById('welcomeMessage').textContent = `${greeting}, ${userName.split(' ')[0]}! 👋`;
-        document.getElementById('welcomeBranch').innerHTML = `<span>📍</span> <span>${branch}</span>`;
+        document.getElementById('welcomeBranch').innerHTML = `<span>📍</span> <span>${isAdmin ? 'Tüm Şubeler' : primaryBranch}</span>`;
         
-        // Shift bilgisi - shift planından al
-        let shiftInfo = '-';
-        try {
-            const weekStart = getWeekStart(today);
-            const weekKey = weekStart.toISOString().split('T')[0];
-            const shiftDoc = await db.collection('shiftPlans').doc(`${branch}_${weekKey}`).get();
-            if (shiftDoc.exists) {
-                const plan = shiftDoc.data();
-                const dayPlan = plan[todayStr];
-                if (dayPlan) {
-                    for (const [shiftType, personnel] of Object.entries(dayPlan)) {
-                        if (personnel && personnel.includes(currentUser?.id)) {
-                            const shiftNames = { acilis: 'Açılış', kapanis: 'Kapanış', ara: 'Ara Vardiya' };
-                            shiftInfo = shiftNames[shiftType] || shiftType;
-                            break;
+        // Shift bilgisi
+        let shiftInfo = isAdmin ? 'Yönetici' : '-';
+        if (!isAdmin) {
+            try {
+                const weekStart = getWeekStart(today);
+                const weekKey = weekStart.toISOString().split('T')[0];
+                const shiftDoc = await db.collection('shiftPlans').doc(`${primaryBranch}_${weekKey}`).get();
+                if (shiftDoc.exists) {
+                    const plan = shiftDoc.data();
+                    const dayPlan = plan[todayStr];
+                    if (dayPlan) {
+                        for (const [shiftType, personnel] of Object.entries(dayPlan)) {
+                            if (personnel && personnel.includes(currentUser?.id)) {
+                                const shiftNames = { acilis: 'Açılış', kapanis: 'Kapanış', ara: 'Ara Vardiya' };
+                                shiftInfo = shiftNames[shiftType] || shiftType;
+                                break;
+                            }
                         }
                     }
                 }
-            }
-        } catch (e) {}
+            } catch (e) {}
+        }
         document.getElementById('welcomeShift').innerHTML = `<span>⏰</span> <span>${shiftInfo}</span>`;
         
         welcomeCard.style.display = 'block';
     }
     
-    // Bu ay puan özeti
-    if (monthlyCard && currentUser?.id) {
+    // Bu ay puan özeti (sadece yönetici değilse)
+    if (monthlyCard && currentUser?.id && !isAdmin) {
         try {
-            const monthKey = todayStr.substring(0, 7); // YYYY-MM
+            const monthKey = todayStr.substring(0, 7);
             const startDate = monthKey + '-01';
             const endDate = monthKey + '-31';
             
-            // Manuel puantaj kayıtlarından
-            let manuelPuan = 0;
-            let ihlalSayisi = 0;
-            let basariSayisi = 0;
+            let manuelPuan = 0, ihlalSayisi = 0, basariSayisi = 0;
             
             const puantajSnapshot = await db.collection('puantaj')
                 .where('personelId', '==', currentUser.id)
@@ -9247,17 +9425,11 @@ async function loadTodayChecks() {
             puantajSnapshot.forEach(doc => {
                 const d = doc.data();
                 const yildiz = d.score || 3;
-                if (yildiz === 1) { manuelPuan -= 3; ihlalSayisi++; }
-                else if (yildiz === 2) { manuelPuan -= 2; ihlalSayisi++; }
-                else if (yildiz === 3) { manuelPuan -= 1; ihlalSayisi++; }
-                else if (yildiz === 4) { manuelPuan += 1; basariSayisi++; }
-                else if (yildiz === 5) { manuelPuan += 2; basariSayisi++; }
+                if (yildiz <= 3) { manuelPuan -= (4 - yildiz); ihlalSayisi++; }
+                else { manuelPuan += (yildiz - 3); basariSayisi++; }
             });
             
-            // Otomatik check puanlarından
-            let checkPuan = 0;
-            let checkVaktinde = 0;
-            let checkGec = 0;
+            let checkPuan = 0, checkVaktinde = 0, checkGec = 0;
             
             const notesSnapshot = await db.collection('puantajNotes')
                 .where('personelId', '==', currentUser.id)
@@ -9290,39 +9462,131 @@ async function loadTodayChecks() {
                     <div style="font-size:.7rem;color:var(--tx2);font-weight:500">VAKTİNDE CHECK</div>
                 </div>
             `;
-            
             monthlyCard.style.display = 'block';
         } catch (e) {
             console.warn('Aylık puan yüklenemedi:', e);
         }
+    } else if (monthlyCard) {
+        monthlyCard.style.display = 'none';
     }
     
-    // Kullanıcının şubesindeki check türlerini al
-    const checkTypes = CHECKLIST_TYPES[branch] || [];
-    if (checkTypes.length === 0) {
-        section.style.display = 'none';
-        return;
+    // Shift planlarını ve personel isimlerini yükle
+    const shiftPlans = {};
+    const personnelNames = {};
+    
+    try {
+        // Personel isimlerini yükle
+        const personnelDoc = await db.collection('config').doc('personnel').get();
+        if (personnelDoc.exists) {
+            const list = personnelDoc.data().list || [];
+            list.forEach(p => {
+                if (p.email) {
+                    const username = p.email.split('@')[0];
+                    personnelNames[username] = p.name;
+                }
+            });
+        }
+        
+        // Shift planlarını yükle
+        const weekStart = getWeekStart(today);
+        const weekKey = weekStart.toISOString().split('T')[0];
+        
+        for (const branch of branches) {
+            try {
+                const shiftDoc = await db.collection('shiftPlans').doc(`${branch}_${weekKey}`).get();
+                if (shiftDoc.exists) {
+                    shiftPlans[branch] = shiftDoc.data()[todayStr] || {};
+                }
+            } catch (e) {}
+        }
+    } catch (e) {
+        console.warn('Shift/personel yüklenemedi:', e);
+    }
+    
+    // Shift'teki personel isimlerini al
+    function getShiftPersonnel(branch, shiftType) {
+        const plan = shiftPlans[branch];
+        if (!plan) return [];
+        
+        const personnel = plan[shiftType] || [];
+        return personnel.map(id => personnelNames[id] || id);
     }
     
     let html = '';
     let hasActiveChecks = false;
     
-    // Günlük Check, Platform Check gibi saat bazlı checkleri göster
-    for (const checkType of checkTypes) {
-        if (checkType.timeSlots && checkType.timeSlots.length > 0) {
-            for (const timeSlot of checkType.timeSlots) {
-                const rules = CHECK_RULES[checkType.id];
-                if (!rules) continue;
+    // Her şube için checkleri göster
+    for (const branch of branches) {
+        const checkTypes = CHECKLIST_TYPES[branch] || [];
+        if (checkTypes.length === 0) continue;
+        
+        const isMoonberry = branch.includes('Şişli') || branch.includes('Merkez');
+        const brandColor = isMoonberry ? '#008c95' : '#ff8674';
+        
+        // Şube başlığı (birden fazla şube varsa)
+        if (branches.length > 1) {
+            html += `
+                <div style="font-size:.85rem;font-weight:600;color:${brandColor};margin:${hasActiveChecks ? '20px' : '0'} 0 12px;display:flex;align-items:center;gap:8px">
+                    <span style="width:24px;height:24px;background:${brandColor};border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.7rem">${isMoonberry ? 'M' : 'S'}</span>
+                    ${branch}
+                </div>
+            `;
+        }
+        
+        // Check türlerini döngüle
+        for (const checkType of checkTypes) {
+            // Saat bazlı checkler (Günlük, Platform)
+            if (checkType.timeSlots && checkType.timeSlots.length > 0) {
+                for (const timeSlot of checkType.timeSlots) {
+                    const rules = CHECK_RULES[checkType.id];
+                    if (!rules) continue;
+                    
+                    const window = getCheckTimeWindow(checkType.id, timeSlot, branch);
+                    if (!window) continue;
+                    
+                    // Yönetici hepsini görür, normal personel sadece aktif olanları
+                    if (!isAdmin && window.isMissed) continue;
+                    if (!isAdmin && window.isBeforeWindow) continue;
+                    
+                    // Submission kontrolü
+                    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType.id}_${todayStr}_${timeSlot.replace(':', '')}`;
+                    let isCompleted = false;
+                    let submissionData = null;
+                    
+                    try {
+                        const doc = await db.collection('checklistSubmissions').doc(submissionId).get();
+                        if (doc.exists) {
+                            isCompleted = true;
+                            submissionData = doc.data();
+                        }
+                    } catch (e) {}
+                    
+                    const remaining = getRemainingTime(checkType.id, timeSlot, branch);
+                    const status = getCheckStatus(checkType.id, timeSlot, branch, isCompleted, submissionData?.submittedAt?.toDate());
+                    
+                    // Shift'ten sorumlu personeli bul
+                    let responsiblePersonnel = [];
+                    const checkHour = parseInt(timeSlot.split(':')[0]);
+                    if (checkHour < 15) {
+                        responsiblePersonnel = getShiftPersonnel(branch, 'acilis');
+                    } else if (checkHour >= 20) {
+                        responsiblePersonnel = getShiftPersonnel(branch, 'kapanis');
+                    } else {
+                        responsiblePersonnel = [...getShiftPersonnel(branch, 'acilis'), ...getShiftPersonnel(branch, 'ara')];
+                    }
+                    
+                    hasActiveChecks = true;
+                    html += renderCheckCard(checkType, timeSlot, branch, isCompleted, submissionData, window, remaining, status, responsiblePersonnel);
+                }
+            }
+            
+            // Müdür Kontrol (managerOnly)
+            if (checkType.managerOnly) {
+                const rules = CHECK_RULES.mudur || CHECK_RULES[checkType.id];
+                const deadline = rules?.deadline || '21:00';
                 
-                const window = getCheckTimeWindow(checkType.id, timeSlot, branch);
-                if (!window) continue;
-                
-                // Sadece bugün için geçerli olan checkleri göster
-                if (window.isMissed && !isAdmin) continue;
-                if (window.isBeforeWindow && !isAdmin) continue;
-                
-                // Bu check dolduruldu mu kontrol et
-                const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType.id}_${todayStr}_${timeSlot.replace(':', '')}`;
+                // Submission kontrolü
+                const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType.id}_${todayStr}`;
                 let isCompleted = false;
                 let submissionData = null;
                 
@@ -9334,56 +9598,60 @@ async function loadTodayChecks() {
                     }
                 } catch (e) {}
                 
-                const remaining = getRemainingTime(checkType.id, timeSlot, branch);
-                const status = getCheckStatus(checkType.id, timeSlot, branch, isCompleted, submissionData?.submittedAt?.toDate());
+                // Deadline kontrolü
+                const now = new Date();
+                const deadlineMinutes = timeToMinutes(deadline);
+                const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                const isMissed = currentMinutes > deadlineMinutes && !isCompleted;
+                const isActive = currentMinutes <= deadlineMinutes;
                 
-                hasActiveChecks = true;
+                // Kalan süre
+                let remainingText = '';
+                if (isActive && !isCompleted) {
+                    const remainingMinutes = deadlineMinutes - currentMinutes;
+                    if (remainingMinutes > 60) {
+                        remainingText = `${Math.floor(remainingMinutes / 60)} saat ${remainingMinutes % 60} dk`;
+                    } else {
+                        remainingText = `${remainingMinutes} dakika`;
+                    }
+                }
                 
                 // Renk ve ikon
                 let bgColor = 'var(--bg3)';
                 let borderColor = 'var(--cardBorder)';
-                let icon = '⏳';
+                let icon = '👔';
                 let statusText = 'Bekliyor';
                 
                 if (isCompleted) {
                     bgColor = 'rgba(39,174,96,.1)';
                     borderColor = '#27ae60';
                     icon = '✅';
-                    statusText = status.label || 'Tamamlandı';
-                } else if (window.isMissed) {
+                    statusText = 'Tamamlandı';
+                } else if (isMissed) {
                     bgColor = 'rgba(231,76,60,.1)';
                     borderColor = '#e74c3c';
                     icon = '❌';
                     statusText = 'Kaçırıldı';
-                } else if (window.isLate) {
-                    bgColor = 'rgba(243,156,18,.1)';
-                    borderColor = '#f39c12';
-                    icon = '⚠️';
-                    statusText = 'Geç Penceresi';
-                } else if (window.isInWindow) {
-                    bgColor = 'rgba(52,152,219,.1)';
-                    borderColor = '#3498db';
-                    icon = '🔵';
+                } else if (isActive) {
+                    bgColor = 'rgba(155,89,182,.1)';
+                    borderColor = '#9b59b6';
+                    icon = '👔';
                     statusText = 'Aktif';
                 }
                 
+                hasActiveChecks = true;
                 html += `
                     <div style="background:${bgColor};border:1px solid ${borderColor};border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer" onclick="goTo('checklist')">
                         <div style="display:flex;align-items:center;gap:12px">
                             <div style="font-size:1.5rem">${icon}</div>
                             <div>
-                                <div style="font-weight:600;color:var(--tx)">${checkType.name} - ${timeSlot}</div>
-                                <div style="font-size:.8rem;color:var(--tx2)">${branch}</div>
+                                <div style="font-weight:600;color:var(--tx)">${checkType.name}</div>
+                                <div style="font-size:.8rem;color:var(--tx2)">${branch} • ${deadline}'a kadar</div>
                             </div>
                         </div>
                         <div style="text-align:right">
-                            <div style="font-size:.85rem;font-weight:600;color:${status.color || 'var(--tx)'}">${statusText}</div>
-                            ${!isCompleted && remaining && !remaining.isExpired ? `
-                                <div style="font-size:.75rem;color:var(--tx3)">⏱️ ${remaining.text}</div>
-                            ` : ''}
-                            ${isCompleted && status.points !== 0 ? `
-                                <div style="font-size:.75rem;color:${status.points > 0 ? '#27ae60' : '#e74c3c'}">${status.points > 0 ? '+' : ''}${status.points} puan</div>
-                            ` : ''}
+                            <div style="font-size:.85rem;font-weight:600;color:${borderColor}">${statusText}</div>
+                            ${remainingText ? `<div style="font-size:.75rem;color:var(--tx3)">⏱️ ${remainingText}</div>` : ''}
                         </div>
                     </div>
                 `;
@@ -9397,6 +9665,66 @@ async function loadTodayChecks() {
     } else {
         section.style.display = 'none';
     }
+}
+
+// Check kartı render helper
+function renderCheckCard(checkType, timeSlot, branch, isCompleted, submissionData, window, remaining, status, responsiblePersonnel) {
+    let bgColor = 'var(--bg3)';
+    let borderColor = 'var(--cardBorder)';
+    let icon = '⏳';
+    let statusText = 'Bekliyor';
+    
+    if (isCompleted) {
+        bgColor = 'rgba(39,174,96,.1)';
+        borderColor = '#27ae60';
+        icon = '✅';
+        statusText = status?.label || 'Tamamlandı';
+    } else if (window?.isMissed) {
+        bgColor = 'rgba(231,76,60,.1)';
+        borderColor = '#e74c3c';
+        icon = '❌';
+        statusText = 'Kaçırıldı';
+    } else if (window?.isLate) {
+        bgColor = 'rgba(243,156,18,.1)';
+        borderColor = '#f39c12';
+        icon = '⚠️';
+        statusText = 'Geç Penceresi';
+    } else if (window?.isInWindow) {
+        bgColor = 'rgba(52,152,219,.1)';
+        borderColor = '#3498db';
+        icon = '🔵';
+        statusText = 'Aktif';
+    }
+    
+    // Sorumlu personel gösterimi
+    let personnelText = '';
+    if (responsiblePersonnel && responsiblePersonnel.length > 0) {
+        const names = responsiblePersonnel.slice(0, 3).join(', ');
+        const extra = responsiblePersonnel.length > 3 ? ` +${responsiblePersonnel.length - 3}` : '';
+        personnelText = `<div style="font-size:.75rem;color:var(--tx3);margin-top:2px">👤 ${names}${extra}</div>`;
+    }
+    
+    return `
+        <div style="background:${bgColor};border:1px solid ${borderColor};border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer" onclick="goTo('checklist')">
+            <div style="display:flex;align-items:center;gap:12px">
+                <div style="font-size:1.5rem">${icon}</div>
+                <div>
+                    <div style="font-weight:600;color:var(--tx)">${checkType.name} - ${timeSlot}</div>
+                    <div style="font-size:.8rem;color:var(--tx2)">${branch}</div>
+                    ${personnelText}
+                </div>
+            </div>
+            <div style="text-align:right">
+                <div style="font-size:.85rem;font-weight:600;color:${borderColor}">${statusText}</div>
+                ${!isCompleted && remaining && !remaining.isExpired ? `
+                    <div style="font-size:.75rem;color:var(--tx3)">⏱️ ${remaining.text}</div>
+                ` : ''}
+                ${isCompleted && status?.points !== 0 ? `
+                    <div style="font-size:.75rem;color:${status.points > 0 ? '#27ae60' : '#e74c3c'}">${status.points > 0 ? '+' : ''}${status.points} puan</div>
+                ` : ''}
+            </div>
+        </div>
+    `;
 }
 
 // ==================== ADMIN - TÜM CHECKLER ÖZETİ ====================
