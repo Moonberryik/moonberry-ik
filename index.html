@@ -5374,12 +5374,12 @@ function showAddUserModal(editId = null) {
     const body = `
         <input type="hidden" id="userEditId" value="${editId || ''}">
         <div class="form-grid">
-            <div class="form-group"><label class="form-label">Kullanıcı Adı *</label><input type="text" id="userName" class="form-input" ${isEdit ? 'readonly' : ''} placeholder="ornek.kullanici"></div>
-            <div class="form-group"><label class="form-label">Görünen Ad</label><input type="text" id="userDisplayName" class="form-input" placeholder="Ahmet Yılmaz"></div>
-            <div class="form-group"><label class="form-label">Şifre ${isEdit ? '(boş bırakılırsa değişmez)' : '*'}</label><input type="password" id="userPassword" class="form-input" minlength="6"></div>
+            <div class="form-group"><label class="form-label">Kullanıcı Adı *</label><input type="text" id="modalUserName" class="form-input" ${isEdit ? 'readonly' : ''} placeholder="ornek.kullanici"></div>
+            <div class="form-group"><label class="form-label">Görünen Ad</label><input type="text" id="modalUserDisplayName" class="form-input" placeholder="Ahmet Yılmaz"></div>
+            <div class="form-group"><label class="form-label">Şifre ${isEdit ? '(boş bırakılırsa değişmez)' : '*'}</label><input type="password" id="modalUserPassword" class="form-input" minlength="6"></div>
             <div class="form-group">
                 <label class="form-label">Rol *</label>
-                <select id="userRole" class="form-select">
+                <select id="modalUserRole" class="form-select">
                     <option value="barista">☕ Barista</option>
                     <option value="magaza_muduru">🏪 Mağaza Müdürü</option>
                     <option value="bolge_muduru">🏢 Bölge Müdürü</option>
@@ -5388,7 +5388,7 @@ function showAddUserModal(editId = null) {
             </div>
             <div class="form-group">
                 <label class="form-label">Şube Erişimi</label>
-                <select id="userBranch" class="form-select">
+                <select id="modalUserBranch" class="form-select">
                     <option value="all">Tüm Şubeler</option>
                     ${STATE.branches.map(b => `<option value="${b}">${b}</option>`).join('')}
                 </select>
@@ -5413,10 +5413,10 @@ async function loadUserForEdit(id) {
         const doc = await db.collection('users').doc(id).get();
         if (doc.exists) {
             const u = doc.data();
-            document.getElementById('userName').value = id;
-            document.getElementById('userDisplayName').value = u.name || '';
-            document.getElementById('userRole').value = u.role || 'magaza_muduru';
-            document.getElementById('userBranch').value = u.branch || 'all';
+            document.getElementById('modalUserName').value = id;
+            document.getElementById('modalUserDisplayName').value = u.name || '';
+            document.getElementById('modalUserRole').value = u.role || 'barista';
+            document.getElementById('modalUserBranch').value = u.branch || 'all';
         }
     } catch (error) {
         console.error('Kullanıcı yükleme hatası:', error);
@@ -5425,11 +5425,11 @@ async function loadUserForEdit(id) {
 
 async function saveUser() {
     const editId = document.getElementById('userEditId').value;
-    const username = document.getElementById('userName').value.trim().toLowerCase();
-    const password = document.getElementById('userPassword').value;
-    const displayName = document.getElementById('userDisplayName').value.trim();
-    const role = document.getElementById('userRole').value;
-    const branch = document.getElementById('userBranch').value;
+    const username = document.getElementById('modalUserName').value.trim().toLowerCase();
+    const password = document.getElementById('modalUserPassword').value;
+    const displayName = document.getElementById('modalUserDisplayName').value.trim();
+    const role = document.getElementById('modalUserRole').value;
+    const branch = document.getElementById('modalUserBranch').value;
     
     if (!username) {
         toast('Kullanıcı adı zorunludur', 'error');
@@ -8712,6 +8712,52 @@ async function loadChecklist() {
             return;
         }
         
+        // Temizlik ve Bakım için renk ve tarih bilgisi mapping
+        if (type === 'aylik') {
+            const aylikMapping = {
+                // AÇILIŞÇI (Mavi)
+                'bulaşık makinesi kireç': { color: '#00B0F0', responsible: 'AÇILIŞÇI', dates: [3, 11, 19, 27] },
+                'şurup ve sosların': { color: '#00B0F0', responsible: 'AÇILIŞÇI', dates: [2, 4, 6, 8, 10, 12, 18, 20, 22, 24, 26, 28] },
+                // HER SHIFT (Sarı)
+                'kuvings': { color: '#FFFF00', responsible: 'HER SHIFT', dates: [] },
+                'blender': { color: '#FFFF00', responsible: 'HER SHIFT', dates: [] },
+                'yasomi': { color: '#FFFF00', responsible: 'HER SHIFT', dates: [] },
+                'çamaşır sulu paspas': { color: '#FFFF00', responsible: 'HER SHIFT', dates: [] },
+                'mikrodalga': { color: '#FFFF00', responsible: 'HER SHIFT', dates: [] },
+                // ARACI (Kırmızı)
+                'mutfak tüm zeminler': { color: '#C00000', responsible: 'ARACI', dates: [2, 4, 6, 8, 10, 12, 18, 20, 22, 24, 26, 28] },
+                'beyaz duvarlar': { color: '#C00000', responsible: 'ARACI', dates: [1, 3, 5, 7, 9, 11, 17, 19, 21, 23, 25, 27] },
+                'bar rafları': { color: '#C00000', responsible: 'ARACI', dates: [1, 3, 5, 7, 9, 11, 17, 19, 21, 23, 25, 27] },
+                'dolap iç ve dış': { color: '#C00000', responsible: 'ARACI', dates: [1, 3, 5, 7, 9, 11, 17, 19, 21, 23, 25, 27] },
+                'dolap rayları': { color: '#C00000', responsible: 'ARACI', dates: [1, 3, 5, 7, 9, 11, 17, 19, 21, 23, 25, 27] },
+                // KAPANIŞÇI (Turuncu)
+                'bardaklar': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [2, 4, 6, 8, 10, 12, 18, 20, 22, 24, 26, 28] },
+                'tabaklar': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [2, 4, 6, 8, 10, 12, 18, 20, 22, 24, 26, 28] },
+                'kaşık': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [2, 4, 6, 8, 10, 12, 18, 20, 22, 24, 26, 28] },
+                'dolap camları': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [1, 3, 5, 7, 9, 11, 17, 19, 21, 23, 25, 27] },
+                'espresso makinası kaşık': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [] },
+                'espresso makinası detaylı': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [2, 4, 6, 8, 10, 12, 18, 20, 22, 24, 26, 28] },
+                'çay demlikleri': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [1, 3, 5, 7, 9, 11, 17, 19, 21, 23, 25, 27] },
+                'dış mekan camları': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [5, 27] },
+                'beyaz minderler': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [14, 25] },
+                'buz makinası': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [12, 28] },
+                'tv üstü': { color: '#FFC000', responsible: 'KAPANIŞÇI', dates: [11, 20] }
+            };
+            
+            // Her item'a mapping'den renk ve tarih bilgisi ekle
+            items = items.map(item => {
+                if (item.color && item.dates) return item; // Zaten yeni formatta
+                
+                const textLower = (item.text || '').toLowerCase();
+                for (const [key, value] of Object.entries(aylikMapping)) {
+                    if (textLower.includes(key)) {
+                        return { ...item, ...value };
+                    }
+                }
+                return item;
+            });
+        }
+        
         // Temizlik ve Bakım (aylik) için tarih filtreleme
         let filteredItems = items;
         let totalItemCount = items.length;
@@ -8786,7 +8832,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
     if (!isSubmitted) {
         checklistStartTime = null;
         checklistFirstItemTime = null;
-        // Beklenen süreyi hesapla
+        // Beklenen süreyi sadece GÖRÜNEN maddeler için hesapla
         checklistExpectedDuration = items.reduce((sum, item) => sum + (item.duration || 60), 0);
     }
     
@@ -8810,35 +8856,43 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
     const expectedMinutes = Math.round(checklistExpectedDuration / 60);
     const iconSvg = getIcon(typeInfo?.icon || 'clipboard-check');
     
+    // Sticky toolbar için data attribute
+    const toolbarData = `data-branch="${branch}" data-type="${type}" data-date="${date}" data-timeslot="${timeSlot || ''}"`;
+    
     let html = `
         <div class="form-section">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
-                <div>
-                    <div style="font-size:1.3rem;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:10px">
-                        <span style="opacity:.7">${iconSvg}</span>
-                        ${typeInfo?.name || type}
-                    </div>
-                    <div style="font-size:.85rem;color:var(--tx2)">${branch} • ${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})}${timeSlot ? ' • ' + timeSlot : ''}</div>
-                </div>
-                <div style="display:flex;gap:8px;align-items:center">
-                    ${type === 'aylik' ? `
-                        <button class="btn btn-sm btn-ghost" onclick="toggleShowAllAylikItems('${branch}', '${type}', '${date}', '${timeSlot || ''}')">
-                            📋 Tümünü Göster
-                        </button>
-                    ` : ''}
-                    ${isSubmitted ? `
-                        <div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.85rem">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                            Tamamlandı
+            <!-- Sticky Toolbar -->
+            <div id="checklistToolbar" class="checklist-toolbar" ${toolbarData} style="position:sticky;top:0;z-index:100;background:var(--bg);padding:12px 0;margin:-12px -16px 16px;padding:12px 16px;border-bottom:1px solid var(--cardBorder)">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+                    <div>
+                        <div style="font-size:1.2rem;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:10px">
+                            <span style="opacity:.7">${iconSvg}</span>
+                            ${typeInfo?.name || type}
+                            ${type === 'aylik' && items.length < actualTotalCount ? `<span style="font-size:.75rem;background:var(--accent);color:#fff;padding:2px 8px;border-radius:10px">${items.length}/${actualTotalCount}</span>` : ''}
                         </div>
-                    ` : ''}
-                    ${isAdmin && !isSubmitted ? `
-                        <button class="btn btn-sm ${checklistEditMode ? 'btn-primary' : 'btn-ghost'}" onclick="toggleChecklistEditMode('${branch}', '${type}', '${date}', '${timeSlot || ''}')">
-                            ${checklistEditMode ? '✓ Düzenleme' : '✏️ Düzenle'}
-                        </button>
-                    ` : ''}
+                        <div style="font-size:.8rem;color:var(--tx2)">${branch} • ${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})}${timeSlot ? ' • ' + timeSlot : ''}</div>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                        ${type === 'aylik' ? `
+                            <button class="btn btn-sm btn-ghost" onclick="toggleShowAllAylikItems('${branch}', '${type}', '${date}', '${timeSlot || ''}')">
+                                📋 Tümünü Göster
+                            </button>
+                        ` : ''}
+                        ${isSubmitted ? `
+                            <div style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:16px;font-size:.8rem">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                Tamamlandı
+                            </div>
+                        ` : ''}
+                        ${isAdmin && !isSubmitted ? `
+                            <button class="btn btn-sm ${checklistEditMode ? 'btn-primary' : 'btn-ghost'}" onclick="toggleChecklistEditMode('${branch}', '${type}', '${date}', '${timeSlot || ''}')">
+                                ${checklistEditMode ? '✓ Düzenleme' : '✏️ Düzenle'}
+                            </button>
+                        ` : ''}
+                    </div>
                 </div>
             </div>
+            
             ${isSubmitted ? `
                 <div style="font-size:.75rem;color:var(--tx3);margin-bottom:16px">${submittedData.submittedByName} • ${submittedData.submittedAt?.toDate ? new Date(submittedData.submittedAt.toDate()).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'}) : ''}</div>
             ` : ''}
@@ -8934,30 +8988,46 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
         const itemNum = index + 1;
         
         // Temizlik ve Bakım için renk ve sorumlu bilgisi
-        const hasColor = item.color && type === 'aylik';
-        const colorStyle = hasColor ? `border-left:4px solid ${item.color};` : '';
+        const hasColor = item.color;
+        const isAylik = type === 'aylik';
+        const colorStyle = hasColor ? `border-left:5px solid ${item.color};` : '';
+        const bgColor = hasColor ? `background:${item.color}08;` : '';
+        
+        // Sorumlu badge
         const responsibleBadge = hasColor && item.responsible ? `
-            <span style="font-size:.7rem;padding:2px 8px;border-radius:10px;background:${item.color}20;color:${item.color};font-weight:600;white-space:nowrap">${item.responsible}</span>
+            <span style="font-size:.65rem;padding:3px 8px;border-radius:12px;background:${item.color};color:#fff;font-weight:600;white-space:nowrap;text-shadow:0 1px 1px rgba(0,0,0,.2)">${item.responsible}</span>
         ` : '';
+        
+        // Tarih badge (sadece aylik için ve tarih varsa)
+        const datesBadge = isAylik && item.dates && item.dates.length > 0 ? `
+            <span style="font-size:.65rem;padding:2px 6px;border-radius:8px;background:var(--bg4);color:var(--tx2);white-space:nowrap">📅 Ayın ${item.dates.slice(0,4).join(', ')}${item.dates.length > 4 ? '...' : ''}</span>
+        ` : (isAylik && (!item.dates || item.dates.length === 0) ? `
+            <span style="font-size:.65rem;padding:2px 6px;border-radius:8px;background:var(--bg4);color:var(--tx2);white-space:nowrap">🔄 Her gün</span>
+        ` : '');
         
         if (checklistEditMode) {
             // Düzenleme modu - checkbox ile seçim
             html += `
-                <div class="checklist-item" data-item-id="${item.id}" style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg2);border-radius:10px;margin-bottom:8px;border:1px solid var(--cardBorder);${colorStyle}">
+                <div class="checklist-item" data-item-id="${item.id}" style="display:flex;align-items:center;gap:12px;padding:14px;${bgColor}border-radius:10px;margin-bottom:8px;border:1px solid var(--cardBorder);${colorStyle}">
                     <input type="checkbox" class="checklist-select-item" value="${item.id}" style="width:20px;height:20px;cursor:pointer;accent-color:#008c95">
-                    <span style="min-width:28px;height:28px;background:var(--bg3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:600;color:var(--tx2)">${itemNum}</span>
-                    <div style="flex:1;font-size:.9rem;color:var(--tx)">${item.text}</div>
-                    ${responsibleBadge}
-                    <button onclick="deleteChecklistItem('${item.id}')" style="background:none;border:none;color:#e74c3c;cursor:pointer;padding:6px;border-radius:6px;transition:all .2s" title="Sil" onmouseover="this.style.background='rgba(231,76,60,.1)'" onmouseout="this.style.background='none'">
-                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/></svg>
+                    <span style="min-width:28px;height:28px;background:${hasColor ? item.color : 'var(--bg3)'};border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:600;color:${hasColor ? '#fff' : 'var(--tx2)'}">${itemNum}</span>
+                    <div style="flex:1">
+                        <div style="font-size:.9rem;color:var(--tx)">${item.text}</div>
+                        ${isAylik ? `<div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">${responsibleBadge}${datesBadge}</div>` : ''}
+                    </div>
+                    <button onclick="editChecklistItem('${item.id}')" style="background:none;border:none;color:var(--accent2);cursor:pointer;padding:6px;border-radius:6px;transition:all .2s" title="Düzenle">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button onclick="deleteChecklistItem('${item.id}')" style="background:none;border:none;color:#e74c3c;cursor:pointer;padding:6px;border-radius:6px;transition:all .2s" title="Sil">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/></svg>
                     </button>
                 </div>
             `;
         } else {
             // Normal mod - check/uncheck with auto numbering
             html += `
-                <div class="checklist-item" style="display:flex;align-items:flex-start;gap:12px;padding:16px;background:var(--bg2);border-radius:10px;margin-bottom:10px;border:1px solid var(--cardBorder);${colorStyle}">
-                    <span style="min-width:32px;height:32px;background:${hasColor ? item.color + '20' : 'var(--bg3)'};border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:600;color:${hasColor ? item.color : 'var(--tx2)'};flex-shrink:0">${itemNum}</span>
+                <div class="checklist-item" style="display:flex;align-items:flex-start;gap:12px;padding:16px;${bgColor}border-radius:10px;margin-bottom:10px;border:1px solid var(--cardBorder);${colorStyle}">
+                    <span style="min-width:32px;height:32px;background:${hasColor ? item.color : 'var(--bg3)'};border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:600;color:${hasColor ? '#fff' : 'var(--tx2)'};flex-shrink:0">${itemNum}</span>
                     <div style="display:flex;gap:8px;flex-shrink:0">
                         <label class="check-option" style="display:flex;align-items:center;gap:6px;cursor:${isSubmitted ? 'default' : 'pointer'}">
                             <input type="radio" name="check_${item.id}" value="done" 
@@ -8984,7 +9054,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                     </div>
                     <div style="flex:1">
                         <div style="font-size:.9rem;color:var(--tx);line-height:1.5">${item.text}</div>
-                        ${responsibleBadge}
+                        ${isAylik ? `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${responsibleBadge}${datesBadge}</div>` : ''}
                     </div>
                 </div>
             `;
@@ -9643,7 +9713,7 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
 }
 
 // Checklist madde ekle modal
-function showAddChecklistItemModal() {
+function showAddChecklistItemModal(editItem = null) {
     const branch = document.getElementById('checklistSube')?.value;
     const type = document.getElementById('checklistType')?.value;
     
@@ -9652,30 +9722,110 @@ function showAddChecklistItemModal() {
         return;
     }
     
-    showModal('Yeni Madde Ekle', `
+    const isAylik = type === 'aylik';
+    const isEdit = !!editItem;
+    const title = isEdit ? 'Madde Düzenle' : 'Yeni Madde Ekle';
+    
+    // Tarih seçenekleri (1-31)
+    const dateOptions = Array.from({length: 31}, (_, i) => i + 1);
+    const selectedDates = editItem?.dates || [];
+    
+    showModal(title, `
         <div class="form-group">
-            <label class="form-label">Madde Metni</label>
-            <textarea id="newChecklistItemText" class="form-input" rows="3" placeholder="Kontrol maddesi..."></textarea>
+            <label class="form-label">Madde Metni *</label>
+            <textarea id="newChecklistItemText" class="form-input" rows="3" placeholder="Kontrol maddesi...">${editItem?.text || ''}</textarea>
         </div>
         <div class="form-group">
-            <label class="form-label">Ceza (opsiyonel)</label>
-            <input type="text" id="newChecklistItemPenalty" class="form-input" placeholder="örn: -100 puan">
+            <label class="form-label">Tahmini Süre (saniye)</label>
+            <input type="number" id="newChecklistItemDuration" class="form-input" placeholder="örn: 300" value="${editItem?.duration || 60}">
         </div>
+        ${isAylik ? `
+            <div class="form-group">
+                <label class="form-label">Sorumlu</label>
+                <select id="newChecklistItemResponsible" class="form-select">
+                    <option value="">-- Seçin --</option>
+                    <option value="AÇILIŞÇI" ${editItem?.responsible === 'AÇILIŞÇI' ? 'selected' : ''}>🔵 AÇILIŞÇI</option>
+                    <option value="HER SHIFT" ${editItem?.responsible === 'HER SHIFT' ? 'selected' : ''}>🟡 HER SHIFT</option>
+                    <option value="ARACI" ${editItem?.responsible === 'ARACI' ? 'selected' : ''}>🔴 ARACI</option>
+                    <option value="KAPANIŞÇI" ${editItem?.responsible === 'KAPANIŞÇI' ? 'selected' : ''}>🟠 KAPANIŞÇI</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Yapılacak Günler (boş = her gün)</label>
+                <div style="display:flex;flex-wrap:wrap;gap:4px;max-height:150px;overflow-y:auto;padding:8px;background:var(--bg3);border-radius:8px">
+                    ${dateOptions.map(d => `
+                        <label style="display:flex;align-items:center;gap:4px;padding:4px 8px;background:var(--bg2);border-radius:6px;cursor:pointer;font-size:.8rem">
+                            <input type="checkbox" class="newItemDate" value="${d}" ${selectedDates.includes(d) ? 'checked' : ''}>
+                            ${d}
+                        </label>
+                    `).join('')}
+                </div>
+                <div style="font-size:.75rem;color:var(--tx3);margin-top:4px">Hiç seçilmezse her gün gösterilir</div>
+            </div>
+        ` : `
+            <div class="form-group">
+                <label class="form-label">Ceza (opsiyonel)</label>
+                <input type="text" id="newChecklistItemPenalty" class="form-input" placeholder="örn: -100 puan" value="${editItem?.penalty || ''}">
+            </div>
+        `}
+        <input type="hidden" id="editChecklistItemId" value="${editItem?.id || ''}">
     `, `
         <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
-        <button class="btn btn-primary" onclick="addChecklistItem('${branch}', '${type}')">Ekle</button>
+        <button class="btn btn-primary" onclick="addChecklistItem('${branch}', '${type}')">${isEdit ? 'Güncelle' : 'Ekle'}</button>
     `);
 }
 
-// Checklist madde ekle
+// Checklist madde düzenle
+function editChecklistItem(itemId) {
+    const branch = document.getElementById('checklistSube')?.value;
+    const type = document.getElementById('checklistType')?.value;
+    
+    // Firebase'den maddeyi bul
+    const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
+    db.collection('checklists').doc(checklistId).get().then(doc => {
+        if (doc.exists) {
+            const item = doc.data().items?.find(i => i.id === itemId);
+            if (item) {
+                showAddChecklistItemModal(item);
+            }
+        }
+    });
+}
+
+// Checklist madde ekle/güncelle
 async function addChecklistItem(branch, type) {
     const text = document.getElementById('newChecklistItemText')?.value?.trim();
-    const penalty = document.getElementById('newChecklistItemPenalty')?.value?.trim();
+    const duration = parseInt(document.getElementById('newChecklistItemDuration')?.value) || 60;
+    const editId = document.getElementById('editChecklistItemId')?.value;
+    const isEdit = !!editId;
     
     if (!text) {
         toast('Madde metni gerekli', 'error');
         return;
     }
+    
+    // Temizlik ve bakım için ek alanlar
+    const isAylik = type === 'aylik';
+    let responsible = '';
+    let dates = [];
+    let color = '';
+    
+    if (isAylik) {
+        responsible = document.getElementById('newChecklistItemResponsible')?.value || '';
+        const dateCheckboxes = document.querySelectorAll('.newItemDate:checked');
+        dates = Array.from(dateCheckboxes).map(cb => parseInt(cb.value));
+        
+        // Sorumluya göre renk ata
+        const colorMap = {
+            'AÇILIŞÇI': '#00B0F0',
+            'HER SHIFT': '#FFFF00',
+            'ARACI': '#C00000',
+            'KAPANIŞÇI': '#FFC000'
+        };
+        color = colorMap[responsible] || '';
+    }
+    
+    const penalty = document.getElementById('newChecklistItemPenalty')?.value?.trim() || null;
     
     try {
         const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
@@ -9683,17 +9833,28 @@ async function addChecklistItem(branch, type) {
         const doc = await checklistRef.get();
         
         const newItem = {
-            id: 'item_' + Date.now(),
+            id: isEdit ? editId : 'item_' + Date.now(),
             text,
-            penalty: penalty || null,
+            duration,
+            ...(isAylik && { responsible, dates, color }),
+            ...(!isAylik && penalty && { penalty }),
             order: (doc.exists ? doc.data().items?.length : 0) + 1
         };
         
-        if (doc.exists) {
+        if (isEdit && doc.exists) {
+            // Güncelleme
+            const items = doc.data().items.map(i => i.id === editId ? newItem : i);
+            await checklistRef.update({
+                items,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            toast('Madde güncellendi', 'success');
+        } else if (doc.exists) {
             await checklistRef.update({
                 items: firebase.firestore.FieldValue.arrayUnion(newItem),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
+            toast('Madde eklendi', 'success');
         } else {
             await checklistRef.set({
                 branch,
@@ -9701,15 +9862,15 @@ async function addChecklistItem(branch, type) {
                 items: [newItem],
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
+            toast('Madde eklendi', 'success');
         }
         
         closeModal();
-        toast('Madde eklendi', 'success');
         loadChecklist();
         
     } catch (error) {
         console.error('Madde ekleme hatası:', error);
-        toast('Ekleme hatası!', 'error');
+        toast('İşlem hatası!', 'error');
     }
 }
 
