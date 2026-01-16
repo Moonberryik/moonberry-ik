@@ -5112,18 +5112,29 @@ async function savePersonel() {
 }
 
 function editPersonel(id) {
+    if (!id || id === 'undefined' || id === '') {
+        toast('Geçersiz personel ID!', 'error');
+        return;
+    }
     showAddPersonelModal(id);
 }
 
 async function deletePersonel(id) {
+    // ID kontrolü
+    if (!id || id === 'undefined' || id === '') {
+        toast('Geçersiz personel ID!', 'error');
+        console.error('deletePersonel: Boş veya geçersiz ID:', id);
+        return;
+    }
+    
     confirmModal('Personel Sil', 'Bu personeli silmek istediğinize emin misiniz?', async () => {
         try {
             await db.collection('personel').doc(id).delete();
-            toast('Personel silindi', 'success');
+            toast('Personel silindi ✓', 'success');
             loadPersonelList();
         } catch (error) {
             console.error('Silme hatası:', error);
-            toast('Silme hatası!', 'error');
+            toast('Silme hatası: ' + error.message, 'error');
         }
     });
 }
