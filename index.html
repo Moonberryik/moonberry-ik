@@ -9108,24 +9108,25 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
             `;
         } else {
             // Normal mod - TAM DOLGU RENGİ
+            const canEdit = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(userRole);
             html += `
                 <div class="checklist-item" style="display:flex;align-items:flex-start;gap:14px;padding:18px 20px;border-radius:14px;margin-bottom:14px;background:${hasColor ? itemColor : 'var(--bg2)'};box-shadow:0 3px 12px rgba(0,0,0,.1)">
-                    <div style="display:flex;flex-direction:column;gap:10px;flex-shrink:0">
+                    <div style="display:flex;flex-direction:row;gap:8px;flex-shrink:0">
                         <label style="cursor:${isSubmitted ? 'default' : 'pointer'}">
                             <input type="radio" name="check_${item.id}" value="done" ${isChecked ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''} style="display:none">
-                            <span onclick="${isSubmitted ? '' : `selectCheckOption(this, '${item.id}', 'done')`}"
-                                style="width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;
+                            <span class="check-btn done" onclick="${isSubmitted ? '' : `selectCheckOption(this, '${item.id}', 'done')`}"
+                                style="width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;
                                 background:${isChecked ? '#22c55e' : 'rgba(255,255,255,.95)'};
-                                border:3px solid ${isChecked ? '#22c55e' : 'rgba(255,255,255,.5)'};
+                                border:3px solid ${isChecked ? '#22c55e' : 'rgba(34,197,94,.4)'};
                                 color:${isChecked ? '#fff' : '#22c55e'};
                                 transition:all .15s;font-weight:bold;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.1)">✓</span>
                         </label>
                         <label style="cursor:${isSubmitted ? 'default' : 'pointer'}">
                             <input type="radio" name="check_${item.id}" value="notdone" ${isNotDone ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''} style="display:none">
-                            <span onclick="${isSubmitted ? '' : `selectCheckOption(this, '${item.id}', 'notdone')`}"
-                                style="width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;
+                            <span class="check-btn notdone" onclick="${isSubmitted ? '' : `selectCheckOption(this, '${item.id}', 'notdone')`}"
+                                style="width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;
                                 background:${isNotDone ? '#ef4444' : 'rgba(255,255,255,.95)'};
-                                border:3px solid ${isNotDone ? '#ef4444' : 'rgba(255,255,255,.5)'};
+                                border:3px solid ${isNotDone ? '#ef4444' : 'rgba(239,68,68,.4)'};
                                 color:${isNotDone ? '#fff' : '#ef4444'};
                                 transition:all .15s;font-weight:bold;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.1)">✗</span>
                         </label>
@@ -9137,6 +9138,11 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
                         </div>
                         <div style="font-size:1rem;color:${hasColor ? '#fff' : 'var(--tx)'};line-height:1.6;font-weight:500">${item.text}</div>
                     </div>
+                    ${canEdit && !isSubmitted ? `
+                    <button onclick="showEditChecklistItemModal('${item.id}')" style="background:rgba(255,255,255,.2);border:none;color:${hasColor ? '#fff' : 'var(--tx2)'};cursor:pointer;padding:8px;border-radius:8px;flex-shrink:0" title="Düzenle">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    ` : ''}
                 </div>
             `;
         }
@@ -9232,10 +9238,68 @@ function selectCheckOption(btn, itemId, value) {
     const doneInput = parent.querySelector('input[value="done"]');
     const notdoneInput = parent.querySelector('input[value="notdone"]');
     
-    // İlk madde işaretlendiğinde zamanlayıcıyı başlat
+    if (!doneBtn || !notdoneBtn) {
+        console.error('Butonlar bulunamadı');
+        return;
+    }
+    
+    // Önce işaretle
+    if (value === 'done') {
+        doneInput.checked = true;
+        notdoneInput.checked = false;
+        doneBtn.style.background = '#22c55e';
+        doneBtn.style.borderColor = '#22c55e';
+        doneBtn.style.color = '#fff';
+        notdoneBtn.style.background = 'rgba(255,255,255,.95)';
+        notdoneBtn.style.borderColor = 'rgba(239,68,68,.4)';
+        notdoneBtn.style.color = '#ef4444';
+    } else {
+        notdoneInput.checked = true;
+        doneInput.checked = false;
+        notdoneBtn.style.background = '#ef4444';
+        notdoneBtn.style.borderColor = '#ef4444';
+        notdoneBtn.style.color = '#fff';
+        doneBtn.style.background = 'rgba(255,255,255,.95)';
+        doneBtn.style.borderColor = 'rgba(34,197,94,.4)';
+        doneBtn.style.color = '#22c55e';
+    }
+    
+    // İlk madde işaretlendiğinde modal göster
     if (!checklistFirstItemTime) {
-        checklistFirstItemTime = new Date();
-        checklistStartTime = new Date();
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('tr-TR', {day: '2-digit', month: '2-digit', year: 'numeric'});
+        const timeStr = now.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+        
+        const typeSelect = document.getElementById('checklistType');
+        const typeName = typeSelect?.selectedOptions?.[0]?.text || 'Checklist';
+        
+        showModal('✅ Checklist Başladı', `
+            <div style="text-align:center;padding:20px 0">
+                <div style="font-size:3rem;margin-bottom:16px">⏱️</div>
+                <div style="font-size:1.2rem;font-weight:600;color:var(--tx);margin-bottom:8px">${typeName}</div>
+                <div style="font-size:2rem;font-weight:700;color:#008c95;margin-bottom:8px">${timeStr}</div>
+                <div style="font-size:1rem;color:var(--tx2)">${dateStr}</div>
+                <div style="margin-top:16px;padding:12px;background:var(--bg3);border-radius:8px;font-size:.9rem;color:var(--tx2)">
+                    Süre sayacı başladı. Tüm maddeleri kontrol edin.
+                </div>
+            </div>
+        `, `
+            <button class="btn btn-primary" onclick="confirmChecklistStart()">Tamam</button>
+        `);
+        
+        // Geçici olarak zamanı sakla
+        window.pendingChecklistStartTime = now;
+    }
+    
+    // Tüm maddeler işaretlendi mi kontrol et
+    checkAllItemsMarked();
+}
+
+// Checklist başlangıcını onayla
+function confirmChecklistStart() {
+    if (window.pendingChecklistStartTime) {
+        checklistFirstItemTime = window.pendingChecklistStartTime;
+        checklistStartTime = window.pendingChecklistStartTime;
         
         // Banner'ı göster
         const banner = document.getElementById('checklistTimerBanner');
@@ -9247,34 +9311,9 @@ function selectCheckOption(btn, itemId, value) {
             }
         }
         
-        // Bildirim göster
-        const typeSelect = document.getElementById('checklistType');
-        const typeName = typeSelect?.selectedOptions?.[0]?.text || 'Checklist';
-        showToast(`${typeName} başladı! Başlangıç: ${checklistStartTime.toLocaleTimeString('tr-TR')}`, 'success');
+        delete window.pendingChecklistStartTime;
     }
-    
-    // Reset
-    doneBtn.style.background = 'var(--bg3)';
-    doneBtn.style.borderColor = 'var(--cardBorder)';
-    doneBtn.style.color = 'var(--tx3)';
-    notdoneBtn.style.background = 'var(--bg3)';
-    notdoneBtn.style.borderColor = 'var(--cardBorder)';
-    notdoneBtn.style.color = 'var(--tx3)';
-    
-    if (value === 'done') {
-        doneInput.checked = true;
-        doneBtn.style.background = 'rgba(39,174,96,.2)';
-        doneBtn.style.borderColor = '#27ae60';
-        doneBtn.style.color = '#27ae60';
-    } else {
-        notdoneInput.checked = true;
-        notdoneBtn.style.background = 'rgba(231,76,60,.2)';
-        notdoneBtn.style.borderColor = '#e74c3c';
-        notdoneBtn.style.color = '#e74c3c';
-    }
-    
-    // Tüm maddeler işaretlendi mi kontrol et
-    checkAllItemsMarked();
+    closeModal();
 }
 
 // Tüm maddelerin işaretlenip işaretlenmediğini kontrol et
@@ -10041,6 +10080,188 @@ async function deleteChecklistItem(itemId) {
     } catch (error) {
         console.error('Madde silme hatası:', error);
         toast('Silme hatası!', 'error');
+    }
+}
+
+// Checklist madde düzenle modal
+async function showEditChecklistItemModal(itemId) {
+    const branch = document.getElementById('checklistSube')?.value;
+    const type = document.getElementById('checklistType')?.value;
+    
+    if (!branch || !type) {
+        toast('Checklist bulunamadı', 'error');
+        return;
+    }
+    
+    try {
+        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
+        const checklistRef = db.collection('checklists').doc(checklistId);
+        const doc = await checklistRef.get();
+        
+        if (!doc.exists) {
+            toast('Checklist bulunamadı', 'error');
+            return;
+        }
+        
+        const item = doc.data().items.find(i => i.id === itemId);
+        if (!item) {
+            toast('Madde bulunamadı', 'error');
+            return;
+        }
+        
+        const isAylik = type === 'aylik';
+        
+        // Tarih checkboxları (aylik için)
+        let dateOptions = '';
+        if (isAylik) {
+            for (let i = 1; i <= 31; i++) {
+                const checked = item.dates && item.dates.includes(i) ? 'checked' : '';
+                dateOptions += `<label style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:var(--bg3);border-radius:6px;cursor:pointer;font-size:.8rem">
+                    <input type="checkbox" class="editItemDate" value="${i}" ${checked} style="accent-color:#008c95"> ${i}
+                </label>`;
+            }
+        }
+        
+        const everyDay = isAylik && (!item.dates || item.dates.length === 0);
+        
+        showModal('Madde Düzenle', `
+            <div class="form-group">
+                <label class="form-label">Madde Metni</label>
+                <textarea id="editChecklistItemText" class="form-input" rows="3">${item.text || ''}</textarea>
+            </div>
+            ${isAylik ? `
+            <div class="form-group">
+                <label class="form-label">Sorumlu</label>
+                <select id="editChecklistItemResponsible" class="form-input">
+                    <option value="">Seçin...</option>
+                    <option value="AÇILIŞÇI" data-color="#0ea5e9" ${item.responsible === 'AÇILIŞÇI' ? 'selected' : ''}>🔵 Açılışçı</option>
+                    <option value="HER SHIFT" data-color="#eab308" ${item.responsible === 'HER SHIFT' ? 'selected' : ''}>🟡 Her Shift</option>
+                    <option value="ARACI" data-color="#dc2626" ${item.responsible === 'ARACI' ? 'selected' : ''}>🔴 Aracı</option>
+                    <option value="KAPANIŞÇI" data-color="#f97316" ${item.responsible === 'KAPANIŞÇI' ? 'selected' : ''}>🟠 Kapanışçı</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tarihler</label>
+                <div style="margin-bottom:8px">
+                    <button type="button" class="btn btn-sm btn-ghost" onclick="editSelectAllDates()">Tümünü Seç</button>
+                    <button type="button" class="btn btn-sm btn-ghost" onclick="editSelectOddDates()">Tek Günler</button>
+                    <button type="button" class="btn btn-sm btn-ghost" onclick="editSelectEvenDates()">Çift Günler</button>
+                    <button type="button" class="btn btn-sm btn-ghost" onclick="editClearAllDates()">Temizle</button>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;max-height:180px;overflow-y:auto;padding:8px;background:var(--bg2);border-radius:8px">
+                    ${dateOptions}
+                </div>
+                <div style="margin-top:8px">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                        <input type="checkbox" id="editItemEveryDay" ${everyDay ? 'checked' : ''} onchange="editToggleEveryDay()" style="accent-color:#008c95">
+                        <span style="font-weight:600">Her gün (tarih seçmeden)</span>
+                    </label>
+                </div>
+            </div>
+            ` : `
+            <div class="form-group">
+                <label class="form-label">Ceza (opsiyonel)</label>
+                <input type="text" id="editChecklistItemPenalty" class="form-input" value="${item.penalty || ''}" placeholder="örn: -100 puan">
+            </div>
+            `}
+        `, `
+            <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
+            <button class="btn btn-primary" onclick="editChecklistItem('${itemId}', '${branch}', '${type}')">Kaydet</button>
+        `);
+        
+    } catch (error) {
+        console.error('Madde yükleme hatası:', error);
+        toast('Yükleme hatası!', 'error');
+    }
+}
+
+// Edit modal tarih yardımcıları
+function editSelectAllDates() {
+    document.querySelectorAll('.editItemDate').forEach(cb => cb.checked = true);
+    document.getElementById('editItemEveryDay').checked = false;
+}
+function editSelectOddDates() {
+    document.querySelectorAll('.editItemDate').forEach(cb => {
+        cb.checked = parseInt(cb.value) % 2 === 1;
+    });
+    document.getElementById('editItemEveryDay').checked = false;
+}
+function editSelectEvenDates() {
+    document.querySelectorAll('.editItemDate').forEach(cb => {
+        cb.checked = parseInt(cb.value) % 2 === 0;
+    });
+    document.getElementById('editItemEveryDay').checked = false;
+}
+function editClearAllDates() {
+    document.querySelectorAll('.editItemDate').forEach(cb => cb.checked = false);
+}
+function editToggleEveryDay() {
+    const everyDay = document.getElementById('editItemEveryDay').checked;
+    if (everyDay) {
+        document.querySelectorAll('.editItemDate').forEach(cb => cb.checked = false);
+    }
+}
+
+// Checklist madde güncelle
+async function editChecklistItem(itemId, branch, type) {
+    const text = document.getElementById('editChecklistItemText')?.value?.trim();
+    const isAylik = type === 'aylik';
+    
+    if (!text) {
+        toast('Madde metni gerekli', 'error');
+        return;
+    }
+    
+    try {
+        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
+        const checklistRef = db.collection('checklists').doc(checklistId);
+        const doc = await checklistRef.get();
+        
+        if (!doc.exists) {
+            toast('Checklist bulunamadı', 'error');
+            return;
+        }
+        
+        const items = doc.data().items.map(item => {
+            if (item.id === itemId) {
+                const updated = { ...item, text };
+                
+                if (isAylik) {
+                    const responsibleSelect = document.getElementById('editChecklistItemResponsible');
+                    updated.responsible = responsibleSelect?.value || '';
+                    const option = responsibleSelect?.options[responsibleSelect.selectedIndex];
+                    updated.color = option?.dataset?.color || '#6b7280';
+                    
+                    const everyDay = document.getElementById('editItemEveryDay')?.checked;
+                    if (everyDay) {
+                        updated.dates = [];
+                    } else {
+                        updated.dates = [];
+                        document.querySelectorAll('.editItemDate:checked').forEach(cb => {
+                            updated.dates.push(parseInt(cb.value));
+                        });
+                    }
+                } else {
+                    updated.penalty = document.getElementById('editChecklistItemPenalty')?.value?.trim() || null;
+                }
+                
+                return updated;
+            }
+            return item;
+        });
+        
+        await checklistRef.update({
+            items,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        closeModal();
+        toast('Madde güncellendi', 'success');
+        loadChecklist();
+        
+    } catch (error) {
+        console.error('Madde güncelleme hatası:', error);
+        toast('Güncelleme hatası!', 'error');
     }
 }
 
