@@ -12798,28 +12798,36 @@ async function showChecklistHistory() {
     }
     
     try {
-        let query = db.collection('checklistSubmissions')
+        // INDEX OLMADAN - sadece branch ile sorgula
+        const snapshot = await db.collection('checklistSubmissions')
             .where('branch', '==', branch)
-            .orderBy('submittedAt', 'desc')
-            .limit(50);
+            .get();
         
-        if (type) {
-            query = db.collection('checklistSubmissions')
-                .where('branch', '==', branch)
-                .where('type', '==', type)
-                .orderBy('submittedAt', 'desc')
-                .limit(50);
-        }
+        // JavaScript'te filtrele ve sırala
+        let submissions = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            // Type filtresi
+            if (type && data.type !== type) return;
+            submissions.push({ id: doc.id, ...data });
+        });
         
-        const snapshot = await query.get();
+        // Tarihe göre sırala (en yeni önce)
+        submissions.sort((a, b) => {
+            const dateA = a.submittedAt?.toDate?.() || new Date(0);
+            const dateB = b.submittedAt?.toDate?.() || new Date(0);
+            return dateB - dateA;
+        });
+        
+        // İlk 50'yi al
+        submissions = submissions.slice(0, 50);
         
         let html = '<div style="max-height:400px;overflow-y:auto">';
         
-        if (snapshot.empty) {
+        if (submissions.length === 0) {
             html += '<p style="color:var(--tx2);text-align:center;padding:20px">Henüz checklist kaydı yok</p>';
         } else {
-            snapshot.forEach(doc => {
-                const data = doc.data();
+            submissions.forEach(data => {
                 const typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === data.type);
                 const date = data.submittedAt?.toDate ? new Date(data.submittedAt.toDate()) : new Date();
                 
