@@ -9361,39 +9361,34 @@ function renderPlatformChecklist(container, branch, date, timeSlot, submittedDat
     const isSubmitted = !!submittedData;
     const userName = currentUser?.name || currentUser?.email?.split('@')[0] || 'Personel';
     
-    // Şubeye göre renk belirle - Moonberry (Şişli) = teal, Sunberry (Tuzla) = coral
+    // Şubeye göre marka rengi - Moonberry #008c95, Sunberry #ff8674
     const isMoonberry = branch.includes('Şişli') || branch.includes('Merkez');
     const brandColor = isMoonberry ? '#008c95' : '#ff8674';
-    const brandColorRgba = isMoonberry ? 'rgba(0,140,149,.2)' : 'rgba(255,134,116,.2)';
-    const brandName = isMoonberry ? 'Moonberry' : 'Sunberry';
+    const brandName = isMoonberry ? 'MOONBERRY' : 'SUNBERRY';
     
-    // Tahmini süre - 8 platform x 30 saniye = ~4 dakika
-    const platformCount = PLATFORMS.length;
-    const estimatedMinutes = Math.ceil(platformCount * 0.5);
+    // Saatler
+    const TIME_SLOTS = ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'];
+    
+    // Platformlar
+    const platforms = ['TRENDYOL', 'YEMEK SEPETİ', 'GETİR YEMEK', 'MİGROS'];
     
     let html = `
         <div class="form-section">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
                 <div>
-                    <div style="font-size:1.3rem;font-weight:700;color:var(--tx)">📱 Platform Check <span style="color:${brandColor};font-size:1rem">(${brandName})</span></div>
+                    <div style="font-size:1.3rem;font-weight:700;color:var(--tx)">📱 Platform Check</div>
                     <div style="font-size:.85rem;color:var(--tx2)">${branch} • ${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})}</div>
                 </div>
                 <div style="display:flex;gap:12px;align-items:center">
                     <div style="text-align:right">
                         <div style="font-size:.8rem;color:var(--tx2)">👤 ${userName}</div>
-                        <div style="font-size:.75rem;color:${brandColor}">⏱️ Tahmini: ${estimatedMinutes} dk</div>
                     </div>
                     ${isSubmitted ? `
-                        <div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:${brandColorRgba};color:${brandColor};border-radius:20px;font-size:.85rem;font-weight:600">
+                        <div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.85rem;font-weight:600">
                             ✓ Tamamlandı
                         </div>
                     ` : ''}
                 </div>
-            </div>
-            
-            <!-- Uyarı Banner -->
-            <div style="margin-bottom:16px;padding:12px 16px;background:${brandColorRgba};border:1px solid ${brandColor}40;border-radius:10px;font-size:.85rem;color:var(--tx)">
-                <strong>⚠️ Önemli:</strong> Her platformu telefon/tabletten açıp kontrol edin. Hızlı geçişler tespit edilir ve puantaja yansır.
             </div>
             
             <div style="margin-bottom:20px;padding:16px;background:var(--bg3);border-radius:12px">
@@ -9403,53 +9398,61 @@ function renderPlatformChecklist(container, branch, date, timeSlot, submittedDat
                     ${isSubmitted ? 'disabled' : ''}>
             </div>
             
-            <div style="background:var(--bg2);border-radius:12px;overflow:hidden;border:1px solid var(--cardBorder)">
-                <table style="width:100%;border-collapse:collapse" data-brand-color="${brandColor}" data-brand-rgba="${brandColorRgba}">
+            <div style="overflow-x:auto;border-radius:12px;border:1px solid var(--cardBorder)">
+                <table style="width:100%;border-collapse:collapse;min-width:500px" data-brand="${brandName}">
                     <thead>
-                        <tr style="background:${brandColorRgba}">
-                            <th style="padding:12px;text-align:left;font-weight:600;color:var(--tx)">Platform</th>
-                            <th style="padding:12px;text-align:center;font-weight:600;color:${brandColor}">Açık ✓</th>
-                            <th style="padding:12px;text-align:center;font-weight:600;color:#e74c3c">Kapalı ✗</th>
+                        <tr>
+                            <th colspan="${platforms.length + 1}" style="padding:12px;text-align:center;font-weight:700;font-size:1.1rem;background:${brandColor};color:#fff;letter-spacing:1px">
+                                ${brandName}
+                            </th>
+                        </tr>
+                        <tr style="background:${brandColor}">
+                            <th style="padding:10px 12px;text-align:center;font-weight:600;color:#fff;border:1px solid rgba(255,255,255,.2);min-width:80px">SAAT</th>
+                            ${platforms.map(p => `<th style="padding:10px 8px;text-align:center;font-weight:600;color:#fff;border:1px solid rgba(255,255,255,.2);font-size:.85rem">${p}</th>`).join('')}
                         </tr>
                     </thead>
                     <tbody>
     `;
     
-    PLATFORMS.forEach(platform => {
-        const isOpen = submittedData?.platforms?.find(p => p.name === platform)?.isOpen;
-        const isClosed = submittedData?.platforms?.find(p => p.name === platform)?.isOpen === false;
-        
+    TIME_SLOTS.forEach(time => {
         html += `
-            <tr style="border-top:1px solid var(--cardBorder)">
-                <td style="padding:12px;font-weight:500;color:var(--tx)">${platform}</td>
-                <td style="padding:12px;text-align:center">
-                    <label style="cursor:${isSubmitted ? 'default' : 'pointer'}">
-                        <input type="radio" name="platform_${platform.replace(/\s/g, '_')}" value="open" 
-                            ${isOpen ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''}
-                            style="display:none">
-                        <span class="platform-check-btn" onclick="${isSubmitted ? '' : `selectPlatformStatus(this, '${platform.replace(/\s/g, '_')}', true)`}"
-                            style="display:inline-flex;width:40px;height:40px;border-radius:10px;align-items:center;justify-content:center;font-size:1.3rem;
-                            background:${isOpen ? brandColorRgba : 'var(--bg3)'};
-                            border:2px solid ${isOpen ? brandColor : 'transparent'};
-                            color:${isOpen ? brandColor : 'var(--tx3)'};
-                            transition:all .2s;cursor:pointer">✓</span>
-                    </label>
-                </td>
-                <td style="padding:12px;text-align:center">
-                    <label style="cursor:${isSubmitted ? 'default' : 'pointer'}">
-                        <input type="radio" name="platform_${platform.replace(/\s/g, '_')}" value="closed" 
-                            ${isClosed ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''}
-                            style="display:none">
-                        <span class="platform-check-btn" onclick="${isSubmitted ? '' : `selectPlatformStatus(this, '${platform.replace(/\s/g, '_')}', false)`}"
-                            style="display:inline-flex;width:40px;height:40px;border-radius:10px;align-items:center;justify-content:center;font-size:1.3rem;
-                            background:${isClosed ? 'rgba(231,76,60,.2)' : 'var(--bg3)'};
-                            border:2px solid ${isClosed ? '#e74c3c' : 'transparent'};
-                            color:${isClosed ? '#e74c3c' : 'var(--tx3)'};
-                            transition:all .2s;cursor:pointer">✗</span>
-                    </label>
-                </td>
-            </tr>
+            <tr>
+                <td style="padding:12px;text-align:center;font-weight:700;background:${brandColor};color:#fff;border:1px solid rgba(255,255,255,.2)">${time}</td>
         `;
+        
+        platforms.forEach(platform => {
+            const key = `${time}_${platform.replace(/\s/g, '_')}`;
+            const savedValue = submittedData?.checks?.[key];
+            const isOpen = savedValue === 'open';
+            const isClosed = savedValue === 'closed';
+            
+            html += `
+                <td style="padding:8px;text-align:center;border:1px solid var(--cardBorder);background:var(--bg2)">
+                    <div style="display:flex;gap:6px;justify-content:center">
+                        <label style="cursor:${isSubmitted ? 'default' : 'pointer'}">
+                            <input type="radio" name="platform_${key}" value="open" ${isOpen ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''} style="display:none">
+                            <span class="platform-btn" onclick="${isSubmitted ? '' : `selectPlatformCell(this, '${key}', 'open')`}"
+                                style="display:inline-flex;width:32px;height:32px;border-radius:8px;align-items:center;justify-content:center;font-size:1.1rem;font-weight:bold;
+                                background:${isOpen ? brandColor : 'var(--bg3)'};
+                                border:2px solid ${isOpen ? brandColor : 'var(--cardBorder)'};
+                                color:${isOpen ? '#fff' : 'var(--tx3)'};
+                                transition:all .15s;cursor:pointer">✓</span>
+                        </label>
+                        <label style="cursor:${isSubmitted ? 'default' : 'pointer'}">
+                            <input type="radio" name="platform_${key}" value="closed" ${isClosed ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''} style="display:none">
+                            <span class="platform-btn" onclick="${isSubmitted ? '' : `selectPlatformCell(this, '${key}', 'closed')`}"
+                                style="display:inline-flex;width:32px;height:32px;border-radius:8px;align-items:center;justify-content:center;font-size:1.1rem;font-weight:bold;
+                                background:${isClosed ? '#e74c3c' : 'var(--bg3)'};
+                                border:2px solid ${isClosed ? '#e74c3c' : 'var(--cardBorder)'};
+                                color:${isClosed ? '#fff' : 'var(--tx3)'};
+                                transition:all .15s;cursor:pointer">✗</span>
+                        </label>
+                    </div>
+                </td>
+            `;
+        });
+        
+        html += `</tr>`;
     });
     
     html += `
@@ -9459,7 +9462,7 @@ function renderPlatformChecklist(container, branch, date, timeSlot, submittedDat
             
             ${!isSubmitted ? `
                 <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
-                    <button class="btn btn-primary" style="background:${brandColor}" onclick="submitPlatformChecklist('${branch}', '${date}', '${timeSlot}')">
+                    <button class="btn btn-primary" style="background:${brandColor}" onclick="submitPlatformChecklist('${branch}', '${date}', '')">
                         ✅ Platform Check'i Tamamla
                     </button>
                 </div>
@@ -9470,37 +9473,39 @@ function renderPlatformChecklist(container, branch, date, timeSlot, submittedDat
     container.innerHTML = html;
 }
 
-// Platform status seç
-function selectPlatformStatus(btn, platformKey, isOpen) {
-    const row = btn.closest('tr');
-    const table = row.closest('table');
-    const openSpan = row.querySelector('td:nth-child(2) span');
-    const closedSpan = row.querySelector('td:nth-child(3) span');
-    const openInput = row.querySelector('input[value="open"]');
-    const closedInput = row.querySelector('input[value="closed"]');
+// Platform hücre seç
+function selectPlatformCell(btn, key, value) {
+    const cell = btn.closest('td');
+    const table = btn.closest('table');
+    const openBtn = cell.querySelector('span:first-of-type');
+    const closedBtn = cell.querySelector('span:last-of-type');
+    const openInput = cell.querySelector('input[value="open"]');
+    const closedInput = cell.querySelector('input[value="closed"]');
     
-    // Şube rengini table'dan al
-    const brandColor = table.dataset.brandColor || '#008c95';
-    const brandColorRgba = table.dataset.brandRgba || 'rgba(0,140,149,.2)';
+    // Marka rengini belirle
+    const brand = table.dataset.brand;
+    const brandColor = brand === 'MOONBERRY' ? '#008c95' : '#ff8674';
     
     // Reset
-    openSpan.style.background = 'var(--bg3)';
-    openSpan.style.borderColor = 'transparent';
-    openSpan.style.color = 'var(--tx3)';
-    closedSpan.style.background = 'var(--bg3)';
-    closedSpan.style.borderColor = 'transparent';
-    closedSpan.style.color = 'var(--tx3)';
+    openBtn.style.background = 'var(--bg3)';
+    openBtn.style.borderColor = 'var(--cardBorder)';
+    openBtn.style.color = 'var(--tx3)';
+    closedBtn.style.background = 'var(--bg3)';
+    closedBtn.style.borderColor = 'var(--cardBorder)';
+    closedBtn.style.color = 'var(--tx3)';
     
-    if (isOpen) {
+    if (value === 'open') {
         openInput.checked = true;
-        openSpan.style.background = brandColorRgba;
-        openSpan.style.borderColor = brandColor;
-        openSpan.style.color = brandColor;
+        closedInput.checked = false;
+        openBtn.style.background = brandColor;
+        openBtn.style.borderColor = brandColor;
+        openBtn.style.color = '#fff';
     } else {
         closedInput.checked = true;
-        closedSpan.style.background = 'rgba(231,76,60,.2)';
-        closedSpan.style.borderColor = '#e74c3c';
-        closedSpan.style.color = '#e74c3c';
+        openInput.checked = false;
+        closedBtn.style.background = '#e74c3c';
+        closedBtn.style.borderColor = '#e74c3c';
+        closedBtn.style.color = '#fff';
     }
 }
 
@@ -9744,22 +9749,33 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
         return;
     }
     
-    const platforms = [];
-    let allAnswered = true;
+    // Saatler ve platformlar
+    const TIME_SLOTS = ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'];
+    const platforms = ['TRENDYOL', 'YEMEK SEPETİ', 'GETİR YEMEK', 'MİGROS'];
     
-    PLATFORMS.forEach(platform => {
-        const key = platform.replace(/\s/g, '_');
-        const openInput = document.querySelector(`input[name="platform_${key}"][value="open"]`);
-        const closedInput = document.querySelector(`input[name="platform_${key}"][value="closed"]`);
-        
-        if (!openInput?.checked && !closedInput?.checked) {
-            allAnswered = false;
-        } else {
-            platforms.push({
-                name: platform,
-                isOpen: openInput?.checked || false
-            });
-        }
+    const checks = {};
+    let allAnswered = true;
+    let openCount = 0;
+    let closedCount = 0;
+    
+    TIME_SLOTS.forEach(time => {
+        platforms.forEach(platform => {
+            const key = `${time}_${platform.replace(/\s/g, '_')}`;
+            const openInput = document.querySelector(`input[name="platform_${key}"][value="open"]`);
+            const closedInput = document.querySelector(`input[name="platform_${key}"][value="closed"]`);
+            
+            if (!openInput?.checked && !closedInput?.checked) {
+                allAnswered = false;
+            } else {
+                if (openInput?.checked) {
+                    checks[key] = 'open';
+                    openCount++;
+                } else {
+                    checks[key] = 'closed';
+                    closedCount++;
+                }
+            }
+        });
     });
     
     if (!allAnswered) {
@@ -9769,19 +9785,23 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
     
     try {
         const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_platform`;
-        const submissionId = `${checklistId}_${date}_${timeSlot.replace(':', '')}`;
+        const submissionId = `${checklistId}_${date}`;
         
         await db.collection('checklistSubmissions').doc(submissionId).set({
             checklistId,
             branch,
             type: 'platform',
             date,
-            timeSlot,
             personName,
             submittedBy: currentUser?.id,
             submittedByName: currentUser?.name || personName,
             submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            platforms
+            checks,
+            summary: {
+                total: TIME_SLOTS.length * platforms.length,
+                open: openCount,
+                closed: closedCount
+            }
         });
         
         toast('Platform check kaydedildi!', 'success');
