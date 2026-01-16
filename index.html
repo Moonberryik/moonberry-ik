@@ -8722,10 +8722,17 @@ async function loadChecklist() {
             const dayOfMonth = selectedDate.getDate();
             
             filteredItems = items.filter(item => {
+                // Yeni format: item.dates dizisi varsa kullan
+                if (item.dates && Array.isArray(item.dates)) {
+                    // Boş dizi = her gün göster (HER SHIFT gibi)
+                    if (item.dates.length === 0) return true;
+                    return item.dates.includes(dayOfMonth);
+                }
+                
+                // Eski format: text içindeki tarihleri parse et
                 const text = item.text || '';
-                // "ayın X, Y, Z" veya "ayın X-Y-Z" formatını ara
                 const dateMatch = text.match(/ayın\s*([\d,\-\s]+)/i);
-                if (!dateMatch) return true; // Tarih belirtilmemişse her zaman göster
+                if (!dateMatch) return true;
                 
                 const dateStr = dateMatch[1];
                 const dates = dateStr.split(/[,\s]+/).flatMap(part => {
@@ -8836,6 +8843,31 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                 <div style="font-size:.75rem;color:var(--tx3);margin-bottom:16px">${submittedData.submittedByName} • ${submittedData.submittedAt?.toDate ? new Date(submittedData.submittedAt.toDate()).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'}) : ''}</div>
             ` : ''}
             
+            ${type === 'aylik' && !checklistEditMode ? `
+                <!-- Temizlik ve Bakım - Sorumlu Renk Açıklaması -->
+                <div style="margin-bottom:20px;padding:14px;background:var(--bg3);border-radius:12px">
+                    <div style="font-size:.75rem;color:var(--tx2);margin-bottom:10px;font-weight:600">🎨 KİM SORUMLU?</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:12px">
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <span style="width:16px;height:16px;background:#00B0F0;border-radius:4px"></span>
+                            <span style="font-size:.8rem;color:var(--tx)">AÇILIŞÇI</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <span style="width:16px;height:16px;background:#FFFF00;border-radius:4px;border:1px solid #ccc"></span>
+                            <span style="font-size:.8rem;color:var(--tx)">HER SHIFT</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <span style="width:16px;height:16px;background:#C00000;border-radius:4px"></span>
+                            <span style="font-size:.8rem;color:var(--tx)">ARACI</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <span style="width:16px;height:16px;background:#FFC000;border-radius:4px"></span>
+                            <span style="font-size:.8rem;color:var(--tx)">KAPANIŞÇI</span>
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
+            
             ${!checklistEditMode ? `
                 <!-- Personel ve Zaman Bilgisi -->
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
@@ -8901,13 +8933,21 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
         const isNotDone = submittedData?.items?.find(i => i.id === item.id)?.notDone;
         const itemNum = index + 1;
         
+        // Temizlik ve Bakım için renk ve sorumlu bilgisi
+        const hasColor = item.color && type === 'aylik';
+        const colorStyle = hasColor ? `border-left:4px solid ${item.color};` : '';
+        const responsibleBadge = hasColor && item.responsible ? `
+            <span style="font-size:.7rem;padding:2px 8px;border-radius:10px;background:${item.color}20;color:${item.color};font-weight:600;white-space:nowrap">${item.responsible}</span>
+        ` : '';
+        
         if (checklistEditMode) {
             // Düzenleme modu - checkbox ile seçim
             html += `
-                <div class="checklist-item" data-item-id="${item.id}" style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg2);border-radius:10px;margin-bottom:8px;border:1px solid var(--cardBorder)">
+                <div class="checklist-item" data-item-id="${item.id}" style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg2);border-radius:10px;margin-bottom:8px;border:1px solid var(--cardBorder);${colorStyle}">
                     <input type="checkbox" class="checklist-select-item" value="${item.id}" style="width:20px;height:20px;cursor:pointer;accent-color:#008c95">
                     <span style="min-width:28px;height:28px;background:var(--bg3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:600;color:var(--tx2)">${itemNum}</span>
                     <div style="flex:1;font-size:.9rem;color:var(--tx)">${item.text}</div>
+                    ${responsibleBadge}
                     <button onclick="deleteChecklistItem('${item.id}')" style="background:none;border:none;color:#e74c3c;cursor:pointer;padding:6px;border-radius:6px;transition:all .2s" title="Sil" onmouseover="this.style.background='rgba(231,76,60,.1)'" onmouseout="this.style.background='none'">
                         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/></svg>
                     </button>
@@ -8916,8 +8956,8 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
         } else {
             // Normal mod - check/uncheck with auto numbering
             html += `
-                <div class="checklist-item" style="display:flex;align-items:flex-start;gap:12px;padding:16px;background:var(--bg2);border-radius:10px;margin-bottom:10px;border:1px solid var(--cardBorder)">
-                    <span style="min-width:32px;height:32px;background:var(--bg3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:600;color:var(--tx2);flex-shrink:0">${itemNum}</span>
+                <div class="checklist-item" style="display:flex;align-items:flex-start;gap:12px;padding:16px;background:var(--bg2);border-radius:10px;margin-bottom:10px;border:1px solid var(--cardBorder);${colorStyle}">
+                    <span style="min-width:32px;height:32px;background:${hasColor ? item.color + '20' : 'var(--bg3)'};border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:600;color:${hasColor ? item.color : 'var(--tx2)'};flex-shrink:0">${itemNum}</span>
                     <div style="display:flex;gap:8px;flex-shrink:0">
                         <label class="check-option" style="display:flex;align-items:center;gap:6px;cursor:${isSubmitted ? 'default' : 'pointer'}">
                             <input type="radio" name="check_${item.id}" value="done" 
@@ -8944,6 +8984,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                     </div>
                     <div style="flex:1">
                         <div style="font-size:.9rem;color:var(--tx);line-height:1.5">${item.text}</div>
+                        ${responsibleBadge}
                     </div>
                 </div>
             `;
@@ -9143,12 +9184,12 @@ function renderPlatformChecklist(container, branch, date, timeSlot, submittedDat
                     <thead>
                         <tr>
                             <th rowspan="2" style="padding:12px;background:var(--bg3);border:1px solid var(--cardBorder);font-weight:600;color:var(--tx);width:70px">SAAT</th>
-                            <th colspan="${moonberryPlatforms.length}" style="padding:10px;background:linear-gradient(135deg,var(--accent),#ff6b5b);color:#fff;text-align:center;font-weight:700;border:1px solid var(--cardBorder)">MOONBERRY</th>
-                            ${isTuzla ? `<th colspan="${sunberryPlatforms.length}" style="padding:10px;background:linear-gradient(135deg,var(--accent2),#00b5a0);color:#fff;text-align:center;font-weight:700;border:1px solid var(--cardBorder)">SUNBERRY</th>` : ''}
+                            <th colspan="${moonberryPlatforms.length}" style="padding:10px;background:linear-gradient(135deg,#008C95,#00b5a0);color:#fff;text-align:center;font-weight:700;border:1px solid var(--cardBorder)">MOONBERRY</th>
+                            ${isTuzla ? `<th colspan="${sunberryPlatforms.length}" style="padding:10px;background:linear-gradient(135deg,#ff8674,#ff6b5b);color:#fff;text-align:center;font-weight:700;border:1px solid var(--cardBorder)">SUNBERRY</th>` : ''}
                         </tr>
                         <tr>
-                            ${moonberryPlatforms.map(p => `<th style="padding:8px;background:rgba(255,134,116,.1);font-size:.75rem;font-weight:600;color:var(--tx);border:1px solid var(--cardBorder);min-width:90px">${p}</th>`).join('')}
-                            ${isTuzla ? sunberryPlatforms.map(p => `<th style="padding:8px;background:rgba(0,140,149,.1);font-size:.75rem;font-weight:600;color:var(--tx);border:1px solid var(--cardBorder);min-width:90px">${p}</th>`).join('') : ''}
+                            ${moonberryPlatforms.map(p => `<th style="padding:8px;background:rgba(0,140,149,.15);font-size:.75rem;font-weight:600;color:var(--tx);border:1px solid var(--cardBorder);min-width:90px">${p}</th>`).join('')}
+                            ${isTuzla ? sunberryPlatforms.map(p => `<th style="padding:8px;background:rgba(255,134,116,.15);font-size:.75rem;font-weight:600;color:var(--tx);border:1px solid var(--cardBorder);min-width:90px">${p}</th>`).join('') : ''}
                         </tr>
                     </thead>
                     <tbody>
