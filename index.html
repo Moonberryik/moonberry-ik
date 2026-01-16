@@ -9858,6 +9858,34 @@ async function loadTodayChecks() {
                 }
             }
             
+            // Platform Check - Günlük tek check (timeSlots yok)
+            if (checkType.id === 'platform') {
+                const submissionId = `platform_${todayStr}`;
+                let isCompleted = false;
+                
+                try {
+                    const doc = await db.collection('checklistSubmissions').doc(submissionId).get();
+                    isCompleted = doc.exists;
+                } catch (e) {}
+                
+                // Platform check her zaman aktif (gece yarısına kadar)
+                const now = new Date();
+                const currentHour = now.getHours();
+                const isActive = !isCompleted;
+                const isMissed = false; // Gece yarısına kadar
+                
+                // Tüm çalışan personel sorumlu
+                const responsiblePersonnel = [
+                    ...getShiftPersonnel(branch, 'acilis'),
+                    ...getShiftPersonnel(branch, 'ara'),
+                    ...getShiftPersonnel(branch, 'kapanis')
+                ].filter((v, i, a) => a.indexOf(v) === i); // Unique
+                
+                hasActiveChecks = true;
+                const rules = CHECK_RULES.platform;
+                html += renderSimpleCheckCard('Platform Check', '00:00', branch, isCompleted, isMissed, isActive, '', responsiblePersonnel, rules, 'smartphone');
+            }
+            
             // Açılış Check (sabah 11:00'e kadar)
             if (checkType.id === 'acilis') {
                 const deadline = '11:00';
@@ -10032,6 +10060,42 @@ async function loadTodayChecks() {
                 `;
             }
         }
+        
+        // ============== PLATFORM CHECK (for döngüsü dışında) ==============
+        // Platform Check her şube için gösterilmeli - CHECKLIST_TYPES'dan bağımsız
+        const platformSubmissionId = `platform_${todayStr}`;
+        let platformCompleted = false;
+        try {
+            const doc = await db.collection('checklistSubmissions').doc(platformSubmissionId).get();
+            platformCompleted = doc.exists;
+        } catch (e) {}
+        
+        const isMoonberryBranch = branch.includes('Şişli') || branch.includes('Merkez');
+        const platformBrandColor = isMoonberryBranch ? '#008c95' : '#ff8674';
+        const platformBrandBg = isMoonberryBranch ? 'rgba(0,140,149,.08)' : 'rgba(255,134,116,.08)';
+        
+        // Tüm çalışan personel
+        const platformPersonnel = [
+            ...getShiftPersonnel(branch, 'acilis'),
+            ...getShiftPersonnel(branch, 'ara'),
+            ...getShiftPersonnel(branch, 'kapanis')
+        ].filter((v, i, a) => a.indexOf(v) === i);
+        
+        const platformPersonnelText = platformPersonnel.length > 0 ? `• ${platformPersonnel.slice(0, 2).map(p => p.split(' ')[0]).join(', ')}` : '';
+        
+        hasActiveChecks = true;
+        html += `
+            <div class="check-pulse-active" style="background:${platformCompleted ? 'rgba(39,174,96,.06)' : platformBrandBg};border-left:3px solid ${platformCompleted ? '#27ae60' : platformBrandColor};border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:8px" onclick="goTo('checklist'); setTimeout(() => { document.querySelector('[data-type=platform]')?.click(); }, 100);">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                    <span style="font-size:1rem">📱</span>
+                    <span style="font-weight:600;font-size:.85rem;color:var(--tx)">Platform Check</span>
+                    <span style="font-size:.7rem;color:var(--tx2)">${platformPersonnelText}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <span style="font-size:.75rem;font-weight:600;color:${platformCompleted ? '#27ae60' : platformBrandColor};padding:3px 10px;background:${platformCompleted ? 'rgba(39,174,96,.1)' : platformBrandBg};border-radius:6px">${platformCompleted ? 'Tamam' : 'Aktif'}</span>
+                </div>
+            </div>
+        `;
     }
     
     if (hasActiveChecks) {
@@ -10119,7 +10183,7 @@ function renderSimpleCheckCard(name, deadline, branch, isCompleted, isMissed, is
     }
     
     // Icon SVG
-    const iconSvg = iconType === 'sunrise' ? '🌅' : iconType === 'sunset' ? '🌇' : '📋';
+    const iconSvg = iconType === 'sunrise' ? '🌅' : iconType === 'sunset' ? '🌇' : iconType === 'smartphone' ? '📱' : '📋';
     
     // Personel
     let personnelHtml = '';
@@ -11106,56 +11170,163 @@ async function loadChecklistTodayPanel() {
         const brandColor = isMoonberry ? '#008c95' : '#ff8674';
         
         for (const checkType of checkTypes) {
-            if (!checkType.timeSlots || checkType.timeSlots.length === 0) continue;
+            // Saat bazlı checkler (Günlük)
+            if (checkType.timeSlots && checkType.timeSlots.length > 0) {
+                for (const timeSlot of checkType.timeSlots) {
+                    const rules = CHECK_RULES[checkType.id];
+                    if (!rules) continue;
+                    
+                    const window = getCheckTimeWindow(checkType.id, timeSlot, branch);
+                    if (!window) continue;
+                    if (!isAdmin && (window.isMissed || window.isBeforeWindow)) continue;
+                    
+                    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType.id}_${todayStr}_${timeSlot.replace(':', '')}`;
+                    let isCompleted = false;
+                    
+                    try {
+                        const doc = await db.collection('checklistSubmissions').doc(submissionId).get();
+                        isCompleted = doc.exists;
+                    } catch (e) {}
+                    
+                    const remaining = getRemainingTime(checkType.id, timeSlot, branch);
+                    const checkHour = parseInt(timeSlot.split(':')[0]);
+                    let responsiblePersonnel = checkHour < 15 ? getShiftPersonnel(branch, 'acilis') : 
+                                              checkHour >= 20 ? getShiftPersonnel(branch, 'kapanis') :
+                                              [...getShiftPersonnel(branch, 'acilis'), ...getShiftPersonnel(branch, 'ara')];
+                    
+                    hasActiveChecks = true;
+                    
+                    // Minimalist tasarım - marka renkleri
+                    const brandBg = isMoonberry ? 'rgba(0,140,149,.06)' : 'rgba(255,134,116,.06)';
+                    let bgColor = 'var(--bg3)', accentColor = 'var(--tx3)', icon = '○', statusText = '';
+                    let isActive = false;
+                    
+                    if (isCompleted) { bgColor = 'rgba(39,174,96,.05)'; accentColor = '#27ae60'; icon = '●'; statusText = 'Tamam'; }
+                    else if (window.isMissed) { bgColor = brandBg; accentColor = brandColor; icon = '○'; statusText = 'Kaçırıldı'; }
+                    else if (window.isLate) { bgColor = 'rgba(243,156,18,.05)'; accentColor = '#f39c12'; icon = '◐'; statusText = 'Geç'; isActive = true; }
+                    else if (window.isInWindow) { bgColor = brandBg; accentColor = brandColor; icon = '●'; statusText = 'Aktif'; isActive = true; }
+                    
+                    const personnelText = responsiblePersonnel.length > 0 ? `• ${responsiblePersonnel[0].split(' ')[0]}` : '';
+                    const branchLabel = isMoonberry ? 'M' : 'S';
+                    
+                    html += `
+                        <div style="background:${bgColor};border-left:3px solid ${accentColor};border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:4px" onclick="selectCheckFromPanel('${branch}', '${checkType.id}', '${timeSlot}')">
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <span style="color:${accentColor};font-size:.8rem">${icon}</span>
+                                <span style="width:18px;height:18px;background:${brandColor};border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.6rem;font-weight:600">${branchLabel}</span>
+                                <span style="font-weight:500;font-size:.8rem;color:var(--tx)">${checkType.name} - ${timeSlot}</span>
+                                <span style="font-size:.7rem;color:var(--tx3)">${personnelText}</span>
+                            </div>
+                            <span style="font-size:.7rem;font-weight:500;color:${accentColor}">${statusText}</span>
+                        </div>
+                    `;
+                }
+            }
             
-            for (const timeSlot of checkType.timeSlots) {
-                const rules = CHECK_RULES[checkType.id];
-                if (!rules) continue;
-                
-                const window = getCheckTimeWindow(checkType.id, timeSlot, branch);
-                if (!window) continue;
-                if (!isAdmin && (window.isMissed || window.isBeforeWindow)) continue;
-                
-                const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType.id}_${todayStr}_${timeSlot.replace(':', '')}`;
+            // Platform Check (timeSlots yok)
+            if (checkType.id === 'platform') {
+                const submissionId = `platform_${todayStr}`;
                 let isCompleted = false;
-                
                 try {
                     const doc = await db.collection('checklistSubmissions').doc(submissionId).get();
                     isCompleted = doc.exists;
                 } catch (e) {}
                 
-                const remaining = getRemainingTime(checkType.id, timeSlot, branch);
-                const checkHour = parseInt(timeSlot.split(':')[0]);
-                let responsiblePersonnel = checkHour < 15 ? getShiftPersonnel(branch, 'acilis') : 
-                                          checkHour >= 20 ? getShiftPersonnel(branch, 'kapanis') :
-                                          [...getShiftPersonnel(branch, 'acilis'), ...getShiftPersonnel(branch, 'ara')];
-                
-                hasActiveChecks = true;
-                
-                // Minimalist tasarım - marka renkleri
-                const brandBg = isMoonberry ? 'rgba(0,140,149,.06)' : 'rgba(255,134,116,.06)';
-                let bgColor = 'var(--bg3)', accentColor = 'var(--tx3)', icon = '○', statusText = '';
-                let isActive = false;
-                
-                if (isCompleted) { bgColor = 'rgba(39,174,96,.05)'; accentColor = '#27ae60'; icon = '●'; statusText = 'Tamam'; }
-                else if (window.isMissed) { bgColor = brandBg; accentColor = brandColor; icon = '○'; statusText = 'Kaçırıldı'; }
-                else if (window.isLate) { bgColor = 'rgba(243,156,18,.05)'; accentColor = '#f39c12'; icon = '◐'; statusText = 'Geç'; isActive = true; }
-                else if (window.isInWindow) { bgColor = brandBg; accentColor = brandColor; icon = '●'; statusText = 'Aktif'; isActive = true; }
-                
+                const responsiblePersonnel = [...getShiftPersonnel(branch, 'acilis'), ...getShiftPersonnel(branch, 'ara'), ...getShiftPersonnel(branch, 'kapanis')].filter((v, i, a) => a.indexOf(v) === i);
                 const personnelText = responsiblePersonnel.length > 0 ? `• ${responsiblePersonnel[0].split(' ')[0]}` : '';
                 const branchLabel = isMoonberry ? 'M' : 'S';
                 
+                hasActiveChecks = true;
+                const bgColor = isCompleted ? 'rgba(39,174,96,.05)' : (isMoonberry ? 'rgba(0,140,149,.06)' : 'rgba(255,134,116,.06)');
+                const accentColor = isCompleted ? '#27ae60' : brandColor;
+                const icon = isCompleted ? '●' : '●';
+                const statusText = isCompleted ? 'Tamam' : 'Aktif';
+                
                 html += `
-                    <div style="background:${bgColor};border-left:3px solid ${accentColor};border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:4px" onclick="selectCheckFromPanel('${branch}', '${checkType.id}', '${timeSlot}')">
+                    <div style="background:${bgColor};border-left:3px solid ${accentColor};border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:4px" onclick="selectCheckFromPanel('${branch}', 'platform', '')">
                         <div style="display:flex;align-items:center;gap:6px">
-                            <span style="color:${accentColor};font-size:.8rem">${icon}</span>
+                            <span style="font-size:.8rem">📱</span>
                             <span style="width:18px;height:18px;background:${brandColor};border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.6rem;font-weight:600">${branchLabel}</span>
-                            <span style="font-weight:500;font-size:.8rem;color:var(--tx)">${checkType.name} - ${timeSlot}</span>
+                            <span style="font-weight:500;font-size:.8rem;color:var(--tx)">Platform Check</span>
                             <span style="font-size:.7rem;color:var(--tx3)">${personnelText}</span>
                         </div>
                         <span style="font-size:.7rem;font-weight:500;color:${accentColor}">${statusText}</span>
                     </div>
                 `;
+            }
+            
+            // Açılış Check
+            if (checkType.id === 'acilis') {
+                const now = new Date();
+                const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                const deadlineMinutes = 11 * 60; // 11:00
+                if (currentMinutes <= deadlineMinutes || isAdmin) {
+                    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_acilis_${todayStr}`;
+                    let isCompleted = false;
+                    try {
+                        const doc = await db.collection('checklistSubmissions').doc(submissionId).get();
+                        isCompleted = doc.exists;
+                    } catch (e) {}
+                    
+                    const isMissed = currentMinutes > deadlineMinutes && !isCompleted;
+                    const responsiblePersonnel = getShiftPersonnel(branch, 'acilis');
+                    const personnelText = responsiblePersonnel.length > 0 ? `• ${responsiblePersonnel[0].split(' ')[0]}` : '';
+                    const branchLabel = isMoonberry ? 'M' : 'S';
+                    
+                    hasActiveChecks = true;
+                    const bgColor = isCompleted ? 'rgba(39,174,96,.05)' : isMissed ? 'var(--bg3)' : (isMoonberry ? 'rgba(0,140,149,.06)' : 'rgba(255,134,116,.06)');
+                    const accentColor = isCompleted ? '#27ae60' : isMissed ? '#9ca3af' : brandColor;
+                    const icon = isCompleted ? '●' : isMissed ? '○' : '●';
+                    const statusText = isCompleted ? 'Tamam' : isMissed ? 'Kaçırıldı' : 'Aktif';
+                    
+                    html += `
+                        <div style="background:${bgColor};border-left:3px solid ${accentColor};border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:4px;opacity:${isMissed ? '0.6' : '1'}" onclick="selectCheckFromPanel('${branch}', 'acilis', '')">
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <span style="font-size:.8rem">🌅</span>
+                                <span style="width:18px;height:18px;background:${brandColor};border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.6rem;font-weight:600">${branchLabel}</span>
+                                <span style="font-weight:500;font-size:.8rem;color:var(--tx)">Açılış</span>
+                                <span style="font-size:.7rem;color:var(--tx3)">${personnelText}</span>
+                            </div>
+                            <span style="font-size:.7rem;font-weight:500;color:${accentColor}">${statusText}</span>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Kapanış Check
+            if (checkType.id === 'kapanis') {
+                const now = new Date();
+                const currentHour = now.getHours();
+                if (currentHour >= 18 || isAdmin) {
+                    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_kapanis_${todayStr}`;
+                    let isCompleted = false;
+                    try {
+                        const doc = await db.collection('checklistSubmissions').doc(submissionId).get();
+                        isCompleted = doc.exists;
+                    } catch (e) {}
+                    
+                    const responsiblePersonnel = getShiftPersonnel(branch, 'kapanis');
+                    const personnelText = responsiblePersonnel.length > 0 ? `• ${responsiblePersonnel[0].split(' ')[0]}` : '';
+                    const branchLabel = isMoonberry ? 'M' : 'S';
+                    
+                    hasActiveChecks = true;
+                    const bgColor = isCompleted ? 'rgba(39,174,96,.05)' : (isMoonberry ? 'rgba(0,140,149,.06)' : 'rgba(255,134,116,.06)');
+                    const accentColor = isCompleted ? '#27ae60' : brandColor;
+                    const icon = isCompleted ? '●' : '●';
+                    const statusText = isCompleted ? 'Tamam' : 'Aktif';
+                    
+                    html += `
+                        <div style="background:${bgColor};border-left:3px solid ${accentColor};border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:4px" onclick="selectCheckFromPanel('${branch}', 'kapanis', '')">
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <span style="font-size:.8rem">🌇</span>
+                                <span style="width:18px;height:18px;background:${brandColor};border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.6rem;font-weight:600">${branchLabel}</span>
+                                <span style="font-weight:500;font-size:.8rem;color:var(--tx)">Kapanış</span>
+                                <span style="font-size:.7rem;color:var(--tx3)">${personnelText}</span>
+                            </div>
+                            <span style="font-size:.7rem;font-weight:500;color:${accentColor}">${statusText}</span>
+                        </div>
+                    `;
+                }
             }
         }
     }
@@ -11292,13 +11463,21 @@ function selectChecklistType(typeId) {
 }
 
 // Checklist yükle
+let checklistLoadingLock = false;
 async function loadChecklist() {
+    // Eşzamanlı yüklemeleri engelle (flickering fix)
+    if (checklistLoadingLock) return;
+    checklistLoadingLock = true;
+    
     const branch = document.getElementById('checklistSube')?.value;
     const type = document.getElementById('checklistType')?.value;
     const date = document.getElementById('checklistDate')?.value;
     const container = document.getElementById('checklistFormContainer');
     
-    if (!branch || !type || !date || !container) return;
+    if (!branch || !type || !date || !container) {
+        checklistLoadingLock = false;
+        return;
+    }
     
     // Saat dilimi kontrolü
     const typeOption = document.getElementById('checklistType')?.selectedOptions[0];
@@ -11309,7 +11488,8 @@ async function loadChecklist() {
     // Platform check için özel işlem - timeSlots olmadan direkt render
     if (type === 'platform') {
         timeSlotGroup.style.display = 'none';
-        renderPlatformChecklistWithStatus(container, branch, date);
+        await renderPlatformChecklistWithStatus(container, branch, date);
+        checklistLoadingLock = false;
         return;
     }
     
@@ -11547,6 +11727,7 @@ async function loadChecklist() {
         }
         
         renderChecklistForm(items, branch, type, date, timeSlot, submittedData, shiftPersonnel);
+        checklistLoadingLock = false;
         
     } catch (error) {
         console.error('Checklist yükleme hatası:', error);
@@ -11554,6 +11735,7 @@ async function loadChecklist() {
             <div style="font-size:2rem;margin-bottom:8px">⚠️</div>
             Checklist yüklenirken hata oluştu: ${error.message || 'Bilinmeyen hata'}
         </div>`;
+        checklistLoadingLock = false;
     }
 }
 
