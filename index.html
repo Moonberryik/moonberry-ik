@@ -9626,32 +9626,28 @@ async function loadTodayChecks() {
         
         console.log('📅 Shift yükleniyor:', { weekKey, dayIndex, todayStr, branches });
         
-        // Her şube için shift'i yükle
+        // Her şube için shift'i yükle (INDEX OLMADAN - sadece branch ile filtrele)
         for (const branch of branches) {
             try {
-                // Önce bu hafta için ara
-                let shiftsSnapshot = await db.collection('shifts')
+                // Sadece branch ile sorgula (index gerektirmez)
+                const shiftsSnapshot = await db.collection('shifts')
                     .where('branch', '==', branch)
-                    .where('weekStart', '==', weekKey)
-                    .limit(1)
                     .get();
                 
-                // Bu hafta yoksa, en son shift'i al
-                if (shiftsSnapshot.empty) {
-                    console.log(`⚠️ ${branch} için ${weekKey} haftası yok, en son shift aranıyor...`);
-                    shiftsSnapshot = await db.collection('shifts')
-                        .where('branch', '==', branch)
-                        .orderBy('weekStart', 'desc')
-                        .limit(1)
-                        .get();
-                }
+                // JavaScript'te sırala ve bu haftayı bul
+                const allShifts = [];
+                shiftsSnapshot.forEach(doc => allShifts.push(doc.data()));
+                allShifts.sort((a, b) => (b.weekStart || '').localeCompare(a.weekStart || ''));
                 
-                if (!shiftsSnapshot.empty) {
-                    const shiftDoc = shiftsSnapshot.docs[0].data();
-                    const personelShifts = shiftDoc.personelShifts || {};
+                // Bu haftayı bul, yoksa en son shift'i kullan
+                let targetShift = allShifts.find(s => s.weekStart === weekKey) || allShifts[0];
+                
+                if (targetShift) {
+                    const personelShifts = targetShift.personelShifts || {};
                     
                     console.log(`✅ ${branch} shift bulundu:`, {
-                        weekStart: shiftDoc.weekStart,
+                        weekStart: targetShift.weekStart,
+                        isCurrentWeek: targetShift.weekStart === weekKey,
                         personelCount: Object.keys(personelShifts).length,
                         personelNames: Object.keys(personelShifts)
                     });
@@ -10732,7 +10728,7 @@ async function loadChecklistTodayPanel() {
         branches = [currentUser?.branch || 'Tuzla Port'];
     }
     
-    // Shift verilerini yükle (shifts koleksiyonundan)
+    // Shift verilerini yükle (INDEX OLMADAN)
     const shiftData = {};
     
     try {
@@ -10743,25 +10739,29 @@ async function loadChecklistTodayPanel() {
         
         for (const branch of branches) {
             try {
+                // Sadece branch ile sorgula
                 const shiftsSnapshot = await db.collection('shifts')
                     .where('branch', '==', branch)
-                    .where('weekStart', '==', weekKey)
-                    .limit(1)
                     .get();
                 
-                if (!shiftsSnapshot.empty) {
-                    const shiftDoc = shiftsSnapshot.docs[0].data();
-                    const personelShifts = shiftDoc.personelShifts || {};
-                    
+                // JavaScript'te sırala ve bu haftayı bul
+                const allShifts = [];
+                shiftsSnapshot.forEach(doc => allShifts.push(doc.data()));
+                allShifts.sort((a, b) => (b.weekStart || '').localeCompare(a.weekStart || ''));
+                
+                const targetShift = allShifts.find(s => s.weekStart === weekKey) || allShifts[0];
+                
+                if (targetShift) {
+                    const personelShifts = targetShift.personelShifts || {};
                     const acilisPersonel = [], kapanisPersonel = [], araPersonel = [];
                     
                     for (const [name, days] of Object.entries(personelShifts)) {
                         const todayShift = days[dayIndex] || '';
                         const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
                         
-                        if (cleanShift === 'A' || cleanShift === 'AÇILIŞ') acilisPersonel.push(name);
-                        else if (cleanShift === 'K' || cleanShift === 'KAPANIŞ') kapanisPersonel.push(name);
-                        else if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-') araPersonel.push(name);
+                        if (cleanShift === 'A' || cleanShift === 'AÇILIŞ' || cleanShift.includes('AÇILI')) acilisPersonel.push(name);
+                        else if (cleanShift === 'K' || cleanShift === 'KAPANIŞ' || cleanShift.includes('KAPANI')) kapanisPersonel.push(name);
+                        else if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-' && cleanShift !== 'X') araPersonel.push(name);
                     }
                     
                     shiftData[branch] = { acilis: acilisPersonel, kapanis: kapanisPersonel, ara: araPersonel };
