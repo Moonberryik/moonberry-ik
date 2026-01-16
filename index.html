@@ -9624,21 +9624,37 @@ async function loadTodayChecks() {
         let dayIndex = today.getDay() - 1;
         if (dayIndex < 0) dayIndex = 6; // Pazar
         
-        console.log('Shift yükleniyor:', { weekKey, dayIndex, branches });
+        console.log('📅 Shift yükleniyor:', { weekKey, dayIndex, todayStr, branches });
         
         // Her şube için shift'i yükle
         for (const branch of branches) {
             try {
-                // shifts koleksiyonundan bu hafta + şube kombinasyonunu bul
-                const shiftsSnapshot = await db.collection('shifts')
+                // Önce bu hafta için ara
+                let shiftsSnapshot = await db.collection('shifts')
                     .where('branch', '==', branch)
                     .where('weekStart', '==', weekKey)
                     .limit(1)
                     .get();
                 
+                // Bu hafta yoksa, en son shift'i al
+                if (shiftsSnapshot.empty) {
+                    console.log(`⚠️ ${branch} için ${weekKey} haftası yok, en son shift aranıyor...`);
+                    shiftsSnapshot = await db.collection('shifts')
+                        .where('branch', '==', branch)
+                        .orderBy('weekStart', 'desc')
+                        .limit(1)
+                        .get();
+                }
+                
                 if (!shiftsSnapshot.empty) {
                     const shiftDoc = shiftsSnapshot.docs[0].data();
                     const personelShifts = shiftDoc.personelShifts || {};
+                    
+                    console.log(`✅ ${branch} shift bulundu:`, {
+                        weekStart: shiftDoc.weekStart,
+                        personelCount: Object.keys(personelShifts).length,
+                        personelNames: Object.keys(personelShifts)
+                    });
                     
                     // Bugünkü açılış/kapanış/ara personelini bul
                     const acilisPersonel = [];
@@ -9649,12 +9665,16 @@ async function loadTodayChecks() {
                         const todayShift = days[dayIndex] || '';
                         const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
                         
-                        if (cleanShift === 'A' || cleanShift === 'AÇILIŞ') {
+                        if (cleanShift) {
+                            console.log(`  ${name}: ${cleanShift}`);
+                        }
+                        
+                        if (cleanShift === 'A' || cleanShift === 'AÇILIŞ' || cleanShift.includes('AÇILI')) {
                             acilisPersonel.push(name);
-                        } else if (cleanShift === 'K' || cleanShift === 'KAPANIŞ') {
+                        } else if (cleanShift === 'K' || cleanShift === 'KAPANIŞ' || cleanShift.includes('KAPANI')) {
                             kapanisPersonel.push(name);
-                        } else if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-') {
-                            // Ara vardiya veya part-time (saat formatı: 12:00-18:00)
+                        } else if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-' && cleanShift !== 'X') {
+                            // Ara vardiya veya part-time
                             araPersonel.push(name);
                         }
                     }
@@ -9665,10 +9685,12 @@ async function loadTodayChecks() {
                         ara: araPersonel
                     };
                     
-                    console.log('Shift yüklendi:', branch, shiftData[branch]);
+                    console.log(`📋 ${branch} vardiyalar:`, shiftData[branch]);
+                } else {
+                    console.log(`❌ ${branch} için hiç shift bulunamadı`);
                 }
             } catch (e) {
-                console.warn('Shift yüklenemedi:', branch, e);
+                console.warn(`⚠️ ${branch} shift yüklenemedi:`, e.message);
             }
         }
     } catch (e) {
