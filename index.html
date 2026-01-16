@@ -291,6 +291,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .floating-bubble{position:absolute;border-radius:50%;background:rgba(255,255,255,.3);animation:float-bubble 3s ease-in-out infinite}
 .check-card-shimmer{background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);background-size:200% 100%;animation:shimmer 2s infinite}
 
+/* Sürükle Bırak Stilleri */
+.checklist-item[draggable="true"]:hover{box-shadow:0 4px 20px rgba(0,0,0,.15)}
+.checklist-item[draggable="true"]:hover .drag-handle{opacity:1}
+.checklist-item.dragging{opacity:.5;transform:scale(.98)}
+.drag-handle:hover{background:rgba(0,0,0,.1);border-radius:8px}
+
 /* Responsive */
 @media(max-width:768px){
     .sidebar{transform:translateX(-100%)}
@@ -11578,10 +11584,24 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
         }
         
         if (checklistEditMode) {
-            // Düzenleme modu - TAM DOLGU RENGİ
+            // Düzenleme modu - SÜRÜKLE BIRAK + NUMARA
             html += `
-                <div class="checklist-item" data-item-id="${item.id}" style="display:flex;align-items:flex-start;gap:12px;padding:16px;border-radius:14px;margin-bottom:12px;background:${hasColor ? itemColor : 'var(--bg2)'};box-shadow:0 2px 8px rgba(0,0,0,.1)">
+                <div class="checklist-item" data-item-id="${item.id}" data-order="${index}" draggable="true"
+                    ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropItem(event)" ondragend="dragEnd(event)"
+                    style="display:flex;align-items:flex-start;gap:12px;padding:16px;border-radius:14px;margin-bottom:12px;background:${hasColor ? itemColor : 'var(--bg2)'};box-shadow:0 2px 8px rgba(0,0,0,.1);cursor:grab;transition:transform .2s, opacity .2s">
+                    
+                    <!-- Sürükle Tutacak -->
+                    <div class="drag-handle" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px;cursor:grab;opacity:.6">
+                        <span style="font-size:1.1rem;font-weight:700;color:${hasColor ? 'rgba(255,255,255,.9)' : 'var(--tx2)'}">${itemNum}</span>
+                        <svg width="16" height="16" fill="${hasColor ? 'rgba(255,255,255,.6)' : 'var(--tx3)'}" viewBox="0 0 24 24">
+                            <circle cx="8" cy="6" r="2"/><circle cx="16" cy="6" r="2"/>
+                            <circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/>
+                            <circle cx="8" cy="18" r="2"/><circle cx="16" cy="18" r="2"/>
+                        </svg>
+                    </div>
+                    
                     <input type="checkbox" class="checklist-select-item" value="${item.id}" style="width:22px;height:22px;cursor:pointer;accent-color:#fff;margin-top:2px">
+                    
                     <div style="flex:1">
                         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
                             ${hasColor ? `<span style="font-size:.85rem;padding:5px 14px;border-radius:6px;background:rgba(255,255,255,.95);color:${itemColor};font-weight:700">${responsibleLabel}</span>` : ''}
@@ -11589,16 +11609,26 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                         </div>
                         <div style="font-size:.95rem;color:${hasColor ? '#fff' : 'var(--tx)'};line-height:1.6;font-weight:500">${item.text}</div>
                     </div>
-                    <button onclick="deleteChecklistItem('${item.id}')" style="background:rgba(255,255,255,.2);border:none;color:#fff;cursor:pointer;padding:8px;border-radius:8px" title="Sil">
-                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/></svg>
-                    </button>
+                    
+                    <!-- Düzenle ve Sil Butonları -->
+                    <div style="display:flex;gap:6px;flex-shrink:0">
+                        <button onclick="showEditChecklistItemModal('${item.id}')" style="background:rgba(255,255,255,.2);border:none;color:${hasColor ? '#fff' : 'var(--tx2)'};cursor:pointer;padding:8px;border-radius:8px" title="Düzenle">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                        <button onclick="deleteChecklistItem('${item.id}')" style="background:rgba(231,76,60,.2);border:none;color:#e74c3c;cursor:pointer;padding:8px;border-radius:8px" title="Sil">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                        </button>
+                    </div>
                 </div>
             `;
         } else {
             // Normal mod - TAM DOLGU RENGİ
-            const canEdit = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(userRole);
+            const canEdit = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
             html += `
-                <div class="checklist-item" style="display:flex;align-items:flex-start;gap:14px;padding:18px 20px;border-radius:14px;margin-bottom:14px;background:${hasColor ? itemColor : 'var(--bg2)'};box-shadow:0 3px 12px rgba(0,0,0,.1)">
+                <div class="checklist-item" data-item-id="${item.id}" style="display:flex;align-items:flex-start;gap:14px;padding:18px 20px;border-radius:14px;margin-bottom:14px;background:${hasColor ? itemColor : 'var(--bg2)'};box-shadow:0 3px 12px rgba(0,0,0,.1)">
+                    <!-- Madde Numarası -->
+                    <div style="min-width:28px;height:28px;background:${hasColor ? 'rgba(255,255,255,.2)' : 'var(--bg3)'};border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;color:${hasColor ? 'rgba(255,255,255,.9)' : 'var(--tx2)'};flex-shrink:0">${itemNum}</div>
+                    
                     <div style="display:flex;flex-direction:row;gap:8px;flex-shrink:0">
                         <label style="cursor:${isSubmitted ? 'default' : 'pointer'}">
                             <input type="radio" name="check_${item.id}" value="done" ${isChecked ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''} style="display:none">
@@ -11627,7 +11657,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                         <div style="font-size:1rem;color:${hasColor ? '#fff' : 'var(--tx)'};line-height:1.6;font-weight:500">${item.text}</div>
                     </div>
                     ${canEdit && !isSubmitted ? `
-                    <button onclick="showEditChecklistItemModal('${item.id}')" style="background:rgba(255,255,255,.2);border:none;color:${hasColor ? '#fff' : 'var(--tx2)'};cursor:pointer;padding:8px;border-radius:8px;flex-shrink:0" title="Düzenle">
+                    <button onclick="showEditChecklistItemModal('${item.id}')" style="background:rgba(0,140,149,.15);border:none;color:#008c95;cursor:pointer;padding:10px;border-radius:10px;flex-shrink:0;transition:all .2s" title="Düzenle" onmouseover="this.style.background='rgba(0,140,149,.25)'" onmouseout="this.style.background='rgba(0,140,149,.15)'">
                         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
                     ` : ''}
@@ -11673,6 +11703,137 @@ function toggleShowAllAylikItems() {
 function toggleChecklistEditMode(branch, type, date, timeSlot) {
     checklistEditMode = !checklistEditMode;
     loadChecklist();
+}
+
+// ==================== SÜRÜKLE BIRAK ====================
+let draggedItem = null;
+let draggedOverItem = null;
+
+function dragStart(e) {
+    draggedItem = e.target.closest('.checklist-item');
+    draggedItem.style.opacity = '0.5';
+    draggedItem.style.transform = 'scale(0.98)';
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', draggedItem.dataset.itemId);
+}
+
+function dragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    const item = e.target.closest('.checklist-item');
+    if (item && item !== draggedItem) {
+        // Hover efekti
+        document.querySelectorAll('.checklist-item').forEach(el => {
+            el.style.borderTop = 'none';
+            el.style.borderBottom = 'none';
+        });
+        
+        const rect = item.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        
+        if (e.clientY < midY) {
+            item.style.borderTop = '3px solid #008c95';
+            item.style.borderBottom = 'none';
+        } else {
+            item.style.borderBottom = '3px solid #008c95';
+            item.style.borderTop = 'none';
+        }
+        
+        draggedOverItem = item;
+    }
+}
+
+function dropItem(e) {
+    e.preventDefault();
+    
+    const item = e.target.closest('.checklist-item');
+    if (item && draggedItem && item !== draggedItem) {
+        const container = document.getElementById('checklistItems');
+        const rect = item.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        
+        if (e.clientY < midY) {
+            container.insertBefore(draggedItem, item);
+        } else {
+            container.insertBefore(draggedItem, item.nextSibling);
+        }
+        
+        // Sıralamayı güncelle
+        updateChecklistOrder();
+    }
+    
+    // Hover efektlerini temizle
+    document.querySelectorAll('.checklist-item').forEach(el => {
+        el.style.borderTop = 'none';
+        el.style.borderBottom = 'none';
+    });
+}
+
+function dragEnd(e) {
+    if (draggedItem) {
+        draggedItem.style.opacity = '1';
+        draggedItem.style.transform = 'scale(1)';
+    }
+    
+    // Tüm hover efektlerini temizle
+    document.querySelectorAll('.checklist-item').forEach(el => {
+        el.style.borderTop = 'none';
+        el.style.borderBottom = 'none';
+    });
+    
+    draggedItem = null;
+    draggedOverItem = null;
+}
+
+// Sıralama değişince numaraları güncelle ve Firebase'e kaydet
+async function updateChecklistOrder() {
+    const items = document.querySelectorAll('#checklistItems .checklist-item');
+    const newOrder = [];
+    
+    // Numaraları güncelle
+    items.forEach((item, index) => {
+        const numEl = item.querySelector('.drag-handle span:first-child');
+        if (numEl) numEl.textContent = index + 1;
+        newOrder.push(item.dataset.itemId);
+        item.dataset.order = index;
+    });
+    
+    // Firebase'e kaydet
+    const branch = document.getElementById('checklistSube')?.value;
+    const type = document.getElementById('checklistType')?.value;
+    
+    if (!branch || !type) return;
+    
+    const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
+    
+    try {
+        const checklistRef = db.collection('checklists').doc(checklistId);
+        const doc = await checklistRef.get();
+        
+        if (doc.exists) {
+            const data = doc.data();
+            const orderedItems = [];
+            
+            // Yeni sıraya göre items dizisini yeniden oluştur
+            newOrder.forEach(itemId => {
+                const foundItem = data.items.find(i => i.id === itemId);
+                if (foundItem) {
+                    orderedItems.push(foundItem);
+                }
+            });
+            
+            await checklistRef.update({
+                items: orderedItems,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+            toast('Sıralama kaydedildi', 'success');
+        }
+    } catch (error) {
+        console.error('Sıralama kayıt hatası:', error);
+        toast('Sıralama kaydedilemedi', 'error');
+    }
 }
 
 // Tümünü seç
