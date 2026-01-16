@@ -1472,7 +1472,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <div class="admin-card">
                         <div class="admin-card-header">
                             <div class="admin-card-title">👤 Sistem Kullanıcıları</div>
-                            <button class="btn btn-sm btn-primary" onclick="showAddUserModal()">+ Yeni Kullanıcı</button>
+                            <div style="display:flex;gap:8px">
+                                <button class="btn btn-sm btn-ghost" onclick="syncRolesFromPersonnel()" title="Personel listesindeki rolleri kullanıcılara uygula">🔄 Rolleri Senkronize Et</button>
+                                <button class="btn btn-sm btn-primary" onclick="showAddUserModal()">+ Yeni Kullanıcı</button>
+                            </div>
                         </div>
                         <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Sisteme giriş yapabilecek kullanıcıları yönetin.</p>
                         <div class="admin-list" id="userList">
@@ -5765,7 +5768,16 @@ async function loadUserList() {
         let html = '';
         snapshot.forEach(doc => {
             const u = doc.data();
-            const roleLabel = u.role === 'yonetici' ? '👑 Yönetici' : u.role === 'bolge_muduru' ? '🏢 Bölge Müdürü' : '🏪 Mağaza Müdürü';
+            // Tüm roller için doğru etiket
+            const roleLabels = {
+                'yonetici': '👑 Yönetici',
+                'bolge_muduru': '🏢 Bölge Müdürü',
+                'magaza_muduru': '🏪 Mağaza Müdürü',
+                'magaza_mudur_yardimcisi': '🏪 Müdür Yardımcısı',
+                'mudur_yardimcisi': '🏪 Müdür Yardımcısı',
+                'barista': '☕ Barista'
+            };
+            const roleLabel = roleLabels[u.role] || `📋 ${u.role || 'Bilinmiyor'}`;
             html += `
                 <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg3);border-radius:var(--radiusSm);margin-bottom:8px">
                     <div>
@@ -5786,6 +5798,73 @@ async function loadUserList() {
     } catch (error) {
         console.error('Kullanıcı yükleme hatası:', error);
         container.innerHTML = '<p style="color:var(--red);text-align:center;padding:20px">Yükleme hatası!</p>';
+    }
+}
+
+// Personel listesindeki rolleri users collection'ına senkronize et
+async function syncRolesFromPersonnel() {
+    if (!confirm('Personel listesindeki roller, mevcut kullanıcılara uygulanacak. Devam etmek istiyor musunuz?')) {
+        return;
+    }
+    
+    try {
+        toast('Roller senkronize ediliyor...', 'info');
+        
+        // Personel listesini al
+        const personnelDoc = await db.collection('config').doc('personnel').get();
+        if (!personnelDoc.exists) {
+            toast('Personel listesi bulunamadı', 'error');
+            return;
+        }
+        
+        const personnelList = personnelDoc.data().list || [];
+        
+        // Email'e göre rol eşleştirmesi oluştur
+        const roleMap = {};
+        personnelList.forEach(p => {
+            if (p.email && p.role) {
+                // Email'in @ öncesini kullanıcı adı olarak kullan
+                const username = p.email.split('@')[0];
+                roleMap[username] = { role: p.role, branch: p.branch, name: p.name };
+            }
+        });
+        
+        // Users collection'ını güncelle
+        const usersSnapshot = await db.collection('users').get();
+        let updated = 0;
+        
+        for (const doc of usersSnapshot.docs) {
+            const userId = doc.id;
+            const userData = doc.data();
+            
+            // Email veya kullanıcı adı ile eşleştir
+            let match = roleMap[userId];
+            
+            // Eğer direkt eşleşme yoksa, email'den dene
+            if (!match && userData.email) {
+                const emailUsername = userData.email.split('@')[0];
+                match = roleMap[emailUsername];
+            }
+            
+            if (match && match.role) {
+                // Sadece rol farklıysa güncelle
+                if (userData.role !== match.role) {
+                    await db.collection('users').doc(userId).update({
+                        role: match.role,
+                        branch: match.branch || userData.branch
+                    });
+                    updated++;
+                    console.log(`${userId}: ${userData.role} → ${match.role}`);
+                }
+            }
+        }
+        
+        toast(`${updated} kullanıcı güncellendi`, 'success');
+        loadUserList();
+        
+    } catch (error) {
+        console.error('Senkronizasyon hatası:', error);
+        toast('Senkronizasyon hatası!', 'error');
     }
 }
 
@@ -8794,8 +8873,38 @@ function getWeekOptions() {
 // Checklist türleri - Firebase'den yüklenecek
 let CHECKLIST_TYPES = {};
 let SYSTEM_CONFIG = {};
-let BRANCH_HOURS = {};
-let CHECK_RULES = {};
+let BRANCH_HOURS = {
+    'Tuzla Port': { opening: '10:00', closing: { default: '01:00', friday: '01:30', saturday: '01:30' } },
+    'Şişli (Merkez)': { opening: '10:00', closing: { default: '01:30' } }
+};
+let CHECK_RULES = {
+    gunluk: {
+        name: 'Günlük Check',
+        window: { before: 60, after: 60 },
+        lateWindow: 60,
+        points: { onTime: 1, late: -2, missed: -2 }
+    },
+    platform: {
+        name: 'Platform Check',
+        window: { before: 60, after: 60 },
+        lateWindow: 0,
+        points: { onTime: 0, late: 0, missed: -1 }
+    },
+    mudur: {
+        name: 'Müdür Kontrol',
+        deadline: '21:00',
+        points: { onTime: 1, late: -1, missed: -2 }
+    },
+    temizlik: {
+        name: 'Temizlik',
+        windows: { sabah: { start: '10:00', end: '16:00' }, kapanis: { start: '00:00', end: '02:00' } },
+        points: { onTime: 0, late: -1, missed: -1 }
+    },
+    haftalik: {
+        name: 'Haftalık Görevler',
+        points: { done: 0, missed: -1 }
+    }
+};
 let SHIFT_DURATION = 9; // saat
 
 // Platform listesi - Firebase'den yüklenecek
