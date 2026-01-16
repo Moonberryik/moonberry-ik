@@ -9926,63 +9926,62 @@ async function loadTodayChecks() {
 // Check kartı render helper - kompakt versiyon
 function renderCheckCard(checkType, timeSlot, branch, isCompleted, submissionData, window, remaining, status, responsiblePersonnel) {
     const isMoonberry = branch.includes('Şişli') || branch.includes('Merkez');
+    const brandColor = isMoonberry ? '#008c95' : '#ff8674';
+    const brandBg = isMoonberry ? 'rgba(0,140,149,.08)' : 'rgba(255,134,116,.08)';
+    
     let bgColor = 'var(--bg3)';
-    let borderColor = 'var(--cardBorder)';
-    let icon = '⏳';
-    let statusText = 'Bekliyor';
+    let accentColor = 'var(--tx3)';
+    let icon = '○';
+    let statusText = '';
     let isActive = false;
     
     if (isCompleted) {
-        bgColor = 'rgba(39,174,96,.08)';
-        borderColor = '#27ae60';
-        icon = '✅';
-        statusText = status?.label || 'Tamamlandı';
+        bgColor = 'rgba(39,174,96,.06)';
+        accentColor = '#27ae60';
+        icon = '●';
+        statusText = 'Tamam';
     } else if (window?.isMissed) {
-        bgColor = 'rgba(231,76,60,.08)';
-        borderColor = '#e74c3c';
-        icon = '❌';
+        bgColor = brandBg;
+        accentColor = brandColor;
+        icon = '○';
         statusText = 'Kaçırıldı';
     } else if (window?.isLate) {
-        bgColor = 'rgba(243,156,18,.08)';
-        borderColor = '#f39c12';
-        icon = '⚠️';
+        bgColor = 'rgba(243,156,18,.06)';
+        accentColor = '#f39c12';
+        icon = '◐';
         statusText = 'Geç';
         isActive = true;
     } else if (window?.isInWindow) {
-        bgColor = isMoonberry ? 'rgba(0,140,149,.08)' : 'rgba(255,134,116,.08)';
-        borderColor = isMoonberry ? '#008c95' : '#ff8674';
-        icon = '🔵';
+        bgColor = brandBg;
+        accentColor = brandColor;
+        icon = '●';
         statusText = 'Aktif';
         isActive = true;
     }
     
-    // Sorumlu personel gösterimi - sadece shift varsa
+    // Sorumlu personel - kısa gösterim
     let personnelText = '';
     if (responsiblePersonnel && responsiblePersonnel.length > 0 && responsiblePersonnel[0]) {
-        const names = responsiblePersonnel.filter(n => n).slice(0, 2).join(', ');
-        if (names) personnelText = `<span style="font-size:.7rem;color:var(--tx3)">👤 ${names}</span>`;
+        const firstName = responsiblePersonnel[0].split(' ')[0].toUpperCase();
+        personnelText = `<span style="color:var(--tx3);margin-left:6px">• ${firstName}</span>`;
     }
     
-    const activeClass = isActive ? `check-card-active ${isMoonberry ? '' : 'sunberry'}` : '';
+    // Kalan süre - kompakt
+    let timeText = '';
+    if (!isCompleted && remaining && !remaining.isExpired && isActive) {
+        timeText = `<span style="color:var(--tx3);font-size:.7rem;margin-left:8px">⏱ ${remaining.text}</span>`;
+    }
     
     return `
-        <div class="${activeClass}" style="background:${bgColor};border:1px solid ${borderColor};border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;position:relative;overflow:hidden" onclick="goTo('checklist')">
-            ${isActive ? '<div class="check-card-shimmer" style="position:absolute;inset:0;pointer-events:none"></div>' : ''}
-            <div style="display:flex;align-items:center;gap:10px;position:relative">
-                <div style="font-size:1.2rem">${icon}</div>
-                <div>
-                    <div style="font-weight:600;font-size:.9rem;color:var(--tx)">${checkType.name} - ${timeSlot}</div>
-                    ${personnelText}
-                </div>
+        <div style="background:${bgColor};border-left:3px solid ${accentColor};border-radius:6px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:6px" onclick="goTo('checklist')">
+            <div style="display:flex;align-items:center;gap:8px">
+                <span style="color:${accentColor};font-size:.9rem">${icon}</span>
+                <span style="font-weight:500;font-size:.85rem;color:var(--tx)">${checkType.name} - ${timeSlot}</span>
+                ${personnelText}
             </div>
-            <div style="text-align:right;position:relative">
-                <div style="font-size:.8rem;font-weight:600;color:${borderColor}">${statusText}</div>
-                ${!isCompleted && remaining && !remaining.isExpired ? `
-                    <div style="font-size:.7rem;color:var(--tx3)">⏱️ ${remaining.text}</div>
-                ` : ''}
-                ${isCompleted && status?.points !== 0 ? `
-                    <div style="font-size:.7rem;color:${status.points > 0 ? '#27ae60' : '#e74c3c'}">${status.points > 0 ? '+' : ''}${status.points} puan</div>
-                ` : ''}
+            <div style="display:flex;align-items:center;gap:6px">
+                ${timeText}
+                <span style="font-size:.75rem;font-weight:600;color:${accentColor};padding:2px 8px;background:${bgColor};border-radius:4px">${statusText}</span>
             </div>
         </div>
     `;
@@ -10877,34 +10876,28 @@ async function loadChecklistTodayPanel() {
                 
                 hasActiveChecks = true;
                 
-                let bgColor = 'var(--bg3)', borderColor = 'var(--cardBorder)', icon = '⏳', statusText = 'Bekliyor';
+                // Minimalist tasarım - marka renkleri
+                const brandBg = isMoonberry ? 'rgba(0,140,149,.06)' : 'rgba(255,134,116,.06)';
+                let bgColor = 'var(--bg3)', accentColor = 'var(--tx3)', icon = '○', statusText = '';
                 let isActive = false;
                 
-                if (isCompleted) { bgColor = 'rgba(39,174,96,.08)'; borderColor = '#27ae60'; icon = '✅'; statusText = 'Tamamlandı'; }
-                else if (window.isMissed) { bgColor = 'rgba(231,76,60,.08)'; borderColor = '#e74c3c'; icon = '❌'; statusText = 'Kaçırıldı'; }
-                else if (window.isLate) { bgColor = 'rgba(243,156,18,.08)'; borderColor = '#f39c12'; icon = '⚠️'; statusText = 'Geç'; isActive = true; }
-                else if (window.isInWindow) { bgColor = isMoonberry ? 'rgba(0,140,149,.08)' : 'rgba(255,134,116,.08)'; borderColor = brandColor; icon = '🔵'; statusText = 'Aktif'; isActive = true; }
+                if (isCompleted) { bgColor = 'rgba(39,174,96,.05)'; accentColor = '#27ae60'; icon = '●'; statusText = 'Tamam'; }
+                else if (window.isMissed) { bgColor = brandBg; accentColor = brandColor; icon = '○'; statusText = 'Kaçırıldı'; }
+                else if (window.isLate) { bgColor = 'rgba(243,156,18,.05)'; accentColor = '#f39c12'; icon = '◐'; statusText = 'Geç'; isActive = true; }
+                else if (window.isInWindow) { bgColor = brandBg; accentColor = brandColor; icon = '●'; statusText = 'Aktif'; isActive = true; }
                 
-                const personnelText = responsiblePersonnel.length > 0 ? `<span style="font-size:.65rem;color:var(--tx3)">👤 ${responsiblePersonnel.slice(0,2).join(', ')}</span>` : '';
-                const activeClass = isActive ? `check-card-active ${isMoonberry ? '' : 'sunberry'}` : '';
+                const personnelText = responsiblePersonnel.length > 0 ? `• ${responsiblePersonnel[0].split(' ')[0]}` : '';
+                const branchLabel = isMoonberry ? 'M' : 'S';
                 
                 html += `
-                    <div class="${activeClass}" style="background:${bgColor};border:1px solid ${borderColor};border-radius:8px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:6px;cursor:pointer;position:relative;overflow:hidden" onclick="selectCheckFromPanel('${branch}', '${checkType.id}', '${timeSlot}')">
-                        ${isActive ? '<div class="check-card-shimmer" style="position:absolute;inset:0;pointer-events:none"></div>' : ''}
-                        <div style="display:flex;align-items:center;gap:8px;position:relative">
-                            <span style="font-size:1rem">${icon}</span>
-                            <div>
-                                <div style="font-weight:600;font-size:.8rem;color:var(--tx)">${checkType.name} - ${timeSlot}</div>
-                                <div style="display:flex;gap:8px;align-items:center">
-                                    <span style="font-size:.65rem;color:var(--tx3)">${branch}</span>
-                                    ${personnelText}
-                                </div>
-                            </div>
+                    <div style="background:${bgColor};border-left:3px solid ${accentColor};border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:4px" onclick="selectCheckFromPanel('${branch}', '${checkType.id}', '${timeSlot}')">
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <span style="color:${accentColor};font-size:.8rem">${icon}</span>
+                            <span style="width:18px;height:18px;background:${brandColor};border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.6rem;font-weight:600">${branchLabel}</span>
+                            <span style="font-weight:500;font-size:.8rem;color:var(--tx)">${checkType.name} - ${timeSlot}</span>
+                            <span style="font-size:.7rem;color:var(--tx3)">${personnelText}</span>
                         </div>
-                        <div style="text-align:right;position:relative">
-                            <div style="font-size:.7rem;font-weight:600;color:${borderColor}">${statusText}</div>
-                            ${!isCompleted && remaining && !remaining.isExpired ? `<div style="font-size:.65rem;color:var(--tx3)">⏱️ ${remaining.text}</div>` : ''}
-                        </div>
+                        <span style="font-size:.7rem;font-weight:500;color:${accentColor}">${statusText}</span>
                     </div>
                 `;
             }
@@ -11258,8 +11251,46 @@ async function loadChecklist() {
             console.warn('Submission kontrol hatası:', subError);
         }
         
-        // Formu render et
-        renderChecklistForm(items, branch, type, date, timeSlot, submittedData);
+        // Formu render et - shift personeli ile
+        // Shift'ten sorumlu personeli bul
+        let shiftPersonnel = [];
+        try {
+            const weekStart = getWeekStart(new Date(date));
+            const weekKey = formatDateLocal(weekStart);
+            const checkHour = timeSlot ? parseInt(timeSlot.split(':')[0]) : 12;
+            const dayIndex = new Date(date).getDay() - 1 < 0 ? 6 : new Date(date).getDay() - 1;
+            
+            const shiftsSnapshot = await db.collection('shifts')
+                .where('branch', '==', branch)
+                .get();
+            
+            const allShifts = [];
+            shiftsSnapshot.forEach(doc => allShifts.push(doc.data()));
+            allShifts.sort((a, b) => (b.weekStart || '').localeCompare(a.weekStart || ''));
+            
+            const targetShift = allShifts.find(s => s.weekStart === weekKey) || allShifts[0];
+            
+            if (targetShift && targetShift.personelShifts) {
+                for (const [name, days] of Object.entries(targetShift.personelShifts)) {
+                    const todayShift = days[dayIndex] || '';
+                    const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
+                    
+                    if (checkHour < 15 && (cleanShift === 'A' || cleanShift === 'AÇILIŞ' || cleanShift.includes('AÇILI'))) {
+                        shiftPersonnel.push(name);
+                    } else if (checkHour >= 20 && (cleanShift === 'K' || cleanShift === 'KAPANIŞ' || cleanShift.includes('KAPANI'))) {
+                        shiftPersonnel.push(name);
+                    } else if (checkHour >= 15 && checkHour < 20) {
+                        if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-' && cleanShift !== 'X') {
+                            shiftPersonnel.push(name);
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('Shift personeli alınamadı:', e.message);
+        }
+        
+        renderChecklistForm(items, branch, type, date, timeSlot, submittedData, shiftPersonnel);
         
     } catch (error) {
         console.error('Checklist yükleme hatası:', error);
@@ -11276,7 +11307,7 @@ let checklistEditMode = false;
 // Temizlik ve Bakım için tümünü göster flag'i
 let showAllAylikItems = false;
 
-function renderChecklistForm(items, branch, type, date, timeSlot, submittedData) {
+function renderChecklistForm(items, branch, type, date, timeSlot, submittedData, shiftPersonnel = []) {
     const container = document.getElementById('checklistFormContainer');
     const isAdmin = currentUser?.role === 'yonetici' || currentUser?.role === 'bolge_muduru';
     const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
@@ -11305,9 +11336,19 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
         checklistExpectedDuration = filteredItems.reduce((sum, item) => sum + (item.duration || 60), 0);
     }
     
-    // Kullanıcı adını email'den al
-    const autoPersonName = getUserNameFromEmail(currentUser?.email) || currentUser?.name || '';
-    const isAutoName = !!getUserNameFromEmail(currentUser?.email);
+    // Kullanıcı adını belirle - öncelik: shift personeli > email > name
+    let autoPersonName = '';
+    let isAutoName = false;
+    
+    if (shiftPersonnel && shiftPersonnel.length > 0) {
+        // Shift'ten gelen ilk sorumlu personel
+        autoPersonName = shiftPersonnel[0];
+        isAutoName = true;
+    } else {
+        // Fallback: email veya kullanıcı adı
+        autoPersonName = getUserNameFromEmail(currentUser?.email) || currentUser?.name || '';
+        isAutoName = !!getUserNameFromEmail(currentUser?.email);
+    }
     
     let typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === type);
     const expectedMinutes = Math.round(checklistExpectedDuration / 60);
@@ -11377,12 +11418,25 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData)
                     <div style="padding:16px;background:var(--bg3);border-radius:12px">
                         <label class="form-label" style="margin-bottom:8px;display:flex;align-items:center;gap:6px">
                             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                            Personel
+                            Sorumlu Personel
                         </label>
-                        <input type="text" id="checklistPersonName" class="form-input" 
-                            value="${submittedData?.personName || autoPersonName}" 
-                            ${isSubmitted || isAutoName ? 'disabled style="opacity:0.7;background:var(--bg2)"' : 'placeholder="Adınızı girin"'}>
-                        ${isAutoName && !isSubmitted ? '<div style="font-size:.75rem;color:var(--tx3);margin-top:4px">✓ Otomatik atandı</div>' : ''}
+                        ${shiftPersonnel && shiftPersonnel.length > 0 && !isSubmitted ? `
+                            ${shiftPersonnel.length > 1 ? `
+                                <select id="checklistPersonName" class="form-select" style="background:var(--bg2);border-color:var(--cardBorder)" autocomplete="off">
+                                    ${shiftPersonnel.map(p => `<option value="${p}">${p}</option>`).join('')}
+                                </select>
+                            ` : `
+                                <div style="font-size:1.1rem;font-weight:600;color:var(--tx);padding:8px 0">${shiftPersonnel[0]}</div>
+                                <input type="hidden" id="checklistPersonName" value="${shiftPersonnel[0]}">
+                            `}
+                            <div style="font-size:.75rem;color:#008c95;margin-top:4px">✓ Shift'ten otomatik atandı</div>
+                        ` : isSubmitted ? `
+                            <div style="font-size:1.1rem;font-weight:600;color:var(--tx);padding:8px 0">${submittedData?.personName || '-'}</div>
+                            <input type="hidden" id="checklistPersonName" value="${submittedData?.personName || ''}">
+                        ` : `
+                            <div style="font-size:.9rem;color:var(--tx2);padding:8px 0">Shift bilgisi yok</div>
+                            <input type="hidden" id="checklistPersonName" value="${currentUser?.name || 'Bilinmiyor'}">
+                        `}
                     </div>
                     <div style="padding:16px;background:var(--bg3);border-radius:12px">
                         <label class="form-label" style="margin-bottom:8px;display:flex;align-items:center;gap:6px">
