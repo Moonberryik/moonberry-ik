@@ -475,6 +475,50 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <div class="page-subtitle" id="companyName">Yükleniyor...</div>
                 </div>
                 
+                <!-- Personel Karşılama Kartı - Dinamik -->
+                <div id="welcomeCard" style="margin-bottom:24px;display:none">
+                    <div style="background:linear-gradient(135deg,var(--accent),#008c95);border-radius:16px;padding:24px;color:#fff;position:relative;overflow:hidden">
+                        <div style="position:absolute;right:-20px;top:-20px;width:120px;height:120px;background:rgba(255,255,255,.1);border-radius:50%"></div>
+                        <div style="position:absolute;right:40px;bottom:-30px;width:80px;height:80px;background:rgba(255,255,255,.08);border-radius:50%"></div>
+                        <div style="position:relative;z-index:1">
+                            <div style="font-size:.85rem;opacity:.9;margin-bottom:4px" id="welcomeDate">Yükleniyor...</div>
+                            <div style="font-size:1.4rem;font-weight:700;margin-bottom:12px" id="welcomeMessage">Hoş geldin!</div>
+                            <div style="display:flex;gap:16px;flex-wrap:wrap">
+                                <div id="welcomeBranch" style="display:flex;align-items:center;gap:6px;font-size:.9rem">
+                                    <span>📍</span> <span>-</span>
+                                </div>
+                                <div id="welcomeShift" style="display:flex;align-items:center;gap:6px;font-size:.9rem">
+                                    <span>⏰</span> <span>-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bu Ay Puan Özeti - Dinamik -->
+                <div id="monthlyPointsCard" style="margin-bottom:24px;display:none">
+                    <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:16px;padding:20px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                            <div style="font-size:.85rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em">Bu Ay Puanım</div>
+                            <div id="monthlyPointsTotal" style="font-size:1.3rem;font-weight:700">-</div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" id="monthlyPointsDetails">
+                            <!-- Dinamik içerik -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bugünkü Checklerim - Dinamik -->
+                <div id="todayChecksSection" class="dashboard-section" style="margin-bottom:28px;display:none">
+                    <div style="font-size:.8rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;padding-left:4px;display:flex;align-items:center;gap:8px">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                        Bugünkü Checklerim
+                    </div>
+                    <div id="todayChecksContainer" style="display:grid;gap:12px">
+                        <!-- Dinamik içerik buraya gelecek -->
+                    </div>
+                </div>
+                
                 <!-- Personel Yönetimi -->
                 <div class="dashboard-section" style="margin-bottom:28px">
                     <div style="font-size:.8rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;padding-left:4px;display:flex;align-items:center;gap:8px">
@@ -1282,8 +1326,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
                 <div class="admin-tabs">
                     <button class="admin-tab active" onclick="showAdminTab('genel',this)">Genel</button>
+                    <button class="admin-tab" onclick="showAdminTab('tumCheckler',this)">📊 Tüm Checkler</button>
                     <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">👤 Kullanıcı Yönetimi</button>
                     <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">⏱️ Oturumlar</button>
+                    <button class="admin-tab" onclick="showAdminTab('magazaSaatleri',this)">🕐 Mağaza Saatleri</button>
+                    <button class="admin-tab" onclick="showAdminTab('checkKurallari',this)">📋 Check Kuralları</button>
                     <button class="admin-tab" onclick="showAdminTab('puantajKurallar',this)">Puantaj Kuralları</button>
                     <button class="admin-tab" onclick="showAdminTab('subeler',this)">Şubeler</button>
                     <button class="admin-tab" onclick="showAdminTab('pozisyonlar',this)">Pozisyonlar</button>
@@ -1291,6 +1338,30 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <button class="admin-tab" onclick="showAdminTab('sablonlar',this)">Sözleşme Şablonları</button>
                     <button class="admin-tab" onclick="showAdminTab('belgeler',this)">Belge Şablonları</button>
                     <button class="admin-tab" id="tab-aktiviteler" onclick="showAdminTab('aktiviteler',this)">📊 Aktiviteler</button>
+                </div>
+                
+                <!-- Tüm Checkler Özet -->
+                <div class="admin-section" id="admin-tumCheckler">
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">📊 Bugünkü Tüm Checkler</div>
+                            <div style="display:flex;gap:10px;align-items:center">
+                                <select id="allChecksDateFilter" class="form-select" style="width:auto" onchange="loadAllChecksOverview()">
+                                    <option value="today">Bugün</option>
+                                    <option value="yesterday">Dün</option>
+                                    <option value="week">Bu Hafta</option>
+                                </select>
+                                <select id="allChecksBranchFilter" class="form-select" style="width:auto" onchange="loadAllChecksOverview()">
+                                    <option value="all">Tüm Şubeler</option>
+                                </select>
+                                <button class="btn btn-sm btn-ghost" onclick="loadAllChecksOverview()">🔄</button>
+                            </div>
+                        </div>
+                        
+                        <div id="allChecksOverviewContainer">
+                            <div style="text-align:center;padding:40px;color:var(--tx2)">Yükleniyor...</div>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Genel -->
@@ -1361,6 +1432,36 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                                 (<span id="previewBranchName">-</span>)
                             </div>
                             <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.2);color:#fff;border-color:rgba(255,255,255,.3)" onclick="stopRolePreview()">✕ Önizlemeyi Sonlandır</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mağaza Saatleri -->
+                <div class="admin-section" id="admin-magazaSaatleri">
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">🕐 Mağaza Çalışma Saatleri</div>
+                            <button class="btn btn-sm btn-primary" onclick="saveBranchHours()">💾 Kaydet</button>
+                        </div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:20px">Her mağazanın açılış ve kapanış saatlerini belirleyin. Kapanış saati shift hesaplamalarında kullanılır.</p>
+                        
+                        <div id="branchHoursContainer" style="display:grid;gap:20px">
+                            <!-- Dinamik olarak doldurulacak -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Check Kuralları -->
+                <div class="admin-section" id="admin-checkKurallari">
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">📋 Check Puanlama Kuralları</div>
+                            <button class="btn btn-sm btn-primary" onclick="saveCheckRules()">💾 Kaydet</button>
+                        </div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:20px">Her check türü için zaman penceresi ve puanlamaları düzenleyin.</p>
+                        
+                        <div id="checkRulesContainer" style="display:grid;gap:16px">
+                            <!-- Dinamik olarak doldurulacak -->
                         </div>
                     </div>
                 </div>
@@ -2355,6 +2456,7 @@ function applyUserPermissions() {
             'yonetici': 'Yönetici',
             'bolge_muduru': 'Bölge Müdürü',
             'magaza_muduru': 'Mağaza Müdürü',
+            'magaza_mudur_yardimcisi': 'Mağaza Müdür Yardımcısı',
             'barista': 'Barista'
         };
         userRoleEl.textContent = roleNames[currentUser.role] || currentUser.role;
@@ -2471,6 +2573,11 @@ function goTo(page) {
     const pageName = document.getElementById('currentPageName');
     if (pageName) pageName.textContent = PAGE_NAMES[page] || page;
     
+    // Dashboard - Bugünkü Checkleri yükle
+    if (page === 'dashboard') {
+        loadTodayChecks();
+    }
+    
     if (page === 'katalog') renderViolations();
     if (page === 'admin') renderAdminLists();
     if (page === 'personel') loadPersonelList();
@@ -2513,6 +2620,10 @@ function goTo(page) {
     // Checklist sayfası
     if (page === 'checklist') {
         initChecklistPage();
+    }
+    // Dashboard için bugünkü checkler
+    if (page === 'dashboard') {
+        loadTodayChecks();
     }
 }
 
@@ -3547,6 +3658,12 @@ function switchAdminTab(tab, btn) {
         loadSessionHistory();
     }
     if (tab === 'aktiviteler') loadActivityLogs();
+    if (tab === 'magazaSaatleri') renderBranchHoursSettings();
+    if (tab === 'checkKurallari') renderCheckRulesSettings();
+    if (tab === 'tumCheckler') {
+        populateSubeSelect('allChecksBranchFilter', true);
+        loadAllChecksOverview();
+    }
 }
 
 function loadAdminFields() {
@@ -3767,7 +3884,7 @@ function checkPreviewMode() {
                 currentUser = data.previewUser;
                 
                 // UI güncelle
-                const roleNames = { 'barista': 'Barista', 'bolge_muduru': 'Bölge Müdürü', 'magaza_muduru': 'Mağaza Müdürü', 'yonetici': 'Yönetici' };
+                const roleNames = { 'barista': 'Barista', 'magaza_mudur_yardimcisi': 'Mağaza Müdür Yardımcısı', 'bolge_muduru': 'Bölge Müdürü', 'magaza_muduru': 'Mağaza Müdürü', 'yonetici': 'Yönetici' };
                 
                 document.getElementById('previewRoleName').textContent = roleNames[currentUser.role];
                 document.getElementById('previewBranchName').textContent = currentUser.branch || 'Tüm Şubeler';
@@ -3796,7 +3913,7 @@ function checkPreviewMode() {
 function showPreviewTopBar() {
     if (document.getElementById('previewTopBar')) return;
     
-    const roleNames = { 'barista': 'Barista', 'bolge_muduru': 'Bölge Müdürü', 'magaza_muduru': 'Mağaza Müdürü', 'yonetici': 'Yönetici' };
+    const roleNames = { 'barista': 'Barista', 'magaza_mudur_yardimcisi': 'Mağaza Müdür Yardımcısı', 'bolge_muduru': 'Bölge Müdürü', 'magaza_muduru': 'Mağaza Müdürü', 'yonetici': 'Yönetici' };
     const bar = document.createElement('div');
     bar.id = 'previewTopBar';
     bar.style.cssText = 'position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#f39c12,#e67e22);color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;z-index:10000;font-size:.9rem;box-shadow:0 2px 10px rgba(0,0,0,.3)';
@@ -3831,6 +3948,7 @@ function startRolePreview() {
     // Önizleme kullanıcısını ayarla
     const roleNames = {
         'barista': 'Barista',
+        'magaza_mudur_yardimcisi': 'Mağaza Müdür Yardımcısı',
         'bolge_muduru': 'Bölge Müdürü',
         'magaza_muduru': 'Mağaza Müdürü',
         'yonetici': 'Yönetici'
@@ -3839,7 +3957,7 @@ function startRolePreview() {
     currentUser = {
         ...currentUser,
         role: role,
-        branch: role === 'magaza_muduru' ? branch : (role === 'barista' ? branch : 'all'),
+        branch: role === 'magaza_muduru' || role === 'magaza_mudur_yardimcisi' ? branch : (role === 'barista' ? branch : 'all'),
         name: `Önizleme: ${roleNames[role]}`
     };
     
@@ -5033,11 +5151,129 @@ async function loadPuantaj() {
         }
         html += `</div>`;
         
+        // Otomatik Check Puanları bölümü
+        const autoNotesHtml = await loadAutoCheckNotes(sube, ay, yil, personelList);
+        html += autoNotesHtml;
+        
         container.innerHTML = html;
     } catch (error) {
         console.error('Puantaj yükleme hatası:', error);
         container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red)">Yükleme hatası!</div>';
     }
+}
+
+// Otomatik Check puanlarını yükle
+async function loadAutoCheckNotes(sube, ay, yil, personelList) {
+    let html = '';
+    
+    try {
+        // Ay başlangıç ve bitiş tarihleri
+        const startDate = `${yil}-${ay}-01`;
+        const endDay = new Date(yil, parseInt(ay), 0).getDate();
+        const endDate = `${yil}-${ay}-${endDay.toString().padStart(2, '0')}`;
+        
+        // puantajNotes koleksiyonundan çek
+        const notesSnapshot = await db.collection('puantajNotes')
+            .where('branch', '==', sube)
+            .where('date', '>=', startDate)
+            .where('date', '<=', endDate)
+            .get();
+        
+        if (notesSnapshot.empty) {
+            return ''; // Otomatik not yoksa boş döndür
+        }
+        
+        const notesByPerson = {};
+        notesSnapshot.forEach(doc => {
+            const note = doc.data();
+            if (!notesByPerson[note.personelId]) {
+                notesByPerson[note.personelId] = [];
+            }
+            notesByPerson[note.personelId].push({ id: doc.id, ...note });
+        });
+        
+        // Toplam otomatik puanları hesapla ve personel listesine ekle
+        let totalAutoPoints = 0;
+        Object.values(notesByPerson).forEach(notes => {
+            notes.forEach(n => { totalAutoPoints += n.points || 0; });
+        });
+        
+        html += `
+            <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:16px;padding:20px;margin-top:20px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                    <div style="font-weight:600;color:var(--tx);font-size:1rem">
+                        🤖 Otomatik Check Puanları
+                        <span style="font-size:.8rem;color:var(--tx2);font-weight:400;margin-left:8px">(Sistem tarafından)</span>
+                    </div>
+                    <div style="padding:6px 12px;border-radius:20px;font-size:.85rem;font-weight:600;${totalAutoPoints >= 0 ? 'background:rgba(39,174,96,.1);color:#27ae60' : 'background:rgba(231,76,60,.1);color:#e74c3c'}">
+                        Toplam: ${totalAutoPoints >= 0 ? '+' : ''}${totalAutoPoints}
+                    </div>
+                </div>
+                
+                <div style="background:var(--bg3);border-radius:12px;padding:16px;margin-bottom:16px">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:.8rem;color:var(--tx2)">
+                        <span>📗 Günlük Check vaktinde: +1</span>
+                        <span>📙 Günlük Check geç: -2</span>
+                        <span>📕 Check doldurulmadı: -2</span>
+                        <span>📱 Platform kaçırıldı: -1</span>
+                    </div>
+                </div>
+        `;
+        
+        // Personel bazlı notları göster
+        Object.entries(notesByPerson).forEach(([personelId, notes]) => {
+            const person = personelList.find(p => p.id === personelId);
+            const personName = person?.name || notes[0]?.personelName || personelId;
+            
+            // Kişi toplam puanı
+            let personTotal = 0;
+            notes.forEach(n => { personTotal += n.points || 0; });
+            
+            const personColor = personTotal >= 0 ? '#27ae60' : '#e74c3c';
+            
+            html += `
+                <div style="margin-bottom:16px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;border-bottom:1px solid var(--cardBorder);margin-bottom:10px">
+                        <span style="font-weight:600;color:var(--tx)">${personName}</span>
+                        <span style="font-weight:700;color:${personColor}">${personTotal >= 0 ? '+' : ''}${personTotal} puan</span>
+                    </div>
+            `;
+            
+            // Son 10 notu göster
+            const recentNotes = notes.slice(-10).reverse();
+            recentNotes.forEach(note => {
+                const noteColor = note.points > 0 ? '#27ae60' : (note.points < 0 ? '#e74c3c' : '#95a5a6');
+                const noteBg = note.points > 0 ? 'rgba(39,174,96,.08)' : (note.points < 0 ? 'rgba(231,76,60,.08)' : 'var(--bg3)');
+                const noteIcon = note.status === 'onTime' ? '✅' : (note.status === 'late' ? '⏰' : '❌');
+                
+                html += `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:${noteBg};border-radius:8px;margin-bottom:6px;font-size:.85rem">
+                        <div style="display:flex;align-items:center;gap:10px">
+                            <span>${noteIcon}</span>
+                            <div>
+                                <div style="color:var(--tx)">${note.note}</div>
+                                <div style="color:var(--tx3);font-size:.75rem">${note.date} • ${note.checkTime || ''}</div>
+                            </div>
+                        </div>
+                        <div style="font-weight:700;color:${noteColor}">${note.points > 0 ? '+' : ''}${note.points}</div>
+                    </div>
+                `;
+            });
+            
+            if (notes.length > 10) {
+                html += `<div style="text-align:center;font-size:.8rem;color:var(--tx3);padding:8px">...ve ${notes.length - 10} kayıt daha</div>`;
+            }
+            
+            html += `</div>`;
+        });
+        
+        html += `</div>`;
+        
+    } catch (e) {
+        console.error('Otomatik notlar yüklenemedi:', e);
+    }
+    
+    return html;
 }
 
 function showPuantajModal(personelId, name, type = 'negatif') {
@@ -5567,6 +5803,7 @@ function showAddUserModal(editId = null) {
                 <label class="form-label">Rol *</label>
                 <select id="modalUserRoleSelect" class="form-select">
                     <option value="barista">☕ Barista</option>
+                    <option value="magaza_mudur_yardimcisi">🏪 Mağaza Müdür Yardımcısı</option>
                     <option value="magaza_muduru">🏪 Mağaza Müdürü</option>
                     <option value="bolge_muduru">🏢 Bölge Müdürü</option>
                     <option value="yonetici">👑 Yönetici</option>
@@ -5601,7 +5838,21 @@ async function loadUserForEdit(id) {
             const u = doc.data();
             document.getElementById('modalUserName').value = id;
             document.getElementById('modalUserDisplayName').value = u.name || '';
-            document.getElementById('modalUserRoleSelect').value = u.role || 'barista';
+            
+            // Rol select'ini ayarla - önce select elementini al
+            const roleSelect = document.getElementById('modalUserRoleSelect');
+            if (roleSelect && u.role) {
+                // Eğer rol seçeneklerde yoksa, option olarak ekle
+                const existingOption = roleSelect.querySelector(`option[value="${u.role}"]`);
+                if (!existingOption) {
+                    const newOption = document.createElement('option');
+                    newOption.value = u.role;
+                    newOption.textContent = getRoleName(u.role);
+                    roleSelect.appendChild(newOption);
+                }
+                roleSelect.value = u.role;
+            }
+            
             document.getElementById('modalUserBranch').value = u.branch || 'all';
         }
     } catch (error) {
@@ -5730,6 +5981,12 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: false, edit: false }, tutanak: { view: false, edit: false }, savunma: { view: false, edit: false }, fesih: { view: false, edit: false }, istifa: { view: false, edit: false }, ibraname: { view: false, edit: false } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_izinler: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: false, admin_sablonlar: false },
         special: { print_shift: true, view_checklist_history: false, view_salary: false, export_data: false, delete_records: false }
+    },
+    magaza_mudur_yardimcisi: {
+        pages: { dashboard: { view: true, edit: false }, personel: { view: true, edit: false }, puantaj: { view: true, edit: false }, shift: { view: true, edit: false } },
+        documents: { sozlesme: { view: true, edit: false }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: false, edit: false }, istifa: { view: true, edit: false }, ibraname: { view: true, edit: false } },
+        admin: { admin_genel: false, admin_kullanicilar: false, admin_izinler: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false },
+        special: { print_shift: true, view_checklist_history: true, view_salary: false, export_data: false, delete_records: false }
     },
     magaza_muduru: {
         pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true } },
@@ -8537,6 +8794,9 @@ function getWeekOptions() {
 // Checklist türleri - Firebase'den yüklenecek
 let CHECKLIST_TYPES = {};
 let SYSTEM_CONFIG = {};
+let BRANCH_HOURS = {};
+let CHECK_RULES = {};
+let SHIFT_DURATION = 9; // saat
 
 // Platform listesi - Firebase'den yüklenecek
 let PLATFORMS = ['Trendyol', 'Yemek Sepeti', 'Getir Yemek', 'Migros'];
@@ -8569,10 +8829,1127 @@ function getRoleName(role) {
         'yonetici': 'Yönetici',
         'bolge_muduru': 'Bölge Müdürü',
         'magaza_muduru': 'Mağaza Müdürü',
+        'magaza_mudur_yardimcisi': 'Mağaza Müdür Yardımcısı',
         'mudur_yardimcisi': 'Müdür Yardımcısı',
         'barista': 'Barista'
     };
     return names[role] || role;
+}
+
+// ==================== SHIFT-CHECK ENTEGRASYONU ====================
+
+// Mağaza kapanış saatini al (güne göre)
+function getBranchClosingTime(branch, date = new Date()) {
+    const hours = BRANCH_HOURS[branch];
+    if (!hours) return '01:00';
+    
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = dayNames[date.getDay()];
+    
+    if (hours.closing[dayName]) {
+        return hours.closing[dayName];
+    }
+    return hours.closing.default || '01:00';
+}
+
+// Mağaza açılış saatini al
+function getBranchOpeningTime(branch) {
+    const hours = BRANCH_HOURS[branch];
+    return hours?.opening || '10:00';
+}
+
+// Saat string'ini dakikaya çevir (00:00 = 1440 olarak hesapla gece için)
+function timeToMinutes(timeStr, forNight = false) {
+    const [h, m] = timeStr.split(':').map(Number);
+    let minutes = h * 60 + m;
+    if (forNight && h < 6) minutes += 1440; // Gece saatleri için ertesi güne ekle
+    return minutes;
+}
+
+// Dakikayı saat string'ine çevir
+function minutesToTime(minutes) {
+    const h = Math.floor((minutes % 1440) / 60);
+    const m = minutes % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+
+// Kapanış shift başlangıç saatini hesapla
+function getClosingShiftStart(branch, date = new Date()) {
+    const closingTime = getBranchClosingTime(branch, date);
+    const closingMinutes = timeToMinutes(closingTime, true);
+    const shiftStartMinutes = closingMinutes - (SHIFT_DURATION * 60);
+    return minutesToTime(shiftStartMinutes);
+}
+
+// Personelin bugünkü shift'ini tespit et
+async function getCurrentShiftForPerson(personId, branch, date = new Date()) {
+    const dateStr = date.toISOString().split('T')[0];
+    
+    try {
+        // Haftalık shift planından kontrol et
+        const weekStart = getWeekStart(date);
+        const weekKey = weekStart.toISOString().split('T')[0];
+        
+        const shiftDoc = await db.collection('shiftPlans').doc(`${branch}_${weekKey}`).get();
+        if (shiftDoc.exists) {
+            const plan = shiftDoc.data();
+            const dayPlan = plan[dateStr];
+            
+            if (dayPlan) {
+                for (const [shiftType, personnel] of Object.entries(dayPlan)) {
+                    if (personnel && personnel.includes(personId)) {
+                        return shiftType; // 'acilis', 'kapanis', 'ara'
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Shift planı okunamadı:', e);
+    }
+    
+    return null;
+}
+
+// Hafta başlangıcını al (Pazartesi)
+function getWeekStart(date = new Date()) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+}
+
+// Check için zaman penceresi hesapla
+function getCheckTimeWindow(checkType, targetTime, branch, date = new Date()) {
+    const rules = CHECK_RULES[checkType];
+    if (!rules) return null;
+    
+    const targetMinutes = timeToMinutes(targetTime);
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    
+    let windowStart, windowEnd, lateEnd;
+    
+    if (rules.window) {
+        windowStart = targetMinutes - rules.window.before;
+        windowEnd = targetMinutes + rules.window.after;
+        lateEnd = rules.lateWindow > 0 ? windowEnd + rules.lateWindow : windowEnd;
+    } else if (rules.deadline) {
+        windowStart = timeToMinutes(getBranchOpeningTime(branch));
+        windowEnd = timeToMinutes(rules.deadline);
+        lateEnd = windowEnd;
+    } else {
+        return null;
+    }
+    
+    return {
+        start: minutesToTime(windowStart),
+        end: minutesToTime(windowEnd),
+        lateEnd: minutesToTime(lateEnd),
+        startMinutes: windowStart,
+        endMinutes: windowEnd,
+        lateEndMinutes: lateEnd,
+        currentMinutes,
+        isBeforeWindow: currentMinutes < windowStart,
+        isInWindow: currentMinutes >= windowStart && currentMinutes <= windowEnd,
+        isLate: currentMinutes > windowEnd && currentMinutes <= lateEnd,
+        isMissed: currentMinutes > lateEnd
+    };
+}
+
+// Check durumunu belirle
+function getCheckStatus(checkType, targetTime, branch, isCompleted, completedAt = null) {
+    const window = getCheckTimeWindow(checkType, targetTime, branch);
+    if (!window) return { status: 'unknown', points: 0 };
+    
+    const rules = CHECK_RULES[checkType];
+    
+    if (isCompleted) {
+        if (completedAt) {
+            const completedMinutes = completedAt.getHours() * 60 + completedAt.getMinutes();
+            if (completedMinutes <= window.endMinutes) {
+                return { status: 'onTime', points: rules.points.onTime, label: 'Vaktinde', color: '#27ae60' };
+            } else {
+                return { status: 'late', points: rules.points.late, label: 'Geç', color: '#f39c12' };
+            }
+        }
+        return { status: 'completed', points: 0, label: 'Tamamlandı', color: '#27ae60' };
+    }
+    
+    if (window.isMissed) {
+        return { status: 'missed', points: rules.points.missed, label: 'Kaçırıldı', color: '#e74c3c' };
+    }
+    
+    if (window.isLate) {
+        return { status: 'lateWindow', points: 0, label: 'Geç Penceresi', color: '#f39c12' };
+    }
+    
+    if (window.isInWindow) {
+        return { status: 'active', points: 0, label: 'Aktif', color: '#3498db' };
+    }
+    
+    return { status: 'waiting', points: 0, label: 'Bekliyor', color: '#95a5a6' };
+}
+
+// Kalan süreyi hesapla
+function getRemainingTime(checkType, targetTime, branch) {
+    const window = getCheckTimeWindow(checkType, targetTime, branch);
+    if (!window) return null;
+    
+    const rules = CHECK_RULES[checkType];
+    let deadline = window.endMinutes;
+    
+    // Geç penceresi varsa onu kullan
+    if (rules.lateWindow > 0) {
+        deadline = window.lateEndMinutes;
+    }
+    
+    const remaining = deadline - window.currentMinutes;
+    
+    if (remaining <= 0) return { minutes: 0, text: 'Süre doldu', isExpired: true };
+    
+    const hours = Math.floor(remaining / 60);
+    const mins = remaining % 60;
+    
+    let text = '';
+    if (hours > 0) {
+        text = `${hours} saat ${mins} dk`;
+    } else {
+        text = `${mins} dakika`;
+    }
+    
+    return { 
+        minutes: remaining, 
+        text, 
+        isExpired: false,
+        isUrgent: remaining <= 30,
+        isWarning: remaining <= 60 && remaining > 30
+    };
+}
+
+// Otomatik puantaj notu oluştur
+async function createAutoPuantajNote(personelId, personelName, checkType, checkTime, status, points, branch, date) {
+    const rules = CHECK_RULES[checkType];
+    const checkName = rules?.name || checkType;
+    
+    let note = '';
+    if (status === 'onTime') {
+        note = `${checkTime} ${checkName} vaktinde dolduruldu`;
+    } else if (status === 'late') {
+        note = `${checkTime} ${checkName} geç dolduruldu`;
+    } else if (status === 'missed') {
+        note = `${checkTime} ${checkName} doldurulmadı`;
+    }
+    
+    const noteId = `auto_${personelId}_${date}_${checkType}_${checkTime.replace(':', '')}`;
+    
+    try {
+        await db.collection('puantajNotes').doc(noteId).set({
+            personelId,
+            personelName,
+            branch,
+            date,
+            checkType,
+            checkTime,
+            status,
+            points,
+            note,
+            autoGenerated: true,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        console.log('Puantaj notu oluşturuldu:', noteId);
+    } catch (e) {
+        console.error('Puantaj notu oluşturulamadı:', e);
+    }
+}
+
+// Dashboard - Bugünkü Checkler
+async function loadTodayChecks() {
+    const section = document.getElementById('todayChecksSection');
+    const container = document.getElementById('todayChecksContainer');
+    const welcomeCard = document.getElementById('welcomeCard');
+    const monthlyCard = document.getElementById('monthlyPointsCard');
+    
+    if (!section || !container) return;
+    
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const branch = currentUser?.branch && currentUser.branch !== 'all' ? currentUser.branch : 'Tuzla Port';
+    const isAdmin = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
+    const userName = currentUser?.name || 'Personel';
+    
+    // Karşılama kartını doldur
+    if (welcomeCard) {
+        const dateOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+        const dateStr = today.toLocaleDateString('tr-TR', dateOptions);
+        const hour = today.getHours();
+        let greeting = 'Günaydın';
+        if (hour >= 12 && hour < 18) greeting = 'İyi günler';
+        else if (hour >= 18) greeting = 'İyi akşamlar';
+        
+        document.getElementById('welcomeDate').textContent = dateStr;
+        document.getElementById('welcomeMessage').textContent = `${greeting}, ${userName.split(' ')[0]}! 👋`;
+        document.getElementById('welcomeBranch').innerHTML = `<span>📍</span> <span>${branch}</span>`;
+        
+        // Shift bilgisi - shift planından al
+        let shiftInfo = '-';
+        try {
+            const weekStart = getWeekStart(today);
+            const weekKey = weekStart.toISOString().split('T')[0];
+            const shiftDoc = await db.collection('shiftPlans').doc(`${branch}_${weekKey}`).get();
+            if (shiftDoc.exists) {
+                const plan = shiftDoc.data();
+                const dayPlan = plan[todayStr];
+                if (dayPlan) {
+                    for (const [shiftType, personnel] of Object.entries(dayPlan)) {
+                        if (personnel && personnel.includes(currentUser?.id)) {
+                            const shiftNames = { acilis: 'Açılış', kapanis: 'Kapanış', ara: 'Ara Vardiya' };
+                            shiftInfo = shiftNames[shiftType] || shiftType;
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (e) {}
+        document.getElementById('welcomeShift').innerHTML = `<span>⏰</span> <span>${shiftInfo}</span>`;
+        
+        welcomeCard.style.display = 'block';
+    }
+    
+    // Bu ay puan özeti
+    if (monthlyCard && currentUser?.id) {
+        try {
+            const monthKey = todayStr.substring(0, 7); // YYYY-MM
+            const startDate = monthKey + '-01';
+            const endDate = monthKey + '-31';
+            
+            // Manuel puantaj kayıtlarından
+            let manuelPuan = 0;
+            let ihlalSayisi = 0;
+            let basariSayisi = 0;
+            
+            const puantajSnapshot = await db.collection('puantaj')
+                .where('personelId', '==', currentUser.id)
+                .where('period', '==', monthKey)
+                .get();
+            
+            puantajSnapshot.forEach(doc => {
+                const d = doc.data();
+                const yildiz = d.score || 3;
+                if (yildiz === 1) { manuelPuan -= 3; ihlalSayisi++; }
+                else if (yildiz === 2) { manuelPuan -= 2; ihlalSayisi++; }
+                else if (yildiz === 3) { manuelPuan -= 1; ihlalSayisi++; }
+                else if (yildiz === 4) { manuelPuan += 1; basariSayisi++; }
+                else if (yildiz === 5) { manuelPuan += 2; basariSayisi++; }
+            });
+            
+            // Otomatik check puanlarından
+            let checkPuan = 0;
+            let checkVaktinde = 0;
+            let checkGec = 0;
+            
+            const notesSnapshot = await db.collection('puantajNotes')
+                .where('personelId', '==', currentUser.id)
+                .where('date', '>=', startDate)
+                .where('date', '<=', endDate)
+                .get();
+            
+            notesSnapshot.forEach(doc => {
+                const n = doc.data();
+                checkPuan += n.points || 0;
+                if (n.points > 0) checkVaktinde++;
+                else if (n.points < 0) checkGec++;
+            });
+            
+            const toplamPuan = manuelPuan + checkPuan;
+            const puanColor = toplamPuan >= 0 ? '#27ae60' : '#e74c3c';
+            
+            document.getElementById('monthlyPointsTotal').innerHTML = `<span style="color:${puanColor}">${toplamPuan >= 0 ? '+' : ''}${toplamPuan}</span>`;
+            document.getElementById('monthlyPointsDetails').innerHTML = `
+                <div style="background:rgba(39,174,96,.1);border-radius:10px;padding:12px;text-align:center">
+                    <div style="font-size:1.3rem;font-weight:700;color:#27ae60">${checkVaktinde + basariSayisi}</div>
+                    <div style="font-size:.7rem;color:#27ae60;font-weight:500">BAŞARI</div>
+                </div>
+                <div style="background:rgba(231,76,60,.1);border-radius:10px;padding:12px;text-align:center">
+                    <div style="font-size:1.3rem;font-weight:700;color:#e74c3c">${checkGec + ihlalSayisi}</div>
+                    <div style="font-size:.7rem;color:#e74c3c;font-weight:500">İHLAL</div>
+                </div>
+                <div style="background:var(--bg3);border-radius:10px;padding:12px;text-align:center">
+                    <div style="font-size:1.3rem;font-weight:700;color:var(--tx)">${checkVaktinde}</div>
+                    <div style="font-size:.7rem;color:var(--tx2);font-weight:500">VAKTİNDE CHECK</div>
+                </div>
+            `;
+            
+            monthlyCard.style.display = 'block';
+        } catch (e) {
+            console.warn('Aylık puan yüklenemedi:', e);
+        }
+    }
+    
+    // Kullanıcının şubesindeki check türlerini al
+    const checkTypes = CHECKLIST_TYPES[branch] || [];
+    if (checkTypes.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+    
+    let html = '';
+    let hasActiveChecks = false;
+    
+    // Günlük Check, Platform Check gibi saat bazlı checkleri göster
+    for (const checkType of checkTypes) {
+        if (checkType.timeSlots && checkType.timeSlots.length > 0) {
+            for (const timeSlot of checkType.timeSlots) {
+                const rules = CHECK_RULES[checkType.id];
+                if (!rules) continue;
+                
+                const window = getCheckTimeWindow(checkType.id, timeSlot, branch);
+                if (!window) continue;
+                
+                // Sadece bugün için geçerli olan checkleri göster
+                if (window.isMissed && !isAdmin) continue;
+                if (window.isBeforeWindow && !isAdmin) continue;
+                
+                // Bu check dolduruldu mu kontrol et
+                const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType.id}_${todayStr}_${timeSlot.replace(':', '')}`;
+                let isCompleted = false;
+                let submissionData = null;
+                
+                try {
+                    const doc = await db.collection('checklistSubmissions').doc(submissionId).get();
+                    if (doc.exists) {
+                        isCompleted = true;
+                        submissionData = doc.data();
+                    }
+                } catch (e) {}
+                
+                const remaining = getRemainingTime(checkType.id, timeSlot, branch);
+                const status = getCheckStatus(checkType.id, timeSlot, branch, isCompleted, submissionData?.submittedAt?.toDate());
+                
+                hasActiveChecks = true;
+                
+                // Renk ve ikon
+                let bgColor = 'var(--bg3)';
+                let borderColor = 'var(--cardBorder)';
+                let icon = '⏳';
+                let statusText = 'Bekliyor';
+                
+                if (isCompleted) {
+                    bgColor = 'rgba(39,174,96,.1)';
+                    borderColor = '#27ae60';
+                    icon = '✅';
+                    statusText = status.label || 'Tamamlandı';
+                } else if (window.isMissed) {
+                    bgColor = 'rgba(231,76,60,.1)';
+                    borderColor = '#e74c3c';
+                    icon = '❌';
+                    statusText = 'Kaçırıldı';
+                } else if (window.isLate) {
+                    bgColor = 'rgba(243,156,18,.1)';
+                    borderColor = '#f39c12';
+                    icon = '⚠️';
+                    statusText = 'Geç Penceresi';
+                } else if (window.isInWindow) {
+                    bgColor = 'rgba(52,152,219,.1)';
+                    borderColor = '#3498db';
+                    icon = '🔵';
+                    statusText = 'Aktif';
+                }
+                
+                html += `
+                    <div style="background:${bgColor};border:1px solid ${borderColor};border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer" onclick="goTo('checklist')">
+                        <div style="display:flex;align-items:center;gap:12px">
+                            <div style="font-size:1.5rem">${icon}</div>
+                            <div>
+                                <div style="font-weight:600;color:var(--tx)">${checkType.name} - ${timeSlot}</div>
+                                <div style="font-size:.8rem;color:var(--tx2)">${branch}</div>
+                            </div>
+                        </div>
+                        <div style="text-align:right">
+                            <div style="font-size:.85rem;font-weight:600;color:${status.color || 'var(--tx)'}">${statusText}</div>
+                            ${!isCompleted && remaining && !remaining.isExpired ? `
+                                <div style="font-size:.75rem;color:var(--tx3)">⏱️ ${remaining.text}</div>
+                            ` : ''}
+                            ${isCompleted && status.points !== 0 ? `
+                                <div style="font-size:.75rem;color:${status.points > 0 ? '#27ae60' : '#e74c3c'}">${status.points > 0 ? '+' : ''}${status.points} puan</div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    }
+    
+    if (hasActiveChecks) {
+        section.style.display = 'block';
+        container.innerHTML = html;
+    } else {
+        section.style.display = 'none';
+    }
+}
+
+// ==================== ADMIN - TÜM CHECKLER ÖZETİ ====================
+async function loadAllChecksOverview() {
+    const container = document.getElementById('allChecksOverviewContainer');
+    if (!container) return;
+    
+    const dateFilter = document.getElementById('allChecksDateFilter')?.value || 'today';
+    const branchFilter = document.getElementById('allChecksBranchFilter')?.value || 'all';
+    
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx2)"><div class="loading-spinner" style="margin:0 auto 16px"></div>Yükleniyor...</div>';
+    
+    try {
+        // Tarih aralığını belirle
+        const today = new Date();
+        let startDate, endDate;
+        
+        if (dateFilter === 'today') {
+            startDate = today.toISOString().split('T')[0];
+            endDate = startDate;
+        } else if (dateFilter === 'yesterday') {
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            startDate = yesterday.toISOString().split('T')[0];
+            endDate = startDate;
+        } else if (dateFilter === 'week') {
+            const weekStart = getWeekStart(today);
+            startDate = weekStart.toISOString().split('T')[0];
+            endDate = today.toISOString().split('T')[0];
+        }
+        
+        // Şubeleri belirle
+        const branches = branchFilter === 'all' ? (STATE.branches || ['Tuzla Port', 'Şişli (Merkez)']) : [branchFilter];
+        
+        let allSubmissions = [];
+        let expectedChecks = [];
+        
+        // Her şube için beklenen checkleri hesapla
+        for (const branch of branches) {
+            const checkTypes = CHECKLIST_TYPES[branch] || [];
+            
+            for (const checkType of checkTypes) {
+                if (checkType.timeSlots && checkType.timeSlots.length > 0) {
+                    for (const timeSlot of checkType.timeSlots) {
+                        // Tarih aralığındaki her gün için
+                        let currentDate = new Date(startDate);
+                        const end = new Date(endDate);
+                        
+                        while (currentDate <= end) {
+                            const dateStr = currentDate.toISOString().split('T')[0];
+                            expectedChecks.push({
+                                branch,
+                                type: checkType.id,
+                                typeName: checkType.name,
+                                timeSlot,
+                                date: dateStr,
+                                submissionId: `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType.id}_${dateStr}_${timeSlot.replace(':', '')}`
+                            });
+                            currentDate.setDate(currentDate.getDate() + 1);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Gönderilen checkleri çek
+        const submissionsMap = {};
+        
+        for (const expected of expectedChecks) {
+            try {
+                const doc = await db.collection('checklistSubmissions').doc(expected.submissionId).get();
+                if (doc.exists) {
+                    submissionsMap[expected.submissionId] = doc.data();
+                }
+            } catch (e) {}
+        }
+        
+        // İstatistikler
+        let completed = 0;
+        let missed = 0;
+        let pending = 0;
+        let totalPoints = 0;
+        
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        
+        // HTML oluştur
+        let html = '';
+        
+        // Özet kartları
+        expectedChecks.forEach(expected => {
+            const submission = submissionsMap[expected.submissionId];
+            const isToday = expected.date === today.toISOString().split('T')[0];
+            
+            if (submission) {
+                completed++;
+                totalPoints += submission.points || 0;
+            } else if (isToday) {
+                const window = getCheckTimeWindow(expected.type, expected.timeSlot, expected.branch);
+                if (window && window.isMissed) {
+                    missed++;
+                } else {
+                    pending++;
+                }
+            } else {
+                missed++;
+            }
+        });
+        
+        // Özet kartları
+        html += `
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;margin-bottom:24px">
+                <div style="background:rgba(39,174,96,.1);border:1px solid rgba(39,174,96,.2);border-radius:12px;padding:20px;text-align:center">
+                    <div style="font-size:2rem;font-weight:700;color:#27ae60">${completed}</div>
+                    <div style="font-size:.8rem;color:#27ae60;font-weight:500">Tamamlandı</div>
+                </div>
+                <div style="background:rgba(52,152,219,.1);border:1px solid rgba(52,152,219,.2);border-radius:12px;padding:20px;text-align:center">
+                    <div style="font-size:2rem;font-weight:700;color:#3498db">${pending}</div>
+                    <div style="font-size:.8rem;color:#3498db;font-weight:500">Bekliyor</div>
+                </div>
+                <div style="background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.2);border-radius:12px;padding:20px;text-align:center">
+                    <div style="font-size:2rem;font-weight:700;color:#e74c3c">${missed}</div>
+                    <div style="font-size:.8rem;color:#e74c3c;font-weight:500">Kaçırıldı</div>
+                </div>
+                <div style="background:var(--bg3);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;text-align:center">
+                    <div style="font-size:2rem;font-weight:700;color:${totalPoints >= 0 ? '#27ae60' : '#e74c3c'}">${totalPoints >= 0 ? '+' : ''}${totalPoints}</div>
+                    <div style="font-size:.8rem;color:var(--tx2);font-weight:500">Toplam Puan</div>
+                </div>
+            </div>
+        `;
+        
+        // Detay tablosu
+        html += `
+            <div style="overflow-x:auto">
+                <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+                    <thead>
+                        <tr style="background:var(--bg3)">
+                            <th style="padding:12px;text-align:left;border-bottom:1px solid var(--cardBorder)">Şube</th>
+                            <th style="padding:12px;text-align:left;border-bottom:1px solid var(--cardBorder)">Check</th>
+                            <th style="padding:12px;text-align:center;border-bottom:1px solid var(--cardBorder)">Saat</th>
+                            <th style="padding:12px;text-align:center;border-bottom:1px solid var(--cardBorder)">Tarih</th>
+                            <th style="padding:12px;text-align:center;border-bottom:1px solid var(--cardBorder)">Durum</th>
+                            <th style="padding:12px;text-align:center;border-bottom:1px solid var(--cardBorder)">Dolduran</th>
+                            <th style="padding:12px;text-align:center;border-bottom:1px solid var(--cardBorder)">Puan</th>
+                            <th style="padding:12px;text-align:center;border-bottom:1px solid var(--cardBorder)">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        // Tarihe göre sırala (en yeni en üstte)
+        expectedChecks.sort((a, b) => {
+            if (a.date !== b.date) return b.date.localeCompare(a.date);
+            return a.timeSlot.localeCompare(b.timeSlot);
+        });
+        
+        expectedChecks.forEach(expected => {
+            const submission = submissionsMap[expected.submissionId];
+            const isToday = expected.date === today.toISOString().split('T')[0];
+            
+            let statusBadge, statusColor;
+            
+            if (submission) {
+                const pointStatus = submission.pointStatus || 'completed';
+                if (pointStatus === 'onTime') {
+                    statusBadge = '✅ Vaktinde';
+                    statusColor = '#27ae60';
+                } else if (pointStatus === 'late') {
+                    statusBadge = '⏰ Geç';
+                    statusColor = '#f39c12';
+                } else {
+                    statusBadge = '✓ Tamamlandı';
+                    statusColor = '#27ae60';
+                }
+            } else if (isToday) {
+                const window = getCheckTimeWindow(expected.type, expected.timeSlot, expected.branch);
+                if (window && window.isMissed) {
+                    statusBadge = '❌ Kaçırıldı';
+                    statusColor = '#e74c3c';
+                } else if (window && window.isLate) {
+                    statusBadge = '⚠️ Geç Pencere';
+                    statusColor = '#f39c12';
+                } else if (window && window.isInWindow) {
+                    statusBadge = '🔵 Aktif';
+                    statusColor = '#3498db';
+                } else {
+                    statusBadge = '⏳ Bekliyor';
+                    statusColor = '#95a5a6';
+                }
+            } else {
+                statusBadge = '❌ Kaçırıldı';
+                statusColor = '#e74c3c';
+            }
+            
+            const points = submission?.points || 0;
+            const pointsDisplay = points !== 0 ? `<span style="color:${points > 0 ? '#27ae60' : '#e74c3c'};font-weight:600">${points > 0 ? '+' : ''}${points}</span>` : '-';
+            
+            html += `
+                <tr style="border-bottom:1px solid var(--bg3)">
+                    <td style="padding:12px">${expected.branch}</td>
+                    <td style="padding:12px;font-weight:500">${expected.typeName}</td>
+                    <td style="padding:12px;text-align:center">${expected.timeSlot}</td>
+                    <td style="padding:12px;text-align:center">${expected.date}</td>
+                    <td style="padding:12px;text-align:center">
+                        <span style="padding:4px 10px;border-radius:12px;font-size:.75rem;font-weight:600;background:${statusColor}15;color:${statusColor}">${statusBadge}</span>
+                    </td>
+                    <td style="padding:12px;text-align:center">${submission?.personName || '-'}</td>
+                    <td style="padding:12px;text-align:center">${pointsDisplay}</td>
+                    <td style="padding:12px;text-align:center">
+                        ${!submission && (isToday || dateFilter !== 'today') ? `
+                            <button class="btn btn-sm btn-ghost" onclick="showManualCheckModal('${expected.branch}', '${expected.type}', '${expected.timeSlot}', '${expected.date}')" title="Manuel Ekle">
+                                ➕
+                            </button>
+                        ` : ''}
+                        ${submission ? `
+                            <button class="btn btn-sm btn-ghost" onclick="viewCheckDetails('${expected.submissionId}')" title="Detay">
+                                👁️
+                            </button>
+                        ` : ''}
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        if (expectedChecks.length === 0) {
+            html = '<div style="text-align:center;padding:60px;color:var(--tx2)">Bu dönem için check bulunamadı.</div>';
+        }
+        
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Checkler yüklenirken hata:', error);
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:#e74c3c">Yükleme hatası!</div>';
+    }
+}
+
+// Manuel check ekleme modal'ı
+function showManualCheckModal(branch, type, timeSlot, date) {
+    const typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === type);
+    const typeName = typeInfo?.name || type;
+    
+    showModal('➕ Manuel Check Ekle', `
+        <div style="padding:8px 0">
+            <div style="background:var(--bg3);border-radius:12px;padding:16px;margin-bottom:20px">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:.9rem">
+                    <div><strong>Şube:</strong> ${branch}</div>
+                    <div><strong>Check:</strong> ${typeName}</div>
+                    <div><strong>Saat:</strong> ${timeSlot}</div>
+                    <div><strong>Tarih:</strong> ${date}</div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Dolduran Personel</label>
+                <select id="manualCheckPersonel" class="form-select">
+                    <option value="">-- Seçin --</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Durum</label>
+                <select id="manualCheckStatus" class="form-select">
+                    <option value="onTime">✅ Vaktinde</option>
+                    <option value="late">⏰ Geç</option>
+                    <option value="missed">❌ Kaçırıldı</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Not (Opsiyonel)</label>
+                <textarea id="manualCheckNote" class="form-input" rows="2" placeholder="Manuel ekleme sebebi..."></textarea>
+            </div>
+        </div>
+    `, `
+        <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
+        <button class="btn btn-primary" onclick="saveManualCheck('${branch}', '${type}', '${timeSlot}', '${date}')">💾 Kaydet</button>
+    `);
+    
+    // Personel listesini doldur
+    loadPersonelForManualCheck(branch);
+}
+
+async function loadPersonelForManualCheck(branch) {
+    const select = document.getElementById('manualCheckPersonel');
+    if (!select) return;
+    
+    try {
+        const snapshot = await db.collection('personel').where('branch', '==', branch).get();
+        let options = '<option value="">-- Seçin --</option>';
+        snapshot.forEach(doc => {
+            const p = doc.data();
+            options += `<option value="${doc.id}" data-name="${p.name}">${p.name}</option>`;
+        });
+        select.innerHTML = options;
+    } catch (e) {
+        console.error('Personel yüklenemedi:', e);
+    }
+}
+
+async function saveManualCheck(branch, type, timeSlot, date) {
+    const personelSelect = document.getElementById('manualCheckPersonel');
+    const statusSelect = document.getElementById('manualCheckStatus');
+    const noteInput = document.getElementById('manualCheckNote');
+    
+    const personelId = personelSelect?.value;
+    const personelName = personelSelect?.selectedOptions[0]?.dataset?.name;
+    const status = statusSelect?.value;
+    const note = noteInput?.value?.trim();
+    
+    if (!personelId) {
+        toast('Lütfen personel seçin', 'error');
+        return;
+    }
+    
+    try {
+        const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}_${date}_${timeSlot.replace(':', '')}`;
+        const rules = CHECK_RULES[type];
+        let points = 0;
+        
+        if (rules) {
+            if (status === 'onTime') points = rules.points.onTime;
+            else if (status === 'late') points = rules.points.late;
+            else if (status === 'missed') points = rules.points.missed;
+        }
+        
+        await db.collection('checklistSubmissions').doc(submissionId).set({
+            branch,
+            type,
+            timeSlot,
+            date,
+            personName: personelName,
+            submittedBy: currentUser?.id,
+            submittedByName: currentUser?.name,
+            submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            points,
+            pointStatus: status,
+            manualEntry: true,
+            manualNote: note || 'Yönetici tarafından manuel eklendi',
+            items: []
+        });
+        
+        // Puantaj notu oluştur
+        if (points !== 0) {
+            await createAutoPuantajNote(personelId, personelName, type, timeSlot, status, points, branch, date);
+        }
+        
+        toast('Check kaydedildi', 'success');
+        closeModal();
+        loadAllChecksOverview();
+        
+    } catch (error) {
+        console.error('Kayıt hatası:', error);
+        toast('Kayıt hatası!', 'error');
+    }
+}
+
+// Check detaylarını görüntüle
+async function viewCheckDetails(submissionId) {
+    try {
+        const doc = await db.collection('checklistSubmissions').doc(submissionId).get();
+        if (!doc.exists) {
+            toast('Kayıt bulunamadı', 'error');
+            return;
+        }
+        
+        const data = doc.data();
+        const submittedAt = data.submittedAt?.toDate?.()?.toLocaleString('tr-TR') || '-';
+        
+        let itemsHtml = '';
+        if (data.items && data.items.length > 0) {
+            itemsHtml = `
+                <div style="margin-top:16px;max-height:300px;overflow-y:auto">
+                    <div style="font-weight:600;margin-bottom:8px">Maddeler:</div>
+                    ${data.items.map(item => `
+                        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bg3);font-size:.85rem">
+                            <span style="color:${item.checked ? '#27ae60' : '#e74c3c'}">${item.checked ? '✓' : '✗'}</span>
+                            <span>${item.id}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+        
+        showModal('📋 Check Detayı', `
+            <div style="padding:8px 0">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+                    <div>
+                        <div style="font-size:.75rem;color:var(--tx2);margin-bottom:4px">Şube</div>
+                        <div style="font-weight:600">${data.branch || '-'}</div>
+                    </div>
+                    <div>
+                        <div style="font-size:.75rem;color:var(--tx2);margin-bottom:4px">Tarih</div>
+                        <div style="font-weight:600">${data.date || '-'}</div>
+                    </div>
+                    <div>
+                        <div style="font-size:.75rem;color:var(--tx2);margin-bottom:4px">Saat</div>
+                        <div style="font-weight:600">${data.timeSlot || '-'}</div>
+                    </div>
+                    <div>
+                        <div style="font-size:.75rem;color:var(--tx2);margin-bottom:4px">Dolduran</div>
+                        <div style="font-weight:600">${data.personName || '-'}</div>
+                    </div>
+                    <div>
+                        <div style="font-size:.75rem;color:var(--tx2);margin-bottom:4px">Gönderim Zamanı</div>
+                        <div style="font-weight:600">${submittedAt}</div>
+                    </div>
+                    <div>
+                        <div style="font-size:.75rem;color:var(--tx2);margin-bottom:4px">Puan</div>
+                        <div style="font-weight:600;color:${(data.points || 0) >= 0 ? '#27ae60' : '#e74c3c'}">${(data.points || 0) >= 0 ? '+' : ''}${data.points || 0}</div>
+                    </div>
+                </div>
+                
+                ${data.manualEntry ? `
+                    <div style="background:rgba(243,156,18,.1);border:1px solid rgba(243,156,18,.3);border-radius:8px;padding:12px;margin-bottom:16px">
+                        <div style="font-size:.8rem;color:#f39c12;font-weight:600">⚠️ Manuel Ekleme</div>
+                        <div style="font-size:.85rem;color:var(--tx);margin-top:4px">${data.manualNote || '-'}</div>
+                    </div>
+                ` : ''}
+                
+                ${itemsHtml}
+            </div>
+        `, '<button class="btn btn-ghost" onclick="closeModal()">Kapat</button>');
+        
+    } catch (error) {
+        console.error('Detay yüklenemedi:', error);
+        toast('Yükleme hatası!', 'error');
+    }
+}
+
+// ==================== ADMIN - MAĞAZA SAATLERİ ====================
+function renderBranchHoursSettings() {
+    const container = document.getElementById('branchHoursContainer');
+    if (!container) return;
+    
+    const branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+    const days = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+    const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    
+    let html = '';
+    
+    branches.forEach(branch => {
+        const hours = BRANCH_HOURS[branch] || { opening: '10:00', closing: { default: '01:00' } };
+        const isMoonberry = branch.includes('Şişli') || branch.includes('Merkez');
+        const brandColor = isMoonberry ? '#008c95' : '#ff8674';
+        const brandName = isMoonberry ? 'MOONBERRY' : 'SUNBERRY';
+        
+        html += `
+            <div style="background:var(--bg3);border-radius:12px;padding:20px;border-left:4px solid ${brandColor}">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+                    <div style="width:32px;height:32px;background:${brandColor};border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.75rem">${brandName.charAt(0)}</div>
+                    <div>
+                        <div style="font-weight:600;color:var(--tx)">${branch}</div>
+                        <div style="font-size:.75rem;color:var(--tx2)">${brandName}</div>
+                    </div>
+                </div>
+                
+                <div class="form-grid" style="margin-bottom:16px">
+                    <div class="form-group">
+                        <label class="form-label">Açılış Saati</label>
+                        <input type="time" class="form-input" id="hours_${branch.replace(/\s/g, '_')}_opening" value="${hours.opening || '10:00'}">
+                    </div>
+                </div>
+                
+                <div style="margin-bottom:12px">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                        <input type="checkbox" id="hours_${branch.replace(/\s/g, '_')}_sameClosing" 
+                            ${!hours.closing.monday ? 'checked' : ''} 
+                            onchange="toggleDailyClosing('${branch.replace(/\s/g, '_')}', this.checked)">
+                        <span style="font-size:.85rem;color:var(--tx2)">Tüm günler aynı kapanış saati</span>
+                    </label>
+                </div>
+                
+                <div id="sameClosing_${branch.replace(/\s/g, '_')}" style="${hours.closing.monday ? 'display:none' : ''}">
+                    <div class="form-group">
+                        <label class="form-label">Kapanış Saati (Tüm Günler)</label>
+                        <input type="time" class="form-input" id="hours_${branch.replace(/\s/g, '_')}_closing_default" value="${hours.closing.default || '01:00'}">
+                    </div>
+                </div>
+                
+                <div id="dailyClosing_${branch.replace(/\s/g, '_')}" style="${!hours.closing.monday ? 'display:none' : ''}">
+                    <label class="form-label" style="margin-bottom:8px">Günlük Kapanış Saatleri</label>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">
+                        ${dayKeys.map((key, i) => `
+                            <div>
+                                <label style="font-size:.7rem;color:var(--tx3);display:block;margin-bottom:2px">${days[i]}</label>
+                                <input type="time" class="form-input" style="font-size:.8rem;padding:6px 8px" 
+                                    id="hours_${branch.replace(/\s/g, '_')}_closing_${key}" 
+                                    value="${hours.closing[key] || hours.closing.default || '01:00'}">
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function toggleDailyClosing(branchKey, sameForAll) {
+    document.getElementById('sameClosing_' + branchKey).style.display = sameForAll ? 'block' : 'none';
+    document.getElementById('dailyClosing_' + branchKey).style.display = sameForAll ? 'none' : 'block';
+}
+
+async function saveBranchHours() {
+    const branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+    const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    
+    const branchHours = {};
+    
+    branches.forEach(branch => {
+        const branchKey = branch.replace(/\s/g, '_');
+        const opening = document.getElementById(`hours_${branchKey}_opening`)?.value || '10:00';
+        const sameClosing = document.getElementById(`hours_${branchKey}_sameClosing`)?.checked;
+        
+        const closing = {};
+        if (sameClosing) {
+            closing.default = document.getElementById(`hours_${branchKey}_closing_default`)?.value || '01:00';
+        } else {
+            closing.default = document.getElementById(`hours_${branchKey}_closing_monday`)?.value || '01:00';
+            dayKeys.forEach(day => {
+                const val = document.getElementById(`hours_${branchKey}_closing_${day}`)?.value;
+                if (val) closing[day] = val;
+            });
+        }
+        
+        branchHours[branch] = { opening, closing };
+    });
+    
+    try {
+        await db.collection('config').doc('system').update({
+            branchHours,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        BRANCH_HOURS = branchHours;
+        toast('Mağaza saatleri kaydedildi', 'success');
+    } catch (e) {
+        console.error('Kayıt hatası:', e);
+        toast('Kayıt hatası!', 'error');
+    }
+}
+
+// ==================== ADMIN - CHECK KURALLARI ====================
+function renderCheckRulesSettings() {
+    const container = document.getElementById('checkRulesContainer');
+    if (!container) return;
+    
+    const defaultRules = {
+        gunluk: { name: 'Günlük Check', window: { before: 60, after: 60 }, lateWindow: 60, points: { onTime: 1, late: -2, missed: -2 } },
+        platform: { name: 'Platform Check', window: { before: 60, after: 60 }, lateWindow: 0, points: { onTime: 0, late: 0, missed: -1 } },
+        mudur: { name: 'Müdür Kontrol', deadline: '21:00', points: { onTime: 1, late: -1, missed: -2 } },
+        temizlik: { name: 'Temizlik', windows: { sabah: { start: '10:00', end: '16:00' }, kapanis: { start: '00:00', end: '02:00' } }, points: { onTime: 0, late: -1, missed: -1 } },
+        haftalik: { name: 'Haftalık Görevler', points: { done: 0, missed: -1 } }
+    };
+    
+    const rules = { ...defaultRules, ...CHECK_RULES };
+    
+    let html = '';
+    
+    Object.entries(rules).forEach(([key, rule]) => {
+        html += `
+            <div style="background:var(--bg3);border-radius:12px;padding:16px">
+                <div style="font-weight:600;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                    <span style="background:var(--accent);color:#fff;padding:2px 8px;border-radius:4px;font-size:.7rem">${key.toUpperCase()}</span>
+                    ${rule.name}
+                </div>
+                
+                <div class="form-grid" style="gap:12px">
+                    ${rule.window ? `
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:.75rem">Pencere Önce (dk)</label>
+                            <input type="number" class="form-input" id="rule_${key}_before" value="${rule.window.before}" min="0" max="180">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:.75rem">Pencere Sonra (dk)</label>
+                            <input type="number" class="form-input" id="rule_${key}_after" value="${rule.window.after}" min="0" max="180">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:.75rem">Geç Penceresi (dk)</label>
+                            <input type="number" class="form-input" id="rule_${key}_lateWindow" value="${rule.lateWindow || 0}" min="0" max="180">
+                            <div style="font-size:.65rem;color:var(--tx3);margin-top:2px">0 = geç doldurulamaz</div>
+                        </div>
+                    ` : ''}
+                    ${rule.deadline ? `
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:.75rem">Son Saat</label>
+                            <input type="time" class="form-input" id="rule_${key}_deadline" value="${rule.deadline}">
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--cardBorder)">
+                    <div style="font-size:.75rem;font-weight:600;color:var(--tx2);margin-bottom:8px">Puanlama</div>
+                    <div style="display:flex;gap:12px;flex-wrap:wrap">
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <span style="font-size:.75rem;color:var(--tx2)">Vaktinde:</span>
+                            <input type="number" class="form-input" style="width:60px;padding:4px 8px;font-size:.85rem" id="rule_${key}_onTime" value="${rule.points.onTime || 0}">
+                        </div>
+                        ${rule.points.late !== undefined ? `
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <span style="font-size:.75rem;color:var(--tx2)">Geç:</span>
+                                <input type="number" class="form-input" style="width:60px;padding:4px 8px;font-size:.85rem" id="rule_${key}_late" value="${rule.points.late || 0}">
+                            </div>
+                        ` : ''}
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <span style="font-size:.75rem;color:var(--tx2)">Kaçırıldı:</span>
+                            <input type="number" class="form-input" style="width:60px;padding:4px 8px;font-size:.85rem" id="rule_${key}_missed" value="${rule.points.missed || -1}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+async function saveCheckRules() {
+    const keys = ['gunluk', 'platform', 'mudur', 'temizlik', 'haftalik'];
+    const checkRules = {};
+    
+    keys.forEach(key => {
+        const rule = { name: CHECK_RULES[key]?.name || key, points: {} };
+        
+        // Window
+        const before = document.getElementById(`rule_${key}_before`)?.value;
+        const after = document.getElementById(`rule_${key}_after`)?.value;
+        if (before !== undefined && after !== undefined) {
+            rule.window = { before: parseInt(before), after: parseInt(after) };
+            rule.lateWindow = parseInt(document.getElementById(`rule_${key}_lateWindow`)?.value || 0);
+        }
+        
+        // Deadline
+        const deadline = document.getElementById(`rule_${key}_deadline`)?.value;
+        if (deadline) rule.deadline = deadline;
+        
+        // Points
+        rule.points.onTime = parseInt(document.getElementById(`rule_${key}_onTime`)?.value || 0);
+        const late = document.getElementById(`rule_${key}_late`)?.value;
+        if (late !== undefined) rule.points.late = parseInt(late);
+        rule.points.missed = parseInt(document.getElementById(`rule_${key}_missed`)?.value || -1);
+        
+        checkRules[key] = rule;
+    });
+    
+    try {
+        await db.collection('config').doc('system').update({
+            checkRules,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        CHECK_RULES = checkRules;
+        toast('Check kuralları kaydedildi', 'success');
+    } catch (e) {
+        console.error('Kayıt hatası:', e);
+        toast('Kayıt hatası!', 'error');
+    }
 }
 
 // Checklist zamanlama değişkenleri
@@ -8592,6 +9969,9 @@ async function loadSystemConfig() {
             SYSTEM_CONFIG = sysDoc.data();
             WHATSAPP_GROUPS = SYSTEM_CONFIG.whatsappGroups || {};
             PLATFORMS = SYSTEM_CONFIG.platforms || PLATFORMS;
+            BRANCH_HOURS = SYSTEM_CONFIG.branchHours || {};
+            CHECK_RULES = SYSTEM_CONFIG.checkRules || {};
+            SHIFT_DURATION = SYSTEM_CONFIG.shiftDuration || 9;
         }
         
         // Checklist türleri
@@ -8615,7 +9995,9 @@ async function loadSystemConfig() {
         
         console.log('Sistem config yüklendi:', {
             branches: Object.keys(CHECKLIST_TYPES),
-            personnel: personnelMapping.length
+            personnel: personnelMapping.length,
+            branchHours: BRANCH_HOURS,
+            checkRules: CHECK_RULES
         });
     } catch (e) {
         console.warn('Config yüklenemedi:', e);
@@ -8805,13 +10187,91 @@ async function loadChecklist() {
     const timeSlotGroup = document.getElementById('checklistTimeSlotGroup');
     const timeSlotSelect = document.getElementById('checklistTimeSlot');
     
+    // Platform check için özel işlem - timeSlots olmadan direkt render
+    if (type === 'platform') {
+        timeSlotGroup.style.display = 'none';
+        renderPlatformChecklistWithStatus(container, branch, date);
+        return;
+    }
+    
     if (timeSlots.length > 0) {
-        timeSlotGroup.style.display = 'block';
-        timeSlotSelect.innerHTML = '<option value="">-- Saat Seçin --</option>' + 
-            timeSlots.map(t => `<option value="${t}">${t}</option>`).join('');
+        // Otomatik saat seçimi - mevcut saate göre uygun pencereyi bul
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
         
-        // Saat seçilmemişse bekle
-        if (!timeSlotSelect.value) {
+        let autoSelectedSlot = null;
+        let availableSlots = [];
+        
+        timeSlots.forEach(slot => {
+            const window = getCheckTimeWindow(type, slot, branch);
+            if (window) {
+                const slotInfo = {
+                    time: slot,
+                    window,
+                    status: getCheckStatus(type, slot, branch, false)
+                };
+                
+                // Aktif veya geç penceresindeki slotları ekle
+                if (window.isInWindow || window.isLate) {
+                    availableSlots.push(slotInfo);
+                    if (!autoSelectedSlot) autoSelectedSlot = slot;
+                }
+                // Henüz açılmamış ama bugün için olan slotlar
+                else if (window.isBeforeWindow && !window.isMissed) {
+                    availableSlots.push(slotInfo);
+                }
+            }
+        });
+        
+        // Yönetici tüm saatleri görebilir
+        const isAdmin = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
+        
+        if (isAdmin) {
+            timeSlotGroup.style.display = 'block';
+            timeSlotSelect.innerHTML = '<option value="">-- Tüm Saatler --</option>' + 
+                timeSlots.map(t => {
+                    const window = getCheckTimeWindow(type, t, branch);
+                    const status = window ? getCheckStatus(type, t, branch, false) : null;
+                    let badge = '';
+                    if (status) {
+                        if (status.status === 'active') badge = ' 🟢';
+                        else if (status.status === 'lateWindow') badge = ' 🟡';
+                        else if (status.status === 'missed') badge = ' 🔴';
+                        else if (status.status === 'waiting') badge = ' ⏳';
+                    }
+                    return `<option value="${t}" ${t === autoSelectedSlot ? 'selected' : ''}>${t}${badge}</option>`;
+                }).join('');
+        } else {
+            // Normal personel - sadece aktif penceredeki slotları göster
+            if (availableSlots.length === 0) {
+                timeSlotGroup.style.display = 'none';
+                container.innerHTML = `
+                    <div style="text-align:center;padding:60px;color:var(--tx2)">
+                        <div style="font-size:4rem;margin-bottom:16px">🔒</div>
+                        <div style="font-size:1.1rem;margin-bottom:8px">Aktif Check Yok</div>
+                        <div style="font-size:.9rem">Şu an doldurmanız gereken bir check bulunmuyor</div>
+                        <div style="margin-top:16px;padding:12px;background:var(--bg3);border-radius:10px;font-size:.85rem">
+                            <strong>Check Saatleri:</strong> ${timeSlots.join(', ')}
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Otomatik olarak uygun slot'u seç
+            if (autoSelectedSlot) {
+                timeSlotGroup.style.display = 'none';
+                timeSlotSelect.value = autoSelectedSlot;
+            } else {
+                timeSlotGroup.style.display = 'block';
+                timeSlotSelect.innerHTML = availableSlots.map(s => 
+                    `<option value="${s.time}">${s.time}</option>`
+                ).join('');
+            }
+        }
+        
+        // Saat seçilmemişse ve admin değilse bekle
+        if (!timeSlotSelect.value && !autoSelectedSlot) {
             container.innerHTML = `
                 <div style="text-align:center;padding:60px;color:var(--tx2)">
                     <div style="font-size:4rem;margin-bottom:16px">⏰</div>
@@ -8827,8 +10287,42 @@ async function loadChecklist() {
     
     const timeSlot = timeSlotSelect?.value || null;
     
+    // Zaman penceresi bilgisi göster
+    let windowInfo = '';
+    if (timeSlot && CHECK_RULES[type]) {
+        const window = getCheckTimeWindow(type, timeSlot, branch);
+        const remaining = getRemainingTime(type, timeSlot, branch);
+        const rules = CHECK_RULES[type];
+        
+        if (window && remaining) {
+            const statusClass = remaining.isExpired ? 'background:#e74c3c' : 
+                               remaining.isUrgent ? 'background:#f39c12' : 
+                               remaining.isWarning ? 'background:#3498db' : 'background:#27ae60';
+            
+            windowInfo = `
+                <div style="margin-bottom:16px;padding:16px;border-radius:12px;background:var(--bg3);border:1px solid var(--cardBorder)">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+                        <div>
+                            <div style="font-weight:600;color:var(--tx);margin-bottom:4px">⏱️ ${timeSlot} Check</div>
+                            <div style="font-size:.8rem;color:var(--tx2)">
+                                📗 ${window.start}-${window.end} arası: <strong style="color:#27ae60">+${rules.points.onTime} puan</strong>
+                                ${rules.lateWindow > 0 ? `<br>📙 ${window.end}-${window.lateEnd} arası: <strong style="color:#f39c12">${rules.points.late} puan</strong>` : ''}
+                                <br>📕 Süre sonrası: <strong style="color:#e74c3c">${rules.points.missed} puan</strong>
+                            </div>
+                        </div>
+                        <div style="text-align:right">
+                            <div style="padding:8px 16px;border-radius:20px;color:#fff;font-weight:600;${statusClass}">
+                                ${remaining.isExpired ? '⏰ Süre Doldu!' : `⏱️ ${remaining.text}`}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
     // Loading
-    container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--tx2)">
+    container.innerHTML = windowInfo + `<div style="text-align:center;padding:40px;color:var(--tx2)">
         <div class="loading-spinner" style="margin:0 auto 16px"></div>
         Checklist yükleniyor...
     </div>`;
@@ -8865,25 +10359,9 @@ async function loadChecklist() {
             }
         }
         
-        // Platform check için özel render (items olmadan çalışır)
-        if (type === 'platform') {
-            let submittedData = null;
-            try {
-                const submissionId = `${checklistId}_${date}${timeSlot ? '_' + timeSlot.replace(':', '') : ''}`;
-                const submissionDoc = await db.collection('checklistSubmissions').doc(submissionId).get();
-                if (submissionDoc.exists) {
-                    submittedData = submissionDoc.data();
-                }
-            } catch (subError) {
-                console.warn('Submission kontrol hatası:', subError);
-            }
-            renderPlatformChecklist(container, branch, date, timeSlot, submittedData);
-            return;
-        }
-        
-        // Eğer hala items boşsa hata göster (platform hariç diğer checklistler için)
+        // Eğer hala items boşsa hata göster
         if (!items || items.length === 0) {
-            container.innerHTML = `<div style="text-align:center;padding:60px;color:var(--tx2)">
+            container.innerHTML = windowInfo + `<div style="text-align:center;padding:60px;color:var(--tx2)">
                 <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="opacity:.4;margin-bottom:16px">
                     <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
                 </svg>
@@ -9356,15 +10834,28 @@ function checkAllItemsMarked() {
     }
 }
 
+// Platform checklist render with status (zaman durumlu)
+async function renderPlatformChecklistWithStatus(container, branch, date) {
+    // Önce mevcut submission'ı kontrol et
+    let submittedData = null;
+    try {
+        const submissionId = `platform_${date}`;
+        const submissionDoc = await db.collection('checklistSubmissions').doc(submissionId).get();
+        if (submissionDoc.exists) {
+            submittedData = submissionDoc.data();
+        }
+    } catch (e) {
+        console.warn('Platform submission kontrol hatası:', e);
+    }
+    
+    // Ana render fonksiyonunu çağır
+    renderPlatformChecklist(container, branch, date, null, submittedData);
+}
+
 // Platform checklist render
 function renderPlatformChecklist(container, branch, date, timeSlot, submittedData) {
     const isSubmitted = !!submittedData;
     const userName = currentUser?.name || currentUser?.email?.split('@')[0] || 'Personel';
-    
-    // Şubeye göre marka rengi - Moonberry #008c95, Sunberry #ff8674
-    const isMoonberry = branch.includes('Şişli') || branch.includes('Merkez');
-    const brandColor = isMoonberry ? '#008c95' : '#ff8674';
-    const brandName = isMoonberry ? 'MOONBERRY' : 'SUNBERRY';
     
     // Saatler
     const TIME_SLOTS = ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'];
@@ -9377,17 +10868,11 @@ function renderPlatformChecklist(container, branch, date, timeSlot, submittedDat
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
                 <div>
                     <div style="font-size:1.3rem;font-weight:700;color:var(--tx)">📱 Platform Check</div>
-                    <div style="font-size:.85rem;color:var(--tx2)">${branch} • ${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})}</div>
+                    <div style="font-size:.85rem;color:var(--tx2)">${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})}</div>
                 </div>
                 <div style="display:flex;gap:12px;align-items:center">
-                    <div style="text-align:right">
-                        <div style="font-size:.8rem;color:var(--tx2)">👤 ${userName}</div>
-                    </div>
-                    ${isSubmitted ? `
-                        <div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.85rem;font-weight:600">
-                            ✓ Tamamlandı
-                        </div>
-                    ` : ''}
+                    <div style="font-size:.8rem;color:var(--tx2)">👤 ${userName}</div>
+                    ${isSubmitted ? `<div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.85rem;font-weight:600">✓ Tamamlandı</div>` : ''}
                 </div>
             </div>
             
@@ -9398,71 +10883,105 @@ function renderPlatformChecklist(container, branch, date, timeSlot, submittedDat
                     ${isSubmitted ? 'disabled' : ''}>
             </div>
             
-            <div style="overflow-x:auto;border-radius:12px;border:1px solid var(--cardBorder)">
-                <table style="width:100%;border-collapse:collapse;min-width:500px" data-brand="${brandName}">
-                    <thead>
-                        <tr>
-                            <th colspan="${platforms.length + 1}" style="padding:12px;text-align:center;font-weight:700;font-size:1.1rem;background:${brandColor};color:#fff;letter-spacing:1px">
-                                ${brandName}
-                            </th>
-                        </tr>
-                        <tr style="background:${brandColor}">
-                            <th style="padding:10px 12px;text-align:center;font-weight:600;color:#fff;border:1px solid rgba(255,255,255,.2);min-width:80px">SAAT</th>
-                            ${platforms.map(p => `<th style="padding:10px 8px;text-align:center;font-weight:600;color:#fff;border:1px solid rgba(255,255,255,.2);font-size:.85rem">${p}</th>`).join('')}
-                        </tr>
-                    </thead>
-                    <tbody>
+            <!-- Yan yana tablolar -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;overflow-x:auto">
+                
+                <!-- MOONBERRY (Şişli) -->
+                <div style="border-radius:12px;overflow:hidden;border:1px solid var(--cardBorder)">
+                    <table style="width:100%;border-collapse:collapse" data-brand="MOONBERRY" data-branch="Şişli">
+                        <thead>
+                            <tr>
+                                <th colspan="${platforms.length + 1}" style="padding:10px;text-align:center;font-weight:700;font-size:.95rem;background:#008c95;color:#fff;letter-spacing:1px">
+                                    MOONBERRY
+                                </th>
+                            </tr>
+                            <tr style="background:#008c95">
+                                <th style="padding:8px;text-align:center;font-weight:600;color:#fff;border:1px solid rgba(255,255,255,.2);font-size:.75rem;width:60px">SAAT</th>
+                                ${platforms.map(p => `<th style="padding:6px 4px;text-align:center;font-weight:600;color:#fff;border:1px solid rgba(255,255,255,.2);font-size:.65rem">${p}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
     `;
     
+    // Moonberry satırları
     TIME_SLOTS.forEach(time => {
-        html += `
-            <tr>
-                <td style="padding:12px;text-align:center;font-weight:700;background:${brandColor};color:#fff;border:1px solid rgba(255,255,255,.2)">${time}</td>
-        `;
-        
+        html += `<tr><td style="padding:8px;text-align:center;font-weight:700;background:#008c95;color:#fff;border:1px solid rgba(255,255,255,.2);font-size:.8rem">${time}</td>`;
         platforms.forEach(platform => {
-            const key = `${time}_${platform.replace(/\s/g, '_')}`;
+            const key = `moonberry_${time}_${platform.replace(/\s/g, '_')}`;
             const savedValue = submittedData?.checks?.[key];
             const isOpen = savedValue === 'open';
             const isClosed = savedValue === 'closed';
-            
             html += `
-                <td style="padding:8px;text-align:center;border:1px solid var(--cardBorder);background:var(--bg2)">
-                    <div style="display:flex;gap:6px;justify-content:center">
-                        <label style="cursor:${isSubmitted ? 'default' : 'pointer'}">
-                            <input type="radio" name="platform_${key}" value="open" ${isOpen ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''} style="display:none">
-                            <span class="platform-btn" onclick="${isSubmitted ? '' : `selectPlatformCell(this, '${key}', 'open')`}"
-                                style="display:inline-flex;width:32px;height:32px;border-radius:8px;align-items:center;justify-content:center;font-size:1.1rem;font-weight:bold;
-                                background:${isOpen ? brandColor : 'var(--bg3)'};
-                                border:2px solid ${isOpen ? brandColor : 'var(--cardBorder)'};
-                                color:${isOpen ? '#fff' : 'var(--tx3)'};
-                                transition:all .15s;cursor:pointer">✓</span>
-                        </label>
-                        <label style="cursor:${isSubmitted ? 'default' : 'pointer'}">
-                            <input type="radio" name="platform_${key}" value="closed" ${isClosed ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''} style="display:none">
-                            <span class="platform-btn" onclick="${isSubmitted ? '' : `selectPlatformCell(this, '${key}', 'closed')`}"
-                                style="display:inline-flex;width:32px;height:32px;border-radius:8px;align-items:center;justify-content:center;font-size:1.1rem;font-weight:bold;
-                                background:${isClosed ? '#e74c3c' : 'var(--bg3)'};
-                                border:2px solid ${isClosed ? '#e74c3c' : 'var(--cardBorder)'};
-                                color:${isClosed ? '#fff' : 'var(--tx3)'};
-                                transition:all .15s;cursor:pointer">✗</span>
-                        </label>
+                <td style="padding:4px;text-align:center;border:1px solid var(--cardBorder);background:var(--bg2)">
+                    <div style="display:flex;gap:2px;justify-content:center">
+                        <span class="platform-btn" onclick="${isSubmitted ? '' : `selectPlatformCell(this, '${key}', 'open')`}"
+                            style="display:inline-flex;width:24px;height:24px;border-radius:6px;align-items:center;justify-content:center;font-size:.85rem;
+                            background:${isOpen ? '#008c95' : 'var(--bg3)'};border:1px solid ${isOpen ? '#008c95' : 'var(--cardBorder)'};color:${isOpen ? '#fff' : 'var(--tx3)'};cursor:pointer">✓</span>
+                        <span class="platform-btn" onclick="${isSubmitted ? '' : `selectPlatformCell(this, '${key}', 'closed')`}"
+                            style="display:inline-flex;width:24px;height:24px;border-radius:6px;align-items:center;justify-content:center;font-size:.85rem;
+                            background:${isClosed ? '#e74c3c' : 'var(--bg3)'};border:1px solid ${isClosed ? '#e74c3c' : 'var(--cardBorder)'};color:${isClosed ? '#fff' : 'var(--tx3)'};cursor:pointer">✗</span>
                     </div>
-                </td>
-            `;
+                    <input type="hidden" name="platform_${key}" value="${savedValue || ''}">
+                </td>`;
         });
-        
         html += `</tr>`;
     });
     
     html += `
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- SUNBERRY (Tuzla) -->
+                <div style="border-radius:12px;overflow:hidden;border:1px solid var(--cardBorder)">
+                    <table style="width:100%;border-collapse:collapse" data-brand="SUNBERRY" data-branch="Tuzla">
+                        <thead>
+                            <tr>
+                                <th colspan="${platforms.length + 1}" style="padding:10px;text-align:center;font-weight:700;font-size:.95rem;background:#ff8674;color:#fff;letter-spacing:1px">
+                                    SUNBERRY
+                                </th>
+                            </tr>
+                            <tr style="background:#ff8674">
+                                <th style="padding:8px;text-align:center;font-weight:600;color:#fff;border:1px solid rgba(255,255,255,.2);font-size:.75rem;width:60px">SAAT</th>
+                                ${platforms.map(p => `<th style="padding:6px 4px;text-align:center;font-weight:600;color:#fff;border:1px solid rgba(255,255,255,.2);font-size:.65rem">${p}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+    `;
+    
+    // Sunberry satırları
+    TIME_SLOTS.forEach(time => {
+        html += `<tr><td style="padding:8px;text-align:center;font-weight:700;background:#ff8674;color:#fff;border:1px solid rgba(255,255,255,.2);font-size:.8rem">${time}</td>`;
+        platforms.forEach(platform => {
+            const key = `sunberry_${time}_${platform.replace(/\s/g, '_')}`;
+            const savedValue = submittedData?.checks?.[key];
+            const isOpen = savedValue === 'open';
+            const isClosed = savedValue === 'closed';
+            html += `
+                <td style="padding:4px;text-align:center;border:1px solid var(--cardBorder);background:var(--bg2)">
+                    <div style="display:flex;gap:2px;justify-content:center">
+                        <span class="platform-btn" onclick="${isSubmitted ? '' : `selectPlatformCell(this, '${key}', 'open')`}"
+                            style="display:inline-flex;width:24px;height:24px;border-radius:6px;align-items:center;justify-content:center;font-size:.85rem;
+                            background:${isOpen ? '#ff8674' : 'var(--bg3)'};border:1px solid ${isOpen ? '#ff8674' : 'var(--cardBorder)'};color:${isOpen ? '#fff' : 'var(--tx3)'};cursor:pointer">✓</span>
+                        <span class="platform-btn" onclick="${isSubmitted ? '' : `selectPlatformCell(this, '${key}', 'closed')`}"
+                            style="display:inline-flex;width:24px;height:24px;border-radius:6px;align-items:center;justify-content:center;font-size:.85rem;
+                            background:${isClosed ? '#e74c3c' : 'var(--bg3)'};border:1px solid ${isClosed ? '#e74c3c' : 'var(--cardBorder)'};color:${isClosed ? '#fff' : 'var(--tx3)'};cursor:pointer">✗</span>
+                    </div>
+                    <input type="hidden" name="platform_${key}" value="${savedValue || ''}">
+                </td>`;
+        });
+        html += `</tr>`;
+    });
+    
+    html += `
+                        </tbody>
+                    </table>
+                </div>
             </div>
             
             ${!isSubmitted ? `
                 <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
-                    <button class="btn btn-primary" style="background:${brandColor}" onclick="submitPlatformChecklist('${branch}', '${date}', '')">
+                    <button class="btn btn-primary" onclick="submitPlatformChecklist('${branch}', '${date}', '')">
                         ✅ Platform Check'i Tamamla
                     </button>
                 </div>
@@ -9476,15 +10995,14 @@ function renderPlatformChecklist(container, branch, date, timeSlot, submittedDat
 // Platform hücre seç
 function selectPlatformCell(btn, key, value) {
     const cell = btn.closest('td');
-    const table = btn.closest('table');
-    const openBtn = cell.querySelector('span:first-of-type');
-    const closedBtn = cell.querySelector('span:last-of-type');
-    const openInput = cell.querySelector('input[value="open"]');
-    const closedInput = cell.querySelector('input[value="closed"]');
+    const hiddenInput = cell.querySelector('input[type="hidden"]');
+    const btns = cell.querySelectorAll('.platform-btn');
+    const openBtn = btns[0];
+    const closedBtn = btns[1];
     
     // Marka rengini belirle
-    const brand = table.dataset.brand;
-    const brandColor = brand === 'MOONBERRY' ? '#008c95' : '#ff8674';
+    const isMoonberry = key.startsWith('moonberry');
+    const brandColor = isMoonberry ? '#008c95' : '#ff8674';
     
     // Reset
     openBtn.style.background = 'var(--bg3)';
@@ -9495,14 +11013,12 @@ function selectPlatformCell(btn, key, value) {
     closedBtn.style.color = 'var(--tx3)';
     
     if (value === 'open') {
-        openInput.checked = true;
-        closedInput.checked = false;
+        hiddenInput.value = 'open';
         openBtn.style.background = brandColor;
         openBtn.style.borderColor = brandColor;
         openBtn.style.color = '#fff';
     } else {
-        closedInput.checked = true;
-        openInput.checked = false;
+        hiddenInput.value = 'closed';
         closedBtn.style.background = '#e74c3c';
         closedBtn.style.borderColor = '#e74c3c';
         closedBtn.style.color = '#fff';
@@ -9613,6 +11129,34 @@ async function saveChecklistAndShare(branch, type, date, timeSlot, personName, r
         const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
         const submissionId = `${checklistId}_${date}${timeSlot ? '_' + timeSlot.replace(':', '') : ''}`;
         
+        // Puan hesaplama
+        let points = 0;
+        let pointStatus = 'completed';
+        const rules = CHECK_RULES[type];
+        
+        if (rules && timeSlot) {
+            const now = new Date();
+            const status = getCheckStatus(type, timeSlot, branch, true, now);
+            points = status.points;
+            pointStatus = status.status;
+            
+            // Müdür hariç puan uygula
+            const isMudur = ['magaza_muduru', 'bolge_muduru', 'yonetici'].includes(currentUser?.role);
+            if (!isMudur && points !== 0) {
+                // Puantaj notunu oluştur
+                await createAutoPuantajNote(
+                    currentUser?.id || personName,
+                    personName,
+                    type,
+                    timeSlot,
+                    pointStatus,
+                    points,
+                    branch,
+                    date
+                );
+            }
+        }
+        
         const submissionData = {
             checklistId,
             branch,
@@ -9628,13 +11172,17 @@ async function saveChecklistAndShare(branch, type, date, timeSlot, personName, r
             actualDurationMinutes: actualMinutes,
             expectedDurationMinutes: expectedMinutes,
             completionRate: Math.round((doneCount / totalCount) * 100),
-            items: responses
+            items: responses,
+            // Puan bilgileri
+            points,
+            pointStatus,
+            userRole: currentUser?.role
         };
         
         await db.collection('checklistSubmissions').doc(submissionId).set(submissionData);
         
         // Başarı modal'ı göster
-        showChecklistCompleteModal(branch, type, date, timeSlot, personName, actualMinutes, expectedMinutes, doneCount, totalCount);
+        showChecklistCompleteModal(branch, type, date, timeSlot, personName, actualMinutes, expectedMinutes, doneCount, totalCount, points, pointStatus);
         
     } catch (error) {
         console.error('Checklist kayıt hatası:', error);
@@ -9643,12 +11191,29 @@ async function saveChecklistAndShare(branch, type, date, timeSlot, personName, r
 }
 
 // Checklist tamamlandı modal'ı - WhatsApp paylaşımı ile
-function showChecklistCompleteModal(branch, type, date, timeSlot, personName, actualMinutes, expectedMinutes, doneCount, totalCount) {
+function showChecklistCompleteModal(branch, type, date, timeSlot, personName, actualMinutes, expectedMinutes, doneCount, totalCount, points = 0, pointStatus = 'completed') {
     const typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === type);
     const typeName = typeInfo?.name || type;
     const completionRate = Math.round((doneCount / totalCount) * 100);
     const dateStr = new Date(date).toLocaleDateString('tr-TR', {day: 'numeric', month: 'long', year: 'numeric'});
     const timeStr = new Date().toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'});
+    
+    // Puan bilgisi
+    let pointsHtml = '';
+    if (points !== 0 || pointStatus !== 'completed') {
+        const pointColor = points > 0 ? '#27ae60' : points < 0 ? '#e74c3c' : '#95a5a6';
+        const pointIcon = points > 0 ? '🎉' : points < 0 ? '⚠️' : '✓';
+        const pointLabel = pointStatus === 'onTime' ? 'Vaktinde' : pointStatus === 'late' ? 'Geç' : '';
+        pointsHtml = `
+            <div style="background:${points > 0 ? 'rgba(39,174,96,.1)' : points < 0 ? 'rgba(231,76,60,.1)' : 'var(--bg3)'};border-radius:12px;padding:16px;margin-bottom:20px;display:flex;align-items:center;justify-content:center;gap:12px">
+                <span style="font-size:1.5rem">${pointIcon}</span>
+                <div>
+                    <div style="font-size:.85rem;color:var(--tx2)">${pointLabel} dolduruldu</div>
+                    <div style="font-size:1.3rem;font-weight:700;color:${pointColor}">${points > 0 ? '+' : ''}${points} Puan</div>
+                </div>
+            </div>
+        `;
+    }
     
     const modal = document.createElement('div');
     modal.id = 'checklistCompleteModal';
@@ -9660,6 +11225,8 @@ function showChecklistCompleteModal(branch, type, date, timeSlot, personName, ac
                 </div>
                 <h3 style="font-size:1.5rem;font-weight:700;color:var(--tx);margin-bottom:8px">Checklist Tamamlandı!</h3>
                 <p style="color:var(--tx2);margin-bottom:24px">${typeName} • ${branch}</p>
+                
+                ${pointsHtml}
                 
                 <div style="background:var(--bg3);border-radius:12px;padding:20px;margin-bottom:24px;text-align:left">
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
@@ -9752,29 +11319,31 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
     // Saatler ve platformlar
     const TIME_SLOTS = ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'];
     const platforms = ['TRENDYOL', 'YEMEK SEPETİ', 'GETİR YEMEK', 'MİGROS'];
+    const brands = ['moonberry', 'sunberry'];
     
     const checks = {};
     let allAnswered = true;
-    let openCount = 0;
-    let closedCount = 0;
+    let moonberryOpen = 0, moonberryClosed = 0;
+    let sunberryOpen = 0, sunberryClosed = 0;
     
-    TIME_SLOTS.forEach(time => {
-        platforms.forEach(platform => {
-            const key = `${time}_${platform.replace(/\s/g, '_')}`;
-            const openInput = document.querySelector(`input[name="platform_${key}"][value="open"]`);
-            const closedInput = document.querySelector(`input[name="platform_${key}"][value="closed"]`);
-            
-            if (!openInput?.checked && !closedInput?.checked) {
-                allAnswered = false;
-            } else {
-                if (openInput?.checked) {
-                    checks[key] = 'open';
-                    openCount++;
+    brands.forEach(brand => {
+        TIME_SLOTS.forEach(time => {
+            platforms.forEach(platform => {
+                const key = `${brand}_${time}_${platform.replace(/\s/g, '_')}`;
+                const hiddenInput = document.querySelector(`input[name="platform_${key}"]`);
+                const value = hiddenInput?.value;
+                
+                if (!value) {
+                    allAnswered = false;
                 } else {
-                    checks[key] = 'closed';
-                    closedCount++;
+                    checks[key] = value;
+                    if (brand === 'moonberry') {
+                        value === 'open' ? moonberryOpen++ : moonberryClosed++;
+                    } else {
+                        value === 'open' ? sunberryOpen++ : sunberryClosed++;
+                    }
                 }
-            }
+            });
         });
     });
     
@@ -9784,12 +11353,14 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
     }
     
     try {
-        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_platform`;
-        const submissionId = `${checklistId}_${date}`;
+        const submissionId = `platform_${date}`;
+        const now = new Date();
+        
+        // Puan hesaplama - Platform check vaktinde = 0, dolduruldu = 0
+        // Müdür hariç herkes için kaydedilir
+        const isMudur = ['magaza_muduru', 'bolge_muduru', 'yonetici'].includes(currentUser?.role);
         
         await db.collection('checklistSubmissions').doc(submissionId).set({
-            checklistId,
-            branch,
             type: 'platform',
             date,
             personName,
@@ -9798,19 +11369,59 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
             submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
             checks,
             summary: {
-                total: TIME_SLOTS.length * platforms.length,
-                open: openCount,
-                closed: closedCount
-            }
+                moonberry: { open: moonberryOpen, closed: moonberryClosed },
+                sunberry: { open: sunberryOpen, closed: sunberryClosed }
+            },
+            points: 0,
+            pointStatus: 'completed',
+            userRole: currentUser?.role
         });
         
-        toast('Platform check kaydedildi!', 'success');
-        loadChecklist();
+        // Başarı mesajı ve modal
+        showPlatformCompleteModal(date, personName, moonberryOpen, moonberryClosed, sunberryOpen, sunberryClosed);
         
     } catch (error) {
         console.error('Platform check kayıt hatası:', error);
         toast('Kayıt hatası!', 'error');
     }
+}
+
+// Platform check tamamlandı modal'ı
+function showPlatformCompleteModal(date, personName, moonberryOpen, moonberryClosed, sunberryOpen, sunberryClosed) {
+    const dateStr = new Date(date).toLocaleDateString('tr-TR', {day: 'numeric', month: 'long', year: 'numeric'});
+    const timeStr = new Date().toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'});
+    
+    const modal = document.createElement('div');
+    modal.id = 'platformCompleteModal';
+    modal.innerHTML = `
+        <div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px">
+            <div style="background:var(--bg2);border-radius:20px;max-width:480px;width:100%;padding:32px;text-align:center;border:1px solid var(--cardBorder)">
+                <div style="width:80px;height:80px;background:linear-gradient(135deg,rgba(39,174,96,.2),rgba(39,174,96,.1));border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px">
+                    <svg width="40" height="40" fill="none" stroke="#27ae60" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </div>
+                <h3 style="font-size:1.4rem;font-weight:700;color:var(--tx);margin-bottom:8px">Platform Check Tamamlandı!</h3>
+                <p style="color:var(--tx2);margin-bottom:24px">${dateStr} • ${timeStr}</p>
+                
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+                    <div style="background:#008c95;border-radius:12px;padding:16px;color:#fff">
+                        <div style="font-weight:700;margin-bottom:8px">MOONBERRY</div>
+                        <div style="font-size:.9rem">✓ Açık: ${moonberryOpen}</div>
+                        <div style="font-size:.9rem">✗ Kapalı: ${moonberryClosed}</div>
+                    </div>
+                    <div style="background:#ff8674;border-radius:12px;padding:16px;color:#fff">
+                        <div style="font-weight:700;margin-bottom:8px">SUNBERRY</div>
+                        <div style="font-size:.9rem">✓ Açık: ${sunberryOpen}</div>
+                        <div style="font-size:.9rem">✗ Kapalı: ${sunberryClosed}</div>
+                    </div>
+                </div>
+                
+                <button onclick="document.getElementById('platformCompleteModal').remove(); loadChecklist();" class="btn btn-primary" style="padding:14px 32px">
+                    ✓ Tamam
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
 }
 
 // Checklist madde ekle modal
