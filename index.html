@@ -9475,6 +9475,13 @@ async function createAutoPuantajNote(personelId, personelName, checkType, checkT
     const noteId = `auto_${personelId}_${date}_${checkType}_${checkTime.replace(':', '')}`;
     
     try {
+        // Önce var mı kontrol et
+        const existing = await db.collection('puantajNotes').doc(noteId).get();
+        if (existing.exists) {
+            console.log('Puantaj notu zaten var:', noteId);
+            return;
+        }
+        
         await db.collection('puantajNotes').doc(noteId).set({
             personelId,
             personelName,
@@ -9489,9 +9496,39 @@ async function createAutoPuantajNote(personelId, personelName, checkType, checkT
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        console.log('Puantaj notu oluşturuldu:', noteId);
+        console.log('✅ Puantaj notu oluşturuldu:', noteId, points);
     } catch (e) {
-        console.error('Puantaj notu oluşturulamadı:', e);
+        console.error('❌ Puantaj notu oluşturulamadı:', e.message);
+    }
+}
+
+// Kaçırılan checkler için otomatik puan işle
+async function processMissedChecks(branch, checkType, timeSlot, date, shiftPersonnel) {
+    // Sadece yönetici/müdür görünümünde işle (tekrarlı işlemi önlemek için)
+    if (!['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role)) {
+        return;
+    }
+    
+    const rules = CHECK_RULES[checkType];
+    if (!rules || !rules.points?.missed) return;
+    
+    const missedPoints = rules.points.missed;
+    
+    // Her sorumlu personel için puan notu oluştur
+    for (const personName of shiftPersonnel) {
+        // Basit ID oluştur (isimden)
+        const personId = personName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        
+        await createAutoPuantajNote(
+            personId,
+            personName,
+            checkType,
+            timeSlot,
+            'missed',
+            missedPoints,
+            branch,
+            date
+        );
     }
 }
 
@@ -9774,6 +9811,11 @@ async function loadTodayChecks() {
                     
                     hasActiveChecks = true;
                     html += renderCheckCard(checkType, timeSlot, branch, isCompleted, submissionData, window, remaining, status, responsiblePersonnel);
+                    
+                    // Kaçırılan check için otomatik puan işle
+                    if (window.isMissed && !isCompleted && responsiblePersonnel.length > 0) {
+                        processMissedChecks(branch, checkType.id, timeSlot, todayStr, responsiblePersonnel);
+                    }
                 }
             }
             
