@@ -9788,27 +9788,18 @@ async function loadTodayChecks() {
     let html = '';
     let hasActiveChecks = false;
     
-    // Her şube için checkleri göster
+    // Her şube için checkleri topla ve sırala
     for (const branch of branches) {
         const checkTypes = CHECKLIST_TYPES[branch] || [];
-        if (checkTypes.length === 0) continue;
-        
         const isMoonberry = branch.includes('Şişli') || branch.includes('Merkez');
         const brandColor = isMoonberry ? '#008c95' : '#ff8674';
         
-        // Şube başlığı (birden fazla şube varsa)
-        if (branches.length > 1) {
-            html += `
-                <div style="font-size:.85rem;font-weight:600;color:${brandColor};margin:${hasActiveChecks ? '20px' : '0'} 0 12px;display:flex;align-items:center;gap:8px">
-                    <span style="width:24px;height:24px;background:${brandColor};border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.7rem">${isMoonberry ? 'M' : 'S'}</span>
-                    ${branch}
-                </div>
-            `;
-        }
+        // Check'leri diziye topla
+        const checksArray = [];
         
         // Check türlerini döngüle
         for (const checkType of checkTypes) {
-            // Saat bazlı checkler (Günlük, Platform)
+            // Saat bazlı checkler (Günlük)
             if (checkType.timeSlots && checkType.timeSlots.length > 0) {
                 for (const timeSlot of checkType.timeSlots) {
                     const rules = CHECK_RULES[checkType.id];
@@ -9848,42 +9839,42 @@ async function loadTodayChecks() {
                         responsiblePersonnel = [...getShiftPersonnel(branch, 'acilis'), ...getShiftPersonnel(branch, 'ara')];
                     }
                     
-                    hasActiveChecks = true;
-                    html += renderCheckCard(checkType, timeSlot, branch, isCompleted, submissionData, window, remaining, status, responsiblePersonnel);
+                    // Sıralama için priority belirle (düşük = önce göster)
+                    let priority = 50;
+                    let sortMinutes = timeToMinutes(timeSlot);
+                    
+                    if (isCompleted) {
+                        priority = 90; // Tamamlanan en altta
+                    } else if (window.isMissed) {
+                        priority = 80; // Kaçırılan altta
+                    } else if (window.isLate) {
+                        priority = 20; // Geç - acil
+                    } else if (window.isInWindow) {
+                        priority = 10; // Aktif pencerede - en acil
+                    } else if (window.isBeforeWindow) {
+                        priority = 30; // Henüz başlamamış
+                    }
+                    
+                    checksArray.push({
+                        type: 'timeSlot',
+                        checkType,
+                        timeSlot,
+                        branch,
+                        isCompleted,
+                        submissionData,
+                        window,
+                        remaining,
+                        status,
+                        responsiblePersonnel,
+                        priority,
+                        sortMinutes
+                    });
                     
                     // Kaçırılan check için otomatik puan işle
                     if (window.isMissed && !isCompleted && responsiblePersonnel.length > 0) {
                         processMissedChecks(branch, checkType.id, timeSlot, todayStr, responsiblePersonnel);
                     }
                 }
-            }
-            
-            // Platform Check - Günlük tek check (timeSlots yok)
-            if (checkType.id === 'platform') {
-                const submissionId = `platform_${todayStr}`;
-                let isCompleted = false;
-                
-                try {
-                    const doc = await db.collection('checklistSubmissions').doc(submissionId).get();
-                    isCompleted = doc.exists;
-                } catch (e) {}
-                
-                // Platform check her zaman aktif (gece yarısına kadar)
-                const now = new Date();
-                const currentHour = now.getHours();
-                const isActive = !isCompleted;
-                const isMissed = false; // Gece yarısına kadar
-                
-                // Tüm çalışan personel sorumlu
-                const responsiblePersonnel = [
-                    ...getShiftPersonnel(branch, 'acilis'),
-                    ...getShiftPersonnel(branch, 'ara'),
-                    ...getShiftPersonnel(branch, 'kapanis')
-                ].filter((v, i, a) => a.indexOf(v) === i); // Unique
-                
-                hasActiveChecks = true;
-                const rules = CHECK_RULES.platform;
-                html += renderSimpleCheckCard('Platform Check', '00:00', branch, isCompleted, isMissed, isActive, '', responsiblePersonnel, rules, 'smartphone');
             }
             
             // Açılış Check (sabah 11:00'e kadar)
@@ -10102,11 +10093,95 @@ async function loadTodayChecks() {
         section.style.display = 'block';
         container.innerHTML = html;
         
+        // Check'leri sırala: Aktif > Geç > Kaçırıldı > Tamamlandı
+        sortDashboardChecks(container);
+        
         // Canlı geriye sayım başlat
         startDashboardCountdown();
     } else {
         section.style.display = 'none';
     }
+}
+
+// Dashboard check'lerini sırala
+function sortDashboardChecks(container) {
+    // Her şube bloğunu ayrı ayrı işle
+    const branchHeaders = container.querySelectorAll('[style*="font-weight:600"][style*="margin"]');
+    
+    if (branchHeaders.length === 0) {
+        // Tek şube - tüm kartları sırala
+        sortCheckCards(container);
+    } else {
+        // Birden fazla şube - her birini ayrı sırala
+        branchHeaders.forEach((header, index) => {
+            const nextHeader = branchHeaders[index + 1];
+            const cards = [];
+            let sibling = header.nextElementSibling;
+            
+            while (sibling && sibling !== nextHeader) {
+                if (sibling.style.borderLeft || sibling.style.border) {
+                    cards.push(sibling);
+                }
+                sibling = sibling.nextElementSibling;
+            }
+            
+            // Kartları sırala
+            cards.sort((a, b) => {
+                const priorityA = getCardPriority(a);
+                const priorityB = getCardPriority(b);
+                return priorityA - priorityB;
+            });
+            
+            // Yeniden yerleştir
+            cards.forEach(card => {
+                if (nextHeader) {
+                    container.insertBefore(card, nextHeader);
+                } else {
+                    container.appendChild(card);
+                }
+            });
+        });
+    }
+}
+
+// Tek container'daki kartları sırala
+function sortCheckCards(container) {
+    const cards = Array.from(container.children).filter(el => 
+        el.style.borderLeft || (el.style.border && !el.textContent.includes('Şişli') && !el.textContent.includes('Tuzla'))
+    );
+    
+    cards.sort((a, b) => {
+        const priorityA = getCardPriority(a);
+        const priorityB = getCardPriority(b);
+        return priorityA - priorityB;
+    });
+    
+    cards.forEach(card => container.appendChild(card));
+}
+
+// Kart önceliğini belirle
+function getCardPriority(card) {
+    const text = card.textContent.toLowerCase();
+    const style = card.getAttribute('style') || '';
+    
+    // Tamamlandı/Tamam - en altta
+    if (text.includes('tamam') || text.includes('tamamlandı') || style.includes('#27ae60')) {
+        return 90;
+    }
+    // Kaçırıldı - altta
+    if (text.includes('kaçırıldı') || text.includes('süre doldu') || style.includes('#e74c3c') || style.includes('#9ca3af')) {
+        return 80;
+    }
+    // Geç - orta
+    if (text.includes('geç') || style.includes('#f39c12')) {
+        return 20;
+    }
+    // Aktif - en üstte
+    if (text.includes('aktif') || card.classList.contains('check-pulse-active')) {
+        return 10;
+    }
+    // Varsayılan
+    return 50;
 }
 
 // Canlı geriye sayım güncelleme
@@ -10148,9 +10223,11 @@ function startDashboardCountdown() {
 
 // Basit check kartı render (Açılış, Kapanış, Temizlik için)
 function renderSimpleCheckCard(name, deadline, branch, isCompleted, isMissed, isActive, remainingText, responsiblePersonnel, rules, iconType) {
-    const isMoonberry = branch.includes('Şişli') || branch.includes('Merkez');
-    const brandColor = isMoonberry ? '#008c95' : '#ff8674';
-    const brandBg = isMoonberry ? 'rgba(0,140,149,.08)' : 'rgba(255,134,116,.08)';
+    // Sabit renkler - şubeye bağlı değil
+    const TEAL = '#008c95';      // Moonberry - Aktif/Yaklaşan
+    const CORAL = '#ff8674';     // Sunberry - Kaçırıldı
+    const GRAY = '#9ca3af';      // Gri - Tamamlandı
+    const GREEN = '#27ae60';     // Yeşil - Başarılı
     
     const missedPoints = rules?.points?.missed || -2;
     const onTimePoints = rules?.points?.onTime || 1;
@@ -10161,21 +10238,27 @@ function renderSimpleCheckCard(name, deadline, branch, isCompleted, isMissed, is
     let statusText = '';
     let pulseClass = '';
     let riskText = '';
+    let opacity = '1';
     
     if (isCompleted) {
-        bgColor = 'rgba(39,174,96,.06)';
-        accentColor = '#27ae60';
+        // Tamamlandı - Gri/Yeşil
+        bgColor = 'rgba(156,163,175,.06)';
+        accentColor = GRAY;
         icon = '●';
         statusText = 'Tamam';
+        opacity = '0.7';
     } else if (isMissed) {
-        bgColor = 'var(--bg3)';
-        accentColor = '#9ca3af';
+        // Kaçırıldı - Coral/Sunberry
+        bgColor = 'rgba(255,134,116,.08)';
+        accentColor = CORAL;
         icon = '○';
         statusText = `${missedPoints} puan`;
         riskText = 'Süre doldu';
+        opacity = '0.6';
     } else if (isActive) {
-        bgColor = brandBg;
-        accentColor = brandColor;
+        // Aktif/Yaklaşan - Teal/Moonberry
+        bgColor = 'rgba(0,140,149,.08)';
+        accentColor = TEAL;
         icon = '●';
         statusText = 'Aktif';
         pulseClass = 'check-pulse-active';
@@ -10202,7 +10285,7 @@ function renderSimpleCheckCard(name, deadline, branch, isCompleted, isMissed, is
     }
     
     return `
-        <div class="${pulseClass}" style="background:${bgColor};border-left:3px solid ${accentColor};border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:8px;transition:all .2s;opacity:${isMissed ? '0.6' : '1'}" onclick="goTo('checklist')">
+        <div class="${pulseClass}" style="background:${bgColor};border-left:3px solid ${accentColor};border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:8px;transition:all .2s;opacity:${opacity}" onclick="goTo('checklist')">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                 <span style="font-size:1rem">${iconSvg}</span>
                 <span style="font-weight:600;font-size:.85rem;color:var(--tx)">${name}</span>
@@ -10210,7 +10293,7 @@ function renderSimpleCheckCard(name, deadline, branch, isCompleted, isMissed, is
             </div>
             <div style="display:flex;align-items:center;gap:8px">
                 ${timeHtml}
-                <span style="font-size:.75rem;font-weight:600;color:${accentColor};padding:3px 10px;background:${isCompleted ? 'rgba(39,174,96,.1)' : isMissed ? 'var(--bg3)' : bgColor};border-radius:6px">${statusText}</span>
+                <span style="font-size:.75rem;font-weight:600;color:${accentColor};padding:3px 10px;background:${isCompleted ? 'rgba(156,163,175,.1)' : isMissed ? 'rgba(255,134,116,.1)' : bgColor};border-radius:6px">${statusText}</span>
             </div>
         </div>
     `;
@@ -10218,9 +10301,11 @@ function renderSimpleCheckCard(name, deadline, branch, isCompleted, isMissed, is
 
 // Check kartı render helper - kompakt versiyon
 function renderCheckCard(checkType, timeSlot, branch, isCompleted, submissionData, window, remaining, status, responsiblePersonnel) {
-    const isMoonberry = branch.includes('Şişli') || branch.includes('Merkez');
-    const brandColor = isMoonberry ? '#008c95' : '#ff8674';
-    const brandBg = isMoonberry ? 'rgba(0,140,149,.08)' : 'rgba(255,134,116,.08)';
+    // Sabit renkler - duruma göre
+    const TEAL = '#008c95';      // Moonberry - Aktif
+    const CORAL = '#ff8674';     // Sunberry - Kaçırıldı
+    const ORANGE = '#f39c12';    // Turuncu - Geç
+    const GRAY = '#9ca3af';      // Gri - Tamamlandı
     
     // Puan kuralları
     const rules = CHECK_RULES[checkType.id];
@@ -10235,29 +10320,36 @@ function renderCheckCard(checkType, timeSlot, branch, isCompleted, submissionDat
     let isActive = false;
     let pulseClass = '';
     let riskText = '';
+    let opacity = '1';
     
     if (isCompleted) {
-        bgColor = 'rgba(39,174,96,.06)';
-        accentColor = '#27ae60';
+        // Tamamlandı - Gri
+        bgColor = 'rgba(156,163,175,.06)';
+        accentColor = GRAY;
         icon = '●';
         statusText = 'Tamam';
+        opacity = '0.7';
     } else if (window?.isMissed) {
-        bgColor = 'var(--bg3)';
-        accentColor = '#9ca3af';  // Gri
+        // Kaçırıldı - Coral/Sunberry
+        bgColor = 'rgba(255,134,116,.08)';
+        accentColor = CORAL;
         icon = '○';
         statusText = `${missedPoints} puan`;
         riskText = 'Süre doldu';
+        opacity = '0.6';
     } else if (window?.isLate) {
+        // Geç - Turuncu
         bgColor = 'rgba(243,156,18,.06)';
-        accentColor = '#f39c12';
+        accentColor = ORANGE;
         icon = '◐';
         statusText = 'Geç';
         isActive = true;
         pulseClass = 'check-pulse-warning';
         riskText = `${latePoints} puan riski`;
     } else if (window?.isInWindow) {
-        bgColor = brandBg;
-        accentColor = brandColor;
+        // Aktif - Teal/Moonberry
+        bgColor = 'rgba(0,140,149,.08)';
+        accentColor = TEAL;
         icon = '●';
         statusText = 'Aktif';
         isActive = true;
@@ -10293,7 +10385,7 @@ function renderCheckCard(checkType, timeSlot, branch, isCompleted, submissionDat
     }
     
     return `
-        <div class="${pulseClass}" style="background:${bgColor};border-left:3px solid ${accentColor};border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:8px;transition:all .2s;opacity:${window?.isMissed ? '0.6' : '1'}" onclick="goTo('checklist')">
+        <div class="${pulseClass}" style="background:${bgColor};border-left:3px solid ${accentColor};border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:8px;transition:all .2s;opacity:${opacity}" onclick="goTo('checklist')">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                 <span style="color:${accentColor};font-size:1rem;${isActive ? 'animation:pulse-dot 1.5s infinite' : ''}">${icon}</span>
                 <span style="font-weight:600;font-size:.85rem;color:var(--tx)">${checkType.name} - ${timeSlot}</span>
@@ -10301,7 +10393,7 @@ function renderCheckCard(checkType, timeSlot, branch, isCompleted, submissionDat
             </div>
             <div style="display:flex;align-items:center;gap:8px">
                 ${timeHtml}
-                <span style="font-size:.75rem;font-weight:600;color:${accentColor};padding:3px 10px;background:${isCompleted ? 'rgba(39,174,96,.1)' : window?.isMissed ? 'var(--bg3)' : bgColor};border-radius:6px">${statusText}</span>
+                <span style="font-size:.75rem;font-weight:600;color:${accentColor};padding:3px 10px;background:${isCompleted ? 'rgba(156,163,175,.1)' : accentColor === CORAL ? 'rgba(255,134,116,.1)' : bgColor};border-radius:6px">${statusText}</span>
             </div>
         </div>
     `;
