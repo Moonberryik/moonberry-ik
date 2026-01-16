@@ -5194,24 +5194,30 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
         const endDay = new Date(yil, parseInt(ay), 0).getDate();
         const endDate = `${yil}-${ay}-${endDay.toString().padStart(2, '0')}`;
         
-        // puantajNotes koleksiyonundan çek
+        // puantajNotes koleksiyonundan çek (INDEX OLMADAN - sadece branch ile)
         const notesSnapshot = await db.collection('puantajNotes')
             .where('branch', '==', sube)
-            .where('date', '>=', startDate)
-            .where('date', '<=', endDate)
             .get();
         
-        if (notesSnapshot.empty) {
+        // JavaScript'te tarih filtresi uygula
+        const filteredDocs = [];
+        notesSnapshot.forEach(doc => {
+            const note = doc.data();
+            if (note.date >= startDate && note.date <= endDate) {
+                filteredDocs.push({ id: doc.id, ...note });
+            }
+        });
+        
+        if (filteredDocs.length === 0) {
             return ''; // Otomatik not yoksa boş döndür
         }
         
         const notesByPerson = {};
-        notesSnapshot.forEach(doc => {
-            const note = doc.data();
+        filteredDocs.forEach(note => {
             if (!notesByPerson[note.personelId]) {
                 notesByPerson[note.personelId] = [];
             }
-            notesByPerson[note.personelId].push({ id: doc.id, ...note });
+            notesByPerson[note.personelId].push(note);
         });
         
         // Toplam otomatik puanları hesapla ve personel listesine ekle
@@ -9059,7 +9065,8 @@ async function logActivity(type, details = {}) {
             sessionId: currentUser.sessionId || null
         });
     } catch (error) {
-        console.error('Aktivite loglama hatası:', error);
+        // Sessizce devam et - aktivite loglama kritik değil
+        // console.warn('Aktivite loglama:', error.message);
     }
 }
 
@@ -9159,8 +9166,14 @@ async function loadActivityLogs() {
         container.innerHTML = html;
         
     } catch (error) {
-        console.error('Aktivite logları yükleme hatası:', error);
-        container.innerHTML = `<div style="color:var(--red);padding:20px;text-align:center">Yükleme hatası</div>`;
+        // Sessiz hata - aktivite logları kritik değil
+        container.innerHTML = `
+            <div style="text-align:center;padding:40px;color:var(--tx2)">
+                <div style="font-size:2rem;margin-bottom:12px">📊</div>
+                <div>Aktivite logları yüklenemedi</div>
+                <div style="font-size:.8rem;margin-top:8px;color:var(--tx3)">Firebase ayarları kontrol edilebilir</div>
+            </div>
+        `;
     }
 }
 
