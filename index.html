@@ -2175,21 +2175,49 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Önce config'i yükle (email mapping için)
                     await loadSystemConfig();
                     
-                    const userDoc = await db.collection('users').doc(user.uid).get();
-                    if (userDoc.exists) {
-                        currentUser = { id: user.uid, email: user.email, ...userDoc.data() };
-                    } else {
-                        // Email'den kullanıcı bilgisi al
-                        const emailMatch = personnelMapping.find(p => p.email?.toLowerCase() === user.email?.toLowerCase());
-                        const isAdmin = user.email === 'admin@moonberrycoffee.com' || user.email === 'tamer@moonberrycoffee.com';
+                    // 1. ÖNCE PERSONEL koleksiyonundan email ile bul
+                    let foundInPersonel = false;
+                    const personelSnapshot = await db.collection('personel').where('email', '==', user.email).limit(1).get();
+                    
+                    if (!personelSnapshot.empty) {
+                        const personelDoc = personelSnapshot.docs[0];
+                        const personelData = personelDoc.data();
                         
-                        currentUser = {
-                            id: user.uid,
-                            email: user.email,
-                            name: emailMatch?.name || (isAdmin ? 'Yönetici' : user.email.split('@')[0]),
-                            role: emailMatch?.role || (isAdmin ? 'yonetici' : 'barista'),
-                            branch: emailMatch?.branch || (isAdmin ? 'all' : '')
-                        };
+                        if (personelData.role) {
+                            currentUser = {
+                                id: user.uid,
+                                personelId: personelDoc.id,
+                                email: user.email,
+                                name: personelData.name,
+                                role: personelData.role,
+                                branch: personelData.branch || 'all',
+                                position: personelData.position
+                            };
+                            foundInPersonel = true;
+                            console.log('✅ Personel koleksiyonundan kullanıcı bulundu:', currentUser.name, currentUser.role);
+                        }
+                    }
+                    
+                    // 2. Personel'de bulunamadıysa users koleksiyonuna bak
+                    if (!foundInPersonel) {
+                        const userDoc = await db.collection('users').doc(user.uid).get();
+                        if (userDoc.exists) {
+                            currentUser = { id: user.uid, email: user.email, ...userDoc.data() };
+                            console.log('✅ Users koleksiyonundan kullanıcı bulundu');
+                        } else {
+                            // 3. Email mapping'den bak
+                            const emailMatch = personnelMapping.find(p => p.email?.toLowerCase() === user.email?.toLowerCase());
+                            const isAdmin = user.email === 'admin@moonberrycoffee.com' || user.email === 'tamer@moonberrycoffee.com';
+                            
+                            currentUser = {
+                                id: user.uid,
+                                email: user.email,
+                                name: emailMatch?.name || (isAdmin ? 'Yönetici' : user.email.split('@')[0]),
+                                role: emailMatch?.role || (isAdmin ? 'yonetici' : 'barista'),
+                                branch: emailMatch?.branch || (isAdmin ? 'all' : '')
+                            };
+                            console.log('✅ Email mapping veya varsayılan kullanıcı:', currentUser.name, currentUser.role);
+                        }
                     }
                     
                     // Kullanıcı adını sidebar'da göster
@@ -4806,25 +4834,90 @@ async function loadPersonelList() {
             return;
         }
         
-        let html = '<div class="admin-list">';
+        // Rol isimleri
+        const roleNames = {
+            'yonetici': { name: 'Yönetici', color: '#ff8674', icon: '👑' },
+            'bolge_muduru': { name: 'Bölge Müdürü', color: '#9b59b6', icon: '🌍' },
+            'magaza_muduru': { name: 'Mağaza Müdürü', color: '#008c95', icon: '🏪' },
+            'barista': { name: 'Barista', color: '#3498db', icon: '🧑‍🍳' }
+        };
+        
+        let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px">';
         snapshot.forEach(doc => {
             const p = doc.data();
+            const roleInfo = roleNames[p.role] || null;
+            const hasAccess = !!p.role;
+            
             html += `
-                <div class="admin-list-item" style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg3);border-radius:var(--radiusSm);margin-bottom:8px">
-                    <div>
-                        <strong style="color:var(--tx)">${p.name}</strong>
-                        <div style="font-size:.8rem;color:var(--tx2)">${p.position || '-'} • ${p.branch || '-'}</div>
-                        <div style="font-size:.75rem;color:var(--tx3)">TC: ${p.tc || '-'} | Tel: ${p.phone || '-'}</div>
+                <div style="background:var(--bg2);border:1px solid var(--cardBorder);border-radius:12px;padding:16px;position:relative;transition:all .2s" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow='none'">
+                    <!-- Üst kısım: Avatar + İsim -->
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                        <div style="width:48px;height:48px;background:linear-gradient(135deg,${roleInfo?.color || '#9ca3af'},${roleInfo?.color ? roleInfo.color + '88' : '#6b7280'});border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;font-weight:600">
+                            ${roleInfo?.icon || p.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div style="flex:1">
+                            <div style="font-weight:600;color:var(--tx);font-size:1rem">${p.name}</div>
+                            <div style="font-size:.8rem;color:var(--tx2)">${p.position || 'Pozisyon belirtilmemiş'}</div>
+                        </div>
+                        ${hasAccess ? `<span style="background:${roleInfo.color}22;color:${roleInfo.color};padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:600">${roleInfo.name}</span>` : ''}
                     </div>
-                    <div style="display:flex;gap:8px">
-                        <button class="btn btn-sm btn-ghost" onclick="editPersonel('${doc.id}')">✏️</button>
-                        <button class="btn btn-sm" style="background:var(--red);color:#fff" onclick="deletePersonel('${doc.id}')">🗑️</button>
+                    
+                    <!-- Bilgiler -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.8rem;color:var(--tx2);margin-bottom:12px">
+                        <div>📍 ${p.branch || '-'}</div>
+                        <div>📱 ${p.phone || '-'}</div>
+                        <div>✉️ ${p.email || '-'}</div>
+                        <div>🆔 ${p.tc ? p.tc.slice(0, 3) + '***' + p.tc.slice(-2) : '-'}</div>
+                    </div>
+                    
+                    <!-- Sistem erişimi durumu -->
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid var(--bg4)">
+                        <div style="font-size:.75rem;color:${hasAccess ? '#27ae60' : 'var(--tx3)'}">
+                            ${hasAccess ? '🔓 Sisteme giriş yapabilir' : '🔒 Sistem erişimi yok'}
+                        </div>
+                        <div style="display:flex;gap:6px">
+                            <button onclick="editPersonel('${doc.id}')" style="padding:6px 12px;background:var(--bg3);border:none;border-radius:6px;color:var(--tx);cursor:pointer;font-size:.8rem;display:flex;align-items:center;gap:4px" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">
+                                ✏️ Düzenle
+                            </button>
+                            <button onclick="deletePersonel('${doc.id}')" style="padding:6px 12px;background:#fff0f0;border:none;border-radius:6px;color:#dc3545;cursor:pointer;font-size:.8rem" onmouseover="this.style.background='#ffe0e0'" onmouseout="this.style.background='#fff0f0'">
+                                🗑️
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
         });
         html += '</div>';
-        container.innerHTML = html;
+        
+        // İstatistik özet
+        const total = snapshot.size;
+        const withAccess = snapshot.docs.filter(d => d.data().role).length;
+        const byBranch = {};
+        snapshot.forEach(doc => {
+            const branch = doc.data().branch || 'Belirtilmemiş';
+            byBranch[branch] = (byBranch[branch] || 0) + 1;
+        });
+        
+        const statsHtml = `
+            <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+                <div style="background:linear-gradient(135deg,#008c95,#00a8a8);padding:12px 20px;border-radius:10px;color:#fff;display:flex;align-items:center;gap:10px">
+                    <span style="font-size:1.5rem">👥</span>
+                    <div><div style="font-size:1.4rem;font-weight:700">${total}</div><div style="font-size:.75rem;opacity:.8">Toplam Personel</div></div>
+                </div>
+                <div style="background:linear-gradient(135deg,#27ae60,#2ecc71);padding:12px 20px;border-radius:10px;color:#fff;display:flex;align-items:center;gap:10px">
+                    <span style="font-size:1.5rem">🔓</span>
+                    <div><div style="font-size:1.4rem;font-weight:700">${withAccess}</div><div style="font-size:.75rem;opacity:.8">Sistem Erişimi</div></div>
+                </div>
+                ${Object.entries(byBranch).map(([branch, count]) => `
+                    <div style="background:var(--bg3);padding:12px 20px;border-radius:10px;display:flex;align-items:center;gap:10px">
+                        <span style="font-size:1.2rem">📍</span>
+                        <div><div style="font-size:1.1rem;font-weight:600;color:var(--tx)">${count}</div><div style="font-size:.7rem;color:var(--tx2)">${branch}</div></div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        
+        container.innerHTML = statsHtml + html;
     } catch (error) {
         console.error('Personel yükleme hatası:', error);
         container.innerHTML = '<p style="color:var(--red);text-align:center;padding:20px">Yükleme hatası!</p>';
@@ -4856,6 +4949,34 @@ function showAddPersonelModal(editId = null) {
             <div class="form-group"><label class="form-label">İşe Başlama</label><input type="date" id="personelStartDate" class="form-input"></div>
             ${salaryField}
         </div>
+        
+        <!-- SİSTEM ERİŞİMİ -->
+        <div style="margin-top:20px;padding:16px;background:linear-gradient(135deg,rgba(0,140,149,.08),rgba(255,134,116,.08));border-radius:12px;border:1px solid var(--cardBorder)">
+            <div style="font-weight:600;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                <svg width="18" height="18" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                Sistem Erişimi
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Sistem Rolü</label>
+                    <select id="personelRole" class="form-select">
+                        <option value="">-- Rol Seçin (Giriş Yok) --</option>
+                        <option value="barista">🧑‍🍳 Barista (Salt Okunur)</option>
+                        <option value="magaza_muduru">🏪 Mağaza Müdürü</option>
+                        <option value="bolge_muduru">🌍 Bölge Müdürü</option>
+                        <option value="yonetici">👑 Yönetici</option>
+                    </select>
+                </div>
+                <div class="form-group" id="personelPasswordGroup" style="display:none">
+                    <label class="form-label">Şifre (min 6 karakter)</label>
+                    <input type="password" id="personelPassword" class="form-input" minlength="6" placeholder="Yeni kullanıcı için şifre">
+                    <small style="color:var(--tx2);font-size:.7rem">Düzenleme modunda boş bırakılırsa değişmez</small>
+                </div>
+            </div>
+            <div style="font-size:.75rem;color:var(--tx2);margin-top:8px">
+                ⓘ Rol seçilirse personel sisteme e-posta ile giriş yapabilir. E-posta alanı zorunlu olur.
+            </div>
+        </div>
     `;
     
     const footer = `
@@ -4864,6 +4985,15 @@ function showAddPersonelModal(editId = null) {
     `;
     
     showModal(title, body, footer);
+    
+    // Rol seçildiğinde şifre alanını göster
+    setTimeout(() => {
+        const roleSelect = document.getElementById('personelRole');
+        const passwordGroup = document.getElementById('personelPasswordGroup');
+        roleSelect?.addEventListener('change', () => {
+            passwordGroup.style.display = roleSelect.value ? 'block' : 'none';
+        });
+    }, 100);
     
     if (isEdit) {
         loadPersonelForEdit(editId);
@@ -4886,6 +5016,16 @@ async function loadPersonelForEdit(id) {
             document.getElementById('personelPosition').value = p.position || '';
             document.getElementById('personelStartDate').value = p.startDate || '';
             document.getElementById('personelSalary').value = p.salary || '';
+            
+            // Rol alanı
+            const roleSelect = document.getElementById('personelRole');
+            const passwordGroup = document.getElementById('personelPasswordGroup');
+            if (roleSelect) {
+                roleSelect.value = p.role || '';
+                if (p.role) {
+                    passwordGroup.style.display = 'block';
+                }
+            }
         }
     } catch (error) {
         console.error('Personel yükleme hatası:', error);
@@ -4897,9 +5037,24 @@ async function savePersonel() {
     const name = document.getElementById('personelName').value.trim();
     const tc = document.getElementById('personelTC').value.trim();
     let codeName = document.getElementById('personelCodeName').value.trim();
+    const email = document.getElementById('personelEmail').value.trim();
+    const role = document.getElementById('personelRole').value;
+    const password = document.getElementById('personelPassword')?.value || '';
     
     if (!name) {
         toast('Ad soyad zorunludur', 'error');
+        return;
+    }
+    
+    // Rol seçildiyse email zorunlu
+    if (role && !email) {
+        toast('Sistem erişimi için e-posta zorunludur', 'error');
+        return;
+    }
+    
+    // Yeni kullanıcı ve rol seçildiyse şifre zorunlu
+    if (!editId && role && password.length < 6) {
+        toast('Şifre en az 6 karakter olmalı', 'error');
         return;
     }
     
@@ -4918,31 +5073,62 @@ async function savePersonel() {
         codeName,
         tc,
         phone: document.getElementById('personelPhone').value.trim(),
-        email: document.getElementById('personelEmail').value.trim(),
+        email,
         address: document.getElementById('personelAddress').value.trim(),
         iban: document.getElementById('personelIBAN').value.trim(),
         branch: document.getElementById('personelBranch').value,
         position: document.getElementById('personelPosition').value,
         startDate: document.getElementById('personelStartDate').value,
         salary: document.getElementById('personelSalary').value,
+        role: role || null,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedBy: currentUser?.username || 'admin'
     };
     
     try {
+        // Firebase Auth işlemleri
+        if (role && email) {
+            if (!editId && password) {
+                // Yeni kullanıcı oluştur
+                try {
+                    // Mevcut oturumu kaydet
+                    const currentAuth = firebase.auth().currentUser;
+                    
+                    // Admin SDK olmadığı için client-side createUser kullanamayız
+                    // Bunun yerine users koleksiyonuna kaydet, ilk giriş şifresini ayarla
+                    data.pendingPassword = password;
+                    data.authStatus = 'pending';
+                    
+                    toast('Kullanıcı bilgileri kaydedildi. İlk girişte şifre oluşturulacak.', 'info');
+                } catch (authError) {
+                    console.warn('Auth hatası:', authError);
+                }
+            }
+            
+            // Users koleksiyonunu da güncelle (geriye uyumluluk)
+            await db.collection('users').doc(email).set({
+                email,
+                role,
+                branch: data.branch,
+                name,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+        }
+        
         if (editId) {
             await db.collection('personel').doc(editId).update(data);
-            toast('Personel güncellendi', 'success');
+            toast('Personel güncellendi ✓', 'success');
         } else {
             data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
             await db.collection('personel').add(data);
-            toast('Personel eklendi', 'success');
+            toast('Personel eklendi ✓', 'success');
         }
+        
         closeModal();
         loadPersonelList();
     } catch (error) {
         console.error('Kayıt hatası:', error);
-        toast('Kayıt hatası!', 'error');
+        toast('Kayıt hatası: ' + error.message, 'error');
     }
 }
 
