@@ -2621,6 +2621,14 @@ function applyBaristaRestrictions() {
         userRoleEl.innerHTML = '<span style="background:var(--accent);color:#fff;padding:2px 8px;border-radius:10px;font-size:.65rem">SALT OKUNUR</span> Barista';
     }
     
+    // Dashboard'da FORMLAR bölümünü de gizle
+    document.querySelectorAll('.dashboard-section, [style*="FORMLAR"], h3, div').forEach(el => {
+        if (el.textContent && (el.textContent.includes('FORMLAR') || el.textContent.includes('Formlar'))) {
+            const section = el.closest('.dashboard-section') || el.parentElement;
+            if (section) section.style.display = 'none';
+        }
+    });
+    
     console.log('✅ Barista kısıtlamaları uygulandı');
 }
 
@@ -2757,15 +2765,32 @@ function closeModal() {
     document.getElementById('modalOverlay').classList.remove('show');
 }
 
+// Global confirm callback
+let _confirmCallback = null;
+
 function confirmModal(title, message, onConfirm, type = 'warning') {
     const icons = {warning: '⚠️', danger: '🗑️', success: '✅', info: 'ℹ️'};
+    _confirmCallback = onConfirm;
     showModal(title, `
         <div class="modal-icon ${type}">${icons[type]}</div>
         <div class="modal-message">${message}</div>
     `, `
         <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
-        <button class="btn ${type === 'danger' ? 'btn-danger' : 'btn-primary'}" onclick="closeModal(); (${onConfirm})()">Onayla</button>
+        <button class="btn ${type === 'danger' ? 'btn-danger' : 'btn-primary'}" onclick="executeConfirmCallback()">Onayla</button>
     `);
+}
+
+async function executeConfirmCallback() {
+    closeModal();
+    if (_confirmCallback) {
+        try {
+            await _confirmCallback();
+        } catch (error) {
+            console.error('Confirm callback hatası:', error);
+            toast('İşlem hatası: ' + error.message, 'error');
+        }
+        _confirmCallback = null;
+    }
 }
 
 function successModal(message) {
