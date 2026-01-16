@@ -279,6 +279,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .perm-cb:checked{animation:checkPop .2s ease}
 @keyframes checkPop{0%{transform:scale(.8)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes glow{0%,100%{box-shadow:0 0 5px var(--glow-color)}50%{box-shadow:0 0 20px var(--glow-color),0 0 30px var(--glow-color)}}
+.check-card-active{animation:glow 2s ease-in-out infinite;--glow-color:rgba(0,140,149,.4)}
+.check-card-active.sunberry{--glow-color:rgba(255,134,116,.4)}
+.check-card-shimmer{background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);background-size:200% 100%;animation:shimmer 2s infinite}
 
 /* Responsive */
 @media(max-width:768px){
@@ -1105,6 +1110,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <div class="page-subtitle">Günlük kontrol listeleri</div>
                 </div>
                 
+                <!-- Bugünkü Aktif Checkler Paneli -->
+                <div id="checklistTodayPanel" style="margin-bottom:20px;display:none">
+                    <div style="font-size:.8rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">📋 Bugünkü Checkler</div>
+                    <div id="checklistTodayContainer" style="display:grid;gap:8px;max-height:280px;overflow-y:auto">
+                        <!-- Dinamik içerik -->
+                    </div>
+                </div>
+                
                 <!-- Şube ve Tür Seçimi -->
                 <div class="form-section" style="margin-bottom:20px">
                     <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
@@ -1471,12 +1484,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <!-- Sistem Kullanıcıları -->
                     <div class="admin-card">
                         <div class="admin-card-header">
-                            <div class="admin-card-title">👤 Personel Giriş Yönetimi</div>
+                            <div class="admin-card-title">👤 Kullanıcı Yönetimi</div>
                             <div style="display:flex;gap:8px">
-                                <button class="btn btn-sm btn-ghost" onclick="syncRolesFromPersonnel()" title="Personel listesindeki rolleri kullanıcılara uygula">🔄 Rolleri Senkronize Et</button>
+                                <button class="btn btn-sm btn-ghost" onclick="syncRolesFromPersonnel()" title="Personel listesindeki rolleri kullanıcılara uygula">🔄 Senkronize Et</button>
+                                <button class="btn btn-sm btn-primary" onclick="showNewUserModal()">+ Yeni Kullanıcı</button>
                             </div>
                         </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Personel listesindeki kişilere sistem girişi tanımlayın. Login tanımlı personeller sisteme giriş yapabilir.</p>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Sisteme giriş yapabilen kullanıcıları yönetin. Kullanıcı adı@moonberrycoffee.com formatında giriş yapılır.</p>
                         <div class="admin-list" id="userList">
                             <p style="color:var(--tx2);text-align:center;padding:20px">Yükleniyor...</p>
                         </div>
@@ -2180,6 +2194,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.querySelector('.app').style.opacity = '1';
                     applyUserPermissions();
                     loadFirebaseData();
+                    
+                    // Config yükle ve Dashboard verilerini yükle
+                    loadSystemConfig().then(() => {
+                        console.log('Config yüklendi, dashboard yükleniyor...');
+                        loadTodayChecks();
+                    });
                     
                     // Önizleme modunu kontrol et
                     checkPreviewMode();
@@ -5759,21 +5779,19 @@ async function loadUserList() {
     container.innerHTML = '<p style="color:var(--tx2);text-align:center;padding:20px">Yükleniyor...</p>';
     
     try {
-        // Personel listesini al
+        // Users collection'ını al
+        const usersSnapshot = await db.collection('users').get();
+        
+        // Personel listesini al (isim eşleştirmesi için)
         const personnelDoc = await db.collection('config').doc('personnel').get();
         const personnelList = personnelDoc.exists ? (personnelDoc.data().list || []) : [];
-        
-        // Users collection'ını al (login bilgileri için)
-        const usersSnapshot = await db.collection('users').get();
-        const usersMap = {};
-        usersSnapshot.forEach(doc => {
-            usersMap[doc.id] = doc.data();
+        const personnelMap = {};
+        personnelList.forEach(p => {
+            if (p.email) {
+                const username = p.email.split('@')[0];
+                personnelMap[username] = p;
+            }
         });
-        
-        if (personnelList.length === 0) {
-            container.innerHTML = '<p style="color:var(--tx2);text-align:center;padding:20px">Personel listesi boş. Önce personel ekleyin.</p>';
-            return;
-        }
         
         // Rol etiketleri
         const roleLabels = {
@@ -5785,85 +5803,109 @@ async function loadUserList() {
             'barista': '☕ Barista'
         };
         
-        let html = '';
+        if (usersSnapshot.empty) {
+            container.innerHTML = '<p style="color:var(--tx2);text-align:center;padding:20px">Henüz kullanıcı yok.</p>';
+            return;
+        }
         
-        // Önce login'i olan kullanıcılar
-        html += '<div style="margin-bottom:16px"><div style="font-size:.75rem;font-weight:600;color:var(--tx2);margin-bottom:8px;text-transform:uppercase">🔓 Giriş Yapabilen Personel</div>';
+        let html = '<div style="font-size:.75rem;font-weight:600;color:var(--tx2);margin-bottom:12px;text-transform:uppercase">🔓 Sisteme Giriş Yapabilen Kullanıcılar</div>';
         
-        let hasLoginUsers = false;
-        for (const p of personnelList) {
-            const username = p.email ? p.email.split('@')[0] : null;
-            const userData = username ? usersMap[username] : null;
+        usersSnapshot.forEach(doc => {
+            const u = doc.data();
+            const userId = doc.id;
             
-            if (userData) {
-                hasLoginUsers = true;
-                const roleLabel = roleLabels[p.role] || `📋 ${p.role || 'Bilinmiyor'}`;
-                const branchText = p.branch && p.branch !== 'all' ? p.branch : 'Tüm Şubeler';
-                
-                html += `
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg3);border-radius:var(--radiusSm);margin-bottom:8px;border-left:3px solid #27ae60">
-                        <div>
-                            <div style="display:flex;align-items:center;gap:8px">
-                                <strong style="color:var(--tx)">${p.name}</strong>
-                                <span style="font-size:.75rem;background:var(--accentLight);color:var(--accent);padding:2px 8px;border-radius:4px">${roleLabel}</span>
-                                <span style="font-size:.65rem;background:rgba(39,174,96,.15);color:#27ae60;padding:2px 6px;border-radius:4px">✓ Aktif</span>
-                            </div>
-                            <div style="font-size:.8rem;color:var(--tx2)">${p.email} • ${branchText}</div>
+            // Personel listesinden bilgi al (varsa)
+            const personnel = personnelMap[userId];
+            const displayName = u.name || personnel?.name || userId;
+            const displayRole = u.role || personnel?.role || 'barista';
+            const displayBranch = u.branch || personnel?.branch || '';
+            
+            const roleLabel = roleLabels[displayRole] || `📋 ${displayRole}`;
+            const branchText = displayBranch && displayBranch !== 'all' ? displayBranch : 'Tüm Şubeler';
+            const isAdmin = userId === 'admin';
+            
+            html += `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg3);border-radius:var(--radiusSm);margin-bottom:8px;border-left:3px solid ${isAdmin ? '#9b59b6' : '#27ae60'}">
+                    <div>
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                            <strong style="color:var(--tx)">${displayName}</strong>
+                            <span style="font-size:.75rem;background:var(--accentLight);color:var(--accent);padding:2px 8px;border-radius:4px">${roleLabel}</span>
+                            ${personnel ? '' : '<span style="font-size:.65rem;background:rgba(243,156,18,.15);color:#f39c12;padding:2px 6px;border-radius:4px">Personel listesinde yok</span>'}
                         </div>
-                        <div style="display:flex;gap:8px">
-                            <button class="btn btn-sm btn-ghost" onclick="showLoginModal('${username}', '${p.name}', '${p.email}', '${p.role}', '${p.branch}')" title="Login Düzenle">🔑</button>
-                            <button class="btn btn-sm" style="background:var(--red);color:#fff" onclick="removeUserLogin('${username}')" title="Login'i Kaldır">🗑️</button>
-                        </div>
+                        <div style="font-size:.8rem;color:var(--tx2)">@${userId} • ${branchText}</div>
                     </div>
-                `;
-            }
-        }
+                    <div style="display:flex;gap:8px">
+                        ${!isAdmin ? `
+                            <button class="btn btn-sm btn-ghost" onclick="editUserDirect('${userId}')" title="Düzenle">✏️</button>
+                            <button class="btn btn-sm" style="background:var(--red);color:#fff" onclick="removeUserLogin('${userId}')" title="Sil">🗑️</button>
+                        ` : '<span style="font-size:.75rem;color:var(--tx3)">Sistem</span>'}
+                    </div>
+                </div>
+            `;
+        });
         
-        if (!hasLoginUsers) {
-            html += '<p style="color:var(--tx3);font-size:.85rem;padding:8px">Henüz login tanımlı personel yok.</p>';
-        }
-        html += '</div>';
+        // Personel listesinde olup users'da olmayan kişiler
+        let pendingHtml = '';
+        let hasPending = false;
         
-        // Login'i olmayan personel
-        html += '<div><div style="font-size:.75rem;font-weight:600;color:var(--tx2);margin-bottom:8px;text-transform:uppercase">🔒 Giriş Tanımlı Değil</div>';
-        
-        let hasNoLoginUsers = false;
         for (const p of personnelList) {
             const username = p.email ? p.email.split('@')[0] : null;
-            const userData = username ? usersMap[username] : null;
+            if (!username) continue;
             
-            if (!userData) {
-                hasNoLoginUsers = true;
+            let found = false;
+            usersSnapshot.forEach(doc => {
+                if (doc.id === username) found = true;
+            });
+            
+            if (!found) {
+                hasPending = true;
                 const roleLabel = roleLabels[p.role] || `📋 ${p.role || 'Bilinmiyor'}`;
                 const branchText = p.branch && p.branch !== 'all' ? p.branch : 'Tüm Şubeler';
                 
-                html += `
+                pendingHtml += `
                     <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg3);border-radius:var(--radiusSm);margin-bottom:8px;opacity:.7">
                         <div>
                             <div style="display:flex;align-items:center;gap:8px">
                                 <strong style="color:var(--tx)">${p.name}</strong>
                                 <span style="font-size:.75rem;background:var(--accentLight);color:var(--accent);padding:2px 8px;border-radius:4px">${roleLabel}</span>
                             </div>
-                            <div style="font-size:.8rem;color:var(--tx2)">${p.email || 'E-posta yok'} • ${branchText}</div>
+                            <div style="font-size:.8rem;color:var(--tx2)">${p.email} • ${branchText}</div>
                         </div>
                         <div>
-                            <button class="btn btn-sm btn-primary" onclick="showLoginModal('${username || ''}', '${p.name}', '${p.email || ''}', '${p.role}', '${p.branch}')" title="Login Tanımla">🔑 Login Ekle</button>
+                            <button class="btn btn-sm btn-primary" onclick="showLoginModal('${username}', '${p.name}', '${p.email}', '${p.role}', '${p.branch}')" title="Login Tanımla">🔑 Login Ekle</button>
                         </div>
                     </div>
                 `;
             }
         }
         
-        if (!hasNoLoginUsers) {
-            html += '<p style="color:var(--tx3);font-size:.85rem;padding:8px">Tüm personele login tanımlanmış.</p>';
+        if (hasPending) {
+            html += '<div style="font-size:.75rem;font-weight:600;color:var(--tx2);margin:20px 0 12px;text-transform:uppercase">🔒 Giriş Tanımlı Değil (Personel Listesinden)</div>';
+            html += pendingHtml;
         }
-        html += '</div>';
         
         container.innerHTML = html;
         
     } catch (error) {
         console.error('Kullanıcı yükleme hatası:', error);
         container.innerHTML = '<p style="color:var(--red);text-align:center;padding:20px">Yükleme hatası!</p>';
+    }
+}
+
+// Kullanıcı düzenleme (direkt users collection)
+async function editUserDirect(userId) {
+    try {
+        const doc = await db.collection('users').doc(userId).get();
+        if (!doc.exists) {
+            toast('Kullanıcı bulunamadı', 'error');
+            return;
+        }
+        
+        const u = doc.data();
+        showLoginModal(userId, u.name || userId, userId + '@moonberrycoffee.com', u.role || 'barista', u.branch || '');
+    } catch (e) {
+        console.error('Kullanıcı yükleme hatası:', e);
+        toast('Yükleme hatası', 'error');
     }
 }
 
@@ -5968,6 +6010,106 @@ async function removeUserLogin(username) {
     } catch (error) {
         console.error('Silme hatası:', error);
         toast('Silme hatası!', 'error');
+    }
+}
+
+// Yeni kullanıcı ekleme modal'ı
+function showNewUserModal() {
+    const roleOptions = `
+        <option value="barista">☕ Barista</option>
+        <option value="magaza_mudur_yardimcisi">🏪 Müdür Yardımcısı</option>
+        <option value="magaza_muduru">🏪 Mağaza Müdürü</option>
+        <option value="bolge_muduru">🏢 Bölge Müdürü</option>
+        <option value="yonetici">👑 Yönetici</option>
+    `;
+    
+    const branchOptions = (STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'])
+        .map(b => `<option value="${b}">${b}</option>`).join('');
+    
+    const body = `
+        <div style="padding:8px 0">
+            <div class="form-group">
+                <label class="form-label">Kullanıcı Adı *</label>
+                <input type="text" id="newUserUsername" class="form-input" placeholder="ornek">
+                <div style="font-size:.75rem;color:var(--tx3);margin-top:4px">Giriş: kullanici@moonberrycoffee.com</div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Görünen Ad *</label>
+                <input type="text" id="newUserName" class="form-input" placeholder="Ad Soyad">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Şifre *</label>
+                <input type="password" id="newUserPassword" class="form-input" placeholder="En az 6 karakter" minlength="6">
+            </div>
+            
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                <div class="form-group">
+                    <label class="form-label">Rol</label>
+                    <select id="newUserRole" class="form-select">${roleOptions}</select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Şube</label>
+                    <select id="newUserBranch" class="form-select">
+                        <option value="all">Tüm Şubeler</option>
+                        ${branchOptions}
+                    </select>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const footer = `
+        <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
+        <button class="btn btn-primary" onclick="createNewUser()">💾 Oluştur</button>
+    `;
+    
+    showModal('➕ Yeni Kullanıcı', body, footer);
+}
+
+// Yeni kullanıcı oluştur
+async function createNewUser() {
+    const username = document.getElementById('newUserUsername')?.value?.trim().toLowerCase();
+    const name = document.getElementById('newUserName')?.value?.trim();
+    const password = document.getElementById('newUserPassword')?.value;
+    const role = document.getElementById('newUserRole')?.value || 'barista';
+    const branch = document.getElementById('newUserBranch')?.value || 'Tuzla Port';
+    
+    if (!username) { toast('Kullanıcı adı gerekli', 'error'); return; }
+    if (!name) { toast('Görünen ad gerekli', 'error'); return; }
+    if (!password || password.length < 6) { toast('Şifre en az 6 karakter olmalı', 'error'); return; }
+    
+    // Geçersiz karakterler kontrolü
+    if (!/^[a-z0-9._]+$/.test(username)) {
+        toast('Kullanıcı adı sadece küçük harf, rakam, nokta ve alt çizgi içerebilir', 'error');
+        return;
+    }
+    
+    try {
+        // Kullanıcı zaten var mı kontrol et
+        const existingDoc = await db.collection('users').doc(username).get();
+        if (existingDoc.exists) {
+            toast('Bu kullanıcı adı zaten mevcut', 'error');
+            return;
+        }
+        
+        await db.collection('users').doc(username).set({
+            name: name,
+            role: role,
+            branch: branch,
+            password: password, // Gerçek uygulamada hash'lenmeli
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdBy: currentUser?.id || 'admin'
+        });
+        
+        toast('Kullanıcı oluşturuldu', 'success');
+        closeModal();
+        loadUserList();
+        
+    } catch (error) {
+        console.error('Kullanıcı oluşturma hatası:', error);
+        toast('Oluşturma hatası!', 'error');
     }
 }
 
@@ -9470,46 +9612,74 @@ async function loadTodayChecks() {
         monthlyCard.style.display = 'none';
     }
     
-    // Shift planlarını ve personel isimlerini yükle
-    const shiftPlans = {};
-    const personnelNames = {};
+    // Shift planlarını yükle (shifts koleksiyonundan)
+    const shiftData = {};
     
     try {
-        // Personel isimlerini yükle
-        const personnelDoc = await db.collection('config').doc('personnel').get();
-        if (personnelDoc.exists) {
-            const list = personnelDoc.data().list || [];
-            list.forEach(p => {
-                if (p.email) {
-                    const username = p.email.split('@')[0];
-                    personnelNames[username] = p.name;
-                }
-            });
-        }
-        
-        // Shift planlarını yükle
+        // Haftanın pazartesi gününü bul
         const weekStart = getWeekStart(today);
         const weekKey = weekStart.toISOString().split('T')[0];
         
+        // Günün index'i (Pazartesi = 0, Pazar = 6)
+        let dayIndex = today.getDay() - 1;
+        if (dayIndex < 0) dayIndex = 6; // Pazar
+        
+        console.log('Shift yükleniyor:', { weekKey, dayIndex, branches });
+        
+        // Her şube için shift'i yükle
         for (const branch of branches) {
             try {
-                const shiftDoc = await db.collection('shiftPlans').doc(`${branch}_${weekKey}`).get();
-                if (shiftDoc.exists) {
-                    shiftPlans[branch] = shiftDoc.data()[todayStr] || {};
+                // shifts koleksiyonundan bu hafta + şube kombinasyonunu bul
+                const shiftsSnapshot = await db.collection('shifts')
+                    .where('branch', '==', branch)
+                    .where('weekStart', '==', weekKey)
+                    .limit(1)
+                    .get();
+                
+                if (!shiftsSnapshot.empty) {
+                    const shiftDoc = shiftsSnapshot.docs[0].data();
+                    const personelShifts = shiftDoc.personelShifts || {};
+                    
+                    // Bugünkü açılış/kapanış/ara personelini bul
+                    const acilisPersonel = [];
+                    const kapanisPersonel = [];
+                    const araPersonel = [];
+                    
+                    for (const [name, days] of Object.entries(personelShifts)) {
+                        const todayShift = days[dayIndex] || '';
+                        const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
+                        
+                        if (cleanShift === 'A' || cleanShift === 'AÇILIŞ') {
+                            acilisPersonel.push(name);
+                        } else if (cleanShift === 'K' || cleanShift === 'KAPANIŞ') {
+                            kapanisPersonel.push(name);
+                        } else if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-') {
+                            // Ara vardiya veya part-time (saat formatı: 12:00-18:00)
+                            araPersonel.push(name);
+                        }
+                    }
+                    
+                    shiftData[branch] = {
+                        acilis: acilisPersonel,
+                        kapanis: kapanisPersonel,
+                        ara: araPersonel
+                    };
+                    
+                    console.log('Shift yüklendi:', branch, shiftData[branch]);
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.warn('Shift yüklenemedi:', branch, e);
+            }
         }
     } catch (e) {
-        console.warn('Shift/personel yüklenemedi:', e);
+        console.warn('Shift yükleme hatası:', e);
     }
     
     // Shift'teki personel isimlerini al
     function getShiftPersonnel(branch, shiftType) {
-        const plan = shiftPlans[branch];
-        if (!plan) return [];
-        
-        const personnel = plan[shiftType] || [];
-        return personnel.map(id => personnelNames[id] || id);
+        const data = shiftData[branch];
+        if (!data) return [];
+        return data[shiftType] || [];
     }
     
     let html = '';
@@ -9617,41 +9787,45 @@ async function loadTodayChecks() {
                 }
                 
                 // Renk ve ikon
+                const isMoonberry = branch.includes('Şişli') || branch.includes('Merkez');
                 let bgColor = 'var(--bg3)';
                 let borderColor = 'var(--cardBorder)';
                 let icon = '👔';
                 let statusText = 'Bekliyor';
+                let cardClass = '';
                 
                 if (isCompleted) {
-                    bgColor = 'rgba(39,174,96,.1)';
+                    bgColor = 'rgba(39,174,96,.08)';
                     borderColor = '#27ae60';
                     icon = '✅';
                     statusText = 'Tamamlandı';
                 } else if (isMissed) {
-                    bgColor = 'rgba(231,76,60,.1)';
+                    bgColor = 'rgba(231,76,60,.08)';
                     borderColor = '#e74c3c';
                     icon = '❌';
                     statusText = 'Kaçırıldı';
                 } else if (isActive) {
-                    bgColor = 'rgba(155,89,182,.1)';
+                    bgColor = 'rgba(155,89,182,.08)';
                     borderColor = '#9b59b6';
                     icon = '👔';
                     statusText = 'Aktif';
+                    cardClass = 'check-card-active';
                 }
                 
                 hasActiveChecks = true;
                 html += `
-                    <div style="background:${bgColor};border:1px solid ${borderColor};border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer" onclick="goTo('checklist')">
-                        <div style="display:flex;align-items:center;gap:12px">
-                            <div style="font-size:1.5rem">${icon}</div>
+                    <div class="${cardClass}" style="background:${bgColor};border:1px solid ${borderColor};border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;position:relative;overflow:hidden" onclick="goTo('checklist')">
+                        ${isActive ? '<div class="check-card-shimmer" style="position:absolute;inset:0;pointer-events:none"></div>' : ''}
+                        <div style="display:flex;align-items:center;gap:10px;position:relative">
+                            <div style="font-size:1.2rem">${icon}</div>
                             <div>
-                                <div style="font-weight:600;color:var(--tx)">${checkType.name}</div>
-                                <div style="font-size:.8rem;color:var(--tx2)">${branch} • ${deadline}'a kadar</div>
+                                <div style="font-weight:600;font-size:.9rem;color:var(--tx)">${checkType.name}</div>
+                                <span style="font-size:.7rem;color:var(--tx3)">${deadline}'a kadar</span>
                             </div>
                         </div>
-                        <div style="text-align:right">
-                            <div style="font-size:.85rem;font-weight:600;color:${borderColor}">${statusText}</div>
-                            ${remainingText ? `<div style="font-size:.75rem;color:var(--tx3)">⏱️ ${remainingText}</div>` : ''}
+                        <div style="text-align:right;position:relative">
+                            <div style="font-size:.8rem;font-weight:600;color:${borderColor}">${statusText}</div>
+                            ${remainingText ? `<div style="font-size:.7rem;color:var(--tx3)">⏱️ ${remainingText}</div>` : ''}
                         </div>
                     </div>
                 `;
@@ -9667,60 +9841,65 @@ async function loadTodayChecks() {
     }
 }
 
-// Check kartı render helper
+// Check kartı render helper - kompakt versiyon
 function renderCheckCard(checkType, timeSlot, branch, isCompleted, submissionData, window, remaining, status, responsiblePersonnel) {
+    const isMoonberry = branch.includes('Şişli') || branch.includes('Merkez');
     let bgColor = 'var(--bg3)';
     let borderColor = 'var(--cardBorder)';
     let icon = '⏳';
     let statusText = 'Bekliyor';
+    let isActive = false;
     
     if (isCompleted) {
-        bgColor = 'rgba(39,174,96,.1)';
+        bgColor = 'rgba(39,174,96,.08)';
         borderColor = '#27ae60';
         icon = '✅';
         statusText = status?.label || 'Tamamlandı';
     } else if (window?.isMissed) {
-        bgColor = 'rgba(231,76,60,.1)';
+        bgColor = 'rgba(231,76,60,.08)';
         borderColor = '#e74c3c';
         icon = '❌';
         statusText = 'Kaçırıldı';
     } else if (window?.isLate) {
-        bgColor = 'rgba(243,156,18,.1)';
+        bgColor = 'rgba(243,156,18,.08)';
         borderColor = '#f39c12';
         icon = '⚠️';
-        statusText = 'Geç Penceresi';
+        statusText = 'Geç';
+        isActive = true;
     } else if (window?.isInWindow) {
-        bgColor = 'rgba(52,152,219,.1)';
-        borderColor = '#3498db';
+        bgColor = isMoonberry ? 'rgba(0,140,149,.08)' : 'rgba(255,134,116,.08)';
+        borderColor = isMoonberry ? '#008c95' : '#ff8674';
         icon = '🔵';
         statusText = 'Aktif';
+        isActive = true;
     }
     
-    // Sorumlu personel gösterimi
+    // Sorumlu personel gösterimi - sadece shift varsa
     let personnelText = '';
-    if (responsiblePersonnel && responsiblePersonnel.length > 0) {
-        const names = responsiblePersonnel.slice(0, 3).join(', ');
-        const extra = responsiblePersonnel.length > 3 ? ` +${responsiblePersonnel.length - 3}` : '';
-        personnelText = `<div style="font-size:.75rem;color:var(--tx3);margin-top:2px">👤 ${names}${extra}</div>`;
+    if (responsiblePersonnel && responsiblePersonnel.length > 0 && responsiblePersonnel[0]) {
+        const names = responsiblePersonnel.filter(n => n).slice(0, 2).join(', ');
+        if (names) personnelText = `<span style="font-size:.7rem;color:var(--tx3)">👤 ${names}</span>`;
     }
+    
+    const activeClass = isActive ? `check-card-active ${isMoonberry ? '' : 'sunberry'}` : '';
     
     return `
-        <div style="background:${bgColor};border:1px solid ${borderColor};border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer" onclick="goTo('checklist')">
-            <div style="display:flex;align-items:center;gap:12px">
-                <div style="font-size:1.5rem">${icon}</div>
+        <div class="${activeClass}" style="background:${bgColor};border:1px solid ${borderColor};border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;position:relative;overflow:hidden" onclick="goTo('checklist')">
+            ${isActive ? '<div class="check-card-shimmer" style="position:absolute;inset:0;pointer-events:none"></div>' : ''}
+            <div style="display:flex;align-items:center;gap:10px;position:relative">
+                <div style="font-size:1.2rem">${icon}</div>
                 <div>
-                    <div style="font-weight:600;color:var(--tx)">${checkType.name} - ${timeSlot}</div>
-                    <div style="font-size:.8rem;color:var(--tx2)">${branch}</div>
+                    <div style="font-weight:600;font-size:.9rem;color:var(--tx)">${checkType.name} - ${timeSlot}</div>
                     ${personnelText}
                 </div>
             </div>
-            <div style="text-align:right">
-                <div style="font-size:.85rem;font-weight:600;color:${borderColor}">${statusText}</div>
+            <div style="text-align:right;position:relative">
+                <div style="font-size:.8rem;font-weight:600;color:${borderColor}">${statusText}</div>
                 ${!isCompleted && remaining && !remaining.isExpired ? `
-                    <div style="font-size:.75rem;color:var(--tx3)">⏱️ ${remaining.text}</div>
+                    <div style="font-size:.7rem;color:var(--tx3)">⏱️ ${remaining.text}</div>
                 ` : ''}
                 ${isCompleted && status?.points !== 0 ? `
-                    <div style="font-size:.75rem;color:${status.points > 0 ? '#27ae60' : '#e74c3c'}">${status.points > 0 ? '+' : ''}${status.points} puan</div>
+                    <div style="font-size:.7rem;color:${status.points > 0 ? '#27ae60' : '#e74c3c'}">${status.points > 0 ? '+' : ''}${status.points} puan</div>
                 ` : ''}
             </div>
         </div>
@@ -10506,8 +10685,176 @@ async function initChecklistPage() {
         adminBtns.style.display = (currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru') ? 'block' : 'none';
     }
     
+    // Bugünkü checkler panelini yükle
+    loadChecklistTodayPanel();
+    
     // Checklist türlerini yükle
     loadChecklistTypes();
+}
+
+// Checklist sayfası - Bugünkü checkler paneli
+async function loadChecklistTodayPanel() {
+    const panel = document.getElementById('checklistTodayPanel');
+    const container = document.getElementById('checklistTodayContainer');
+    if (!panel || !container) return;
+    
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const isAdmin = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
+    
+    // Şubeleri belirle
+    let branches = [];
+    if (isAdmin || currentUser?.branch === 'all') {
+        branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+    } else {
+        branches = [currentUser?.branch || 'Tuzla Port'];
+    }
+    
+    // Shift verilerini yükle (shifts koleksiyonundan)
+    const shiftData = {};
+    
+    try {
+        const weekStart = getWeekStart(today);
+        const weekKey = weekStart.toISOString().split('T')[0];
+        let dayIndex = today.getDay() - 1;
+        if (dayIndex < 0) dayIndex = 6;
+        
+        for (const branch of branches) {
+            try {
+                const shiftsSnapshot = await db.collection('shifts')
+                    .where('branch', '==', branch)
+                    .where('weekStart', '==', weekKey)
+                    .limit(1)
+                    .get();
+                
+                if (!shiftsSnapshot.empty) {
+                    const shiftDoc = shiftsSnapshot.docs[0].data();
+                    const personelShifts = shiftDoc.personelShifts || {};
+                    
+                    const acilisPersonel = [], kapanisPersonel = [], araPersonel = [];
+                    
+                    for (const [name, days] of Object.entries(personelShifts)) {
+                        const todayShift = days[dayIndex] || '';
+                        const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
+                        
+                        if (cleanShift === 'A' || cleanShift === 'AÇILIŞ') acilisPersonel.push(name);
+                        else if (cleanShift === 'K' || cleanShift === 'KAPANIŞ') kapanisPersonel.push(name);
+                        else if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-') araPersonel.push(name);
+                    }
+                    
+                    shiftData[branch] = { acilis: acilisPersonel, kapanis: kapanisPersonel, ara: araPersonel };
+                }
+            } catch (e) {}
+        }
+    } catch (e) {}
+    
+    function getShiftPersonnel(branch, shiftType) {
+        const data = shiftData[branch];
+        if (!data) return [];
+        return data[shiftType] || [];
+    }
+    
+    let html = '';
+    let hasActiveChecks = false;
+    
+    for (const branch of branches) {
+        const checkTypes = CHECKLIST_TYPES[branch] || [];
+        if (checkTypes.length === 0) continue;
+        
+        const isMoonberry = branch.includes('Şişli') || branch.includes('Merkez');
+        const brandColor = isMoonberry ? '#008c95' : '#ff8674';
+        
+        for (const checkType of checkTypes) {
+            if (!checkType.timeSlots || checkType.timeSlots.length === 0) continue;
+            
+            for (const timeSlot of checkType.timeSlots) {
+                const rules = CHECK_RULES[checkType.id];
+                if (!rules) continue;
+                
+                const window = getCheckTimeWindow(checkType.id, timeSlot, branch);
+                if (!window) continue;
+                if (!isAdmin && (window.isMissed || window.isBeforeWindow)) continue;
+                
+                const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType.id}_${todayStr}_${timeSlot.replace(':', '')}`;
+                let isCompleted = false;
+                
+                try {
+                    const doc = await db.collection('checklistSubmissions').doc(submissionId).get();
+                    isCompleted = doc.exists;
+                } catch (e) {}
+                
+                const remaining = getRemainingTime(checkType.id, timeSlot, branch);
+                const checkHour = parseInt(timeSlot.split(':')[0]);
+                let responsiblePersonnel = checkHour < 15 ? getShiftPersonnel(branch, 'acilis') : 
+                                          checkHour >= 20 ? getShiftPersonnel(branch, 'kapanis') :
+                                          [...getShiftPersonnel(branch, 'acilis'), ...getShiftPersonnel(branch, 'ara')];
+                
+                hasActiveChecks = true;
+                
+                let bgColor = 'var(--bg3)', borderColor = 'var(--cardBorder)', icon = '⏳', statusText = 'Bekliyor';
+                let isActive = false;
+                
+                if (isCompleted) { bgColor = 'rgba(39,174,96,.08)'; borderColor = '#27ae60'; icon = '✅'; statusText = 'Tamamlandı'; }
+                else if (window.isMissed) { bgColor = 'rgba(231,76,60,.08)'; borderColor = '#e74c3c'; icon = '❌'; statusText = 'Kaçırıldı'; }
+                else if (window.isLate) { bgColor = 'rgba(243,156,18,.08)'; borderColor = '#f39c12'; icon = '⚠️'; statusText = 'Geç'; isActive = true; }
+                else if (window.isInWindow) { bgColor = isMoonberry ? 'rgba(0,140,149,.08)' : 'rgba(255,134,116,.08)'; borderColor = brandColor; icon = '🔵'; statusText = 'Aktif'; isActive = true; }
+                
+                const personnelText = responsiblePersonnel.length > 0 ? `<span style="font-size:.65rem;color:var(--tx3)">👤 ${responsiblePersonnel.slice(0,2).join(', ')}</span>` : '';
+                const activeClass = isActive ? `check-card-active ${isMoonberry ? '' : 'sunberry'}` : '';
+                
+                html += `
+                    <div class="${activeClass}" style="background:${bgColor};border:1px solid ${borderColor};border-radius:8px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:6px;cursor:pointer;position:relative;overflow:hidden" onclick="selectCheckFromPanel('${branch}', '${checkType.id}', '${timeSlot}')">
+                        ${isActive ? '<div class="check-card-shimmer" style="position:absolute;inset:0;pointer-events:none"></div>' : ''}
+                        <div style="display:flex;align-items:center;gap:8px;position:relative">
+                            <span style="font-size:1rem">${icon}</span>
+                            <div>
+                                <div style="font-weight:600;font-size:.8rem;color:var(--tx)">${checkType.name} - ${timeSlot}</div>
+                                <div style="display:flex;gap:8px;align-items:center">
+                                    <span style="font-size:.65rem;color:var(--tx3)">${branch}</span>
+                                    ${personnelText}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="text-align:right;position:relative">
+                            <div style="font-size:.7rem;font-weight:600;color:${borderColor}">${statusText}</div>
+                            ${!isCompleted && remaining && !remaining.isExpired ? `<div style="font-size:.65rem;color:var(--tx3)">⏱️ ${remaining.text}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    }
+    
+    if (hasActiveChecks) {
+        panel.style.display = 'block';
+        container.innerHTML = html;
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+// Panelden check seçme
+function selectCheckFromPanel(branch, type, timeSlot) {
+    const subeSelect = document.getElementById('checklistSube');
+    const typeSelect = document.getElementById('checklistType');
+    const timeSlotSelect = document.getElementById('checklistTimeSlot');
+    
+    if (subeSelect) subeSelect.value = branch;
+    loadChecklistTypes().then(() => {
+        if (typeSelect) {
+            typeSelect.value = type;
+            // Buton aktifliğini güncelle
+            document.querySelectorAll('.checklist-type-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.type === type);
+            });
+            loadChecklist().then(() => {
+                if (timeSlotSelect && timeSlot) {
+                    timeSlotSelect.value = timeSlot;
+                    loadChecklist();
+                }
+            });
+        }
+    });
 }
 
 // Checklist türlerini yükle
