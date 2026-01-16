@@ -1355,7 +1355,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <div class="admin-tabs">
                     <button class="admin-tab active" onclick="showAdminTab('genel',this)">Genel</button>
                     <button class="admin-tab" onclick="showAdminTab('tumCheckler',this)">📊 Tüm Checkler</button>
-                    <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">👥 Personel & Yetkiler</button>
+                    <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">🔐 Pozisyon Yetkileri</button>
                     <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">⏱️ Oturumlar</button>
                     <button class="admin-tab" onclick="showAdminTab('magazaSaatleri',this)">🕐 Mağaza Saatleri</button>
                     <button class="admin-tab" onclick="showAdminTab('checkKurallari',this)">📋 Check Kuralları</button>
@@ -1494,81 +1494,100 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                 </div>
 
-                <!-- Kullanıcı Yönetimi → Personel'e Yönlendir -->
+                <!-- Pozisyon Yetkileri -->
                 <div class="admin-section" id="admin-kullanicilar">
-                    <!-- Personel Yönlendirme -->
                     <div class="admin-card">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title">👥 Personel & Kullanıcı Yönetimi</div>
-                        </div>
-                        <div style="text-align:center;padding:40px 20px">
-                            <div style="font-size:3rem;margin-bottom:16px">👥</div>
-                            <h3 style="color:var(--tx);margin-bottom:8px">Tüm personel işlemleri tek yerden!</h3>
-                            <p style="color:var(--tx2);font-size:.9rem;margin-bottom:24px">
-                                Personel ekleme, düzenleme, şifre atama ve giriş yetkileri<br>
-                                artık <strong>Personel</strong> sayfasından yönetiliyor.
-                            </p>
-                            <button class="btn btn-primary" onclick="goTo('page-personel')" style="padding:14px 32px;font-size:1rem">
-                                📋 Personel Yönetimine Git
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Pozisyon Yetkileri -->
-                    <div class="admin-card" style="margin-top:20px">
                         <div class="admin-card-header">
                             <div class="admin-card-title">🔐 Pozisyon Yetkileri</div>
                         </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Her pozisyon için sayfa ve özellik erişim izinlerini yapılandırın.</p>
+                        <p style="color:var(--tx2);font-size:.9rem;margin-bottom:24px">
+                            Her pozisyon için hangi sayfaları görebileceğini ve hangi işlemleri yapabileceğini belirleyin.
+                        </p>
                         
-                        <!-- Pozisyon Seçimi -->
-                        <div class="form-group" style="margin-bottom:20px">
-                            <label class="form-label">Pozisyon Seçin</label>
-                            <select id="advRoleSelect" class="form-select" onchange="loadAdvancedPermissions()" style="max-width:300px">
-                                <option value="">-- Pozisyon Seçin --</option>
-                                <option value="barista">🧑‍🍳 Barista / Servis</option>
-                                <option value="magaza_muduru">🏪 Mağaza Müdürü</option>
-                                <option value="bolge_muduru">🌍 Bölge Müdürü</option>
-                            </select>
+                        <!-- Pozisyon Kartları -->
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">
+                            <!-- Barista -->
+                            <div class="permission-card" onclick="selectRoleForPermissions('barista')" style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:24px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#3498db';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
+                                <div style="font-size:2.5rem;margin-bottom:12px">🧑‍🍳</div>
+                                <div style="font-weight:600;color:var(--tx);font-size:1.1rem;margin-bottom:4px">Barista / Servis</div>
+                                <div style="font-size:.8rem;color:var(--tx2)">Günlük operasyon işlemleri</div>
+                                <div style="margin-top:12px;padding:6px 12px;background:#3498db22;color:#3498db;border-radius:8px;font-size:.75rem;font-weight:500">Sınırlı Erişim</div>
+                            </div>
+                            
+                            <!-- Mağaza Müdürü -->
+                            <div class="permission-card" onclick="selectRoleForPermissions('magaza_muduru')" style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:24px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#008c95';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
+                                <div style="font-size:2.5rem;margin-bottom:12px">🏪</div>
+                                <div style="font-weight:600;color:var(--tx);font-size:1.1rem;margin-bottom:4px">Mağaza Müdürü</div>
+                                <div style="font-size:.8rem;color:var(--tx2)">Şube yönetimi işlemleri</div>
+                                <div style="margin-top:12px;padding:6px 12px;background:#008c9522;color:#008c95;border-radius:8px;font-size:.75rem;font-weight:500">Orta Erişim</div>
+                            </div>
+                            
+                            <!-- Bölge Müdürü -->
+                            <div class="permission-card" onclick="selectRoleForPermissions('bolge_muduru')" style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:24px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#9b59b6';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
+                                <div style="font-size:2.5rem;margin-bottom:12px">🌍</div>
+                                <div style="font-weight:600;color:var(--tx);font-size:1.1rem;margin-bottom:4px">Bölge Müdürü</div>
+                                <div style="font-size:.8rem;color:var(--tx2)">Çoklu şube yönetimi</div>
+                                <div style="margin-top:12px;padding:6px 12px;background:#9b59b622;color:#9b59b6;border-radius:8px;font-size:.75rem;font-weight:500">Geniş Erişim</div>
+                            </div>
                         </div>
                         
-                        <!-- İzin Paneli -->
-                        <div id="advPermissionsPanel" style="display:none">
-                            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px">
-                                <!-- Sayfalar -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
-                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem">📄 Sayfalar</div>
-                                    <div style="display:flex;flex-direction:column;gap:8px" id="pagePermissions"></div>
-                                </div>
-                                
-                                <!-- Belgeler -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
-                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem">📋 Belgeler</div>
-                                    <div style="display:flex;flex-direction:column;gap:8px" id="docPermissions"></div>
-                                </div>
-                                
-                                <!-- Admin Panelleri -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
-                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem">⚙️ Yönetim</div>
-                                    <div style="display:flex;flex-direction:column;gap:8px" id="adminPermissions"></div>
-                                </div>
-                                
-                                <!-- Özel İzinler -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
-                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem">🎯 Özel</div>
-                                    <div style="display:flex;flex-direction:column;gap:8px" id="specialPermissions"></div>
+                        <!-- Seçili Rol İzinleri -->
+                        <div id="selectedRolePermissions" style="display:none;background:var(--bg2);border:1px solid var(--cardBorder);border-radius:16px;padding:24px">
+                            <div style="display:flex;align-items:center;justify-content:between;margin-bottom:20px">
+                                <div style="display:flex;align-items:center;gap:12px">
+                                    <span id="selectedRoleIcon" style="font-size:2rem">🧑‍🍳</span>
+                                    <div>
+                                        <div id="selectedRoleName" style="font-weight:600;color:var(--tx);font-size:1.2rem">Barista</div>
+                                        <div id="selectedRoleDesc" style="font-size:.8rem;color:var(--tx2)">Yetkileri düzenle</div>
+                                    </div>
                                 </div>
                             </div>
                             
-                            <div class="btn-group" style="margin-top:16px">
-                                <button class="btn btn-primary btn-sm" onclick="saveAdvancedPermissions()">💾 Kaydet</button>
-                                <button class="btn btn-ghost btn-sm" onclick="resetAdvancedPermissions()">🔄 Varsayılan</button>
+                            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:20px">
+                                <!-- Sayfalar -->
+                                <div style="background:var(--bg3);border-radius:12px;padding:20px">
+                                    <div style="font-weight:600;color:var(--tx);margin-bottom:16px;font-size:1rem;display:flex;align-items:center;gap:8px">
+                                        <span>📄</span> Sayfa Erişimi
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;gap:10px" id="pagePermissions"></div>
+                                </div>
+                                
+                                <!-- Belgeler -->
+                                <div style="background:var(--bg3);border-radius:12px;padding:20px">
+                                    <div style="font-weight:600;color:var(--tx);margin-bottom:16px;font-size:1rem;display:flex;align-items:center;gap:8px">
+                                        <span>📋</span> Belge Erişimi
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;gap:10px" id="docPermissions"></div>
+                                </div>
+                                
+                                <!-- Yönetim -->
+                                <div style="background:var(--bg3);border-radius:12px;padding:20px">
+                                    <div style="font-weight:600;color:var(--tx);margin-bottom:16px;font-size:1rem;display:flex;align-items:center;gap:8px">
+                                        <span>⚙️</span> Yönetim Panelleri
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;gap:10px" id="adminPermissions"></div>
+                                </div>
+                                
+                                <!-- Özel -->
+                                <div style="background:var(--bg3);border-radius:12px;padding:20px">
+                                    <div style="font-weight:600;color:var(--tx);margin-bottom:16px;font-size:1rem;display:flex;align-items:center;gap:8px">
+                                        <span>🎯</span> Özel Yetkiler
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;gap:10px" id="specialPermissions"></div>
+                                </div>
+                            </div>
+                            
+                            <div style="display:flex;gap:12px;margin-top:24px;justify-content:flex-end">
+                                <button class="btn btn-ghost" onclick="hideRolePermissions()">İptal</button>
+                                <button class="btn btn-primary" onclick="saveAdvancedPermissions()">💾 Yetkileri Kaydet</button>
                             </div>
                         </div>
                         
-                        <div id="advPermissionsEmpty" style="text-align:center;padding:30px;color:var(--tx2)">
-                            <div style="font-size:2rem;margin-bottom:8px">🔐</div>
-                            <div style="font-size:.85rem">Düzenlemek için yukarıdan bir pozisyon seçin</div>
+                        <!-- Bilgi -->
+                        <div id="permissionsInfo" style="text-align:center;padding:40px;color:var(--tx2)">
+                            <div style="font-size:3rem;margin-bottom:12px">👆</div>
+                            <div style="font-size:1rem;font-weight:500;color:var(--tx);margin-bottom:8px">Bir pozisyon seçin</div>
+                            <div style="font-size:.85rem">Yukarıdaki kartlardan düzenlemek istediğiniz pozisyona tıklayın</div>
                         </div>
                     </div>
                 </div>
@@ -2621,6 +2640,11 @@ const PAGE_NAMES = {
 };
 
 function goTo(page) {
+    // page-xxx formatında geldiyse düzelt
+    if (page && page.startsWith('page-')) {
+        page = page.replace('page-', '');
+    }
+    
     // Aktivite logla
     logActivity('page_view', { page: page, from: currentPage });
     
@@ -2632,7 +2656,15 @@ function goTo(page) {
     previousPage = currentPage;
     currentPage = page;
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById('page-' + page).classList.add('active');
+    
+    const targetPage = document.getElementById('page-' + page);
+    if (targetPage) {
+        targetPage.classList.add('active');
+    } else {
+        console.error('Sayfa bulunamadı:', 'page-' + page);
+        return;
+    }
+    
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     const navItem = document.querySelector(`.nav-item[data-page="${page}"]`);
     if (navItem) navItem.classList.add('active');
@@ -4858,11 +4890,18 @@ async function loadPersonelList() {
         let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px">';
         snapshot.forEach(doc => {
             const p = doc.data();
+            const docId = doc.id;
+            
+            // ID kontrolü
+            if (!docId) {
+                console.warn('Personel dökümanı ID\'si yok, atlanıyor');
+                return;
+            }
             
             // Rol: Önce personel.role, yoksa pozisyondan belirle
             const role = p.role || positionToRole[p.position] || 'barista';
             const roleInfo = roleStyles[role] || { name: 'Personel', color: '#9ca3af', icon: '👤' };
-            const hasAccess = !!p.email && !!p.password; // Email ve şifre varsa giriş yapabilir
+            const hasAccess = !!(p.email && p.password); // Email ve şifre varsa giriş yapabilir
             
             html += `
                 <div style="background:var(--bg2);border:1px solid var(--cardBorder);border-radius:12px;padding:16px;position:relative;transition:all .2s" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow='none'">
@@ -4872,7 +4911,7 @@ async function loadPersonelList() {
                             ${roleInfo.icon}
                         </div>
                         <div style="flex:1">
-                            <div style="font-weight:600;color:var(--tx);font-size:1rem">${p.name}</div>
+                            <div style="font-weight:600;color:var(--tx);font-size:1rem">${p.name || 'İsimsiz'}</div>
                             <div style="font-size:.8rem;color:var(--tx2)">${p.position || 'Pozisyon belirtilmemiş'}</div>
                         </div>
                         <span style="background:${roleInfo.color}22;color:${roleInfo.color};padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:600">${roleInfo.name}</span>
@@ -4892,10 +4931,10 @@ async function loadPersonelList() {
                             ${hasAccess ? '🔓 Giriş yapabilir' : (p.email ? '🔑 Şifre gerekli' : '🔒 E-posta yok')}
                         </div>
                         <div style="display:flex;gap:6px">
-                            <button onclick="editPersonel('${doc.id}')" style="padding:6px 12px;background:var(--bg3);border:none;border-radius:6px;color:var(--tx);cursor:pointer;font-size:.8rem;display:flex;align-items:center;gap:4px" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">
+                            <button onclick="editPersonel('${docId}')" style="padding:6px 12px;background:var(--bg3);border:none;border-radius:6px;color:var(--tx);cursor:pointer;font-size:.8rem;display:flex;align-items:center;gap:4px" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">
                                 ✏️ Düzenle
                             </button>
-                            <button onclick="deletePersonel('${doc.id}')" style="padding:6px 12px;background:#fff0f0;border:none;border-radius:6px;color:#dc3545;cursor:pointer;font-size:.8rem" onmouseover="this.style.background='#ffe0e0'" onmouseout="this.style.background='#fff0f0'">
+                            <button onclick="deletePersonel('${docId}')" style="padding:6px 12px;background:#fff0f0;border:none;border-radius:6px;color:#dc3545;cursor:pointer;font-size:.8rem" onmouseover="this.style.background='#ffe0e0'" onmouseout="this.style.background='#fff0f0'">
                                 🗑️
                             </button>
                         </div>
@@ -6593,19 +6632,74 @@ const DEFAULT_ROLE_PERMISSIONS = {
     }
 };
 
+// Pozisyon seçimi için yeni fonksiyonlar
+let selectedRoleForPerm = null;
+
+function selectRoleForPermissions(role) {
+    selectedRoleForPerm = role;
+    
+    const roleInfo = {
+        barista: { icon: '🧑‍🍳', name: 'Barista / Servis', desc: 'Günlük operasyon yetkileri' },
+        magaza_muduru: { icon: '🏪', name: 'Mağaza Müdürü', desc: 'Şube yönetimi yetkileri' },
+        bolge_muduru: { icon: '🌍', name: 'Bölge Müdürü', desc: 'Çoklu şube yönetimi yetkileri' }
+    };
+    
+    const info = roleInfo[role];
+    document.getElementById('selectedRoleIcon').textContent = info.icon;
+    document.getElementById('selectedRoleName').textContent = info.name;
+    document.getElementById('selectedRoleDesc').textContent = info.desc;
+    
+    document.getElementById('selectedRolePermissions').style.display = 'block';
+    document.getElementById('permissionsInfo').style.display = 'none';
+    
+    // İzinleri yükle
+    loadRolePermissions(role);
+}
+
+function hideRolePermissions() {
+    document.getElementById('selectedRolePermissions').style.display = 'none';
+    document.getElementById('permissionsInfo').style.display = 'block';
+    selectedRoleForPerm = null;
+}
+
+async function loadRolePermissions(role) {
+    // Firebase'den izinleri al veya varsayılanı kullan
+    let perms = DEFAULT_ROLE_PERMISSIONS[role];
+    try {
+        const doc = await db.collection('advancedPermissions').doc(role).get();
+        if (doc.exists) {
+            perms = { ...perms, ...doc.data() };
+        }
+    } catch (error) {
+        console.error('İzin yükleme hatası:', error);
+    }
+    
+    // Sayfalar
+    renderPagePermissions(perms.pages || {});
+    
+    // Belgeler
+    renderDocPermissions(perms.documents || {});
+    
+    // Admin
+    renderAdminPermissions(perms.admin || {});
+    
+    // Özel izinler
+    renderSpecialPermissions(perms.special || {});
+}
+
 async function loadAdvancedPermissions() {
-    const role = document.getElementById('advRoleSelect').value;
+    const role = document.getElementById('advRoleSelect')?.value;
     const panel = document.getElementById('advPermissionsPanel');
     const empty = document.getElementById('advPermissionsEmpty');
     
     if (!role) {
-        panel.style.display = 'none';
-        empty.style.display = 'block';
+        if (panel) panel.style.display = 'none';
+        if (empty) empty.style.display = 'block';
         return;
     }
     
-    panel.style.display = 'block';
-    empty.style.display = 'none';
+    if (panel) panel.style.display = 'block';
+    if (empty) empty.style.display = 'none';
     
     // Firebase'den izinleri al veya varsayılanı kullan
     let perms = DEFAULT_ROLE_PERMISSIONS[role];
@@ -6732,9 +6826,9 @@ function renderSpecialPermissions(perms) {
 }
 
 async function saveAdvancedPermissions() {
-    const role = document.getElementById('advRoleSelect').value;
+    const role = selectedRoleForPerm || document.getElementById('advRoleSelect')?.value;
     if (!role) {
-        toast('Lütfen bir rol seçin', 'error');
+        toast('Lütfen bir pozisyon seçin', 'error');
         return;
     }
     
@@ -6763,10 +6857,11 @@ async function saveAdvancedPermissions() {
     
     try {
         await db.collection('advancedPermissions').doc(role).set(permissions);
-        toast('İzinler başarıyla kaydedildi!', 'success');
+        toast('Yetkiler başarıyla kaydedildi! ✓', 'success');
+        hideRolePermissions();
     } catch (error) {
-        console.error('İzin kayıt hatası:', error);
-        toast('Kayıt hatası!', 'error');
+        console.error('Yetki kayıt hatası:', error);
+        toast('Kayıt hatası: ' + error.message, 'error');
     }
 }
 
