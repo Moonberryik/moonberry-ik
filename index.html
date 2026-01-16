@@ -4834,32 +4834,45 @@ async function loadPersonelList() {
             return;
         }
         
-        // Rol isimleri
-        const roleNames = {
+        // Pozisyondan rol belirleme
+        const positionToRole = {
+            'Barista': 'barista',
+            'Barista / Servis': 'barista',
+            'Mağaza Müdürü': 'magaza_muduru',
+            'Mağaza Müdür Yardımcısı': 'magaza_mudur_yardimcisi',
+            'Bölge Müdürü': 'bolge_muduru'
+        };
+        
+        // Rol görünümleri
+        const roleStyles = {
             'yonetici': { name: 'Yönetici', color: '#ff8674', icon: '👑' },
             'bolge_muduru': { name: 'Bölge Müdürü', color: '#9b59b6', icon: '🌍' },
             'magaza_muduru': { name: 'Mağaza Müdürü', color: '#008c95', icon: '🏪' },
-            'barista': { name: 'Barista', color: '#3498db', icon: '🧑‍🍳' }
+            'magaza_mudur_yardimcisi': { name: 'Müdür Yrd.', color: '#3498db', icon: '🧑‍💼' },
+            'barista': { name: 'Barista', color: '#27ae60', icon: '🧑‍🍳' }
         };
         
         let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px">';
         snapshot.forEach(doc => {
             const p = doc.data();
-            const roleInfo = roleNames[p.role] || null;
-            const hasAccess = !!p.role;
+            
+            // Rol: Önce personel.role, yoksa pozisyondan belirle
+            const role = p.role || positionToRole[p.position] || 'barista';
+            const roleInfo = roleStyles[role] || { name: 'Personel', color: '#9ca3af', icon: '👤' };
+            const hasAccess = !!p.email && !!p.password; // Email ve şifre varsa giriş yapabilir
             
             html += `
                 <div style="background:var(--bg2);border:1px solid var(--cardBorder);border-radius:12px;padding:16px;position:relative;transition:all .2s" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow='none'">
                     <!-- Üst kısım: Avatar + İsim -->
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-                        <div style="width:48px;height:48px;background:linear-gradient(135deg,${roleInfo?.color || '#9ca3af'},${roleInfo?.color ? roleInfo.color + '88' : '#6b7280'});border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;font-weight:600">
-                            ${roleInfo?.icon || p.name.charAt(0).toUpperCase()}
+                        <div style="width:48px;height:48px;background:linear-gradient(135deg,${roleInfo.color},${roleInfo.color}88);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;font-weight:600">
+                            ${roleInfo.icon}
                         </div>
                         <div style="flex:1">
                             <div style="font-weight:600;color:var(--tx);font-size:1rem">${p.name}</div>
                             <div style="font-size:.8rem;color:var(--tx2)">${p.position || 'Pozisyon belirtilmemiş'}</div>
                         </div>
-                        ${hasAccess ? `<span style="background:${roleInfo.color}22;color:${roleInfo.color};padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:600">${roleInfo.name}</span>` : ''}
+                        <span style="background:${roleInfo.color}22;color:${roleInfo.color};padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:600">${roleInfo.name}</span>
                     </div>
                     
                     <!-- Bilgiler -->
@@ -4873,7 +4886,7 @@ async function loadPersonelList() {
                     <!-- Sistem erişimi durumu -->
                     <div style="display:flex;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid var(--bg4)">
                         <div style="font-size:.75rem;color:${hasAccess ? '#27ae60' : 'var(--tx3)'}">
-                            ${hasAccess ? '🔓 Sisteme giriş yapabilir' : '🔒 Sistem erişimi yok'}
+                            ${hasAccess ? '🔓 Giriş yapabilir' : (p.email ? '🔑 Şifre gerekli' : '🔒 E-posta yok')}
                         </div>
                         <div style="display:flex;gap:6px">
                             <button onclick="editPersonel('${doc.id}')" style="padding:6px 12px;background:var(--bg3);border:none;border-radius:6px;color:var(--tx);cursor:pointer;font-size:.8rem;display:flex;align-items:center;gap:4px" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">
@@ -4891,7 +4904,7 @@ async function loadPersonelList() {
         
         // İstatistik özet
         const total = snapshot.size;
-        const withAccess = snapshot.docs.filter(d => d.data().role).length;
+        const withAccess = snapshot.docs.filter(d => d.data().email && d.data().password).length;
         const byBranch = {};
         snapshot.forEach(doc => {
             const branch = doc.data().branch || 'Belirtilmemiş';
@@ -4906,7 +4919,7 @@ async function loadPersonelList() {
                 </div>
                 <div style="background:linear-gradient(135deg,#27ae60,#2ecc71);padding:12px 20px;border-radius:10px;color:#fff;display:flex;align-items:center;gap:10px">
                     <span style="font-size:1.5rem">🔓</span>
-                    <div><div style="font-size:1.4rem;font-weight:700">${withAccess}</div><div style="font-size:.75rem;opacity:.8">Sistem Erişimi</div></div>
+                    <div><div style="font-size:1.4rem;font-weight:700">${withAccess}</div><div style="font-size:.75rem;opacity:.8">Giriş Yapabilen</div></div>
                 </div>
                 ${Object.entries(byBranch).map(([branch, count]) => `
                     <div style="background:var(--bg3);padding:12px 20px;border-radius:10px;display:flex;align-items:center;gap:10px">
@@ -4920,7 +4933,7 @@ async function loadPersonelList() {
         container.innerHTML = statsHtml + html;
     } catch (error) {
         console.error('Personel yükleme hatası:', error);
-        container.innerHTML = '<p style="color:var(--red);text-align:center;padding:20px">Yükleme hatası!</p>';
+        container.innerHTML = '<p style="color:var(--red);text-align:center;padding:20px">Yükleme hatası: ' + error.message + '</p>';
     }
 }
 
@@ -4941,7 +4954,6 @@ function showAddPersonelModal(editId = null) {
             <div class="form-group"><label class="form-label">Shift Kod Adı</label><input type="text" id="personelCodeName" class="form-input" placeholder="Örn: Esin İ."><small style="color:var(--tx2);font-size:.7rem">Boş bırakılırsa Ad S. formatı kullanılır</small></div>
             <div class="form-group"><label class="form-label">T.C. Kimlik No *</label><input type="text" id="personelTC" class="form-input" maxlength="11"></div>
             <div class="form-group"><label class="form-label">Telefon</label><input type="tel" id="personelPhone" class="form-input"></div>
-            <div class="form-group"><label class="form-label">E-posta</label><input type="email" id="personelEmail" class="form-input"></div>
             <div class="form-group full"><label class="form-label">Adres</label><input type="text" id="personelAddress" class="form-input"></div>
             <div class="form-group"><label class="form-label">IBAN</label><input type="text" id="personelIBAN" class="form-input"></div>
             <div class="form-group"><label class="form-label">Şube</label><select id="personelBranch" class="form-select">${STATE.branches.map(b => `<option value="${b}">${b}</option>`).join('')}</select></div>
@@ -4950,31 +4962,24 @@ function showAddPersonelModal(editId = null) {
             ${salaryField}
         </div>
         
-        <!-- SİSTEM ERİŞİMİ -->
+        <!-- SİSTEM GİRİŞİ -->
         <div style="margin-top:20px;padding:16px;background:linear-gradient(135deg,rgba(0,140,149,.08),rgba(255,134,116,.08));border-radius:12px;border:1px solid var(--cardBorder)">
             <div style="font-weight:600;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px">
                 <svg width="18" height="18" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                Sistem Erişimi
+                Sistem Girişi
             </div>
             <div class="form-grid">
                 <div class="form-group">
-                    <label class="form-label">Sistem Rolü</label>
-                    <select id="personelRole" class="form-select">
-                        <option value="">-- Rol Seçin (Giriş Yok) --</option>
-                        <option value="barista">🧑‍🍳 Barista (Salt Okunur)</option>
-                        <option value="magaza_muduru">🏪 Mağaza Müdürü</option>
-                        <option value="bolge_muduru">🌍 Bölge Müdürü</option>
-                        <option value="yonetici">👑 Yönetici</option>
-                    </select>
+                    <label class="form-label">E-posta</label>
+                    <input type="email" id="personelEmail" class="form-input" placeholder="ornek@moonberrycoffee.com">
                 </div>
-                <div class="form-group" id="personelPasswordGroup" style="display:none">
-                    <label class="form-label">Şifre (min 6 karakter)</label>
-                    <input type="password" id="personelPassword" class="form-input" minlength="6" placeholder="Yeni kullanıcı için şifre">
-                    <small style="color:var(--tx2);font-size:.7rem">Düzenleme modunda boş bırakılırsa değişmez</small>
+                <div class="form-group">
+                    <label class="form-label">Şifre ${isEdit ? '(değiştirmek için girin)' : ''}</label>
+                    <input type="password" id="personelPassword" class="form-input" minlength="6" placeholder="${isEdit ? 'Boş bırakılırsa değişmez' : 'En az 6 karakter'}">
                 </div>
             </div>
             <div style="font-size:.75rem;color:var(--tx2);margin-top:8px">
-                ⓘ Rol seçilirse personel sisteme e-posta ile giriş yapabilir. E-posta alanı zorunlu olur.
+                ⓘ E-posta ve şifre girilirse personel sisteme giriş yapabilir. Rol pozisyona göre otomatik belirlenir.
             </div>
         </div>
     `;
@@ -4985,15 +4990,6 @@ function showAddPersonelModal(editId = null) {
     `;
     
     showModal(title, body, footer);
-    
-    // Rol seçildiğinde şifre alanını göster
-    setTimeout(() => {
-        const roleSelect = document.getElementById('personelRole');
-        const passwordGroup = document.getElementById('personelPasswordGroup');
-        roleSelect?.addEventListener('change', () => {
-            passwordGroup.style.display = roleSelect.value ? 'block' : 'none';
-        });
-    }, 100);
     
     if (isEdit) {
         loadPersonelForEdit(editId);
@@ -5016,16 +5012,7 @@ async function loadPersonelForEdit(id) {
             document.getElementById('personelPosition').value = p.position || '';
             document.getElementById('personelStartDate').value = p.startDate || '';
             document.getElementById('personelSalary').value = p.salary || '';
-            
-            // Rol alanı
-            const roleSelect = document.getElementById('personelRole');
-            const passwordGroup = document.getElementById('personelPasswordGroup');
-            if (roleSelect) {
-                roleSelect.value = p.role || '';
-                if (p.role) {
-                    passwordGroup.style.display = 'block';
-                }
-            }
+            // Şifre alanı - düzenleme modunda boş bırakılır (değişmeyecekse)
         }
     } catch (error) {
         console.error('Personel yükleme hatası:', error);
@@ -5038,22 +5025,16 @@ async function savePersonel() {
     const tc = document.getElementById('personelTC').value.trim();
     let codeName = document.getElementById('personelCodeName').value.trim();
     const email = document.getElementById('personelEmail').value.trim();
-    const role = document.getElementById('personelRole').value;
     const password = document.getElementById('personelPassword')?.value || '';
+    const position = document.getElementById('personelPosition').value;
     
     if (!name) {
         toast('Ad soyad zorunludur', 'error');
         return;
     }
     
-    // Rol seçildiyse email zorunlu
-    if (role && !email) {
-        toast('Sistem erişimi için e-posta zorunludur', 'error');
-        return;
-    }
-    
-    // Yeni kullanıcı ve rol seçildiyse şifre zorunlu
-    if (!editId && role && password.length < 6) {
+    // Yeni kullanıcı ve email + şifre girildiyse şifre kontrolü
+    if (!editId && email && password && password.length < 6) {
         toast('Şifre en az 6 karakter olmalı', 'error');
         return;
     }
@@ -5068,6 +5049,16 @@ async function savePersonel() {
         }
     }
     
+    // Pozisyondan rol belirleme
+    const positionToRole = {
+        'Barista': 'barista',
+        'Barista / Servis': 'barista',
+        'Mağaza Müdürü': 'magaza_muduru',
+        'Mağaza Müdür Yardımcısı': 'magaza_mudur_yardimcisi',
+        'Bölge Müdürü': 'bolge_muduru'
+    };
+    const role = positionToRole[position] || 'barista';
+    
     const data = {
         name,
         codeName,
@@ -5077,35 +5068,22 @@ async function savePersonel() {
         address: document.getElementById('personelAddress').value.trim(),
         iban: document.getElementById('personelIBAN').value.trim(),
         branch: document.getElementById('personelBranch').value,
-        position: document.getElementById('personelPosition').value,
+        position,
+        role,
         startDate: document.getElementById('personelStartDate').value,
         salary: document.getElementById('personelSalary').value,
-        role: role || null,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedBy: currentUser?.username || 'admin'
     };
     
+    // Şifre girilmişse kaydet
+    if (password) {
+        data.password = password;
+    }
+    
     try {
-        // Firebase Auth işlemleri
-        if (role && email) {
-            if (!editId && password) {
-                // Yeni kullanıcı oluştur
-                try {
-                    // Mevcut oturumu kaydet
-                    const currentAuth = firebase.auth().currentUser;
-                    
-                    // Admin SDK olmadığı için client-side createUser kullanamayız
-                    // Bunun yerine users koleksiyonuna kaydet, ilk giriş şifresini ayarla
-                    data.pendingPassword = password;
-                    data.authStatus = 'pending';
-                    
-                    toast('Kullanıcı bilgileri kaydedildi. İlk girişte şifre oluşturulacak.', 'info');
-                } catch (authError) {
-                    console.warn('Auth hatası:', authError);
-                }
-            }
-            
-            // Users koleksiyonunu da güncelle (geriye uyumluluk)
+        // Email ve şifre varsa users koleksiyonunu da güncelle
+        if (email) {
             await db.collection('users').doc(email).set({
                 email,
                 role,
