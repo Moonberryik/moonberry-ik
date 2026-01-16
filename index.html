@@ -281,8 +281,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
 @keyframes glow{0%,100%{box-shadow:0 0 5px var(--glow-color)}50%{box-shadow:0 0 20px var(--glow-color),0 0 30px var(--glow-color)}}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.2)}}
+@keyframes float-bubble{0%,100%{transform:translateY(0) scale(1);opacity:.6}50%{transform:translateY(-10px) scale(1.1);opacity:1}}
+@keyframes soft-pulse{0%,100%{opacity:.8;box-shadow:0 0 0 0 var(--pulse-color)}50%{opacity:1;box-shadow:0 0 8px 2px var(--pulse-color)}}
 .check-card-active{animation:glow 2s ease-in-out infinite;--glow-color:rgba(0,140,149,.4)}
 .check-card-active.sunberry{--glow-color:rgba(255,134,116,.4)}
+.check-pulse-active{animation:soft-pulse 2s ease-in-out infinite;--pulse-color:rgba(0,140,149,.3)}
+.check-pulse-warning{animation:soft-pulse 1.5s ease-in-out infinite;--pulse-color:rgba(243,156,18,.3)}
+.floating-bubble{position:absolute;border-radius:50%;background:rgba(255,255,255,.3);animation:float-bubble 3s ease-in-out infinite}
 .check-card-shimmer{background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);background-size:200% 100%;animation:shimmer 2s infinite}
 
 /* Responsive */
@@ -483,8 +489,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <!-- Personel Karşılama Kartı - Dinamik -->
                 <div id="welcomeCard" style="margin-bottom:24px;display:none">
                     <div style="background:linear-gradient(135deg,var(--accent),#008c95);border-radius:16px;padding:24px;color:#fff;position:relative;overflow:hidden">
-                        <div style="position:absolute;right:-20px;top:-20px;width:120px;height:120px;background:rgba(255,255,255,.1);border-radius:50%"></div>
-                        <div style="position:absolute;right:40px;bottom:-30px;width:80px;height:80px;background:rgba(255,255,255,.08);border-radius:50%"></div>
+                        <!-- Hareketli Baloncuklar -->
+                        <div class="floating-bubble" style="right:20px;top:20px;width:60px;height:60px;animation-delay:0s"></div>
+                        <div class="floating-bubble" style="right:60px;bottom:10px;width:40px;height:40px;animation-delay:.5s"></div>
+                        <div class="floating-bubble" style="right:100px;top:40px;width:25px;height:25px;animation-delay:1s"></div>
+                        <div class="floating-bubble" style="right:-10px;bottom:30px;width:80px;height:80px;animation-delay:1.5s;opacity:.4"></div>
                         <div style="position:relative;z-index:1">
                             <div style="font-size:.85rem;opacity:.9;margin-bottom:4px" id="welcomeDate">Yükleniyor...</div>
                             <div style="font-size:1.4rem;font-weight:700;margin-bottom:12px" id="welcomeMessage">Hoş geldin!</div>
@@ -9918,9 +9927,49 @@ async function loadTodayChecks() {
     if (hasActiveChecks) {
         section.style.display = 'block';
         container.innerHTML = html;
+        
+        // Canlı geriye sayım başlat
+        startDashboardCountdown();
     } else {
         section.style.display = 'none';
     }
+}
+
+// Canlı geriye sayım güncelleme
+let dashboardCountdownInterval = null;
+function startDashboardCountdown() {
+    // Önceki interval'i temizle
+    if (dashboardCountdownInterval) clearInterval(dashboardCountdownInterval);
+    
+    dashboardCountdownInterval = setInterval(() => {
+        const timers = document.querySelectorAll('.countdown-timer');
+        timers.forEach(timer => {
+            const target = timer.dataset.target;
+            if (!target) return;
+            
+            const now = new Date();
+            const [hours, minutes] = target.split(':').map(Number);
+            const targetTime = new Date(now);
+            targetTime.setHours(hours, minutes, 0, 0);
+            
+            const diff = targetTime - now;
+            if (diff <= 0) {
+                timer.textContent = 'Süre doldu';
+                return;
+            }
+            
+            const mins = Math.floor(diff / 60000);
+            const secs = Math.floor((diff % 60000) / 1000);
+            
+            if (mins >= 60) {
+                const h = Math.floor(mins / 60);
+                const m = mins % 60;
+                timer.textContent = `${h} saat ${m} dk`;
+            } else {
+                timer.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+        });
+    }, 1000);
 }
 
 // Check kartı render helper - kompakt versiyon
@@ -9929,11 +9978,19 @@ function renderCheckCard(checkType, timeSlot, branch, isCompleted, submissionDat
     const brandColor = isMoonberry ? '#008c95' : '#ff8674';
     const brandBg = isMoonberry ? 'rgba(0,140,149,.08)' : 'rgba(255,134,116,.08)';
     
+    // Puan kuralları
+    const rules = CHECK_RULES[checkType.id];
+    const missedPoints = rules?.points?.missed || -2;
+    const latePoints = rules?.points?.late || -2;
+    const onTimePoints = rules?.points?.onTime || 1;
+    
     let bgColor = 'var(--bg3)';
     let accentColor = 'var(--tx3)';
     let icon = '○';
     let statusText = '';
     let isActive = false;
+    let pulseClass = '';
+    let riskText = '';
     
     if (isCompleted) {
         bgColor = 'rgba(39,174,96,.06)';
@@ -9941,47 +9998,66 @@ function renderCheckCard(checkType, timeSlot, branch, isCompleted, submissionDat
         icon = '●';
         statusText = 'Tamam';
     } else if (window?.isMissed) {
-        bgColor = brandBg;
-        accentColor = brandColor;
+        bgColor = 'var(--bg3)';
+        accentColor = '#9ca3af';  // Gri
         icon = '○';
-        statusText = 'Kaçırıldı';
+        statusText = `${missedPoints} puan`;
+        riskText = 'Süre doldu';
     } else if (window?.isLate) {
         bgColor = 'rgba(243,156,18,.06)';
         accentColor = '#f39c12';
         icon = '◐';
         statusText = 'Geç';
         isActive = true;
+        pulseClass = 'check-pulse-warning';
+        riskText = `${latePoints} puan riski`;
     } else if (window?.isInWindow) {
         bgColor = brandBg;
         accentColor = brandColor;
         icon = '●';
         statusText = 'Aktif';
         isActive = true;
+        pulseClass = 'check-pulse-active';
+        riskText = `+${onTimePoints} puan`;
     }
     
-    // Sorumlu personel - kısa gösterim
-    let personnelText = '';
-    if (responsiblePersonnel && responsiblePersonnel.length > 0 && responsiblePersonnel[0]) {
-        const firstName = responsiblePersonnel[0].split(' ')[0].toUpperCase();
-        personnelText = `<span style="color:var(--tx3);margin-left:6px">• ${firstName}</span>`;
+    // Sorumlu personel butonları - ADİL DAĞITIM
+    let personnelHtml = '';
+    if (responsiblePersonnel && responsiblePersonnel.length > 0 && !isCompleted) {
+        if (responsiblePersonnel.length === 1) {
+            personnelHtml = `<span style="font-size:.7rem;color:var(--tx2);margin-left:4px">• ${responsiblePersonnel[0].split(' ')[0]}</span>`;
+        } else {
+            // Birden fazla personel - butonlarla seç
+            personnelHtml = `<div style="display:flex;gap:4px;margin-left:8px">`;
+            responsiblePersonnel.slice(0, 3).forEach((p, i) => {
+                const firstName = p.split(' ')[0];
+                personnelHtml += `<span style="font-size:.65rem;padding:2px 6px;background:${i === 0 ? accentColor : 'var(--bg4)'};color:${i === 0 ? '#fff' : 'var(--tx2)'};border-radius:4px;cursor:pointer" onclick="event.stopPropagation()">${firstName}</span>`;
+            });
+            personnelHtml += `</div>`;
+        }
     }
     
-    // Kalan süre - kompakt
-    let timeText = '';
+    // Kalan süre ve risk bilgisi
+    let timeHtml = '';
     if (!isCompleted && remaining && !remaining.isExpired && isActive) {
-        timeText = `<span style="color:var(--tx3);font-size:.7rem;margin-left:8px">⏱ ${remaining.text}</span>`;
+        timeHtml = `<span style="font-size:.7rem;color:var(--tx2);display:flex;align-items:center;gap:4px">
+            <span class="countdown-timer" data-target="${window?.end || ''}" style="font-weight:500">${remaining.text}</span>
+            <span style="color:${accentColor};font-size:.65rem">${riskText}</span>
+        </span>`;
+    } else if (!isCompleted && window?.isMissed) {
+        timeHtml = `<span style="font-size:.7rem;color:#9ca3af">${riskText}</span>`;
     }
     
     return `
-        <div style="background:${bgColor};border-left:3px solid ${accentColor};border-radius:6px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:6px" onclick="goTo('checklist')">
-            <div style="display:flex;align-items:center;gap:8px">
-                <span style="color:${accentColor};font-size:.9rem">${icon}</span>
-                <span style="font-weight:500;font-size:.85rem;color:var(--tx)">${checkType.name} - ${timeSlot}</span>
-                ${personnelText}
+        <div class="${pulseClass}" style="background:${bgColor};border-left:3px solid ${accentColor};border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:8px;transition:all .2s;opacity:${window?.isMissed ? '0.6' : '1'}" onclick="goTo('checklist')">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="color:${accentColor};font-size:1rem;${isActive ? 'animation:pulse-dot 1.5s infinite' : ''}">${icon}</span>
+                <span style="font-weight:600;font-size:.85rem;color:var(--tx)">${checkType.name} - ${timeSlot}</span>
+                ${personnelHtml}
             </div>
-            <div style="display:flex;align-items:center;gap:6px">
-                ${timeText}
-                <span style="font-size:.75rem;font-weight:600;color:${accentColor};padding:2px 8px;background:${bgColor};border-radius:4px">${statusText}</span>
+            <div style="display:flex;align-items:center;gap:8px">
+                ${timeHtml}
+                <span style="font-size:.75rem;font-weight:600;color:${accentColor};padding:3px 10px;background:${isCompleted ? 'rgba(39,174,96,.1)' : window?.isMissed ? 'var(--bg3)' : bgColor};border-radius:6px">${statusText}</span>
             </div>
         </div>
     `;
