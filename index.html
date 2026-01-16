@@ -1703,309 +1703,92 @@ let db = null;
 let currentUser = null;
 
 // Varsayılan puantaj kuralları
-const DEFAULT_PUANTAJ_RULES = [
-    { id: 'R01', title: '5x "1 Yıldız"', effect: 'prim_yok', desc: 'Aynı ay içinde 5 kez 1 yıldız alan personel prim hakkını kaybeder' },
-    { id: 'R02', title: 'Online ≤2 Yıldız', effect: '-1', desc: 'Online platformlarda (Google, Yemeksepeti vb.) 2 veya altı yıldız alınması' },
-    { id: 'R03', title: 'Mazeretsiz Devamsızlık', effect: '-2', desc: 'Mazeretsiz devamsızlık yapılması' },
-    { id: 'R04', title: 'Müşteri Şikayeti', effect: '-1', desc: 'Doğrulanmış müşteri şikayeti' }
-];
 
-// ==================== DEFAULT STATE ====================
-const DEFAULT_STATE = {
-    company: {
-        name: 'TAMASLAN KAFE RESTORAN VE GIDA HİZMETLERİ SANAYİ İÇ VE DIŞ TİCARET LİMİTED ŞİRKETİ',
-        short: 'MOONBERRY COFFEE',
-        mersis: '0817072351000001',
-        address: 'DUATEPE MAH. ERGENEKON CAD. KONAK APT NO: 109 C ŞİŞLİ / İSTANBUL',
-        tel: '+90 533 486 63 66',
-        email: 'info@moonberrycoffee.com',
-        vergiNo: '8170723510',
-        vergiDairesi: 'Şişli',
-        kep: 'tamaslan@hs01.kep.tr'
-    },
-    branches: ['Şişli (Merkez)', 'Tuzla Port'],
-    branchCodes: {'Şişli (Merkez)': 'SIS', 'Tuzla Port': 'TZL'},
-    positions: [
-        {id: 'barista', name: 'Barista / Servis', type: 'Mavi Yaka'},
-        {id: 'mudur_yardimcisi', name: 'Müdür Yardımcısı', type: 'Gri Yaka'},
-        {id: 'magaza_muduru', name: 'Mağaza Müdürü', type: 'Beyaz Yaka'},
-        {id: 'bolge_muduru', name: 'Bölge Müdürü', type: 'Stratejik'}
-    ],
-    violations: [
-        {id:'V01',title:'Telefon Kullanımı',risk:'low',legal:'İş K. 25/II-h',steps:['Sözlü uyarı','Yazılı uyarı','İhtar'],desc:'Mesai saatinde telefon kullanımı'},
-        {id:'V02',title:'Geç Kalma (<30dk)',risk:'low',legal:'İş K. 25/II-h',steps:['Sözlü uyarı','Tekrarda yazılı','İhtar'],desc:'30 dakika altı geç kalma'},
-        {id:'V03',title:'Geç Kalma (>30dk)',risk:'medium',legal:'İş K. 25/II-g',steps:['Tutanak','Savunma','İhtar','Fesih'],desc:'30 dakika üstü geç kalma'},
-        {id:'V04',title:'1 Gün Devamsızlık',risk:'medium',legal:'İş K. 25/II-g',steps:['Tutanak','Savunma','İhtar'],desc:'Mazeretsiz 1 gün devamsızlık'},
-        {id:'V05',title:'2+ Gün Devamsızlık',risk:'high',legal:'İş K. 25/II-g',steps:['Her gün tutanak','Savunma','6 iş günü içinde fesih'],desc:'Ardı ardına 2+ gün mazeretsiz devamsızlık - Haklı fesih sebebi'},
-        {id:'V06',title:'Kasa Açığı',risk:'medium',legal:'TBK 407',steps:['Sayım tutanağı','Savunma','Borç İkrar'],desc:'Kasada nakit eksikliği tespit edilmesi'},
-        {id:'V07',title:'Ürün Götürme',risk:'high',legal:'İş K. 25/II-e',steps:['Tutanak','Kamera kayıt','Savunma','Fesih'],desc:'İzinsiz ürün götürme - Güveni kötüye kullanma'},
-        {id:'V08',title:'Müşteriye Hakaret',risk:'high',legal:'İş K. 25/II-d',steps:['Tutanak','Şikayet kaydı','Savunma','Fesih'],desc:'Müşteriye kaba davranış veya hakaret'},
-        {id:'V09',title:'İşyerinde Kavga',risk:'high',legal:'İş K. 25/II-d',steps:['İki taraf tutanak','Şahit ifadeleri','Savunma','Fesih'],desc:'İşyerinde fiziksel veya sözlü kavga'},
-        {id:'V10',title:'Hijyen İhlali',risk:'high',legal:'İş K. 25/II-ı',steps:['Tutanak','Savunma','Derhal fesih'],desc:'El yıkamama, SKT ihlali, çapraz bulaşma'},
-        {id:'V11',title:'Alkol/Uyuşturucu',risk:'high',legal:'İş K. 25/II-d',steps:['Tutanak (2 şahit)','Derhal fesih'],desc:'İşe alkollü veya uyuşturucu etkisinde gelme'},
-        {id:'V12',title:'İş Reddi',risk:'medium',legal:'İş K. 25/II-h',steps:['Tutanak','Savunma','İhtar','Fesih'],desc:'Verilen görevi reddetme - "Benim işim değil" tutumu'},
-        {id:'V13',title:'Ticari Sır İfşası',risk:'high',legal:'TCK 239',steps:['Delil toplama','Tutanak','Fesih + Suç duyurusu'],desc:'Reçete, maliyet, tedarikçi bilgisi paylaşımı'},
-        {id:'V14',title:'Sosyal Medya İhlali',risk:'medium',legal:'İş K. 25/II-b',steps:['Ekran görüntüsü','Tutanak','Savunma'],desc:'İşveren aleyhine sosyal medya paylaşımı'},
-        {id:'V15',title:'İmzadan İmtina',risk:'low',legal:'Yargıtay içtihatı',steps:['İmtina tutanağı','2 şahit imzası'],desc:'Belge imzalamaktan kaçınma'},
-        {id:'V16',title:'Kılık Kıyafet',risk:'low',legal:'İş K. 25/II-h',steps:['Sözlü uyarı','Yazılı uyarı','İhtar'],desc:'Üniforma giymeme veya uygunsuz kıyafet'},
-        {id:'V17',title:'Demirbaş Hasarı',risk:'medium',legal:'TBK 407',steps:['Hasar tutanağı','Savunma','Borç İkrar'],desc:'POS, tablet, ekipman hasarı'},
-        {id:'V18',title:'Yetkisiz İndirim',risk:'high',legal:'İş K. 25/II-e',steps:['POS kaydı kontrolü','Tutanak','Fesih'],desc:'İzinsiz ücretsiz ürün verme veya indirim yapma'},
-        {id:'V19',title:'Hırsızlık',risk:'high',legal:'İş K. 25/II-e + TCK 141',steps:['Tutanak','Kamera kayıt','Kolluk bildirimi','Derhal fesih + Suç duyurusu'],desc:'İşyerinden para, ürün veya malzeme çalma'},
-        {id:'V20',title:'Zimmet',risk:'high',legal:'TCK 247',steps:['Mali denetim','Tutanak','Fesih + Suç duyurusu'],desc:'Kendisine tevdi edilen şirket malını sahiplenme'},
-        {id:'V21',title:'Sahte Belge',risk:'high',legal:'TCK 204 + İş K. 25/II-a',steps:['Belge incelemesi','Tutanak','Fesih + Suç duyurusu'],desc:'Sahte rapor, diploma veya evrak sunma'},
-        {id:'V22',title:'İzinsiz İşten Ayrılma',risk:'high',legal:'İş K. 25/II-g',steps:['Devamsızlık tutanağı','Noter ihtarı','Fesih'],desc:'Haber vermeden işi terk etme'},
-        {id:'V23',title:'Cinsel Taciz',risk:'high',legal:'İş K. 25/II-c + TCK 105',steps:['Şikayet kaydı','İfade alma','Fesih + Suç duyurusu'],desc:'İşyerinde cinsel taciz'},
-        {id:'V24',title:'Sözlü Taciz',risk:'medium',legal:'İş K. 25/II-d',steps:['Tutanak','Şahit ifadeleri','Savunma','Fesih'],desc:'Sözlü sarkıntılık, uygunsuz espri veya laf atma'},
-        {id:'V25',title:'Tehdit',risk:'high',legal:'İş K. 25/II-d + TCK 106',steps:['Tutanak','Şahit ifadeleri','Fesih + Suç duyurusu'],desc:'İş arkadaşı veya yöneticiye tehdit'},
-        {id:'V26',title:'Mobbing Uygulama',risk:'high',legal:'İş K. 25/II-d + TBK 417',steps:['Şikayet kaydı','Soruşturma','Savunma','Fesih'],desc:'Sistematik psikolojik baskı uygulama'},
-        {id:'V27',title:'Güvenlik Kuralı İhlali',risk:'high',legal:'İş K. 25/II-ı',steps:['Tutanak','Savunma','İhtar veya Fesih'],desc:'İş güvenliği kurallarını ihlal etme'},
-        {id:'V28',title:'Yangın Güvenliği İhlali',risk:'high',legal:'İş K. 25/II-ı',steps:['Tutanak','Savunma','Derhal fesih'],desc:'Yangın çıkışını engelleme, yangın söndürücü ile oynama'},
-        {id:'V29',title:'İş Kazası Gizleme',risk:'high',legal:'5510 SK + İş K. 25/II',steps:['Tutanak','SGK bildirimi','Savunma','Fesih'],desc:'İş kazasını bildirmeme veya gizleme'},
-        {id:'V30',title:'Müşteri Verisi Paylaşma',risk:'high',legal:'KVKK + İş K. 25/II-e',steps:['Delil toplama','Tutanak','Fesih'],desc:'Müşteri bilgilerini izinsiz paylaşma'},
-        {id:'V31',title:'Rüşvet/Komisyon',risk:'high',legal:'TCK 252 + İş K. 25/II-e',steps:['Delil toplama','Tutanak','Fesih + Suç duyurusu'],desc:'Tedarikçi veya müşteriden rüşvet/komisyon alma'},
-        {id:'V32',title:'Rakiple İşbirliği',risk:'high',legal:'TBK 396 + İş K. 25/II-e',steps:['Delil toplama','Tutanak','Fesih'],desc:'Rakip firma ile gizli işbirliği'},
-        {id:'V33',title:'Dedikodu/Fitne',risk:'low',legal:'İş K. 25/II-d',steps:['Sözlü uyarı','Tutanak','Savunma','İhtar'],desc:'İşyeri huzurunu bozucu dedikodu yayma'},
-        {id:'V34',title:'Mal Kabul Usulsüzlüğü',risk:'high',legal:'İş K. 25/II-e',steps:['Stok kontrolü','Tutanak','Fesih'],desc:'Teslim alınmayan malı kabul etmiş gibi gösterme'},
-        {id:'V35',title:'Eğitime Katılmama',risk:'low',legal:'İş K. 25/II-h',steps:['Sözlü uyarı','Yazılı uyarı','İhtar'],desc:'Zorunlu eğitimlere mazeretsiz katılmama'},
-        {id:'V36',title:'İzinsiz Fotoğraf/Video',risk:'medium',legal:'KVKK + İş K. 25/II-e',steps:['Tutanak','Savunma','İhtar veya Fesih'],desc:'İşyerinde izinsiz fotoğraf veya video çekme'},
-        {id:'V37',title:'Mesai Saati Manipülasyonu',risk:'high',legal:'İş K. 25/II-e',steps:['PDKS kaydı','Tutanak','Fesih'],desc:'Giriş-çıkış saatlerini manipüle etme'},
-        {id:'V38',title:'Sahte Mazeret',risk:'medium',legal:'İş K. 25/II-a',steps:['Belge doğrulama','Tutanak','Savunma','Fesih'],desc:'Gerçek dışı mazeret beyan etme'}
-    ],
-    templates: {
-        barista: `<div class="doc-article"><div class="doc-article-title">MADDE 2: GÖREV TANIMI, YETKİ VE SORUMLULUKLAR</div><div class="doc-article-content">
-<p><strong>2.1. Pozisyonun Niteliği:</strong> Personel, işletmede "BARİSTA VE MAĞAZA OPERASYON SORUMLUSU" unvanı ile istihdam edilmiştir. Taraflar, bu pozisyonun doğası gereği sadece içecek hazırlamayı değil; mağazanın genel düzenini, hijyenini, lojistiğini ve operasyonel akışını sağlamayı kapsayan bütünleşik bir görev olduğu konusunda mutabıktır.</p>
-<p><strong>2.2. Asli Görevler (Çok Yönlü Çalışma Taahhüdü):</strong> Personel, aşağıda belirtilen görevlerin iş tanımının asli unsurları olduğunu, bu görevlerin kendisinden talep edilmesinin 4857 sayılı İş Kanunu'nun 22. maddesi kapsamında "çalışma koşullarında esaslı değişiklik" sayılmayacağını peşinen kabul ve taahhüt eder:</p>
-<p>a) <strong>Üretim ve Servis:</strong> İşletmenin standart reçetelerine (gramaj, ısı, sunum) birebir uyarak kahve, soğuk/sıcak içecek ve yiyecek hazırlamak; müşteriyi karşılamak, sipariş almak, masaya servis yapmak ve boşları toplamak.</p>
-<p>b) <strong>Sanitasyon ve Temizlik:</strong> Gıda güvenliği (HACCP) ve işletme standartları gereği; bar istasyonu, espresso makinesi, müşteri masaları, zeminler, depo alanları, camlar ve mağaza tuvaletlerinin (WC) hijyen planına uygun olarak periyodik temizliğini, dezenfeksiyonunu ve kontrolünü bizzat yapmak.</p>
-<p>c) <strong>Lojistik ve Stok:</strong> Mal kabulü yapmak, kolileri taşımak, rafları düzenlemek, FIFO (İlk Giren İlk Çıkar) kuralına göre stok takibi ve Son Kullanma Tarihi (SKT) kontrollerini gerçekleştirmek.</p>
-<p>d) <strong>Destek Hizmetleri (Kurye/Valet):</strong> İşverenin talep etmesi ve Personelin gerekli yasal ehliyet ve yetkinlik belgelerine (Sürücü Belgesi, SRC, Psikoteknik vb.) sahip olması kaydıyla; paket servis lojistiği ve otopark düzeni konularında destek vermek. Personel, bu görevleri ifa ederken Karayolları Trafik Kanunu'na ve İSG kurallarına tam uyum sağlamakla yükümlüdür.</p>
-<p><strong>2.3. Nakil Yetkisi:</strong> İşveren, operasyonel gereklilikler halinde Personel'i, aynı il sınırları içerisindeki mevcut veya ileride açılacak diğer "Moonberry Coffee" şubelerinde, unvanı ve ücreti korunmak kaydıyla geçici veya sürekli olarak görevlendirme hakkına sahiptir. Personel, bu değişikliği peşinen kabul eder.</p>
-</div></div>
+// ==================== CONFIG FROM FIREBASE ====================
+// Tüm config verileri Firebase'den yüklenir
+// HTML kaynağında hassas veri bulunmaz
 
-<div class="doc-article"><div class="doc-article-title">MADDE 3: ÇALIŞMA SÜRESİ, FAZLA MESAİ VE ÜCRET</div><div class="doc-article-content">
-<p><strong>3.1. Çalışma Süresi:</strong> Haftalık çalışma süresi yasal sınır olan 45 saattir. İşveren, bu süreyi işyerinin açılış-kapanış saatlerine ve yoğunluğuna göre, günde 11 saati aşmamak kaydıyla haftanın çalışılan günlerine farklı şekillerde bölebilir. İşveren, İş Kanunu m. 63 uyarınca 2 (iki) aylık süreler içinde "Denkleştirme" uygulayabilir.</p>
-<p><strong>3.2. Ücret ve Fazla Mesai (Yıllık 270 Saat Dahil):</strong></p>
-<p>a) Personelin aylık maktu brüt ücreti {{UCRET}} TL'dir.</p>
-<p>b) Belirlenen bu ücret, yasal asgari ücretin üzerinde (emsal ücret) tespit edilmiştir. Taraflar; İş Kanunu'nun 41. maddesi uyarınca yapılabilecek yıllık 270 saate kadar olan fazla çalışmaların ile ulusal bayram ve genel tatil günlerindeki çalışmaların karşılığının, kararlaştırılan bu aylık ücrete dahil olduğu hususunda mutabık kalmışlardır.</p>
-<p>c) Personel, yıllık 270 saati aşmayan bu çalışmalar için aylık maaşı dışında ayrıca bir fazla mesai ücreti talep etmeyeceğini beyan eder.</p>
-<p>d) Yıllık 270 saati aşan fazla çalışmaların ücreti, İş Kanunu hükümleri uyarınca ayrıca ödenir veya mevzuata uygun olarak serbest zaman şeklinde kullandırılır.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 4: KASA TAZMİNATI VE AÇIKLAR (TBK m. 407/2 Uyumlu)</div><div class="doc-article-content">
-<p><strong>4.1. Kasa Tazminatı:</strong> Kasa sorumluluğu verilen Personele, üstlendiği finansal riskin ve özen borcunun karşılığı olarak, aylık ücret bordrosunda "Kasa Tazminatı" adı altında ayrı bir ek ödeme yapılır.</p>
-<p><strong>4.2. Açıkların Mahsubu:</strong> Kasada oluşacak nakit veya hesaben açıklar, öncelikle ve münhasıran o ay Personele tahakkuk ettirilen Kasa Tazminatı tutarından mahsup edilir.</p>
-<p><strong>4.3. Tazminatı Aşan Açıklar:</strong> Kasa açığının, ödenen kasa tazminatı tutarını aşması halinde; Personel, söz konusu açığın kendi kusurundan veya ihmalinden (hatalı işlem, eksik tahsilat, kayıp vb.) kaynaklandığını kabul ettiği takdirde, ilgili tutarın ücretinin yasal olarak haczedilebilir kısmından (1/4 oranında) kesilmesine her somut olayda ayrıca yazılı onay verecektir. Personelin rızasının olmadığı veya kasıt/ağır ihmal şüphesinin bulunduğu durumlarda İşverenin yasal yollara başvurma hakkı saklıdır.</p>
-<p><strong>4.4. Bahşiş (Tip) Politikası:</strong> İşletmede müşteriler tarafından bırakılan bahşişler (tip), İşveren tarafından verilen bir ücret veya ücret eki değildir. İşveren, kredi kartı veya nakit olarak toplanan bahşişlerin personele dağıtılmasında sadece "aracı" sıfatına sahiptir. Bahşiş gelirleri, kıdem ve ihbar tazminatı hesabına dahil edilen giydirilmiş ücret kavramına dahil edilmez.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 5: EĞİTİM GİDERLERİ VE CEZAİ ŞART</div><div class="doc-article-content">
-<p><strong>5.1.</strong> İşveren tarafından Personele, mesleki gelişimini sağlamak amacıyla verilecek olan sertifikalı barista eğitimleri, özel kahve teknikleri kursları ve benzeri yüksek maliyetli eğitimler karşılığında; Personel, eğitimin tamamlandığı tarihten itibaren en az 12 (on iki) ay süreyle İşveren nezdinde çalışmayı taahhüt eder.</p>
-<p><strong>5.2.</strong> Personelin, bu süre dolmadan haklı bir neden olmaksızın istifa etmesi veya İşveren tarafından haklı nedenle (İş K. m. 25/II - Ahlak ve iyi niyet kurallarına aykırılık) işten çıkarılması halinde; Personel, kendisine yapılan belgelendirilmiş eğitim masraflarını (eğitmen ücreti, kurs bedeli, materyal vb.), kalan çalışma süresiyle orantılı olarak İşverene nakden ve defaten ödemeyi kabul ve taahhüt eder.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 6: YASAKLAR VE FESİH NEDENLERİ</div><div class="doc-article-content">
-<p><strong>6.1. Artık Ürün (Leftover/Waste):</strong> İşyerinde satılamayan, zayi olan veya müşteriden dönen ürünlerin (waste) Personel tarafından izinsiz tüketilmesi, eve götürülmesi veya üçüncü şahıslara ikram edilmesi kesinlikle yasaktır. Bu eylem, değeri ne olursa olsun "İşverenin Güvenini Kötüye Kullanma" (İş K. m. 25/II-e) ve TCK m. 155 kapsamında suç teşkil eder; tazminatsız derhal fesih sebebidir.</p>
-<p><strong>6.2. Tıbbi Gizleme:</strong> Personel, gıda güvenliğini tehdit eden bulaşıcı hastalıkları (sarılık, tüberküloz, açık yara, ishal vb.) derhal işverene bildirmek zorundadır. Bu durumun gizlenerek çalışmaya devam edilmesi, halk sağlığını tehlikeye attığı gerekçesiyle haklı fesih nedenidir.</p>
-<p><strong>6.3. Kişisel Veriler ve Sır Saklama:</strong> Personel, işyeri sınırları içerisinde (mutfak, bar, depo vb.) izinsiz fotoğraf veya video çekemez. İşletmenin reçetelerini, operasyonel sırlarını veya müşterileri içeren görsellerin sosyal medyada paylaşılması "Sadakat Borcuna Aykırılık" sayılır ve haklı fesih nedenidir.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 7: İŞYERİ GÜVENLİĞİ VE KAMERA KAYDI (KVKK AYDINLATMA)</div><div class="doc-article-content">
-<p><strong>7.1.</strong> İşyeri güvenliği, gıda güvenliği süreçlerinin takibi, iş sağlığı ve güvenliği ile hırsızlık gibi suçların önlenmesi amacıyla; işyerinin ortak alanlarında, üretim bölümlerinde, kasa noktalarında ve depo alanlarında 7/24 görüntü (CCTV/Video) kaydı yapılmaktadır.</p>
-<p><strong>7.2.</strong> İşyerinde, yasal zorunluluklar ve istisnalar saklı kalmak kaydıyla, ses (audio) kaydı alınmamaktadır. Tuvalet, soyunma odası gibi mahremiyet içeren alanlarda kesinlikle izleme yapılmaz.</p>
-<p><strong>7.3.</strong> PERSONEL, işyerinde güvenlik kameralarının bulunduğunu bildiğini, bu verilerin işlenmesine ilişkin KVKK Aydınlatma Metni'nin kendisine tebliğ edildiğini ve İşverenin meşru menfaati kapsamında görüntü kaydı alınmasına rıza gösterdiğini kabul eder.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 8: DENEME SÜRESİ VE YÜRÜRLÜK</div><div class="doc-article-content">
-<p><strong>8.1.</strong> İşbu sözleşmede deneme süresi 2 (İki) aydır. Taraflar bu süre içinde iş sözleşmesini bildirim süresine gerek olmaksızın ve tazminatsız feshedebilir.</p>
-<p><strong>8.2.</strong> 8 (Sekiz) maddeden ve 3 (üç) sayfadan ibaret işbu sözleşme, {{BASLAMA}} tarihinde taraflarca okunarak, içeriği tam olarak anlaşılmak suretiyle tek nüsha olarak imzalanmış ve aslı İşverende kalmak üzere, bir sureti (fotokopisi) PERSONEL'e elden teslim edilmiştir.</p>
-</div></div>`,
-        mudur_yardimcisi: `<div class="doc-article"><div class="doc-article-title">MADDE 2: SÖZLEŞMENİN KONUSU VE HUKUKİ STATÜ</div><div class="doc-article-content">
-<p>İşbu sözleşmenin konusu, PERSONEL'in İŞVEREN'e ait "Moonberry Coffee" markalı işyerlerinde "Mağaza Müdür Yardımcısı" unvanı ile, aşağıda belirtilen görev tanımı, 4857 sayılı İş Kanunu, 6098 sayılı Türk Borçlar Kanunu ve işletme prosedürleri çerçevesinde iş görme edimini; İŞVEREN'in de buna karşılık ücret ödeme edimini yerine getirmesidir. PERSONEL, kendisine bağlı alt ekipler (barista, servis elemanı, temizlik personeli vb.) üzerinde yönetim, denetim, vardiya düzenleme ve talimat verme yetkisine sahip olup; işletmenin işleyişinden sorumlu yönetici sıfatını haizdir.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 3: GÖREV TANIMI VE "HİBRİT ÇALIŞMA" ESASI</div><div class="doc-article-content">
-<p><strong>3.1. Entegre ve Çok Yönlü Görev Tanımı:</strong> PERSONEL, bu pozisyonun sadece "idari/masa başı" bir yöneticilik olmadığını; perakende ve hizmet sektörünün doğası gereği hem yönetimsel hem de operasyonel (fiili) görevleri kapsadığını kabul eder. Aşağıdaki görevlerin tamamı PERSONEL'in "Asli İşi" sayılır ve bu görevlerin talep edilmesi "çalışma koşullarında esaslı değişiklik" (İş K. m. 22) teşkil etmez:</p>
-<p>a) <strong>Yönetim ve Temsil:</strong> Mağaza Müdürü'nün bulunmadığı zamanlarda işletmeyi tam yetkili olarak sevk ve idare etmek, vardiya çizelgelerini (shift plan) yasal mevzuata ve operasyonel verimliliğe uygun hazırlamak, personelin kılık-kıyafet, mesai ve hijyen denetimini yapmak.</p>
-<p>b) <strong>Fiili Operasyonel Destek:</strong> İşletmenin yoğun olduğu saatlerde, personel eksikliğinde, mola değişimlerinde veya işin gerektirdiği hallerde; bizzat bar arkasına geçerek ürün hazırlamak, servis yapmak, masaları toplamak, bulaşık alanını koordine etmek ve kasaya bakmak.</p>
-<p>c) <strong>Sanitasyon ve Denetim:</strong> Gıda güvenliği (HACCP) standartlarının uygulanmasını denetlemek ve bizzat sağlamak. Gerektiğinde; müşteri tuvaletleri, zemin, depo ve üretim alanlarının temizlik kontrollerini yapmak ve temizlik operasyonuna fiilen katılmak.</p>
-<p>d) <strong>Stok ve Maliyet Kontrolü:</strong> Günlük, haftalık ve aylık stok sayımlarını bizzat yönetmek; zayi (waste) oranlarını raporlamak, Son Kullanma Tarihi (SKT) kontrollerini yapmak, mal kabul süreçlerini yürütmek.</p>
-<p><strong>3.2. Görev Yeri ve Nakil Yetkisi:</strong> İŞVEREN, işletmesel gereklilik halinde PERSONEL'i, aynı il sınırları (Büyükşehir Belediyesi sınırları dahil) içerisindeki mevcut veya açılacak diğer şubelerinde, personelin ikametgahına makul ulaşım imkanları gözetilerek aynı veya eşdeğer bir pozisyonda görevlendirme hakkına sahiptir. PERSONEL, bu nakil yetkisini peşinen kabul ettiğini beyan eder.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 4: ÇALIŞMA SÜRELERİ, FAZLA MESAİ VE ÜCRET SİSTEMİ</div><div class="doc-article-content">
-<p><strong>4.1. Çalışma Düzeni:</strong> Haftalık çalışma süresi yasal sınır olan 45 saattir. PERSONEL, yönetici sıfatıyla mağazanın açılış-kapanış, sayım ve raporlama süreçlerinden sorumlu olduğundan, mesai saatleri bu gerekliliklere göre İŞVEREN tarafından düzenlenir. İŞVEREN, İş Kanunu m. 63 uyarınca 2 (iki) aylık denkleştirme uygulayabilir.</p>
-<p><strong>4.2. Yıllık 270 Saat Fazla Mesainin Ücrete Dahil Olması:</strong> PERSONEL'in aylık brüt ücreti, üstlendiği yönetim sorumluluğu ve operasyonel yük dikkate alınarak yasal asgari ücretin üzerinde (emsal ücret) tespit edilmiştir. Taraflar, yıllık 270 saate kadar (aylık ortalama 22,5 saat) yapılacak fazla çalışma ücretlerinin, kararlaştırılan aylık ücrete dahil olduğu hususunda mutabık kalmışlardır. PERSONEL, yıllık 270 saati aşmayan fazla çalışmalar için ayrıca bir ücret talep etmeyeceğini kabul eder. (Not: Ulusal Bayram ve Genel Tatil günlerinde yapılan çalışmalar ile hafta tatili çalışmaları bu 270 saatlik kapsama dahil olmayıp, çalışılması halinde ayrıca ödenir.)</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 5: ÜCRET, YAN HAKLAR VE MALİ SORUMLULUK</div><div class="doc-article-content">
-<p><strong>5.1. Ücret:</strong> PERSONEL'e aylık Brüt {{UCRET}} TL ücret ödenecektir. Ücret ödemeleri banka kanalıyla yapılır. Varsa yol ve yemek yardımları şirket politikalarına göre ayni veya nakdi olarak ayrıca belirlenir.</p>
-<p><strong>5.2. Kasa Tazminatı ve Mali Sorumluluk:</strong> Nakit, stok ve zimmet güvenliğini yönetmesi sebebiyle PERSONEL'e, aylık ücretine ek olarak (bordroda belirtilmek suretiyle) "Mali Sorumluluk / Kasa Tazminatı" ödenir. PERSONEL, kendi görev alanı ve denetim sorumluluğundaki kasa açıklarından ve stok kayıplarından (hırsızlık, kayıp, usulsüz ikram vb.), kusurunun tespiti halinde şahsen sorumludur. Tespit edilen ve PERSONEL'in kusuruna (kasıt, ihmal veya dikkatsizlik) dayanan zararlar; öncelikle olay bazında alınacak yazılı onayı ile kasa tazminatından ve hakedişinden mahsup edilir. Personelin onay vermemesi halinde İŞVEREN'in Borçlar Kanunu ve İş Kanunu hükümleri uyarınca yasal takip ve tazminat talep etme hakkı saklıdır.</p>
-<p><strong>5.3. Bahşiş (Tip) Politikası:</strong> İşletmede müşteriler tarafından bırakılan bahşişler, ücretin bir parçası olmayıp, İŞVEREN sadece dağıtım için aracı konumundadır. PERSONEL, bahşişlerin kıdem/ihbar tazminatı hesabına dahil edilmeyeceğini kabul eder.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 6: GİZLİLİK VE REKABET YASAĞI</div><div class="doc-article-content">
-<p><strong>6.1. Ticari Sırlar:</strong> PERSONEL, görevi gereği eriştiği; mağaza ciro bilgileri, karlılık raporları, tedarikçi fiyatları, özel ürün reçeteleri, personel maaş bilgileri ve müşteri datalarını "Ticari Sır" olarak saklamakla yükümlüdür. Bu bilgilerin rakip firmalarla veya yetkisiz üçüncü kişilerle paylaşılması, TCK m. 239 kapsamında suç duyurusu ve haklı nedenle derhal fesih sebebidir.</p>
-<p><strong>6.2. Rekabet Yasağı (Sınırlı):</strong> PERSONEL, iş sözleşmesi herhangi bir nedenle sona erdikten sonra 1 (bir) yıl süreyle, son görev yaptığı şubenin bulunduğu ilçe sınırları içerisinde, Moonberry Coffee ile doğrudan rakip olan (benzer konseptteki kahve zincirleri) bir işletmede yönetici, ortak veya danışman olarak çalışmamayı taahhüt eder. Bu yasağın ihlali halinde, son brüt maaşının 3 (üç) katı tutarında cezai şartı İŞVEREN'e ödemeyi kabul ve taahhüt eder.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 7: YASAKLAR VE FESİH NEDENLERİ</div><div class="doc-article-content">
-<p>Aşağıdaki haller, İŞVEREN için 4857 sayılı İş Kanunu m. 25/II kapsamında haklı nedenle derhal fesih sebebidir:</p>
-<p>a) Kasa işlemlerinde usulsüzlük (fişsiz satış, hileli iptal/iade, zimmet).</p>
-<p>b) İşletme ürünlerinin (yemek, kahve, pasta vb.) izinsiz tüketilmesi, dışarı çıkarılması veya üçüncü şahıslara bedelsiz ikram edilmesi (Güveni Kötüye Kullanma).</p>
-<p>c) Astı konumundaki personele mobbing uygulamak, hakaret etmek, ayrımcılık yapmak veya cinsel tacizde bulunmak.</p>
-<p>d) Gıda güvenliğini (HACCP) tehlikeye atacak hijyen ihlallerine göz yumulması veya bizzat yapılması.</p>
-<p>e) İş Sağlığı ve Güvenliği (İSG) talimatlarına uymamak, kişisel koruyucu donanım kullanmamak, işyerini ve müşterileri tehlikeye düşürecek davranışlarda bulunmak.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 8: KİŞİSEL VERİLER, KAMERA KAYDI VE TEBLİGAT</div><div class="doc-article-content">
-<p><strong>8.1. Kamera Kaydı:</strong> İşyeri güvenliği, hırsızlık olaylarının önlenmesi ve operasyonel standartların takibi amacıyla; işyerinin ortak alanlarında, ofis, depo ve kasa noktalarında 7/24 görüntü kaydı (CCTV) yapılmaktadır. Ses kaydı yapılmamaktadır. PERSONEL, işyerinde güvenlik kameralarının bulunduğunu bildiğini, bu kayıtların KVKK ve İŞVEREN'in meşru menfaati kapsamında işlendiğini kabul eder.</p>
-<p><strong>8.2. Tebligat:</strong> Tarafların Madde 1'de belirtilen adresleri yasal tebligat adresleridir. Adres değişikliği yazılı olarak bildirilmediği sürece, bu adreslere yapılacak tebligatlar geçerli sayılacaktır.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 9: DENEME SÜRESİ VE YÜRÜRLÜK</div><div class="doc-article-content">
-<p><strong>9.1.</strong> İşbu sözleşmede deneme süresi 2 (İki) aydır. Taraflar bu süre içinde iş sözleşmesini bildirim süresine gerek olmaksızın ve tazminatsız feshedebilir.</p>
-<p><strong>9.2.</strong> İşbu sözleşme, 9 maddeden ibaret olup, {{BASLAMA}} tarihinde taraflarca okunarak, içeriği tam olarak anlaşılmak suretiyle tek nüsha olarak imzalanmış ve aslı İŞVEREN'de kalmak üzere bir kopyası PERSONEL'e teslim edilmiştir.</p>
-</div></div>`,
-        magaza_muduru: `<div class="doc-article"><div class="doc-article-title">MADDE 2: GÖREV TANIMI, YETKİ VE İŞVEREN VEKİLLİĞİ STATÜSÜ</div><div class="doc-article-content">
-<p><strong>2.1. Görev Tanımı:</strong> YÖNETİCİ, ŞİRKET'e ait "Moonberry Coffee" mağazasında MAĞAZA MÜDÜRÜ unvanı ile görev yapacaktır. YÖNETİCİ; mağazanın ticari başarısından, operasyonel standartlarından, yasal mevzuata uyumundan (Gıda güvenliği, İSG vb.) ve ekibin sevk ve idaresinden tam yetkili ve sorumludur.</p>
-<p><strong>2.2. İşveren Vekilliği (Hukuki Statü):</strong> Taraflar; YÖNETİCİ'nin işyerindeki konumu itibarıyla, 4857 sayılı İş Kanunu'nun 2. maddesi ve 18. maddesinin son fıkrası anlamında "İşyerinin bütününü sevk ve idare eden ve işçiyi işe alma ve işten çıkarma yetkisi bulunan İŞVEREN VEKİLİ" statüsünde olduğunu kabul ve beyan ederler. Bu statünün gereği olarak YÖNETİCİ;</p>
-<p>• Mağaza personel kadrosunu belirleme,</p>
-<p>• Adaylarla mülakat yapıp işe alma kararını tek başına verme,</p>
-<p>• Performans düşüklüğü, disiplin suçları veya işletme gerekleri nedeniyle alt kademe personelin iş sözleşmelerini tek başına ve nihai karar verici olarak feshetme yetkisine haizdir.</p>
-<p>YÖNETİCİ, bu nitelikli yetkileri haiz olması sebebiyle, 4857 sayılı Kanun'un iş güvencesi (işe iade davası) hükümlerinden yararlanamayacağını bildiğini gayrikabili rücu kabul eder.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 3: ÇALIŞMA SÜRESİ VE FAZLA MESAİ DÜZENLEMESİ</div><div class="doc-article-content">
-<p><strong>3.1. Mesaiyi Belirleme Serbestisi:</strong> YÖNETİCİ, işyerinin en üst düzey amiri sıfatıyla; görev ve sorumluluklarının gerektirdiği şekilde mesai saatlerini, işe başlama-bitiş zamanlarını, ara dinlenmelerini ve izin düzenini şahsen belirleme ve tanzim etme yetkisine sahiptir. YÖNETİCİ'ye kart basma veya saatlik puantaj zorunluluğu uygulanmaz; esas olan sonuç odaklı yönetimdir.</p>
-<p><strong>3.2. Fazla Çalışma Ücrete Dahildir:</strong> YÖNETİCİ'ye ödenen aylık ücret, üstlendiği idari sorumluluk, bağımsız karar alma yetkisi ve mesaisini kendisinin belirlemesi hususları dikkate alınarak, yasal asgari ücretin ve emsal ücretlerin üzerinde (nitelikli ücret) tespit edilmiştir. Bu sebeple;</p>
-<p>• Yasal haftalık 45 saati aşan çalışmaların (Fazla Mesai),</p>
-<p>• Hafta tatili çalışmalarının,</p>
-<p>• Ulusal Bayram ve Genel Tatil günlerinde yapılan çalışmaların,</p>
-<p>karşılığı olan ücretler, YÖNETİCİ'nin kararlaştırılan aylık ücretine dahildir. YÖNETİCİ, yıllık 270 saate kadar olan bu tür çalışmaları için ayrıca bir ücret, zamlı ödeme veya serbest zaman talep etmeyeceğini kabul ve taahhüt eder.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 4: ÜCRET VE YAN HAKLAR</div><div class="doc-article-content">
-<p><strong>4.1. Kök Ücret:</strong> YÖNETİCİ'ye, yukarıdaki çalışma şartları karşılığında aylık Brüt {{UCRET}} TL ücret ödenecektir.</p>
-<p><strong>4.2. Mali Sorumluluk (Kasa) Tazminatı:</strong> YÖNETİCİ'ye, mağazadaki nakit akışı, stok, emtia ve demirbaşların korunması riskini üstlenmesi karşılığında, aylık kök ücretine ek olarak ve bordroda ayrı bir kalem olarak gösterilmek suretiyle her ay "Mali Sorumluluk (Kasa) Tazminatı" ödenir.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 5: MALİ SORUMLULUK, ZAYİAT VE KESİNTİLER</div><div class="doc-article-content">
-<p><strong>5.1. Zararın Tazmini ve Mahsup:</strong> Mağaza kasasında, stok sayımlarında veya zimmetli demirbaşlarda; hırsızlık, dikkatsizlik, prosedür hatası veya YÖNETİCİ'nin özen borcuna aykırılığı nedeniyle oluşan noksanlıklar (açıklar/zararlar), öncelikle ve münhasıran YÖNETİCİ'ye o ay ödenen "Mali Sorumluluk Tazminatı"ndan mahsup edilir.</p>
-<p><strong>5.2. Tazminatı Aşan Zararlar:</strong> Oluşan zarar miktarının, ödenen Mali Sorumluluk Tazminatını aşması durumunda; aşan kısım için YÖNETİCİ'nin kusuru oranında rücu edilir. YÖNETİCİ, tazminatı aşan zararların tahsili için olayın vuku bulduğu tarihte düzenlenecek mutabakat tutanağı ile ücretinden kesinti yapılmasını veya borcu def'aten ödemeyi kabul eder.</p>
-<p><strong>5.3. Kasıtlı Haller:</strong> Zimmet, emniyeti suistimal, hırsızlık veya ŞİRKET'e kasten zarar verme halleri, tazminat limitine bakılmaksızın 4857 sayılı İş Kanunu m. 25/II uyarınca haklı nedenle derhal fesih sebebidir ve oluşan tüm zarar yasal yollarla YÖNETİCİ'den tahsil edilir.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 6: PERFORMANS, REKABET YASAĞI VE GİZLİLİK</div><div class="doc-article-content">
-<p><strong>6.1. Performans Hedefleri:</strong> YÖNETİCİ, kendisine tebliğ edilen ciro, kârlılık (P&L), fire/zayi oranı ve denetim puanı hedeflerini (KPI) tutturmakla yükümlüdür. Makul mazeret (mücbir sebep) olmaksızın hedeflerin süreklilik arz edecek şekilde tutturulamaması, "Performans Düşüklüğü/Yetersizlik" sayılır. ŞİRKET, bu durumda YÖNETİCİ'den yazılı savunma almak kaydıyla iş sözleşmesini geçerli nedenle feshedebilir.</p>
-<p><strong>6.2. Rekabet Yasağı:</strong> YÖNETİCİ, iş sözleşmesi herhangi bir nedenle sona erdikten sonra 1 (Bir) yıl süreyle; son görev yaptığı mağazanın bulunduğu ilçe sınırları içerisinde, Moonberry Coffee ile doğrudan rakip olan (Kahve Zinciri/Kafe/Restoran) işletmelerde çalışmamayı, ortak olmamayı veya danışmanlık yapmamayı taahhüt eder.</p>
-<p><strong>6.3. Cezai Şart (Karşılıklılık Esası):</strong> YÖNETİCİ'nin Rekabet Yasağını (Madde 6.2) ihlal etmesi halinde, son brüt ücretinin 6 (Altı) katı tutarında cezai şartı ŞİRKET'e ödemeyi kabul eder. ŞİRKET'in iş sözleşmesini haksız yere feshetmesi durumunda da, ŞİRKET aynı tutarda (6 brüt maaş) cezai şartı YÖNETİCİ'ye ödemeyi taahhüt eder. (TBK m. 420 ve Yargıtay içtihatları gereği karşılıklılık ilkesi).</p>
-<p><strong>6.4. Gizlilik:</strong> ŞİRKET'e ait kahve reçeteleri, tedarikçi sözleşmeleri, personel ücret bilgileri, mali veriler ve müşteri veri tabanı "Ticari Sır" niteliğindedir. Bu bilgilerin üçüncü kişilerle veya rakip firmalarla paylaşılması, tazminatsız derhal fesih nedenidir ve ayrıca cezai sorumluluk (TCK m. 239) doğurur.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 7: İŞYERİ GÜVENLİĞİ VE KİŞİSEL VERİLER (KVKK)</div><div class="doc-article-content">
-<p><strong>7.1. Görüntü Kaydı (CCTV):</strong> İşyeri güvenliği, iş sağlığı ve güvenliği ile operasyonel denetim amacıyla mağaza genelinde, kasa noktalarında ve çalışma alanlarında (tuvalet/giyinme kabini hariç) 7/24 Görüntü Kaydı (Video) yapılmaktadır. YÖNETİCİ, bu uygulamanın KVKK m. 5/2-f (Meşru Menfaat) kapsamında olduğunu bilir, kabul eder ve mağaza genelinde bu sistemin sürekli çalışır durumda olmasını sağlamakla yükümlüdür.</p>
-<p><strong>7.2. Ses Kaydı Yasağı:</strong> Türk Ceza Kanunu'nun 133. maddesi ve KVKK ilkeleri gereği, işyerinde çalışanların ve müşterilerin özel hayatının gizliliğini ihlal edecek şekilde genel ve sürekli ses kaydı yapılmamaktadır. YÖNETİCİ, mağaza içinde izinsiz ses kaydı alan cihazların kullanılmasını engellemekle sorumludur.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 8: SON HÜKÜMLER</div><div class="doc-article-content">
-<p><strong>8.1. Delil Sözleşmesi:</strong> İşbu sözleşmeden doğacak uyuşmazlıklarda ŞİRKET'in ticari defterleri, bordroları, banka kayıtları, e-posta yazışmaları ve kamera görüntüleri HMK m. 193 uyarınca kesin delil niteliğindedir.</p>
-<p><strong>8.2. Yürürlük:</strong> İşbu sözleşme, 2 (iki) sayfa ve 8 (sekiz) maddeden ibaret olup, {{BASLAMA}} tarihinde taraflarca okunup, müzakere edilerek tam bir mutabakatla imzalanmış ve bir nüshası YÖNETİCİ'ye teslim edilmiştir.</p>
-</div></div>`,
-        bolge_muduru: `<div class="doc-article"><div class="doc-article-title">MADDE 2: GÖREV TANIMI VE "İŞVEREN VEKİLİ" STATÜSÜ</div><div class="doc-article-content">
-<p><strong>2.1. Görev:</strong> PERSONEL, ŞİRKET bünyesinde "BÖLGE MÜDÜRÜ" unvanı ile istihdam edilmiştir. Sorumluluk alanı, Şirket tarafından kendisine yazılı olarak veya şirket veri sistemleri üzerinden bildirilen coğrafi bölge ve bu bölgedeki tüm şubelerdir.</p>
-<p><strong>2.2. Hukuki Statü (İşveren Vekilliği):</strong> PERSONEL, kendisine bağlı bölgedeki işyerlerini (şubeleri) sevk ve idare eden, işletmenin stratejik hedeflerine yön veren ve sorumluluk bölgesindeki alt kademe çalışanları (Şube Müdürü, Barista, Servis Elemanı vb.) işe alma, işten çıkarma, terfi ettirme ve disiplin cezası verme yetkisine müstakil olarak (tek başına) sahip olan yöneticidir. Taraflar; PERSONEL'in bu yetki ve sorumlulukları gereği, 4857 sayılı İş Kanunu'nun 18. maddesinin son fıkrası ve 2. maddesi anlamında "İşletmenin Bütününü Sevk ve İdare Eden İşveren Vekili Yardımcısı" veya "İşyerinin Bütününü Sevk ve İdare Eden ve İşçi Alma/Çıkarma Yetkisi Bulunan İşveren Vekili" statüsünde olduğunu ve bu statünün yasal sonuçlarını (iş güvencesi hükümlerinin uygulanmayacağını) bildiğini kabul ve beyan ederler.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 3: GÖREV, YETKİ VE SORUMLULUKLAR</div><div class="doc-article-content">
-<p>PERSONEL, sorumluluk alanındaki bölgenin kârlılığı, büyümesi ve marka standartlarının korunmasından tam sorumludur. Asli görevleri şunlardır:</p>
-<p>a) <strong>Stratejik Yönetim:</strong> Bölgedeki şubelerin ciro, kârlılık (P&L) ve büyüme hedeflerini belirlemek, bütçeyi yönetmek ve Genel Müdürlük stratejilerini sahada bizzat uygulamak.</p>
-<p>b) <strong>İK ve Organizasyon Yönetimi:</strong> Bölge kadrosunu oluşturmak, norm kadro çalışmaları yapmak, Şube Müdürlerini atamak, performanslarını değerlendirmek, işe alım ve fesih kararlarını nihai merci olarak vermek.</p>
-<p>c) <strong>Denetim ve Standartlar:</strong> Şubelerin operasyonel standartlara (hijyen, servis kalitesi, ürün reçeteleri, Moonberry marka kimliği) uygunluğunu denetlemek, "Gizli Müşteri" skorlarını yükseltmek.</p>
-<p>d) <strong>Yasal Temsil:</strong> Bölgesindeki resmi kurumlar, belediyeler ve tedarikçiler nezdinde ŞİRKET'i temsil etmek, gerekli ruhsat ve izin süreçlerini yönetmek.</p>
-<p>e) <strong>Kriz Yönetimi:</strong> Bölgesinde oluşabilecek operasyonel krizleri (gıda güvenliği, iş kazası, sosyal medya krizi vb.) yönetmek.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 4: ÇALIŞMA SÜRELERİ VE FAZLA ÇALIŞMA DÜZENİ</div><div class="doc-article-content">
-<p><strong>4.1. Mesai Düzeni (Time Sovereignty):</strong> PERSONEL, "Üst Düzey Yönetici" konumunda olup; görev ve sorumluluklarının gerektirdiği şekilde mesai saatlerini, şube ziyaret planlarını ve çalışma düzenini işin gerekliliklerine göre bizzat kendisi belirleme yetkisine sahiptir. İŞVEREN, PERSONEL'e günlük kart basma/imza atma zorunluluğu uygulamaz; esas olan hedeflerin gerçekleşmesidir.</p>
-<p><strong>4.2. Ücretin Kapsamı:</strong> PERSONEL'in aylık brüt ücreti, üstlendiği yönetim sorumluluğu, yetkileri ve mesaisini kendisinin belirlemesi hususları dikkate alınarak, asgari ücretten ve emsal çalışanlardan belirgin şekilde yüksek tespit edilmiştir. Bu çerçevede; yasal sınır olan yıllık 270 saate kadar yapılacak fazla çalışmalar, hafta tatili çalışmaları ve ulusal bayram/genel tatil günü çalışmaları kararlaştırılan aylık ücrete dahildir. PERSONEL, bu çalışmalar için ayrıca ücret talep etmeyeceğini kabul eder.</p>
-<p><strong>4.3. Denkleştirme ve Serbest Zaman:</strong> Yıllık 270 saati aşan bir fazla çalışma yapılması ve bunun yazılı delillerle ispatlanması durumunda; aşan kısmın karşılığı nakdi ücret olarak değil, 4857 sayılı İş Kanunu'nun 41. maddesi uyarınca zamlı oran üzerinden hesaplanacak "Serbest Zaman" (İzin) olarak kullandırılacaktır.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 5: ÜCRET VE YAN HAKLAR</div><div class="doc-article-content">
-<p><strong>5.1. Ücret:</strong> PERSONEL'e aylık Brüt {{UCRET}} TL ücret ödenecektir. Ücret, her ayın sonunda PERSONEL'in banka hesabına yatırılır.</p>
-<p><strong>5.2. Performans Primi:</strong> İŞVEREN, tek taraflı inisiyatifi ile belirleyeceği yıllık hedeflerin (KPI) tutturulması halinde PERSONEL'e prim ödemesi yapabilir. Prim uygulaması, "İşyeri Şartı" niteliğinde olmayıp, İŞVEREN tarafından her dönem değiştirilebilir veya tamamen kaldırılabilir.</p>
-<p><strong>5.3. Araç ve Ekipman:</strong> Görev gereği tahsis edilen şirket aracı, bilgisayar ve telefon, sadece iş amaçlı kullanım içindir. İş sözleşmesinin sona ermesi veya İŞVEREN'in talebi halinde bu ekipmanlar derhal ve eksiksiz iade edilecektir.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 6: ŞİRKET ARACI KULLANIMI VE TRAFİK CEZALARI</div><div class="doc-article-content">
-<p><strong>6.1. Sorumluluk:</strong> PERSONEL, kendisine tahsis edilen şirket aracını Karayolları Trafik Kanunu'na ve iş güvenliği kurallarına uygun kullanmakla yükümlüdür.</p>
-<p><strong>6.2. Cezaların Rücu Edilmesi:</strong> PERSONEL'in kullanımında iken (ister mesai içinde ister dışında) araca kesilen trafik cezalarından (hız, park, kırmızı ışık vb.) PERSONEL şahsen sorumludur. ŞİRKET, yasal zorunluluk gereği cezayı ödemek zorunda kalırsa; PERSONEL, ödenen tutarı ilk yazılı bildirimde ŞİRKET'e nakden ödemeyi veya ilgili tutarın ücretinden mahsup edilmesi için her olay özelinde ayrıca muvafakatname vermeyi kabul ve taahhüt eder.</p>
-<p><strong>6.3. Disiplin:</strong> PERSONEL'in kusurlu davranışı sonucu oluşan trafik cezalarını ödemekten imtina etmesi veya rücu işlemine onay vermemesi, işverene zarar verme kastı taşıdığından, İş Kanunu m. 25/II kapsamında haklı fesih nedeni sayılabilecektir.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 7: REKABET YASAĞI, GİZLİLİK VE CEZAİ ŞART</div><div class="doc-article-content">
-<p><strong>7.1. Gizlilik ve Ticari Sır:</strong> PERSONEL; ŞİRKET'in maliyet yapıları, franchise koşulları, tedarikçi anlaşmaları, müşteri veritabanı, özel tarifeleri ve büyüme stratejileri gibi "Ticari Sır" niteliğindeki bilgilere vakıftır. Bu bilgilerin sözleşme süresince veya sona erdikten sonra üçüncü kişilerle paylaşılması, TCK m. 239 kapsamında suç teşkil eder ve tazminatsız derhal fesih nedenidir.</p>
-<p><strong>7.2. Rekabet Yasağı (TBK 444-447):</strong> PERSONEL, iş sözleşmesi herhangi bir nedenle (işverenin haklı feshi veya personelin istifası/haksız feshi ile) sona erdikten sonra 2 (iki) yıl süreyle; son görev yaptığı il sınırları içerisinde, "Kahve Zinciri, Kafe-Restoran ve Gıda Perakendeciliği" sektöründe faaliyet gösteren rakip bir firmada çalışmamayı, ortak olmamayı veya danışmanlık yapmamayı taahhüt eder.</p>
-<p><strong>7.3. Cezai Şart:</strong> PERSONEL'in işbu 7. maddede düzenlenen rekabet yasağını ihlal etmesi halinde; ŞİRKET'in uğradığı zararın miktarını ispat etmesine gerek kalmaksızın, PERSONEL, son brüt maaşının 6 (Altı) katı tutarında cezai şartı İŞVEREN'e derhal ve nakden ödemeyi kabul ve taahhüt eder. İŞVEREN'in bu miktarı aşan zararlarını talep hakkı ve TBK m. 446/2 uyarınca rekabet edici davranışa son verilmesini talep hakkı saklıdır.</p>
-<p><strong>7.4. Ayartma Yasağı (Non-Solicitation):</strong> PERSONEL, işten ayrıldıktan sonra 2 yıl süreyle, ŞİRKET çalışanlarını yeni işyerine transfer etmeyeceğini, onlara iş teklifinde bulunmayacağını taahhüt eder.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 8: FİKRİ MÜLKİYET HAKLARININ DEVRİ</div><div class="doc-article-content">
-<p>PERSONEL, işbu sözleşme kapsamında görevi sırasında veya görevi nedeniyle meydana getirdiği/getireceği her türlü fikir, sanat eseri, rapor, operasyonel süreç tasarımı, eğitim materyali, bilgisayar programı, veri tabanı ve iş geliştirme projeleri üzerindeki 5846 sayılı FSEK kapsamındaki tüm mali hakları (işleme, çoğaltma, yayma, temsil, umuma iletim) yer, süre ve sayı sınırı olmaksızın, işbu sözleşmedeki ücret karşılığında münhasıran ŞİRKET'e devrettiğini; bu hakların kullanımı ve devri konusunda ŞİRKET'in tam yetkili olduğunu kabul ve beyan eder.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 9: ÜCRETLİ UZAKLAŞTIRMA (GARDEN LEAVE)</div><div class="doc-article-content">
-<p>İş sözleşmesinin herhangi bir nedenle feshi ihbarında bulunulması halinde (taraflardan hangisinin ihbar ettiğine bakılmaksızın); ŞİRKET, ihbar süresinin tamamında veya bir kısmında PERSONEL'i işyerine gelmekten, iş görme borcunu ifa etmekten ve şirket sistemlerine erişmekten muaf tutma (Garden Leave) hakkına sahiptir. Bu süre zarfında PERSONEL'in ücret ve yan hakları (prim hariç) ödenmeye devam eder. PERSONEL, bu süre içinde başka bir işverene hizmet veremez, rekabet edemez ve sadakat borcuna aykırı davranamaz.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 10: KİŞİSEL VERİLERİN KORUNMASI (KVKK) VE İZLEME</div><div class="doc-article-content">
-<p><strong>10.1.</strong> ŞİRKET; iş sağlığı güvenliği, operasyonel verimlilik, şirket varlıklarının korunması ve yasal yükümlülükler (işin ifası ve meşru menfaat) sebepleriyle; işyerlerinde, ofislerde kamera ile görüntü kaydı ve şirket araçlarında GPS (Konum) takip sistemi kullanmaktadır.</p>
-<p><strong>10.2.</strong> PERSONEL, bu veri işleme faaliyetleri, kameraların bulunduğu yerler ve araç takip sisteminin çalışma prensipleri hakkında kendisine ayrıca tebliğ edilen "Çalışan Aydınlatma Metni" ile 6698 sayılı KVKK kapsamında detaylıca bilgilendirildiğini, mesai saatleri dışında şirket aracının kullanımı durumunda da (özel kullanım izni varsa) GPS kaydının devam edebileceğini bildiğini beyan eder.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 11: MOBBİNG VE ETİK HAT</div><div class="doc-article-content">
-<p>PERSONEL, işyerinde karşılaşabileceği her türlü etik dışı davranış, ayrımcılık veya psikolojik taciz (mobbing) iddiasını, yasal yollara başvurmadan önce ivedilikle Şirket Yönetim Kurulu'na veya varsa "Etik Hattı"na yazılı olarak bildirmeyi kabul eder. ŞİRKET, bu başvuruları gizlilik içinde inceleyip sonuçlandıracağını taahhüt eder.</p>
-</div></div>
-
-<div class="doc-article"><div class="doc-article-title">MADDE 12: SON HÜKÜMLER VE YÜRÜRLÜK</div><div class="doc-article-content">
-<p><strong>12.1.</strong> İşbu sözleşmede hüküm bulunmayan hallerde 4857 sayılı İş Kanunu, 6098 sayılı TBK ve ilgili mevzuat hükümleri uygulanır.</p>
-<p><strong>12.2.</strong> Uyuşmazlık halinde İstanbul (Çağlayan) Mahkemeleri ve İcra Daireleri yetkilidir.</p>
-<p><strong>12.3.</strong> İki sayfadan ve 12 maddeden ibaret işbu sözleşme, {{BASLAMA}} tarihinde taraflarca okunarak, içeriği müzakere edilip tam olarak anlaşılarak serbest iradeleriyle imzalanmış ve bir nüshası PERSONEL'e teslim edilmiştir.</p>
-</div></div>`
-    },
-    fesihDayanaklari: {
-        hakli: [
-            {v:'25_2_a',t:'25/II-a: Yanıltma'},
-            {v:'25_2_b',t:'25/II-b: Hakaret'},
-            {v:'25_2_d',t:'25/II-d: Sataşma/Sarhoşluk'},
-            {v:'25_2_e',t:'25/II-e: Güveni kötüye kullanma'},
-            {v:'25_2_g',t:'25/II-g: Devamsızlık'},
-            {v:'25_2_h',t:'25/II-h: Görev reddi'},
-            {v:'25_2_i',t:'25/II-ı: İş güvenliği'}
-        ],
-        gecerli: [
-            {v:'18_y',t:'Yetersizlik'},
-            {v:'18_d',t:'Davranış'},
-            {v:'18_i',t:'İşletme gerekleri'}
-        ],
-        deneme: [{v:'deneme',t:'Deneme değerlendirmesi'}]
-    },
-    documentTemplates: {
-        tutanak: {
-            olay: '<p><strong>OLAY:</strong></p><p>{{TARIH}} tarihinde saat {{SAAT}} sıralarında, {{SUBE}} şubesinde görevli {{PERSONEL}} ({{TC}}) aşağıda açıklanan olayı gerçekleştirmiştir:</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #ff8674;margin:15px 0">{{ACIKLAMA}}</p><p>İşbu tutanak, olayın tespiti amacıyla düzenlenmiş olup, ilgili personele tebliğ edilmiştir.</p>',
-            devamsizlik: '<p><strong>DEVAMSIZLIK TESPİTİ:</strong></p><p>{{PERSONEL}} ({{TC}}), {{TARIH}} tarihinde {{SUBE}} şubesinde göreve gelmemiştir.</p><p>Yapılan araştırmada herhangi bir mazeret bildirimi tespit edilememiştir.</p><p style="background:#fef9e7;padding:12px;border-radius:6px;margin:15px 0">⚠️ İş Kanunu Md. 25/II-g: Ardı ardına 2 iş günü veya ay içinde 3 iş günü devamsızlık haklı fesih sebebidir.</p>',
-            kasa: '<p><strong>KASA SAYIM TESPİTİ:</strong></p><p>{{TARIH}} tarihinde saat {{SAAT}} itibarıyla {{SUBE}} şubesinde yapılan kasa sayımında aşağıdaki tespit yapılmıştır:</p><p>Sorumlu personel: {{PERSONEL}} ({{TC}})</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #ff8674;margin:15px 0">{{ACIKLAMA}}</p><p>TBK Md. 407/2 uyarınca personelin yazılı muvafakati ile ücretinden kesinti yapılabilir.</p>',
-            imza: '<p><strong>İMZADAN İMTİNA TESPİTİ:</strong></p><p>{{TARIH}} tarihinde {{PERSONEL}} ({{TC}}) adlı personele tebliğ edilmek istenen belgeyi imzalamaktan imtina etmiştir.</p><p>İmtina edilen belge: {{ACIKLAMA}}</p><p style="background:#ebf5fb;padding:12px;border-radius:6px;margin:15px 0">📌 Yargıtay içtihadı gereği, 2 şahit huzurunda düzenlenen imtina tutanağı tebliğ yerine geçer.</p>'
-        },
-        savunma: '<p>Şirketimiz {{SUBE}} şubesinde {{POZISYON}} olarak görev yapmaktasınız.</p><p><strong>{{TARIH}}</strong> tarihinde gerçekleştirdiğiniz aşağıdaki davranış/eylem nedeniyle savunmanız istenmektedir:</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #ff8674;margin:15px 0">{{ACIKLAMA}}</p><p>Bu davranış <strong>{{DAYANAK}}</strong> kapsamında değerlendirilmektedir.</p><p style="background:#fef9e7;padding:12px;border-radius:6px;margin:15px 0">⚠️ Savunmanızı bu yazının tebliğinden itibaren <strong>{{SURE}}</strong> içinde yazılı olarak vermeniz gerekmektedir. Süresinde savunma verilmemesi, savunma hakkından vazgeçilmiş sayılacaktır.</p>',
-        fesih: {
-            hakli: '<p>{{TARIH}} tarihinde gerçekleştirdiğiniz aşağıdaki eylem/davranış nedeniyle iş sözleşmeniz <strong>4857 sayılı İş Kanunu\'nun {{DAYANAK}} maddesi</strong> uyarınca haklı nedenle ve derhal feshedilmiştir:</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #c0392b;margin:15px 0">{{ACIKLAMA}}</p><p>Bu fesih işlemi sonucunda kıdem ve ihbar tazminatı ödenmeyecektir.</p>',
-            gecerli: '<p>Aşağıda belirtilen nedenlerle iş sözleşmeniz <strong>4857 sayılı İş Kanunu\'nun 17. ve 18. maddeleri</strong> uyarınca geçerli nedenle feshedilmiştir:</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #ff8674;margin:15px 0">{{ACIKLAMA}}</p><p>İhbar süreniz: {{IHBAR_SURE}}<br>Son çalışma gününüz: {{SON_GUN}}</p><p>Kıdem tazminatı ve diğer yasal haklarınız ödenecektir.</p>',
-            deneme: '<p>{{BASLAMA}} tarihinde başlayan iş sözleşmeniz, 2 aylık deneme süresi içinde <strong>4857 sayılı İş Kanunu\'nun 15. maddesi</strong> uyarınca sona erdirilmiştir.</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #3498db;margin:15px 0">{{ACIKLAMA}}</p><p>Deneme süresi içinde fesih bildirim süresine ve tazminata tabi değildir.</p>'
-        },
-        borc: '<p>Ben {{PERSONEL}}, {{TARIH}} tarihli olayda kusurum nedeniyle <strong>{{TUTAR}} TL</strong> borcu kabul ediyorum.</p><p style="background:#f9f9f9;padding:15px;border-left:4px solid #ff8674;margin:15px 0">{{ACIKLAMA}}</p><p>TBK Md. 407/2 uyarınca bu borcun {{ODEME_SEKLI}} kabul ve taahhüt ediyorum.</p><p>Baskı altında olmadığımı, borcumu ve kesinti koşullarını anladığımı beyan ederim.</p>'
-    }
+let CONFIG = {
+    company: {},
+    branches: [],
+    branchCodes: {},
+    positions: [],
+    violations: [],
+    puantajRules: [],
+    fesihDayanaklari: {},
+    documentTemplates: {},
+    contractTemplates: {}
 };
+
+// Firebase'den config yükle
+async function loadConfigFromFirebase() {
+    try {
+        const configDocs = [
+            'company', 'branches', 'positions', 'violations',
+            'puantajRules', 'fesihDayanaklari', 'documentTemplates',
+            'contractTemplates', 'system', 'checklistTypes'
+        ];
+        
+        const promises = configDocs.map(doc => 
+            db.collection('config').doc(doc).get()
+        );
+        
+        const results = await Promise.all(promises);
+        
+        results.forEach((snap, i) => {
+            if (snap.exists) {
+                const data = snap.data();
+                const docName = configDocs[i];
+                
+                switch(docName) {
+                    case 'company':
+                        CONFIG.company = data;
+                        break;
+                    case 'branches':
+                        CONFIG.branches = data.list || [];
+                        CONFIG.branchCodes = data.codes || {};
+                        break;
+                    case 'positions':
+                        CONFIG.positions = data.list || [];
+                        break;
+                    case 'violations':
+                        CONFIG.violations = data.list || [];
+                        break;
+                    case 'puantajRules':
+                        CONFIG.puantajRules = data.list || [];
+                        break;
+                    case 'fesihDayanaklari':
+                        CONFIG.fesihDayanaklari = {
+                            hakli: data.hakli || [],
+                            gecerli: data.gecerli || [],
+                            deneme: data.deneme || []
+                        };
+                        break;
+                    case 'documentTemplates':
+                        CONFIG.documentTemplates = data;
+                        break;
+                    case 'contractTemplates':
+                        CONFIG.contractTemplates = data;
+                        break;
+                    case 'system':
+                        SYSTEM_CONFIG = data;
+                        PLATFORMS = data.platforms || [];
+                        WHATSAPP_GROUPS = data.whatsappGroups || {};
+                        break;
+                    case 'checklistTypes':
+                        CHECKLIST_TYPES = data;
+                        break;
+                }
+            }
+        });
+        
+        console.log('✅ Config Firebase\'den yüklendi');
+        return true;
+    } catch (error) {
+        console.error('❌ Config yükleme hatası:', error);
+        return false;
+    }
+}
 
 // ==================== STATE MANAGEMENT ====================
 let STATE = {};
@@ -2014,20 +1797,32 @@ let previousPage = 'dashboard';
 let selectedTypes = {sozlesme: 'barista', tutanak: null, fesih: null};
 
 function loadState() {
+    // STATE artık CONFIG'dan besleniyor
+    // CONFIG Firebase'den yüklendikten sonra STATE'e aktarılır
+    STATE = {
+        company: CONFIG.company || {},
+        branches: CONFIG.branches || [],
+        branchCodes: CONFIG.branchCodes || {},
+        positions: CONFIG.positions || [],
+        violations: CONFIG.violations || [],
+        templates: CONFIG.contractTemplates || {},
+        fesihDayanaklari: CONFIG.fesihDayanaklari || {},
+        documentTemplates: CONFIG.documentTemplates || {}
+    };
+    
+    // LocalStorage'dan kullanıcı tercihlerini yükle
     const saved = localStorage.getItem('moonberry_state');
     if (saved) {
         try {
             const parsed = JSON.parse(saved);
-            // Deep merge for nested objects like company
-            STATE = {...DEFAULT_STATE, ...parsed};
-            STATE.company = {...DEFAULT_STATE.company, ...parsed.company};
+            // Sadece kullanıcı tercihlerini merge et, config verilerini değil
+            if (parsed.preferences) {
+                STATE.preferences = parsed.preferences;
+            }
         } catch(e) {
-            STATE = {...DEFAULT_STATE};
+            console.log('LocalStorage parse hatası');
         }
-    } else {
-        STATE = {...DEFAULT_STATE};
     }
-    saveState();
 }
 
 function saveState() {
@@ -2298,7 +2093,7 @@ async function initializeDefaultData() {
         const rulesRef = db.collection('puantajRules');
         const rulesSnapshot = await rulesRef.get();
         if (rulesSnapshot.empty) {
-            for (const rule of DEFAULT_PUANTAJ_RULES) {
+            for (const rule of CONFIG.puantajRules) {
                 await rulesRef.doc(rule.id).set(rule);
             }
             console.log('Varsayılan puantaj kuralları oluşturuldu');
@@ -4311,7 +4106,7 @@ function importCode() {
                 throw new Error('Invalid structure');
             }
             
-            STATE = {...DEFAULT_STATE, ...data};
+            STATE = {...CONFIG, ...data};
             saveState();
             initUI();
             document.getElementById('importCode').value = '';
@@ -4362,7 +4157,7 @@ function uploadBackup(event) {
                     throw new Error('Invalid structure');
                 }
                 
-                STATE = {...DEFAULT_STATE, ...data};
+                STATE = {...CONFIG, ...data};
                 saveState();
                 initUI();
                 successModal('Yedek başarıyla yüklendi!');
@@ -4467,12 +4262,12 @@ function loadDocTemplate(category, subType) {
     currentDocTemplateSubType = subType;
     
     let template = '';
-    const templates = STATE.documentTemplates || DEFAULT_STATE.documentTemplates;
+    const templates = STATE.documentTemplates || CONFIG.documentTemplates;
     
     if (subType && templates[category] && typeof templates[category] === 'object') {
-        template = templates[category][subType] || DEFAULT_STATE.documentTemplates[category][subType] || '';
+        template = templates[category][subType] || CONFIG.documentTemplates[category][subType] || '';
     } else {
-        template = templates[category] || DEFAULT_STATE.documentTemplates[category] || '';
+        template = templates[category] || CONFIG.documentTemplates[category] || '';
     }
     
     const textarea = document.getElementById('doc_template_content');
@@ -4507,7 +4302,7 @@ function saveDocTemplate() {
     
     // documentTemplates yoksa oluştur
     if (!STATE.documentTemplates) {
-        STATE.documentTemplates = JSON.parse(JSON.stringify(DEFAULT_STATE.documentTemplates));
+        STATE.documentTemplates = JSON.parse(JSON.stringify(CONFIG.documentTemplates));
     }
     
     if (currentDocTemplateSubType && typeof STATE.documentTemplates[currentDocTemplateCategory] === 'object') {
@@ -4527,10 +4322,10 @@ function resetDocTemplate() {
     confirmModal('Varsayılana Dön', 'Bu şablonu varsayılan haline döndürmek istediğinize emin misiniz?', () => {
         let defaultTemplate = '';
         
-        if (currentDocTemplateSubType && typeof DEFAULT_STATE.documentTemplates[currentDocTemplateCategory] === 'object') {
-            defaultTemplate = DEFAULT_STATE.documentTemplates[currentDocTemplateCategory][currentDocTemplateSubType];
+        if (currentDocTemplateSubType && typeof CONFIG.documentTemplates[currentDocTemplateCategory] === 'object') {
+            defaultTemplate = CONFIG.documentTemplates[currentDocTemplateCategory][currentDocTemplateSubType];
         } else {
-            defaultTemplate = DEFAULT_STATE.documentTemplates[currentDocTemplateCategory];
+            defaultTemplate = CONFIG.documentTemplates[currentDocTemplateCategory];
         }
         
         const textarea = document.getElementById('doc_template_content');
@@ -4539,7 +4334,7 @@ function resetDocTemplate() {
             
             // STATE'i de güncelle
             if (!STATE.documentTemplates) {
-                STATE.documentTemplates = JSON.parse(JSON.stringify(DEFAULT_STATE.documentTemplates));
+                STATE.documentTemplates = JSON.parse(JSON.stringify(CONFIG.documentTemplates));
             }
             
             if (currentDocTemplateSubType && typeof STATE.documentTemplates[currentDocTemplateCategory] === 'object') {
@@ -8605,26 +8400,8 @@ let personnelMapping = [];
 // Tüm config'i Firebase'den yükle
 async function loadSystemConfig() {
     try {
-        // Sistem ayarları
-        const sysDoc = await db.collection('config').doc('system').get();
-        if (sysDoc.exists) {
-            SYSTEM_CONFIG = sysDoc.data();
-            WHATSAPP_GROUPS = SYSTEM_CONFIG.whatsappGroups || {};
-            PLATFORMS = SYSTEM_CONFIG.platforms || PLATFORMS;
-        }
-        
-        // Checklist türleri
-        const typesDoc = await db.collection('config').doc('checklistTypes').get();
-        if (typesDoc.exists) {
-            const data = typesDoc.data();
-            // updatedAt gibi meta alanları filtrele
-            CHECKLIST_TYPES = {};
-            for (const [key, value] of Object.entries(data)) {
-                if (Array.isArray(value)) {
-                    CHECKLIST_TYPES[key] = value;
-                }
-            }
-        }
+        // Önce tüm config'i Firebase'den yükle
+        await loadConfigFromFirebase();
         
         // Personel eşleştirmesi
         const persDoc = await db.collection('config').doc('personnel').get();
@@ -8632,12 +8409,17 @@ async function loadSystemConfig() {
             personnelMapping = persDoc.data().list || [];
         }
         
-        console.log('Sistem config yüklendi:', {
+        // STATE'i CONFIG'dan doldur
+        loadState();
+        
+        console.log('✅ Sistem config yüklendi:', {
             branches: Object.keys(CHECKLIST_TYPES),
-            personnel: personnelMapping.length
+            personnel: personnelMapping.length,
+            violations: CONFIG.violations?.length || 0,
+            contractTemplates: Object.keys(CONFIG.contractTemplates || {}).length
         });
     } catch (e) {
-        console.warn('Config yüklenemedi:', e);
+        console.warn('❌ Config yüklenemedi:', e);
     }
 }
 
