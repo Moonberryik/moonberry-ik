@@ -312,6 +312,29 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     .page{padding:0}
     .preview-container{border:none;box-shadow:none}
 }
+
+/* Değerlendir Butonu Animasyonu */
+@keyframes subtlePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0,140,149,.3); }
+    50% { box-shadow: 0 0 0 4px rgba(0,140,149,.1); }
+}
+.btn-evaluate-pulse {
+    animation: subtlePulse 2.5s ease-in-out infinite;
+}
+.btn-evaluate-pulse:hover {
+    animation: none;
+}
+
+/* 5 Yıldız Rating Animasyonu */
+@keyframes starShine {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+.star-rating-5 { color: #f1c40f !important; }
+.star-rating-4 { color: #f39c12 !important; }
+.star-rating-3 { color: #95a5a6 !important; }
+.star-rating-2 { color: #e67e22 !important; }
+.star-rating-1 { color: #e74c3c !important; }
     </style>
 </head>
 <body>
@@ -1299,11 +1322,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             </div>
                             <div style="background:rgba(243,156,18,.08);border-radius:10px;padding:12px;text-align:center;border:1px solid rgba(243,156,18,.15)">
                                 <div style="font-size:1.2rem;font-weight:800;color:#f39c12">-2</div>
-                                <div style="font-size:.75rem;color:var(--tx2)">Geç veya Kaçırılan</div>
+                                <div style="font-size:.75rem;color:var(--tx2)">Geç veya Yapılmayan</div>
                             </div>
                             <div style="background:rgba(155,89,182,.08);border-radius:10px;padding:12px;text-align:center;border:1px solid rgba(155,89,182,.15)">
                                 <div style="font-size:1.2rem;font-weight:800;color:#9b59b6">-1</div>
-                                <div style="font-size:.75rem;color:var(--tx2)">Platform Kaçırma</div>
+                                <div style="font-size:.75rem;color:var(--tx2)">Platform Eksik</div>
                             </div>
                             <div style="background:rgba(231,76,60,.08);border-radius:10px;padding:12px;text-align:center;border:1px solid rgba(231,76,60,.15)">
                                 <div style="font-size:1.2rem;font-weight:800;color:#e74c3c">-5</div>
@@ -5598,8 +5621,15 @@ async function loadPuantaj() {
             let toplamPuan = 0;
             let negatifOlay = 0;
             let pozitifOlay = 0;
+            let primResetBonus = 0;
             
             puanlar.forEach(x => {
+                // Prim sıfırlama bonusu
+                if (x.type === 'prim_reset' && x.resetBonus) {
+                    primResetBonus += x.resetBonus;
+                    return;
+                }
+                
                 const yildiz = x.score || 3;
                 if (yildiz === 1) {
                     toplamPuan -= 3; // 1 yıldız = -3 puan (Ciddi İhlal)
@@ -5618,6 +5648,9 @@ async function loadPuantaj() {
                     pozitifOlay++;
                 }
             });
+            
+            // Prim reset bonusunu ekle
+            toplamPuan += primResetBonus;
             
             const primDurumu = toplamPuan <= -5 ? 'prim_yok' : 'prim_var';
             
@@ -5638,11 +5671,74 @@ async function loadPuantaj() {
         // Puantaj cache'e personel listesini kaydet
         window.puantajPersonelCache = personelList;
         
+        // === AYLIK LİDERLİK TABLOSU ===
+        // Puanlara göre sırala ve yıldız hesapla
+        const sortedByPuan = [...personelList].sort((a, b) => b.toplamPuan - a.toplamPuan);
+        const sortedByNegatif = [...personelList].filter(p => p.negatifOlay > 0).sort((a, b) => b.negatifOlay - a.negatifOlay);
+        
+        // Çan eğrisi yıldız hesaplama
+        const puanlar = personelList.map(p => p.toplamPuan);
+        const minPuan = Math.min(...puanlar);
+        const maxPuan = Math.max(...puanlar);
+        const puanAraligi = maxPuan - minPuan || 1;
+        
+        personelList.forEach(p => {
+            const normalizedPuan = (p.toplamPuan - minPuan) / puanAraligi;
+            if (normalizedPuan >= 0.8) p.performansYildiz = 5;
+            else if (normalizedPuan >= 0.6) p.performansYildiz = 4;
+            else if (normalizedPuan >= 0.4) p.performansYildiz = 3;
+            else if (normalizedPuan >= 0.2) p.performansYildiz = 2;
+            else p.performansYildiz = 1;
+        });
+        
         // Personel Kartları - Düzenli Grid, Marka Renkleri
         const isMoonberry = sube.includes('Şişli') || sube.includes('Merkez');
         const brandColor = isMoonberry ? '#008c95' : '#ff8674';
         const brandBg = isMoonberry ? 'rgba(0,140,149,.08)' : 'rgba(255,134,116,.08)';
         
+        // === AYLIK ŞAMPIYONLAR ===
+        if (personelList.length > 1 && !isBarista) {
+            const topPerformer = sortedByPuan[0];
+            const mostImproved = sortedByPuan.find(p => p.pozitifOlay > 0);
+            const needsAttention = sortedByNegatif[0];
+            
+            html += `
+                <div style="margin-bottom:20px;background:linear-gradient(135deg,${brandBg},rgba(255,255,255,.5));border:1px solid ${brandColor}25;border-radius:16px;padding:20px">
+                    <div style="font-weight:700;color:var(--tx);margin-bottom:16px;font-size:1rem;display:flex;align-items:center;gap:8px">
+                        <svg width="20" height="20" fill="none" stroke="${brandColor}" stroke-width="2" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7.8 17h8.4c1.68 0 2.52 0 3.162-.327a3 3 0 001.311-1.311C21 14.72 21 13.88 21 12.2V7.8c0-1.68 0-2.52-.327-3.162a3 3 0 00-1.311-1.311C18.72 3 17.88 3 16.2 3H7.8c-1.68 0-2.52 0-3.162.327a3 3 0 00-1.311 1.311C3 5.28 3 6.12 3 7.8v4.4c0 1.68 0 2.52.327 3.162a3 3 0 001.311 1.311C5.28 17 6.12 17 7.8 17z"/></svg>
+                        Bu Ay Öne Çıkanlar
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+                        ${topPerformer && topPerformer.toplamPuan > 0 ? `
+                            <div style="background:linear-gradient(135deg,rgba(255,215,0,.15),rgba(255,215,0,.05));border:1px solid rgba(255,215,0,.3);border-radius:12px;padding:14px;text-align:center">
+                                <div style="font-size:1.5rem;margin-bottom:4px">🏆</div>
+                                <div style="font-size:.7rem;color:var(--tx2);margin-bottom:4px">En Yüksek Puan</div>
+                                <div style="font-weight:700;color:var(--tx);font-size:.9rem">${topPerformer.name}</div>
+                                <div style="font-size:.8rem;color:#27ae60;font-weight:600">+${topPerformer.toplamPuan} puan</div>
+                            </div>
+                        ` : ''}
+                        ${mostImproved && mostImproved.pozitifOlay >= 2 ? `
+                            <div style="background:linear-gradient(135deg,rgba(39,174,96,.15),rgba(39,174,96,.05));border:1px solid rgba(39,174,96,.3);border-radius:12px;padding:14px;text-align:center">
+                                <div style="font-size:1.5rem;margin-bottom:4px">⭐</div>
+                                <div style="font-size:.7rem;color:var(--tx2);margin-bottom:4px">En Çok Başarı</div>
+                                <div style="font-weight:700;color:var(--tx);font-size:.9rem">${mostImproved.name}</div>
+                                <div style="font-size:.8rem;color:#27ae60;font-weight:600">${mostImproved.pozitifOlay} başarı</div>
+                            </div>
+                        ` : ''}
+                        ${needsAttention && needsAttention.negatifOlay >= 2 ? `
+                            <div style="background:linear-gradient(135deg,rgba(231,76,60,.1),rgba(231,76,60,.03));border:1px solid rgba(231,76,60,.2);border-radius:12px;padding:14px;text-align:center">
+                                <div style="font-size:1.5rem;margin-bottom:4px">⚠️</div>
+                                <div style="font-size:.7rem;color:var(--tx2);margin-bottom:4px">Dikkat Gerektiren</div>
+                                <div style="font-weight:700;color:var(--tx);font-size:.9rem">${needsAttention.name}</div>
+                                <div style="font-size:.8rem;color:#e74c3c;font-weight:600">${needsAttention.negatifOlay} ihlal</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // === EKİP DURUMU ===
         html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:20px">`;
         personelList.forEach(p => {
             const isRisk = p.toplamPuan <= -3;
@@ -5650,10 +5746,13 @@ async function loadPuantaj() {
             const puanColor = p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx)');
             const puanSign = p.toplamPuan > 0 ? '+' : '';
             const cardBorder = isDanger ? '#e74c3c' : (isRisk ? '#f39c12' : brandColor);
-            const cardBg = isDanger ? 'rgba(231,76,60,.03)' : 'var(--cardBg)';
+            
+            // Yıldız gösterimi
+            const yildizlar = '★'.repeat(p.performansYildiz || 3) + '☆'.repeat(5 - (p.performansYildiz || 3));
+            const yildizColor = p.performansYildiz >= 4 ? '#f1c40f' : (p.performansYildiz >= 3 ? '#95a5a6' : '#e74c3c');
             
             html += `
-                <div style="background:${cardBg};border:2px solid ${cardBorder}25;border-left:4px solid ${cardBorder};border-radius:12px;padding:16px;transition:all .2s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                <div style="background:linear-gradient(135deg,${brandBg},var(--cardBg));border:2px solid ${cardBorder}30;border-left:4px solid ${cardBorder};border-radius:12px;padding:16px;transition:all .2s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
                     <!-- Header -->
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
                         <div style="display:flex;align-items:center;gap:10px">
@@ -5661,7 +5760,10 @@ async function loadPuantaj() {
                                 ${p.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                                <div style="font-weight:600;font-size:.95rem;color:var(--tx)">${p.name}</div>
+                                <div style="display:flex;align-items:center;gap:6px">
+                                    <span style="font-weight:600;font-size:.95rem;color:var(--tx)">${p.name}</span>
+                                    <span style="font-size:.7rem;color:${yildizColor};letter-spacing:-1px">${yildizlar}</span>
+                                </div>
                                 <div style="font-size:.75rem;color:var(--tx3)">${p.position || 'Barista'}</div>
                             </div>
                         </div>
@@ -5671,15 +5773,15 @@ async function loadPuantaj() {
                         </div>
                     </div>
                     
-                    <!-- Mini Stats -->
+                    <!-- Mini Stats - Marka Renkleri ile -->
                     <div style="display:flex;gap:8px;margin-bottom:12px">
-                        ${p.negatifOlay > 0 ? `<span style="font-size:.7rem;padding:4px 8px;background:rgba(231,76,60,.1);color:#e74c3c;border-radius:6px">${p.negatifOlay} ihlal</span>` : ''}
-                        ${p.pozitifOlay > 0 ? `<span style="font-size:.7rem;padding:4px 8px;background:rgba(39,174,96,.1);color:#27ae60;border-radius:6px">${p.pozitifOlay} başarı</span>` : ''}
-                        ${p.negatifOlay === 0 && p.pozitifOlay === 0 ? `<span style="font-size:.7rem;padding:4px 8px;background:var(--bg4);color:var(--tx3);border-radius:6px">Henüz kayıt yok</span>` : ''}
+                        ${p.negatifOlay > 0 ? `<span style="font-size:.7rem;padding:4px 8px;background:rgba(231,76,60,.15);color:#c0392b;border-radius:6px;font-weight:500">${p.negatifOlay} ihlal</span>` : ''}
+                        ${p.pozitifOlay > 0 ? `<span style="font-size:.7rem;padding:4px 8px;background:rgba(39,174,96,.15);color:#1e8449;border-radius:6px;font-weight:500">${p.pozitifOlay} başarı</span>` : ''}
+                        ${p.negatifOlay === 0 && p.pozitifOlay === 0 ? `<span style="font-size:.7rem;padding:4px 8px;background:${brandBg};color:var(--tx3);border-radius:6px">Henüz kayıt yok</span>` : ''}
                     </div>
                     
                     ${isDanger ? `
-                        <div style="background:rgba(231,76,60,.1);border-radius:8px;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+                        <div style="background:rgba(231,76,60,.12);border-radius:8px;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px">
                             <div style="display:flex;align-items:center;gap:8px">
                                 <svg width="14" height="14" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                                 <span style="font-size:.75rem;color:#c0392b;font-weight:600">Prim eşiği aşıldı</span>
@@ -5690,10 +5792,10 @@ async function loadPuantaj() {
                         </div>
                     ` : ''}
                     
-                    <!-- Action Buttons -->
+                    <!-- Action Button - Animasyonlu -->
                     ${!isBarista ? `
                     <div style="display:flex;gap:8px">
-                        <button style="flex:1;padding:10px;background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(255,134,116,.1));border:1px solid rgba(0,140,149,.25);color:#008c95;border-radius:8px;font-weight:500;font-size:.8rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px" onclick="showPuantajModal('${p.id}', '${p.name}')" onmouseover="this.style.background='linear-gradient(135deg,rgba(0,140,149,.15),rgba(255,134,116,.15))'" onmouseout="this.style.background='linear-gradient(135deg,rgba(0,140,149,.1),rgba(255,134,116,.1))'">
+                        <button class="btn-evaluate-pulse" style="flex:1;padding:10px;background:linear-gradient(135deg,${brandBg},${brandBg});border:1px solid ${brandColor}40;color:${brandColor};border-radius:8px;font-weight:500;font-size:.8rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px" onclick="showPuantajModal('${p.id}', '${p.name}')" onmouseover="this.style.background='linear-gradient(135deg,${brandColor}20,${brandColor}10)';this.style.borderColor='${brandColor}'" onmouseout="this.style.background='linear-gradient(135deg,${brandBg},${brandBg})';this.style.borderColor='${brandColor}40'">
                             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                             Değerlendir
                         </button>
@@ -5706,7 +5808,8 @@ async function loadPuantaj() {
         
         // Bu Ay Kayıtlar
         html += `<div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:16px;padding:20px">`;
-        html += `<div style="font-weight:600;margin-bottom:16px;color:var(--tx);font-size:1rem">📋 Bu Ay Kayıtları</div>`;
+        html += `<div style="font-weight:600;margin-bottom:16px;color:var(--tx);font-size:1rem;display:flex;align-items:center;gap:8px"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg> Bu Ay Kayıtları</div>`;
+        
         
         let hasRecords = false;
         personelList.forEach(p => {
@@ -5838,7 +5941,7 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
                         <div style="display:flex;align-items:center;gap:8px">
                             ${onTime > 0 ? `<span style="font-size:.7rem;color:#27ae60;background:rgba(39,174,96,.1);padding:2px 6px;border-radius:4px">${onTime} vaktinde</span>` : ''}
                             ${late > 0 ? `<span style="font-size:.7rem;color:#f39c12;background:rgba(243,156,18,.1);padding:2px 6px;border-radius:4px">${late} geç</span>` : ''}
-                            ${missed > 0 ? `<span style="font-size:.7rem;color:#e74c3c;background:rgba(231,76,60,.1);padding:2px 6px;border-radius:4px">${missed} kaçırılan</span>` : ''}
+                            ${missed > 0 ? `<span style="font-size:.7rem;color:#e74c3c;background:rgba(231,76,60,.1);padding:2px 6px;border-radius:4px">${missed} yapılmayan</span>` : ''}
                             <span style="font-size:.8rem;font-weight:700;color:${personTotal >= 0 ? '#27ae60' : '#e74c3c'}">${personTotal >= 0 ? '+' : ''}${personTotal}</span>
                         </div>
                     </div>
@@ -5890,16 +5993,47 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
             });
             
             html += `
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg4)">
-                    <span style="font-size:.85rem;color:var(--tx);font-weight:500">${personName}</span>
-                    <div style="display:flex;align-items:center;gap:8px">
-                        ${onTime > 0 ? `<span style="font-size:.7rem;color:#27ae60;background:rgba(39,174,96,.1);padding:2px 6px;border-radius:4px">${onTime} vaktinde</span>` : ''}
-                        ${late > 0 ? `<span style="font-size:.7rem;color:#f39c12;background:rgba(243,156,18,.1);padding:2px 6px;border-radius:4px">${late} geç</span>` : ''}
-                        ${missed > 0 ? `<span style="font-size:.7rem;color:#e74c3c;background:rgba(231,76,60,.1);padding:2px 6px;border-radius:4px">${missed} kaçırılan</span>` : ''}
-                        <span style="font-size:.85rem;font-weight:700;color:${personTotal >= 0 ? '#27ae60' : '#e74c3c'};min-width:40px;text-align:right">${personTotal >= 0 ? '+' : ''}${personTotal}</span>
+                <div style="margin-bottom:8px">
+                    <div onclick="togglePersonAutoNotes('${personelId}')" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg3);border-radius:8px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <svg width="12" height="12" fill="none" stroke="var(--tx3)" stroke-width="2" viewBox="0 0 24 24" class="chevron-${personelId}" style="transition:transform .2s"><path d="M9 18l6-6-6-6"/></svg>
+                            <span style="font-size:.85rem;color:var(--tx);font-weight:600">${personName.toUpperCase()}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            ${onTime > 0 ? `<span style="font-size:.65rem;color:#27ae60;background:rgba(39,174,96,.12);padding:3px 8px;border-radius:4px;font-weight:500">${onTime} vaktinde</span>` : ''}
+                            ${late > 0 ? `<span style="font-size:.65rem;color:#f39c12;background:rgba(243,156,18,.12);padding:3px 8px;border-radius:4px;font-weight:500">${late} geç</span>` : ''}
+                            ${missed > 0 ? `<span style="font-size:.65rem;color:#e74c3c;background:rgba(231,76,60,.12);padding:3px 8px;border-radius:4px;font-weight:500">${missed} eksik</span>` : ''}
+                            <span style="font-size:.9rem;font-weight:700;color:${personTotal >= 0 ? '#27ae60' : '#e74c3c'};min-width:35px;text-align:right">${personTotal >= 0 ? '+' : ''}${personTotal}</span>
+                        </div>
                     </div>
-                </div>
+                    <div id="autoNotes-${personelId}" style="display:none;padding:8px 0 0 20px">
             `;
+            
+            // Tüm notları göster (tarih ve saat ile)
+            const sortedNotes = [...notes].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            sortedNotes.forEach(note => {
+                const noteColor = note.points > 0 ? '#27ae60' : (note.points < 0 ? '#e74c3c' : 'var(--tx3)');
+                const statusLabel = note.status === 'onTime' ? 'Vaktinde' : (note.status === 'late' ? 'Geç' : 'Eksik');
+                const statusBg = note.status === 'onTime' ? 'rgba(39,174,96,.1)' : (note.status === 'late' ? 'rgba(243,156,18,.1)' : 'rgba(231,76,60,.1)');
+                const statusColor = note.status === 'onTime' ? '#27ae60' : (note.status === 'late' ? '#f39c12' : '#e74c3c');
+                
+                html += `
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-size:.75rem">
+                        <div style="display:flex;align-items:center;gap:10px;flex:1">
+                            <span style="color:var(--tx2);min-width:70px">${note.date || '-'}</span>
+                            <span style="color:var(--tx3);min-width:45px">${note.checkTime || '-'}</span>
+                            <span style="background:${statusBg};color:${statusColor};padding:2px 6px;border-radius:4px;font-size:.65rem;font-weight:500">${statusLabel}</span>
+                            <span style="color:var(--tx);flex:1">${note.checkType || note.note || '-'}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <span style="font-weight:600;color:${noteColor};min-width:30px;text-align:right">${note.points > 0 ? '+' : ''}${note.points}</span>
+                            ${canManagePoints ? `<button onclick="event.stopPropagation();deleteAutoNote('${note.id}')" style="background:rgba(231,76,60,.1);border:none;color:#e74c3c;cursor:pointer;padding:4px 8px;border-radius:4px;font-size:.65rem;font-weight:500;transition:all .15s" onmouseover="this.style.background='rgba(231,76,60,.2)'" onmouseout="this.style.background='rgba(231,76,60,.1)'">Sil</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `</div></div>`;
         });
         html += `</div>`;
         
@@ -5910,6 +6044,21 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
     }
     
     return html;
+}
+
+// Kişi bazlı otomatik notları aç/kapat
+function togglePersonAutoNotes(personelId) {
+    const section = document.getElementById(`autoNotes-${personelId}`);
+    const chevron = document.querySelector(`.chevron-${personelId}`);
+    if (section && chevron) {
+        if (section.style.display === 'none') {
+            section.style.display = 'block';
+            chevron.style.transform = 'rotate(90deg)';
+        } else {
+            section.style.display = 'none';
+            chevron.style.transform = 'rotate(0deg)';
+        }
+    }
 }
 
 // Otomatik puanlar detay aç/kapat
@@ -5966,7 +6115,7 @@ function showPuantajRulesDetail() {
                             <span style="color:#f39c12;font-weight:600">-2 puan</span>
                         </div>
                         <div style="display:flex;justify-content:space-between;color:var(--tx)">
-                            <span>Kaçırılan/doldurulmayan check</span>
+                            <span>Yapılmayan/doldurulmayan check</span>
                             <span style="color:#e74c3c;font-weight:600">-2 puan</span>
                         </div>
                     </div>
@@ -5978,7 +6127,7 @@ function showPuantajRulesDetail() {
                 <div style="background:var(--bg3);border-radius:10px;padding:14px">
                     <div style="font-size:.85rem;color:var(--tx);margin-bottom:8px">Saatler: 10:00, 12:00, 15:00, 18:00, 21:00, 00:00</div>
                     <div style="display:flex;justify-content:space-between;color:var(--tx);font-size:.85rem">
-                        <span>Her kaçırılan saat için</span>
+                        <span>Her yapılmayan saat için</span>
                         <span style="color:#9b59b6;font-weight:600">-1 puan</span>
                     </div>
                 </div>
@@ -6162,6 +6311,20 @@ function showPuantajTab(tab, btn) {
         loadPuantajAnaliz();
     } else if (tab === 'arsiv') {
         document.getElementById('puantajArsivTab').style.display = 'block';
+        // Barista kontrolü
+        if (currentUser?.role === 'barista') {
+            document.getElementById('puantajArsivContainer').innerHTML = `
+                <div style="text-align:center;padding:60px 20px;grid-column:1/-1">
+                    <svg width="48" height="48" fill="none" stroke="var(--tx3)" stroke-width="1.5" viewBox="0 0 24 24" style="margin-bottom:16px;opacity:.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                    <div style="font-size:1.1rem;font-weight:600;color:var(--tx);margin-bottom:8px">Arşiv Erişimi Kısıtlı</div>
+                    <div style="font-size:.85rem;color:var(--tx3);max-width:300px;margin:0 auto">Bu bölüm sadece yöneticiler tarafından görüntülenebilir.</div>
+                </div>
+            `;
+            document.getElementById('arsivSummary').innerHTML = '';
+            document.getElementById('arsivTrendChart').innerHTML = '';
+            document.getElementById('arsivPieChart').innerHTML = '';
+            return;
+        }
         populateSubeSelect('arsivSube');
         loadPuantajArsiv();
     }
@@ -6220,29 +6383,35 @@ async function resetPersonelPrim(personelId, name) {
     
     const ay = document.getElementById('puantajAy')?.value || String(new Date().getMonth() + 1).padStart(2, '0');
     const yil = document.getElementById('puantajYil')?.value || new Date().getFullYear();
+    const sube = document.getElementById('puantajSube')?.value || '';
     const period = `${yil}-${ay}`;
     
     confirmModal(
         'Primi Sıfırla',
         `<strong>${name}</strong> için <strong>${ay}/${yil}</strong> dönemi primi sıfırlanacak.<br><br>
-        <span style="color:var(--tx2);font-size:.85rem">Tüm puantaj kayıtları geçmişte saklanır, sadece prim durumu sıfırlanır.</span>`,
+        <span style="color:var(--tx2);font-size:.85rem">Tüm puantaj kayıtları geçmişte saklanır, +10 telafi puanı eklenir.</span>`,
         async () => {
             try {
-                // Prim sıfırlama kaydı oluştur
-                await db.collection('primResets').add({
+                // Puantaj koleksiyonuna telafi puanı ekle (mevcut izinleri kullanır)
+                await db.collection('puantaj').add({
                     personelId,
                     personelName: name,
                     period,
-                    resetAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    resetBy: currentUser?.email || currentUser?.username || 'admin',
-                    reason: 'Manuel sıfırlama'
+                    branch: sube,
+                    score: 5, // 5 yıldız = +2 puan (ama biz özel işaretliyoruz)
+                    type: 'prim_reset', // Özel tip: Prim sıfırlama
+                    resetBonus: 10, // +10 telafi puanı
+                    note: `Prim sıfırlama - ${currentUser?.name || 'Yönetici'} tarafından`,
+                    eventDate: new Date().toISOString().split('T')[0],
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    createdBy: currentUser?.email || currentUser?.username || 'admin'
                 });
                 
-                toast(`${name} için prim sıfırlandı`, 'success');
+                toast(`${name} için prim sıfırlandı (+10 telafi)`, 'success');
                 loadPuantaj();
             } catch (error) {
                 console.error('Prim sıfırlama hatası:', error);
-                toast('Sıfırlama hatası!', 'error');
+                toast('Sıfırlama hatası: ' + error.message, 'error');
             }
         },
         'warning'
@@ -10838,7 +11007,7 @@ function getCheckStatus(checkType, targetTime, branch, isCompleted, completedAt 
     }
     
     if (window.isMissed) {
-        return { status: 'missed', points: rules.points.missed, label: 'Kaçırıldı', color: '#e74c3c' };
+        return { status: 'missed', points: rules.points.missed, label: 'Yapılmadı', color: '#e74c3c' };
     }
     
     if (window.isLate) {
@@ -10932,7 +11101,7 @@ async function createAutoPuantajNote(personelId, personelName, checkType, checkT
     }
 }
 
-// Kaçırılan checkler için otomatik puan işle
+// Yapılmayan checkler için otomatik puan işle
 async function processMissedChecks(branch, checkType, timeSlot, date, shiftPersonnel) {
     // Sadece yönetici/müdür görünümünde işle (tekrarlı işlemi önlemek için)
     if (!['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role)) {
@@ -11220,7 +11389,7 @@ async function loadTodayChecks() {
                     if (isCompleted) {
                         priority = 90; // Tamamlanan en altta
                     } else if (window.isMissed) {
-                        priority = 80; // Kaçırılan altta
+                        priority = 80; // Yapılmayan altta
                     } else if (window.isLate) {
                         priority = 20; // Geç - acil
                     } else if (window.isInWindow) {
@@ -11244,7 +11413,7 @@ async function loadTodayChecks() {
                         sortMinutes
                     });
                     
-                    // Kaçırılan check için otomatik puan işle
+                    // Yapılmayan check için otomatik puan işle
                     if (window.isMissed && !isCompleted && responsiblePersonnel.length > 0) {
                         processMissedChecks(branch, checkType.id, timeSlot, todayStr, responsiblePersonnel);
                     }
@@ -11397,7 +11566,7 @@ async function loadTodayChecks() {
                     bgColor = 'rgba(231,76,60,.08)';
                     borderColor = '#e74c3c';
                     icon = '❌';
-                    statusText = 'Kaçırıldı';
+                    statusText = 'Yapılmadı';
                 } else if (isActive) {
                     bgColor = 'rgba(155,89,182,.08)';
                     borderColor = '#9b59b6';
@@ -11618,8 +11787,8 @@ function getCardPriority(card) {
     if (text.includes('tamam') || text.includes('tamamlandı') || style.includes('#27ae60')) {
         return 90;
     }
-    // Kaçırıldı - altta
-    if (text.includes('kaçırıldı') || text.includes('süre doldu') || style.includes('#e74c3c') || style.includes('#9ca3af')) {
+    // Yapılmadı - altta
+    if (text.includes('yapılmadı') || text.includes('süre doldu') || style.includes('#e74c3c') || style.includes('#9ca3af')) {
         return 80;
     }
     // Geç - orta
@@ -11752,7 +11921,7 @@ function renderSimpleCheckCard(name, deadline, branch, isCompleted, isMissed, is
 function renderCheckCard(checkType, timeSlot, branch, isCompleted, submissionData, window, remaining, status, responsiblePersonnel) {
     // Sabit renkler - duruma göre
     const TEAL = '#008c95';      // Moonberry - Aktif
-    const CORAL = '#ff8674';     // Sunberry - Kaçırıldı
+    const CORAL = '#ff8674';     // Sunberry - Yapılmadı
     const ORANGE = '#f39c12';    // Turuncu - Geç
     const GRAY = '#9ca3af';      // Gri - Tamamlandı
     const GREEN = '#27ae60';     // Yeşil - Başarılı
@@ -11782,11 +11951,11 @@ function renderCheckCard(checkType, timeSlot, branch, isCompleted, submissionDat
         statusIcon = '📗';
         opacity = '0.7';
     } else if (window?.isMissed) {
-        // Kaçırıldı - Coral/Sunberry
+        // Yapılmadı - Coral/Sunberry
         bgColor = 'rgba(255,134,116,.08)';
         accentColor = CORAL;
         icon = '○';
-        statusText = 'Kaçırıldı';
+        statusText = 'Yapılmadı';
         statusIcon = '📕';
         riskText = `${missedPoints} puan`;
         opacity = '0.6';
@@ -11976,7 +12145,7 @@ async function loadAllChecksOverview() {
                 </div>
                 <div style="background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.2);border-radius:12px;padding:20px;text-align:center">
                     <div style="font-size:2rem;font-weight:700;color:#e74c3c">${missed}</div>
-                    <div style="font-size:.8rem;color:#e74c3c;font-weight:500">Kaçırıldı</div>
+                    <div style="font-size:.8rem;color:#e74c3c;font-weight:500">Yapılmadı</div>
                 </div>
                 <div style="background:var(--bg3);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;text-align:center">
                     <div style="font-size:2rem;font-weight:700;color:${totalPoints >= 0 ? '#27ae60' : '#e74c3c'}">${totalPoints >= 0 ? '+' : ''}${totalPoints}</div>
@@ -12031,7 +12200,7 @@ async function loadAllChecksOverview() {
             } else if (isToday) {
                 const window = getCheckTimeWindow(expected.type, expected.timeSlot, expected.branch);
                 if (window && window.isMissed) {
-                    statusBadge = '❌ Kaçırıldı';
+                    statusBadge = '❌ Yapılmadı';
                     statusColor = '#e74c3c';
                 } else if (window && window.isLate) {
                     statusBadge = '⚠️ Geç Pencere';
@@ -12044,7 +12213,7 @@ async function loadAllChecksOverview() {
                     statusColor = '#95a5a6';
                 }
             } else {
-                statusBadge = '❌ Kaçırıldı';
+                statusBadge = '❌ Yapılmadı';
                 statusColor = '#e74c3c';
             }
             
@@ -12124,7 +12293,7 @@ function showManualCheckModal(branch, type, timeSlot, date) {
                 <select id="manualCheckStatus" class="form-select">
                     <option value="onTime">✅ Vaktinde</option>
                     <option value="late">⏰ Geç</option>
-                    <option value="missed">❌ Kaçırıldı</option>
+                    <option value="missed">❌ Yapılmadı</option>
                 </select>
             </div>
             
@@ -12465,7 +12634,7 @@ function renderCheckRulesSettings() {
                             </div>
                         ` : ''}
                         <div style="display:flex;align-items:center;gap:6px">
-                            <span style="font-size:.75rem;color:var(--tx2)">Kaçırıldı:</span>
+                            <span style="font-size:.75rem;color:var(--tx2)">Yapılmadı:</span>
                             <input type="number" class="form-input" style="width:60px;padding:4px 8px;font-size:.85rem" id="rule_${key}_missed" value="${rule.points.missed || -1}">
                         </div>
                     </div>
@@ -12792,7 +12961,7 @@ async function loadChecklistTodayPanel() {
                     let isActive = false;
                     
                     if (isCompleted) { bgColor = 'rgba(39,174,96,.05)'; accentColor = '#27ae60'; icon = '●'; statusText = 'Tamam'; }
-                    else if (window.isMissed) { bgColor = brandBg; accentColor = brandColor; icon = '○'; statusText = 'Kaçırıldı'; }
+                    else if (window.isMissed) { bgColor = brandBg; accentColor = brandColor; icon = '○'; statusText = 'Yapılmadı'; }
                     else if (window.isLate) { bgColor = 'rgba(243,156,18,.05)'; accentColor = '#f39c12'; icon = '◐'; statusText = 'Geç'; isActive = true; }
                     else if (window.isInWindow) { bgColor = brandBg; accentColor = brandColor; icon = '●'; statusText = 'Aktif'; isActive = true; }
                     
@@ -12867,7 +13036,7 @@ async function loadChecklistTodayPanel() {
                     const bgColor = isCompleted ? 'rgba(39,174,96,.05)' : isMissed ? 'var(--bg3)' : (isMoonberry ? 'rgba(0,140,149,.06)' : 'rgba(255,134,116,.06)');
                     const accentColor = isCompleted ? '#27ae60' : isMissed ? '#9ca3af' : brandColor;
                     const icon = isCompleted ? '●' : isMissed ? '○' : '●';
-                    const statusText = isCompleted ? 'Tamam' : isMissed ? 'Kaçırıldı' : 'Aktif';
+                    const statusText = isCompleted ? 'Tamam' : isMissed ? 'Yapılmadı' : 'Aktif';
                     
                     html += `
                         <div style="background:${bgColor};border-left:3px solid ${accentColor};border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:4px;opacity:${isMissed ? '0.6' : '1'}" onclick="selectCheckFromPanel('${branch}', 'acilis', '')">
