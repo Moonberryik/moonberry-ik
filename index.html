@@ -2460,6 +2460,103 @@ async function cleanOldPuantajNotes() {
     }
 }
 
+// 4. Shift sıralama düzeltme
+async function fixShiftOrdering() {
+    console.log('[Migration] 4/4 Shift sıralaması düzeltiliyor...');
+    
+    try {
+        // Önce tüm personeli çek
+        const personelSnap = await db.collection('personel').get();
+        const personelByBranch = {};
+        
+        personelSnap.forEach(doc => {
+            const p = doc.data();
+            const branch = p.branch;
+            if (!personelByBranch[branch]) personelByBranch[branch] = [];
+            personelByBranch[branch].push({
+                name: p.name,
+                codeName: p.codeName,
+                displayName: getPersonelDisplayName(p),
+                role: p.role,
+                startDate: p.iseBaslama || p.startDate || '9999-12-31'
+            });
+        });
+        
+        // Her şube için sırala
+        const roleOrder = ['bolge_muduru', 'magaza_muduru', 'magaza_muduru_yardimcisi', 'kidemli_barista', 'barista', 'part_time'];
+        Object.keys(personelByBranch).forEach(branch => {
+            personelByBranch[branch].sort((a, b) => {
+                // 1. Rütbeye göre
+                const aRoleIdx = roleOrder.indexOf(a.role) === -1 ? 99 : roleOrder.indexOf(a.role);
+                const bRoleIdx = roleOrder.indexOf(b.role) === -1 ? 99 : roleOrder.indexOf(b.role);
+                if (aRoleIdx !== bRoleIdx) return aRoleIdx - bRoleIdx;
+                
+                // 2. Giriş tarihine göre
+                return (a.startDate || '').localeCompare(b.startDate || '');
+            });
+        });
+        
+        // Tüm shift'leri güncelle
+        const shiftsSnap = await db.collection('shifts').get();
+        let updated = 0;
+        
+        for (const doc of shiftsSnap.docs) {
+            const shift = doc.data();
+            const branch = shift.branch;
+            const orderedPersonel = personelByBranch[branch] || [];
+            const personelShifts = shift.personelShifts || {};
+            
+            // Yeni sıralama oluştur - sadece shift'te olan personeli dahil et
+            const newOrder = [];
+            
+            // Sıralı listedeki her personel için
+            orderedPersonel.forEach(p => {
+                // personelShifts'te bu personel var mı?
+                const existingKey = Object.keys(personelShifts).find(key => {
+                    const keyNorm = normalizeTurkishChars(key);
+                    const displayNorm = normalizeTurkishChars(p.displayName);
+                    const codeNorm = normalizeTurkishChars(p.codeName);
+                    const nameNorm = normalizeTurkishChars(p.name);
+                    const codeFirstNorm = normalizeTurkishChars(p.codeName?.split(' ')[0]);
+                    
+                    return keyNorm === displayNorm || 
+                           keyNorm === codeNorm || 
+                           keyNorm === nameNorm ||
+                           keyNorm === codeFirstNorm ||
+                           key === p.displayName ||
+                           key === p.codeName ||
+                           key === p.name;
+                });
+                
+                if (existingKey) {
+                    newOrder.push(existingKey);
+                }
+            });
+            
+            // Sıralamada olmayan ama shift'te olan personeli en sona ekle
+            Object.keys(personelShifts).forEach(key => {
+                if (!newOrder.includes(key)) {
+                    newOrder.push(key);
+                }
+            });
+            
+            // Güncelle
+            if (JSON.stringify(newOrder) !== JSON.stringify(shift.personelOrder)) {
+                await db.collection('shifts').doc(doc.id).update({ 
+                    personelOrder: newOrder 
+                });
+                updated++;
+            }
+        }
+        
+        console.log(`[Migration] Shift sıralama: ${updated} güncellendi`);
+        return { updated };
+    } catch (e) {
+        console.error('[Migration] Shift sıralama hatası:', e);
+        return { updated: 0, error: e.message };
+    }
+}
+
 // ANA MİGRASYON FONKSİYONU
 async function fullSystemMigration() {
     console.log('═══════════════════════════════════════════');
@@ -2480,6 +2577,9 @@ async function fullSystemMigration() {
     // 3. Eski puantajNotes temizle
     const notesResult = await cleanOldPuantajNotes();
     
+    // 4. Shift sıralamasını düzelt
+    const orderResult = await fixShiftOrdering();
+    
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
     
     console.log('═══════════════════════════════════════════');
@@ -2488,6 +2588,7 @@ async function fullSystemMigration() {
     console.log(`   Personel: ${personelResult.updated} güncellendi`);
     console.log(`   Shift: ${shiftResult.updated} güncellendi`);
     console.log(`   PuantajNotes: ${notesResult.deleted} silindi`);
+    console.log(`   Sıralama: ${orderResult.updated} shift düzeltildi`);
     console.log(`   Süre: ${duration} saniye`);
     console.log('═══════════════════════════════════════════');
     
@@ -2499,13 +2600,14 @@ async function fullSystemMigration() {
         if (typeof loadShiftWeek === 'function') loadShiftWeek();
     }, 1000);
     
-    return { personelResult, shiftResult, notesResult, duration };
+    return { personelResult, shiftResult, notesResult, orderResult, duration };
 }
 
 // Console'dan çağrılabilir
 window.migratePersonelUniqueIds = migratePersonelUniqueIds;
 window.migrateShiftData = migrateShiftData;
 window.cleanOldPuantajNotes = cleanOldPuantajNotes;
+window.fixShiftOrdering = fixShiftOrdering;
 window.fullSystemMigration = fullSystemMigration;
 
 // İsim kısaltma: "BÜŞRA SÖĞÜT" → "Büşra S."
@@ -11042,12 +11144,18 @@ async function createNewShift() {
                 const p = d.data();
                 if (p.branch === sube) personelList.push(p);
             });
-            // Rütbeye göre sırala
+            // Rütbeye göre + giriş tarihine göre sırala
             const roleOrder = ['bolge_muduru', 'magaza_muduru', 'magaza_muduru_yardimcisi', 'kidemli_barista', 'barista', 'part_time'];
             personelList.sort((a, b) => {
-                const aIdx = roleOrder.indexOf(a.role) === -1 ? 99 : roleOrder.indexOf(a.role);
-                const bIdx = roleOrder.indexOf(b.role) === -1 ? 99 : roleOrder.indexOf(b.role);
-                return aIdx - bIdx;
+                // 1. Önce rütbeye göre
+                const aRoleIdx = roleOrder.indexOf(a.role) === -1 ? 99 : roleOrder.indexOf(a.role);
+                const bRoleIdx = roleOrder.indexOf(b.role) === -1 ? 99 : roleOrder.indexOf(b.role);
+                if (aRoleIdx !== bRoleIdx) return aRoleIdx - bRoleIdx;
+                
+                // 2. Aynı rütbede ise giriş tarihine göre (en eski önce)
+                const aDate = a.iseBaslama || a.startDate || '9999-12-31';
+                const bDate = b.iseBaslama || b.startDate || '9999-12-31';
+                return aDate.localeCompare(bDate);
             });
             personelList.forEach(p => {
                 // getPersonelDisplayName: codeName varsa onu, yoksa formatDisplayName kullanır
