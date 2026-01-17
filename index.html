@@ -2229,24 +2229,44 @@ function normalizeTurkishChars(str) {
 }
 
 // Personel map oluştur: displayName/codeName → {uniqueId, fullName}
+// Belirsiz key'ler (aynı ilk isim için birden fazla personel) işaretlenir
 async function buildPersonelMap() {
     if (_migrationPersonelMap) return _migrationPersonelMap;
     
     const snapshot = await db.collection('personel').get();
     _migrationPersonelMap = new Map();
     
+    // Önce tüm personeli topla ve ilk isim sayılarını hesapla
+    const allPersonel = [];
+    const firstNameCount = {}; // "BÜŞRA" → 2 gibi
+    
     snapshot.forEach(doc => {
         const data = doc.data();
         const uniqueId = data.uniqueId || normalizePersonelId(data.name);
         const fullName = data.name;
-        // DOĞRU: codeName varsa onu, yoksa formatDisplayName
         const displayName = getPersonelDisplayName(data);
         const codeName = data.codeName || formatDisplayName(fullName);
         const firstName = fullName?.split(' ')[0] || '';
-        const codeFirstPart = codeName?.split(' ')[0] || '';  // "Esin İ." → "Esin"
+        const firstNameNorm = normalizeTurkishChars(firstName);
         
-        // Tüm olası key'leri ekle (çok kapsamlı)
-        const keys = [
+        allPersonel.push({ doc, data, uniqueId, fullName, displayName, codeName, firstName, firstNameNorm, branch: data.branch });
+        
+        // İlk isim sayısını artır (branch bazlı)
+        const countKey = `${data.branch}_${firstNameNorm}`;
+        firstNameCount[countKey] = (firstNameCount[countKey] || 0) + 1;
+    });
+    
+    // Şimdi map'i oluştur
+    allPersonel.forEach(p => {
+        const { uniqueId, fullName, displayName, codeName, firstName, firstNameNorm, branch, data } = p;
+        const codeFirstPart = codeName?.split(' ')[0] || '';
+        
+        // Bu ilk isim belirsiz mi? (aynı branch'te 2+ kişi)
+        const countKey = `${branch}_${firstNameNorm}`;
+        const isAmbiguous = firstNameCount[countKey] > 1;
+        
+        // Kesin eşleşme key'leri (her zaman ekle)
+        const certainKeys = [
             // Tam isim varyasyonları
             fullName,
             fullName?.toLowerCase(),
@@ -2259,36 +2279,50 @@ async function buildPersonelMap() {
             displayName?.toUpperCase(),
             normalizeTurkishChars(displayName),
             
-            // Kod adı varyasyonları
+            // Kod adı varyasyonları (TAM)
             data.codeName,
             data.codeName?.toLowerCase(),
             data.codeName?.toUpperCase(),
             normalizeTurkishChars(data.codeName),
             
-            // Kod adı ilk kısım (ESİN → Esin İ.)
-            codeFirstPart,
-            codeFirstPart?.toLowerCase(),
-            codeFirstPart?.toUpperCase(),
-            normalizeTurkishChars(codeFirstPart),
-            
-            // İlk isim varyasyonları
+            // Normalize ID (benzersiz)
+            normalizePersonelId(fullName),
+            uniqueId,
+        ].filter(k => k);
+        
+        // Belirsiz olabilecek key'ler (sadece tek personel varsa ekle)
+        const ambiguousKeys = isAmbiguous ? [] : [
+            // İlk isim varyasyonları (BÜŞRA, Büşra, busra)
             firstName,
             firstName?.toLowerCase(),
             firstName?.toUpperCase(),
             normalizeTurkishChars(firstName),
             
-            // Normalize ID
-            normalizePersonelId(fullName),
-            normalizePersonelId(firstName),
-            normalizePersonelId(data.codeName),
-            normalizePersonelId(codeFirstPart),
+            // Kod adı ilk kısım
+            codeFirstPart,
+            codeFirstPart?.toLowerCase(),
+            codeFirstPart?.toUpperCase(),
+            normalizeTurkishChars(codeFirstPart),
         ].filter(k => k);
         
-        keys.forEach(key => {
+        const info = { uniqueId, fullName, displayName, codeName: data.codeName, branch };
+        
+        certainKeys.forEach(key => {
             if (!_migrationPersonelMap.has(key)) {
-                _migrationPersonelMap.set(key, { uniqueId, fullName, displayName, codeName: data.codeName, branch: data.branch });
+                _migrationPersonelMap.set(key, info);
             }
         });
+        
+        ambiguousKeys.forEach(key => {
+            if (!_migrationPersonelMap.has(key)) {
+                _migrationPersonelMap.set(key, info);
+            }
+        });
+        
+        // Belirsiz ilk isimleri logla
+        if (isAmbiguous) {
+            console.log(`[Migration] ⚠️ Belirsiz ilk isim: "${firstName}" (${branch}) - ${firstNameCount[countKey]} kişi`);
+        }
     });
     
     console.log(`[Migration] Personel map oluşturuldu: ${_migrationPersonelMap.size} key`);
@@ -2334,14 +2368,14 @@ async function migratePersonelUniqueIds() {
     }
 }
 
-// 2. Shift verilerini uniqueId sistemine geçir
+// 2. Shift verilerini güncelle - KEY'LERİ DEĞİŞTİRME, SADECE MAPPING EKLE
 async function migrateShiftData() {
     if (!db) {
         console.error('Firebase bağlantısı yok');
         return { updated: 0, skipped: 0 };
     }
     
-    console.log('[Migration] 2/3 Shift verilerini güncelleme başlıyor...');
+    console.log('[Migration] 2/4 Shift mapping güncelleniyor (key değişikliği YOK)...');
     
     try {
         const personelMap = await buildPersonelMap();
@@ -2350,14 +2384,19 @@ async function migrateShiftData() {
         
         for (const doc of shiftsSnapshot.docs) {
             const shift = doc.data();
-            const oldPersonelShifts = shift.personelShifts || {};
-            const newPersonelShifts = {};
-            const newPersonelNames = {};
-            const newPersonelFullNames = {};
+            const personelShifts = shift.personelShifts || {};
+            const newPersonelNames = shift.personelNames || {};
+            const newPersonelFullNames = shift.personelFullNames || {};
             let hasChanges = false;
             
-            for (const [oldKey, days] of Object.entries(oldPersonelShifts)) {
-                // Eski key'den personel bilgisi bul - ÇOKLU DENEME
+            // Key'leri DEĞİŞTİRME - sadece mapping ekle
+            for (const oldKey of Object.keys(personelShifts)) {
+                // Zaten mapping varsa atla
+                if (newPersonelNames[oldKey] && newPersonelFullNames[oldKey]) {
+                    continue;
+                }
+                
+                // Personel bilgisi bul
                 let personelInfo = personelMap.get(oldKey) || 
                                    personelMap.get(oldKey.toLowerCase()) ||
                                    personelMap.get(oldKey.toUpperCase()) ||
@@ -2365,29 +2404,23 @@ async function migrateShiftData() {
                                    personelMap.get(normalizePersonelId(oldKey));
                 
                 if (personelInfo) {
-                    const newKey = personelInfo.uniqueId;
-                    
-                    // Key değiştiyse güncelle
-                    if (newKey !== oldKey) {
-                        hasChanges = true;
-                        console.log(`  ${doc.id}: "${oldKey}" → "${newKey}"`);
-                    }
-                    
-                    newPersonelShifts[newKey] = days;
-                    newPersonelNames[newKey] = personelInfo.displayName;
-                    newPersonelFullNames[newKey] = personelInfo.fullName;
+                    newPersonelNames[oldKey] = personelInfo.displayName;
+                    newPersonelFullNames[oldKey] = personelInfo.fullName;
+                    hasChanges = true;
+                    console.log(`  ✓ ${oldKey} → display: "${personelInfo.displayName}"`);
                 } else {
-                    // Bulunamadı, eski key'i koru
-                    newPersonelShifts[oldKey] = days;
-                    newPersonelNames[oldKey] = oldKey;
-                    newPersonelFullNames[oldKey] = oldKey;
-                    console.warn(`  ⚠️ ${doc.id}: "${oldKey}" için personel bulunamadı`);
+                    // Bulunamadı - key'i displayName olarak kullan
+                    if (!newPersonelNames[oldKey]) {
+                        newPersonelNames[oldKey] = oldKey;
+                        newPersonelFullNames[oldKey] = oldKey;
+                        hasChanges = true;
+                        console.warn(`  ⚠️ "${oldKey}" için personel bulunamadı, olduğu gibi bırakıldı`);
+                    }
                 }
             }
             
-            if (hasChanges || !shift.personelNames || !shift.personelFullNames) {
+            if (hasChanges) {
                 await db.collection('shifts').doc(doc.id).update({
-                    personelShifts: newPersonelShifts,
                     personelNames: newPersonelNames,
                     personelFullNames: newPersonelFullNames,
                     migratedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -2460,7 +2493,7 @@ async function cleanOldPuantajNotes() {
     }
 }
 
-// 4. Shift sıralama düzeltme
+// 4. Shift sıralama düzeltme - SADECE ROLE GÖRE
 async function fixShiftOrdering() {
     console.log('[Migration] 4/4 Shift sıralaması düzeltiliyor...');
     
@@ -2477,23 +2510,24 @@ async function fixShiftOrdering() {
                 name: p.name,
                 codeName: p.codeName,
                 displayName: getPersonelDisplayName(p),
-                role: p.role,
-                startDate: p.iseBaslama || p.startDate || '9999-12-31'
+                uniqueId: p.uniqueId || normalizePersonelId(p.name),
+                role: p.role || 'barista' // undefined ise barista varsay
             });
         });
         
-        // Her şube için sırala
+        // Her şube için SADECE ROLE'E GÖRE sırala
         const roleOrder = ['bolge_muduru', 'magaza_muduru', 'magaza_muduru_yardimcisi', 'kidemli_barista', 'barista', 'part_time'];
         Object.keys(personelByBranch).forEach(branch => {
             personelByBranch[branch].sort((a, b) => {
-                // 1. Rütbeye göre
-                const aRoleIdx = roleOrder.indexOf(a.role) === -1 ? 99 : roleOrder.indexOf(a.role);
-                const bRoleIdx = roleOrder.indexOf(b.role) === -1 ? 99 : roleOrder.indexOf(b.role);
-                if (aRoleIdx !== bRoleIdx) return aRoleIdx - bRoleIdx;
-                
-                // 2. Giriş tarihine göre
-                return (a.startDate || '').localeCompare(b.startDate || '');
+                // Sadece rütbeye göre sırala
+                const aRoleIdx = roleOrder.indexOf(a.role);
+                const bRoleIdx = roleOrder.indexOf(b.role);
+                // undefined role (-1) en sona gitsin
+                const aIdx = aRoleIdx === -1 ? 100 : aRoleIdx;
+                const bIdx = bRoleIdx === -1 ? 100 : bRoleIdx;
+                return aIdx - bIdx;
             });
+            console.log(`[Sıralama] ${branch}:`, personelByBranch[branch].map(p => `${p.displayName}(${p.role})`).join(', '));
         });
         
         // Tüm shift'leri güncelle
@@ -2508,35 +2542,47 @@ async function fixShiftOrdering() {
             
             // Yeni sıralama oluştur - sadece shift'te olan personeli dahil et
             const newOrder = [];
+            const matched = new Set();
             
             // Sıralı listedeki her personel için
             orderedPersonel.forEach(p => {
-                // personelShifts'te bu personel var mı?
+                // personelShifts'te bu personel var mı? - GENİŞLETİLMİŞ EŞLEŞME
                 const existingKey = Object.keys(personelShifts).find(key => {
+                    if (matched.has(key)) return false; // Zaten eşleşmiş
+                    
+                    const keyLower = key.toLowerCase();
                     const keyNorm = normalizeTurkishChars(key);
                     const displayNorm = normalizeTurkishChars(p.displayName);
                     const codeNorm = normalizeTurkishChars(p.codeName);
                     const nameNorm = normalizeTurkishChars(p.name);
+                    const uniqueNorm = normalizeTurkishChars(p.uniqueId);
                     const codeFirstNorm = normalizeTurkishChars(p.codeName?.split(' ')[0]);
+                    const nameFirstNorm = normalizeTurkishChars(p.name?.split(' ')[0]);
                     
                     return keyNorm === displayNorm || 
                            keyNorm === codeNorm || 
                            keyNorm === nameNorm ||
+                           keyNorm === uniqueNorm ||
                            keyNorm === codeFirstNorm ||
+                           keyNorm === nameFirstNorm ||
+                           keyLower === p.uniqueId ||
                            key === p.displayName ||
                            key === p.codeName ||
-                           key === p.name;
+                           key === p.name ||
+                           key === p.uniqueId;
                 });
                 
                 if (existingKey) {
                     newOrder.push(existingKey);
+                    matched.add(existingKey);
                 }
             });
             
-            // Sıralamada olmayan ama shift'te olan personeli en sona ekle
+            // Sıralamada olmayan ama shift'te olan personeli EN SONA ekle (veri kaybı önleme)
             Object.keys(personelShifts).forEach(key => {
                 if (!newOrder.includes(key)) {
                     newOrder.push(key);
+                    console.log(`  ⚠️ ${branch}: "${key}" sıralamada yok, sona eklendi`);
                 }
             });
             
@@ -10900,11 +10946,14 @@ async function addPersonelToShift(docId) {
             }
         });
         
-        // Rütbeye göre sırala
+        // SADECE RÜTBEYE GÖRE sırala
         const roleOrder = ['bolge_muduru', 'magaza_muduru', 'magaza_muduru_yardimcisi', 'kidemli_barista', 'barista', 'part_time'];
         personelList.sort((a, b) => {
-            const aIdx = roleOrder.indexOf(a.role) === -1 ? 99 : roleOrder.indexOf(a.role);
-            const bIdx = roleOrder.indexOf(b.role) === -1 ? 99 : roleOrder.indexOf(b.role);
+            const aRoleIdx = roleOrder.indexOf(a.role);
+            const bRoleIdx = roleOrder.indexOf(b.role);
+            // undefined role (-1) en sona gitsin
+            const aIdx = aRoleIdx === -1 ? 100 : aRoleIdx;
+            const bIdx = bRoleIdx === -1 ? 100 : bRoleIdx;
             return aIdx - bIdx;
         });
         
@@ -11144,18 +11193,15 @@ async function createNewShift() {
                 const p = d.data();
                 if (p.branch === sube) personelList.push(p);
             });
-            // Rütbeye göre + giriş tarihine göre sırala
+            // SADECE RÜTBEYE GÖRE sırala
             const roleOrder = ['bolge_muduru', 'magaza_muduru', 'magaza_muduru_yardimcisi', 'kidemli_barista', 'barista', 'part_time'];
             personelList.sort((a, b) => {
-                // 1. Önce rütbeye göre
-                const aRoleIdx = roleOrder.indexOf(a.role) === -1 ? 99 : roleOrder.indexOf(a.role);
-                const bRoleIdx = roleOrder.indexOf(b.role) === -1 ? 99 : roleOrder.indexOf(b.role);
-                if (aRoleIdx !== bRoleIdx) return aRoleIdx - bRoleIdx;
-                
-                // 2. Aynı rütbede ise giriş tarihine göre (en eski önce)
-                const aDate = a.iseBaslama || a.startDate || '9999-12-31';
-                const bDate = b.iseBaslama || b.startDate || '9999-12-31';
-                return aDate.localeCompare(bDate);
+                const aRoleIdx = roleOrder.indexOf(a.role);
+                const bRoleIdx = roleOrder.indexOf(b.role);
+                // undefined role (-1) en sona gitsin
+                const aIdx = aRoleIdx === -1 ? 100 : aRoleIdx;
+                const bIdx = bRoleIdx === -1 ? 100 : bRoleIdx;
+                return aIdx - bIdx;
             });
             personelList.forEach(p => {
                 // getPersonelDisplayName: codeName varsa onu, yoksa formatDisplayName kullanır
