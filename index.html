@@ -781,7 +781,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <div class="page-header">
                     <div class="page-title">Savunma İsteme</div>
                 </div>
-                <div class="alert alert-warning"><span class="alert-icon">⚠️</span><div>İş Kanunu Md. 19: Fesih öncesi savunma almak zorunludur.</div></div>
+                <div class="alert alert-warning">
+                    <span class="alert-icon"><svg width="18" height="18" fill="none" stroke="#f39c12" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+                    <div>İş Kanunu Md. 19: Fesih öncesi savunma almak zorunludur.</div>
+                </div>
                 <div class="form-section">
                     <div class="form-grid">
                         <div class="form-group"><label class="form-label">Personel</label><input type="text" id="sav_personel" class="form-input"></div>
@@ -807,14 +810,32 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <div class="page-title">Fesih İşlemleri</div>
                 </div>
                 <div class="form-section">
-                    <div class="form-section-title">⚖️ Fesih Türü</div>
+                    <div class="form-section-title" style="display:flex;align-items:center;gap:8px">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                        Fesih Türü
+                    </div>
                     <div class="type-cards">
-                        <div class="type-card" data-type="hakli" onclick="selectFesihType('hakli',this)"><div class="type-card-icon">⚠️</div><div class="type-card-title">Haklı Fesih</div><div class="type-card-sub">Md. 25/II - Tazminatsız</div></div>
-                        <div class="type-card" data-type="gecerli" onclick="selectFesihType('gecerli',this)"><div class="type-card-icon">📋</div><div class="type-card-title">Geçerli Fesih</div><div class="type-card-sub">Md. 18 - Tazminatlı</div></div>
-                        <div class="type-card" data-type="deneme" onclick="selectFesihType('deneme',this)"><div class="type-card-icon">🔄</div><div class="type-card-title">Deneme Feshi</div><div class="type-card-sub">Bildirimsiz</div></div>
+                        <div class="type-card" data-type="hakli" onclick="selectFesihType('hakli',this)">
+                            <div class="type-card-icon"><svg width="24" height="24" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+                            <div class="type-card-title">Haklı Fesih</div>
+                            <div class="type-card-sub">Md. 25/II - Tazminatsız</div>
+                        </div>
+                        <div class="type-card" data-type="gecerli" onclick="selectFesihType('gecerli',this)">
+                            <div class="type-card-icon"><svg width="24" height="24" fill="none" stroke="#3498db" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg></div>
+                            <div class="type-card-title">Geçerli Fesih</div>
+                            <div class="type-card-sub">Md. 18 - Tazminatlı</div>
+                        </div>
+                        <div class="type-card" data-type="deneme" onclick="selectFesihType('deneme',this)">
+                            <div class="type-card-icon"><svg width="24" height="24" fill="none" stroke="#f39c12" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></div>
+                            <div class="type-card-title">Deneme Feshi</div>
+                            <div class="type-card-sub">Bildirimsiz</div>
+                        </div>
                     </div>
                 </div>
-                <div id="fesih_6gun_alert" class="alert alert-danger" style="display:none"><span class="alert-icon">🚨</span><div><strong>6 İş Günü Uyarısı!</strong> Haklı fesih için süre dolmuş olabilir. Yine de belge oluşturabilirsiniz.</div></div>
+                <div id="fesih_6gun_alert" class="alert alert-danger" style="display:none">
+                    <span class="alert-icon"><svg width="18" height="18" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>
+                    <div><strong>6 İş Günü Uyarısı!</strong> Haklı fesih için süre dolmuş olabilir. Yine de belge oluşturabilirsiniz.</div>
+                </div>
                 <div class="form-section">
                     <div class="form-grid">
                         <div class="form-group"><label class="form-label">Personel</label><input type="text" id="fes_personel" class="form-input"></div>
@@ -883,7 +904,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         İbraname
                     </div>
                 </div>
-                <div class="alert alert-warning"><span class="alert-icon">⚠️</span><div>TBK Md.420: İbranamenin geçerliliği için işçinin yazılı onayı ve ödemenin banka yoluyla yapılması şarttır.</div></div>
+                <div class="alert alert-warning">
+                    <span class="alert-icon"><svg width="18" height="18" fill="none" stroke="#f39c12" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+                    <div>TBK Md.420: İbranamenin geçerliliği için işçinin yazılı onayı ve ödemenin banka yoluyla yapılması şarttır.</div>
+                </div>
                 <div class="form-section">
                     <div class="form-grid">
                         <div class="form-group"><label class="form-label">Personel Adı Soyadı</label><input type="text" id="ibra_personel" class="form-input"></div>
@@ -1027,11 +1051,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
                 <div class="form-section">
                     <div class="form-section-title" style="justify-content:space-between">
-                        <span>📋 Kayıtlı Personel</span>
+                        <span style="display:flex;align-items:center;gap:8px">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                            Kayıtlı Personel
+                        </span>
                         <button class="btn btn-primary btn-sm" onclick="showAddPersonelModal()">+ Yeni Personel</button>
                     </div>
                     <div class="form-group">
-                        <input type="text" id="personelSearch" class="form-input" placeholder="🔍 İsim, TC veya şube ara..." oninput="filterPersonel()">
+                        <input type="text" id="personelSearch" class="form-input" placeholder="İsim, TC veya şube ara..." oninput="filterPersonel()">
                     </div>
                     <div id="personelListContainer" style="margin-top:16px">
                         <p style="color:var(--tx2);text-align:center;padding:40px">Henüz personel kaydı yok. "Yeni Personel" butonuna tıklayarak ekleyin.</p>
@@ -1127,7 +1154,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 
                 <!-- Bugünkü Aktif Checkler Paneli -->
                 <div id="checklistTodayPanel" style="margin-bottom:20px;display:none">
-                    <div style="font-size:.8rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">📋 Bugünkü Checkler</div>
+                    <div style="font-size:.8rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;display:flex;align-items:center;gap:6px">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>
+                        Bugünkü Checkler
+                    </div>
                     <div id="checklistTodayContainer" style="display:grid;gap:8px;max-height:280px;overflow-y:auto">
                         <!-- Dinamik içerik -->
                     </div>
@@ -1196,15 +1226,27 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 
                 <!-- Sekmeler -->
                 <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--cardBorder);padding-bottom:12px">
-                    <button class="puantaj-tab active" onclick="showPuantajTab('kayit', this)" style="padding:10px 20px;border:none;background:linear-gradient(135deg,var(--accent),#ff6b5b);color:#fff;border-radius:8px;cursor:pointer;font-weight:600;transition:all .2s;box-shadow:0 2px 12px rgba(255,134,116,.3)">📝 Kayıt</button>
-                    <button class="puantaj-tab" onclick="showPuantajTab('analiz', this)" style="padding:10px 20px;border:none;background:var(--bg3);color:var(--tx);border-radius:8px;cursor:pointer;font-weight:600;transition:all .2s">📊 Analiz</button>
-                    <button class="puantaj-tab" onclick="showPuantajTab('arsiv', this)" style="padding:10px 20px;border:none;background:var(--bg3);color:var(--tx);border-radius:8px;cursor:pointer;font-weight:600;transition:all .2s">📁 Arşiv</button>
+                    <button class="puantaj-tab active" onclick="showPuantajTab('kayit', this)" style="padding:10px 20px;border:none;background:linear-gradient(135deg,var(--accent),#ff6b5b);color:#fff;border-radius:8px;cursor:pointer;font-weight:600;transition:all .2s;box-shadow:0 2px 12px rgba(255,134,116,.3);display:flex;align-items:center;gap:6px">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Kayıt
+                    </button>
+                    <button class="puantaj-tab" onclick="showPuantajTab('analiz', this)" style="padding:10px 20px;border:none;background:var(--bg3);color:var(--tx);border-radius:8px;cursor:pointer;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:6px">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                        Analiz
+                    </button>
+                    <button class="puantaj-tab" onclick="showPuantajTab('arsiv', this)" style="padding:10px 20px;border:none;background:var(--bg3);color:var(--tx);border-radius:8px;cursor:pointer;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:6px">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg>
+                        Arşiv
+                    </button>
                 </div>
                 
                 <!-- KAYIT SEKMESİ -->
                 <div id="puantajKayitTab">
                     <div class="form-section">
-                        <div class="form-section-title">📅 Dönem Seçimi</div>
+                        <div class="form-section-title" style="display:flex;align-items:center;gap:8px">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            Dönem Seçimi
+                        </div>
                         <div class="form-grid">
                             <div class="form-group">
                                 <label class="form-label">Ay</label>
@@ -1239,151 +1281,49 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                     </div>
                     
-                    <!-- Puan Sistemi Açıklama - GÜNCELLENMİŞ -->
-                    <div style="background:linear-gradient(135deg,rgba(255,134,116,.08),rgba(0,140,149,.08));border:1px solid var(--cardBorder);border-radius:16px;padding:20px;margin-bottom:24px">
-                        <div style="font-weight:700;color:var(--tx);margin-bottom:14px;font-size:1rem;display:flex;align-items:center;gap:8px">
-                            <span style="font-size:1.3rem">⭐</span> Puantaj ve Performans Sistemi
+                    <!-- Puan Sistemi - Kompakt ve Okunabilir -->
+                    <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;margin-bottom:20px">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <svg width="20" height="20" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                <span style="font-size:1.1rem;font-weight:700;color:var(--tx)">Performans Takibi</span>
+                            </div>
+                            <span style="font-size:.75rem;color:var(--tx3)">Her ay başı sıfırlanır</span>
                         </div>
                         
-                        <!-- Checklist Puanları -->
-                        <div style="margin-bottom:16px">
-                            <div style="font-size:.75rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Checklist Puanları</div>
-                            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px">
-                                <div style="background:rgba(39,174,96,.12);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px">
-                                    <span style="font-size:1.3rem">📗</span>
-                                    <div>
-                                        <div style="font-size:.8rem;color:#27ae60;font-weight:600">Vaktinde Check</div>
-                                        <div style="font-size:.95rem;color:#2ecc71;font-weight:700">+1 Puan</div>
-                                    </div>
-                                </div>
-                                <div style="background:rgba(243,156,18,.12);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px">
-                                    <span style="font-size:1.3rem">📙</span>
-                                    <div>
-                                        <div style="font-size:.8rem;color:#f39c12;font-weight:600">Geç Check</div>
-                                        <div style="font-size:.95rem;color:#e67e22;font-weight:700">-2 Puan</div>
-                                    </div>
-                                </div>
-                                <div style="background:rgba(231,76,60,.12);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px">
-                                    <span style="font-size:1.3rem">📕</span>
-                                    <div>
-                                        <div style="font-size:.8rem;color:#e74c3c;font-weight:600">Kaçırılan Check</div>
-                                        <div style="font-size:.95rem;color:#c0392b;font-weight:700">-2 Puan</div>
-                                    </div>
-                                </div>
-                                <div style="background:rgba(155,89,182,.12);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px">
-                                    <span style="font-size:1.3rem">📱</span>
-                                    <div>
-                                        <div style="font-size:.8rem;color:#9b59b6;font-weight:600">Platform Kaçırıldı</div>
-                                        <div style="font-size:.7rem;color:#8e44ad">10:00, 12:00, 15:00, 18:00, 21:00, 00:00</div>
-                                        <div style="font-size:.95rem;color:#8e44ad;font-weight:700">-1 Puan/saat</div>
-                                    </div>
-                                </div>
+                        <!-- Ana Kurallar - 2 Satır -->
+                        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+                            <div style="background:rgba(39,174,96,.08);border-radius:10px;padding:12px;text-align:center;border:1px solid rgba(39,174,96,.15)">
+                                <div style="font-size:1.2rem;font-weight:800;color:#27ae60">+1</div>
+                                <div style="font-size:.75rem;color:var(--tx2)">Vaktinde Check</div>
+                            </div>
+                            <div style="background:rgba(243,156,18,.08);border-radius:10px;padding:12px;text-align:center;border:1px solid rgba(243,156,18,.15)">
+                                <div style="font-size:1.2rem;font-weight:800;color:#f39c12">-2</div>
+                                <div style="font-size:.75rem;color:var(--tx2)">Geç veya Kaçırılan</div>
+                            </div>
+                            <div style="background:rgba(155,89,182,.08);border-radius:10px;padding:12px;text-align:center;border:1px solid rgba(155,89,182,.15)">
+                                <div style="font-size:1.2rem;font-weight:800;color:#9b59b6">-1</div>
+                                <div style="font-size:.75rem;color:var(--tx2)">Platform Kaçırma</div>
+                            </div>
+                            <div style="background:rgba(231,76,60,.08);border-radius:10px;padding:12px;text-align:center;border:1px solid rgba(231,76,60,.15)">
+                                <div style="font-size:1.2rem;font-weight:800;color:#e74c3c">-5</div>
+                                <div style="font-size:.75rem;color:var(--tx2)">Prim Eşiği</div>
                             </div>
                         </div>
                         
-                        <!-- Temizlik Çizelgesi -->
-                        <div style="margin-bottom:16px">
-                            <div style="font-size:.75rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Temizlik ve Bakım Sorumlulukları</div>
-                            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-                                <div style="background:rgba(241,196,15,.12);border-radius:10px;padding:10px;text-align:center">
-                                    <div style="font-size:1rem;margin-bottom:4px">🌅</div>
-                                    <div style="font-size:.75rem;color:#f39c12;font-weight:600">Açılışçı</div>
-                                    <div style="font-size:.65rem;color:var(--tx2)">10:00-11:00 shift</div>
-                                    <div style="font-size:.6rem;color:var(--tx3)">15:00'a kadar</div>
-                                </div>
-                                <div style="background:rgba(52,152,219,.12);border-radius:10px;padding:10px;text-align:center">
-                                    <div style="font-size:1rem;margin-bottom:4px">☀️</div>
-                                    <div style="font-size:.75rem;color:#3498db;font-weight:600">Aracı</div>
-                                    <div style="font-size:.65rem;color:var(--tx2)">11:00-16:00 shift</div>
-                                    <div style="font-size:.6rem;color:var(--tx3)">19:00'a kadar</div>
-                                </div>
-                                <div style="background:rgba(155,89,182,.12);border-radius:10px;padding:10px;text-align:center">
-                                    <div style="font-size:1rem;margin-bottom:4px">🌙</div>
-                                    <div style="font-size:.75rem;color:#9b59b6;font-weight:600">Kapanışçı</div>
-                                    <div style="font-size:.65rem;color:var(--tx2)">16:00+ shift</div>
-                                    <div style="font-size:.6rem;color:var(--tx3)">02:00'a kadar</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div style="margin-bottom:16px">
-                            <div style="font-size:.75rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Performans Değerlendirme</div>
-                            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px">
-                                <div style="background:rgba(192,57,43,.1);border-radius:10px;padding:10px;text-align:center">
-                                    <div style="font-size:.9rem;margin-bottom:2px">⭐</div>
-                                    <div style="font-size:.7rem;color:#c0392b;font-weight:600">Ciddi</div>
-                                    <div style="font-size:.8rem;color:#e74c3c;font-weight:700">-3</div>
-                                </div>
-                                <div style="background:rgba(211,84,0,.1);border-radius:10px;padding:10px;text-align:center">
-                                    <div style="font-size:.9rem;margin-bottom:2px">⭐⭐</div>
-                                    <div style="font-size:.7rem;color:#d35400;font-weight:600">Orta</div>
-                                    <div style="font-size:.8rem;color:#e67e22;font-weight:700">-2</div>
-                                </div>
-                                <div style="background:rgba(241,196,15,.1);border-radius:10px;padding:10px;text-align:center">
-                                    <div style="font-size:.9rem;margin-bottom:2px">⭐⭐⭐</div>
-                                    <div style="font-size:.7rem;color:#f39c12;font-weight:600">Hafif</div>
-                                    <div style="font-size:.8rem;color:#f1c40f;font-weight:700">-1</div>
-                                </div>
-                                <div style="background:rgba(39,174,96,.1);border-radius:10px;padding:10px;text-align:center">
-                                    <div style="font-size:.9rem;margin-bottom:2px">⭐⭐⭐⭐</div>
-                                    <div style="font-size:.7rem;color:#27ae60;font-weight:600">İyi</div>
-                                    <div style="font-size:.8rem;color:#2ecc71;font-weight:700">+1</div>
-                                </div>
-                                <div style="background:rgba(46,204,113,.1);border-radius:10px;padding:10px;text-align:center">
-                                    <div style="font-size:.9rem;margin-bottom:2px">⭐⭐⭐⭐⭐</div>
-                                    <div style="font-size:.7rem;color:#2ecc71;font-weight:600">Süper</div>
-                                    <div style="font-size:.8rem;color:#27ae60;font-weight:700">+2</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Puan Durumu - Görsel Progress ile -->
-                        <div id="puantajProgressSection" style="background:linear-gradient(135deg,var(--bg2),var(--bg3));border-radius:16px;padding:20px;margin-bottom:16px">
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-                                <div>
-                                    <div style="font-size:1.1rem;font-weight:700;color:var(--tx)">Bu Ayki Durumun</div>
-                                    <div style="font-size:.8rem;color:var(--tx3)">Her ay başı sıfırlanır</div>
-                                </div>
-                                <div id="puantajQuickStat" style="display:flex;align-items:center;gap:12px">
-                                    <!-- Dinamik olarak doldurulacak -->
-                                </div>
-                            </div>
-                            
-                            <!-- Puan Çubuğu -->
-                            <div style="position:relative;height:12px;background:linear-gradient(90deg,#e74c3c 0%,#f39c12 30%,#27ae60 60%,#008c95 100%);border-radius:6px;overflow:hidden">
-                                <div id="puantajProgressMarker" style="position:absolute;top:-4px;width:20px;height:20px;background:#fff;border:3px solid var(--tx);border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.2);transition:left .5s ease;left:60%"></div>
-                            </div>
-                            <div style="display:flex;justify-content:space-between;margin-top:6px">
-                                <span style="font-size:.7rem;color:#e74c3c;font-weight:600">-5</span>
-                                <span style="font-size:.7rem;color:#f39c12">-2</span>
-                                <span style="font-size:.7rem;color:#27ae60;font-weight:600">0</span>
-                                <span style="font-size:.7rem;color:#008c95">+5</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Puan Kazanma Yolları - Eğlenceli Ton -->
-                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-                            <div style="background:rgba(0,140,149,.08);border-radius:12px;padding:14px;text-align:center;border:1px solid rgba(0,140,149,.15)">
-                                <div style="font-size:1.5rem;margin-bottom:4px">⏰</div>
-                                <div style="font-size:.9rem;font-weight:700;color:#008c95">+1</div>
-                                <div style="font-size:.7rem;color:var(--tx2)">Vaktinde Check</div>
-                            </div>
-                            <div style="background:rgba(39,174,96,.08);border-radius:12px;padding:14px;text-align:center;border:1px solid rgba(39,174,96,.15)">
-                                <div style="font-size:1.5rem;margin-bottom:4px">🌟</div>
-                                <div style="font-size:.9rem;font-weight:700;color:#27ae60">+2</div>
-                                <div style="font-size:.7rem;color:var(--tx2)">Harika İş!</div>
-                            </div>
-                            <div style="background:rgba(255,134,116,.08);border-radius:12px;padding:14px;text-align:center;border:1px solid rgba(255,134,116,.15)">
-                                <div style="font-size:1.5rem;margin-bottom:4px">🎯</div>
-                                <div style="font-size:.9rem;font-weight:700;color:#ff8674">Hedef</div>
-                                <div style="font-size:.7rem;color:var(--tx2)">0 üstünde kal</div>
-                            </div>
+                        <!-- Detay Linki -->
+                        <div style="text-align:center">
+                            <button onclick="showPuantajRulesDetail()" style="background:none;border:none;color:var(--accent);font-size:.8rem;cursor:pointer;text-decoration:underline">Tüm kuralları ve açıklamaları gör →</button>
                         </div>
                     </div>
                     
                     <div class="form-section">
                         <div class="form-section-title" style="justify-content:space-between">
-                            <span>👥 Ekip Durumu</span>
-                            <button class="btn btn-sm btn-ghost" onclick="showPuantajRules()">📋 Detaylar</button>
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                                <span>Ekip Durumu</span>
+                            </div>
+                            <button class="btn btn-sm btn-ghost" onclick="showPuantajRules()">Kural Tanımları</button>
                         </div>
                         <div id="puantajTableContainer">
                             <p style="color:var(--tx2);text-align:center;padding:40px">Yükleniyor...</p>
@@ -1394,7 +1334,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <!-- ANALİZ SEKMESİ -->
                 <div id="puantajAnalizTab" style="display:none">
                     <div class="form-section">
-                        <div class="form-section-title">📊 Performans Analizi</div>
+                        <div class="form-section-title" style="display:flex;align-items:center;gap:8px">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                            Performans Analizi
+                        </div>
                         <div class="form-grid">
                             <div class="form-group">
                                 <label class="form-label">Dönem</label>
@@ -1455,25 +1398,28 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
                 <div class="admin-tabs">
                     <button class="admin-tab active" onclick="showAdminTab('genel',this)">Genel</button>
-                    <button class="admin-tab" onclick="showAdminTab('tumCheckler',this)">📊 Tüm Checkler</button>
-                    <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">🔐 Pozisyon Yetkileri</button>
-                    <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">⏱️ Oturumlar</button>
-                    <button class="admin-tab" onclick="showAdminTab('magazaSaatleri',this)">🕐 Mağaza Saatleri</button>
-                    <button class="admin-tab" onclick="showAdminTab('checkKurallari',this)">📋 Check Kuralları</button>
+                    <button class="admin-tab" onclick="showAdminTab('tumCheckler',this)">Tüm Checkler</button>
+                    <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">Pozisyon Yetkileri</button>
+                    <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">Oturumlar</button>
+                    <button class="admin-tab" onclick="showAdminTab('magazaSaatleri',this)">Mağaza Saatleri</button>
+                    <button class="admin-tab" onclick="showAdminTab('checkKurallari',this)">Check Kuralları</button>
                     <button class="admin-tab" onclick="showAdminTab('puantajKurallar',this)">Puantaj Kuralları</button>
                     <button class="admin-tab" onclick="showAdminTab('subeler',this)">Şubeler</button>
                     <button class="admin-tab" onclick="showAdminTab('pozisyonlar',this)">Pozisyonlar</button>
                     <button class="admin-tab" onclick="showAdminTab('ihlaller',this)">İhlaller</button>
                     <button class="admin-tab" onclick="showAdminTab('sablonlar',this)">Sözleşme Şablonları</button>
                     <button class="admin-tab" onclick="showAdminTab('belgeler',this)">Belge Şablonları</button>
-                    <button class="admin-tab" id="tab-aktiviteler" onclick="showAdminTab('aktiviteler',this)">📊 Aktiviteler</button>
+                    <button class="admin-tab" id="tab-aktiviteler" onclick="showAdminTab('aktiviteler',this)">Aktiviteler</button>
                 </div>
                 
                 <!-- Tüm Checkler Özet -->
                 <div class="admin-section" id="admin-tumCheckler">
                     <div class="admin-card">
                         <div class="admin-card-header">
-                            <div class="admin-card-title">📊 Bugünkü Tüm Checkler</div>
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                                Bugünkü Tüm Checkler
+                            </div>
                             <div style="display:flex;gap:10px;align-items:center">
                                 <select id="allChecksDateFilter" class="form-select" style="width:auto" onchange="loadAllChecksOverview()">
                                     <option value="today">Bugün</option>
@@ -1483,7 +1429,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                                 <select id="allChecksBranchFilter" class="form-select" style="width:auto" onchange="loadAllChecksOverview()">
                                     <option value="all">Tüm Şubeler</option>
                                 </select>
-                                <button class="btn btn-sm btn-ghost" onclick="loadAllChecksOverview()">🔄</button>
+                                <button class="btn btn-sm btn-ghost" onclick="loadAllChecksOverview()" title="Yenile">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                                </button>
                             </div>
                         </div>
                         
@@ -1584,8 +1532,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <div class="admin-section" id="admin-checkKurallari">
                     <div class="admin-card">
                         <div class="admin-card-header">
-                            <div class="admin-card-title">📋 Check Puanlama Kuralları</div>
-                            <button class="btn btn-sm btn-primary" onclick="saveCheckRules()">💾 Kaydet</button>
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>
+                                Check Puanlama Kuralları
+                            </div>
+                            <button class="btn btn-sm btn-primary" onclick="saveCheckRules()" style="display:flex;align-items:center;gap:4px">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                Kaydet
+                            </button>
                         </div>
                         <p style="color:var(--tx2);font-size:.85rem;margin-bottom:20px">Her check türü için zaman penceresi ve puanlamaları düzenleyin.</p>
                         
@@ -1773,8 +1727,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <!-- Aktif Oturumlar -->
                     <div class="admin-card" style="margin-top:16px">
                         <div class="admin-card-header">
-                            <div class="admin-card-title">🖥️ Aktif Oturumlar</div>
-                            <button class="btn btn-sm btn-ghost" onclick="loadActiveSessions()">🔄 Yenile</button>
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                                Aktif Oturumlar
+                            </div>
+                            <button class="btn btn-sm btn-ghost" onclick="loadActiveSessions()" style="display:flex;align-items:center;gap:4px">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                                Yenile
+                            </button>
                         </div>
                         <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:16px">
                             Sisteme giriş yapmış tüm kullanıcıların aktif oturumlarını görüntüleyin ve yönetin.
@@ -1782,7 +1742,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         
                         <div id="activeSessionsList" style="margin-top:16px">
                             <div style="text-align:center;padding:40px;color:var(--tx2)">
-                                <div style="font-size:2rem;margin-bottom:12px">🔄</div>
+                                <div class="loading-spinner" style="margin:0 auto 12px"></div>
                                 <div>Oturumlar yükleniyor...</div>
                             </div>
                         </div>
@@ -1806,7 +1766,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <div class="admin-section" id="admin-puantajKurallar">
                     <div class="admin-card">
                         <div class="admin-card-header">
-                            <div class="admin-card-title">⭐ Puantaj Kuralları</div>
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                Puantaj Kuralları
+                            </div>
                             <button class="btn btn-sm btn-primary" onclick="showAddPuantajRuleModal()">+ Kural Ekle</button>
                         </div>
                         <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:16px">Puantaj değerlendirmesinde kullanılacak kuralları belirleyin. Kurallar otomatik olarak prim hesaplamasını etkiler.</p>
@@ -1934,7 +1897,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <div class="admin-section" id="admin-ihlaller">
                     <div class="admin-card">
                         <div class="admin-card-header">
-                            <div class="admin-card-title">⚠️ İhlal Kataloğu</div>
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                İhlal Kataloğu
+                            </div>
                             <button class="btn btn-sm btn-primary" onclick="addViolation()">+ Ekle</button>
                         </div>
                         <div class="admin-list" id="violationAdminList"></div>
@@ -1944,7 +1910,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <!-- Şablonlar -->
                 <div class="admin-section" id="admin-sablonlar">
                     <div class="admin-card">
-                        <div class="admin-card-header"><div class="admin-card-title">📄 Sözleşme Şablonları</div></div>
+                        <div class="admin-card-header">
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                                Sözleşme Şablonları
+                            </div>
+                        </div>
                         <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:16px">Her pozisyon için HTML şablon düzenleyin. Placeholder'lar: <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{AD_SOYAD}}</code>, <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{TC}}</code>, <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{ADRES}}</code>, <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{IBAN}}</code>, <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{UCRET}}</code>, <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{BASLAMA}}</code>, <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{SUBE}}</code></p>
                         <div class="form-group">
                             <label class="form-label">Pozisyon Seç</label>
@@ -1962,8 +1933,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <div class="admin-section" id="admin-belgeler">
                     <div class="admin-card">
                         <div class="admin-card-header">
-                            <div class="admin-card-title">📝 Belge Şablonları Düzenleyici</div>
-                            <div id="docTemplateUnsaved" style="display:none;color:var(--yellow);font-size:.8rem;font-weight:500">⚠️ Kaydedilmemiş değişiklikler</div>
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                Belge Şablonları Düzenleyici
+                            </div>
+                            <div id="docTemplateUnsaved" style="display:none;color:var(--yellow);font-size:.8rem;font-weight:500">Kaydedilmemiş değişiklikler</div>
                         </div>
                         <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:16px">Tutanak, savunma, fesih ve borç ikrar belgelerinin içeriklerini düzenleyin. Değişiklikler kaydedilmezse varsayılan şablonlar kullanılır.</p>
                         
@@ -2015,9 +1989,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                         
                         <div class="btn-group" style="display:flex;gap:8px;flex-wrap:wrap">
-                            <button class="btn btn-primary btn-sm" onclick="saveDocTemplate()">💾 Şablonu Kaydet</button>
-                            <button class="btn btn-ghost btn-sm" onclick="previewDocTemplate()">👁️ Önizle</button>
-                            <button class="btn btn-sm" style="background:var(--yellow);color:#000" onclick="resetDocTemplate()">🔄 Varsayılana Dön</button>
+                            <button class="btn btn-primary btn-sm" onclick="saveDocTemplate()" style="display:flex;align-items:center;gap:4px">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                Şablonu Kaydet
+                            </button>
+                            <button class="btn btn-ghost btn-sm" onclick="previewDocTemplate()" style="display:flex;align-items:center;gap:4px">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                Önizle
+                            </button>
+                            <button class="btn btn-sm" style="background:var(--yellow);color:#000;display:flex;align-items:center;gap:4px" onclick="resetDocTemplate()">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                                Varsayılana Dön
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -2026,8 +2009,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <div class="admin-section" id="admin-aktiviteler">
                     <div class="admin-card">
                         <div class="admin-card-header">
-                            <div class="admin-card-title">📊 Kullanıcı Aktiviteleri</div>
-                            <button class="btn btn-sm btn-ghost" onclick="loadActivityLogs()">🔄 Yenile</button>
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                                Kullanıcı Aktiviteleri
+                            </div>
+                            <button class="btn btn-sm btn-ghost" onclick="loadActivityLogs()" style="display:flex;align-items:center;gap:4px">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                                Yenile
+                            </button>
                         </div>
                         <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Kullanıcıların sistem üzerindeki hareketlerini takip edin.</p>
                         <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
@@ -2988,10 +2977,15 @@ function closeModal() {
 let _confirmCallback = null;
 
 function confirmModal(title, message, onConfirm, type = 'warning') {
-    const icons = {warning: '⚠️', danger: '🗑️', success: '✅', info: 'ℹ️'};
+    const icons = {
+        warning: '<svg width="32" height="32" fill="none" stroke="#f39c12" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+        danger: '<svg width="32" height="32" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>',
+        success: '<svg width="32" height="32" fill="none" stroke="#27ae60" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+        info: '<svg width="32" height="32" fill="none" stroke="#3498db" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+    };
     _confirmCallback = onConfirm;
     showModal(title, `
-        <div class="modal-icon ${type}">${icons[type]}</div>
+        <div class="modal-icon ${type}" style="display:flex;justify-content:center">${icons[type]}</div>
         <div class="modal-message">${message}</div>
     `, `
         <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
@@ -3014,7 +3008,9 @@ async function executeConfirmCallback() {
 
 function successModal(message) {
     showModal('Başarılı', `
-        <div class="modal-icon success">✅</div>
+        <div class="modal-icon success" style="display:flex;justify-content:center">
+            <svg width="32" height="32" fill="none" stroke="#27ae60" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
         <div class="modal-message">${message}</div>
     `, `<button class="btn btn-primary" onclick="closeModal()">Tamam</button>`);
 }
@@ -3024,8 +3020,12 @@ function toast(message, type = '') {
     const container = document.getElementById('toastContainer');
     const t = document.createElement('div');
     t.className = 'toast ' + type;
-    const icons = {success: '✅', error: '❌', '': '💡'};
-    t.innerHTML = `<span class="toast-icon">${icons[type] || '💡'}</span>${message}`;
+    const icons = {
+        success: '<svg width="16" height="16" fill="none" stroke="#27ae60" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>',
+        error: '<svg width="16" height="16" fill="none" stroke="#e74c3c" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+        '': '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+    };
+    t.innerHTML = `<span class="toast-icon" style="display:flex;align-items:center">${icons[type] || icons['']}</span>${message}`;
     container.appendChild(t);
     setTimeout(() => t.classList.add('show'), 10);
     setTimeout(() => {
@@ -5754,18 +5754,85 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
         const isMoonberry = sube.includes('Şişli') || sube.includes('Merkez');
         const brandColor = isMoonberry ? '#008c95' : '#ff8674';
         
+        // Yetkili roller - puan silebilir/ekleyebilir
+        const canManagePoints = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
+        
         html += `
             <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:16px;margin-top:16px">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
                     <div style="display:flex;align-items:center;gap:8px">
                         <svg width="16" height="16" fill="none" stroke="${brandColor}" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
                         <span style="font-weight:600;color:var(--tx);font-size:.9rem">Otomatik Puanlar</span>
+                        <span style="font-size:.7rem;color:var(--tx3)">(Check sisteminden)</span>
                     </div>
-                    <span style="font-size:.85rem;font-weight:700;color:${totalAutoPoints >= 0 ? '#27ae60' : '#e74c3c'}">${totalAutoPoints >= 0 ? '+' : ''}${totalAutoPoints}</span>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:.85rem;font-weight:700;color:${totalAutoPoints >= 0 ? '#27ae60' : '#e74c3c'}">${totalAutoPoints >= 0 ? '+' : ''}${totalAutoPoints}</span>
+                        ${canManagePoints ? `<button onclick="toggleAutoNotesDetail()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.75rem">Detay</button>` : ''}
+                    </div>
                 </div>
+                
+                <div id="autoNotesDetailSection" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--bg4)">
         `;
         
-        // Kişi bazlı özet - kompakt liste
+        // Kişi bazlı detaylı liste
+        Object.entries(notesByPerson).forEach(([personelId, notes]) => {
+            const person = personelList.find(p => p.id === personelId);
+            const personName = person?.name || notes[0]?.personelName || personelId;
+            
+            let personTotal = 0;
+            let onTime = 0, late = 0, missed = 0;
+            notes.forEach(n => { 
+                personTotal += n.points || 0;
+                if (n.status === 'onTime') onTime++;
+                else if (n.status === 'late') late++;
+                else missed++;
+            });
+            
+            html += `
+                <div style="margin-bottom:12px">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg4)">
+                        <span style="font-size:.85rem;color:var(--tx);font-weight:600">${personName}</span>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            ${onTime > 0 ? `<span style="font-size:.7rem;color:#27ae60;background:rgba(39,174,96,.1);padding:2px 6px;border-radius:4px">${onTime} vaktinde</span>` : ''}
+                            ${late > 0 ? `<span style="font-size:.7rem;color:#f39c12;background:rgba(243,156,18,.1);padding:2px 6px;border-radius:4px">${late} geç</span>` : ''}
+                            ${missed > 0 ? `<span style="font-size:.7rem;color:#e74c3c;background:rgba(231,76,60,.1);padding:2px 6px;border-radius:4px">${missed} kaçırılan</span>` : ''}
+                            <span style="font-size:.8rem;font-weight:700;color:${personTotal >= 0 ? '#27ae60' : '#e74c3c'}">${personTotal >= 0 ? '+' : ''}${personTotal}</span>
+                        </div>
+                    </div>
+            `;
+            
+            // Son 5 notu göster
+            if (canManagePoints) {
+                const recentNotes = notes.slice(-5).reverse();
+                recentNotes.forEach(note => {
+                    const noteColor = note.points > 0 ? '#27ae60' : (note.points < 0 ? '#e74c3c' : 'var(--tx3)');
+                    html += `
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--bg3);border-radius:6px;margin-top:4px;font-size:.75rem">
+                            <div style="display:flex;align-items:center;gap:8px;color:var(--tx2)">
+                                <span>${note.date}</span>
+                                <span>${note.checkTime || ''}</span>
+                                <span style="color:var(--tx)">${note.note || note.checkType}</span>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <span style="font-weight:600;color:${noteColor}">${note.points > 0 ? '+' : ''}${note.points}</span>
+                                <button onclick="deleteAutoNote('${note.id}')" style="background:rgba(231,76,60,.1);border:none;color:#e74c3c;cursor:pointer;padding:2px 6px;border-radius:4px;font-size:.65rem">Sil</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                if (notes.length > 5) {
+                    html += `<div style="text-align:center;font-size:.7rem;color:var(--tx3);padding:4px">...ve ${notes.length - 5} kayıt daha</div>`;
+                }
+            }
+            
+            html += `</div>`;
+        });
+        
+        html += `</div>`; // autoNotesDetailSection
+        
+        // Özet satırları (her zaman görünür)
+        html += `<div id="autoNotesSummarySection">`;
         Object.entries(notesByPerson).forEach(([personelId, notes]) => {
             const person = personelList.find(p => p.id === personelId);
             const personName = person?.name || notes[0]?.personelName || personelId;
@@ -5781,16 +5848,17 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
             
             html += `
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg4)">
-                    <span style="font-size:.85rem;color:var(--tx)">${personName.split(' ')[0]}</span>
-                    <div style="display:flex;align-items:center;gap:12px">
-                        ${onTime > 0 ? `<span style="font-size:.75rem;color:#27ae60">${onTime} tam</span>` : ''}
-                        ${late > 0 ? `<span style="font-size:.75rem;color:#f39c12">${late} geç</span>` : ''}
-                        ${missed > 0 ? `<span style="font-size:.75rem;color:#e74c3c">${missed} kaçık</span>` : ''}
-                        <span style="font-size:.8rem;font-weight:600;color:${personTotal >= 0 ? '#27ae60' : '#e74c3c'};min-width:40px;text-align:right">${personTotal >= 0 ? '+' : ''}${personTotal}</span>
+                    <span style="font-size:.85rem;color:var(--tx);font-weight:500">${personName}</span>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        ${onTime > 0 ? `<span style="font-size:.7rem;color:#27ae60;background:rgba(39,174,96,.1);padding:2px 6px;border-radius:4px">${onTime} vaktinde</span>` : ''}
+                        ${late > 0 ? `<span style="font-size:.7rem;color:#f39c12;background:rgba(243,156,18,.1);padding:2px 6px;border-radius:4px">${late} geç</span>` : ''}
+                        ${missed > 0 ? `<span style="font-size:.7rem;color:#e74c3c;background:rgba(231,76,60,.1);padding:2px 6px;border-radius:4px">${missed} kaçırılan</span>` : ''}
+                        <span style="font-size:.85rem;font-weight:700;color:${personTotal >= 0 ? '#27ae60' : '#e74c3c'};min-width:40px;text-align:right">${personTotal >= 0 ? '+' : ''}${personTotal}</span>
                     </div>
                 </div>
             `;
         });
+        html += `</div>`;
         
         html += `</div>`;
         
@@ -5799,6 +5867,124 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
     }
     
     return html;
+}
+
+// Otomatik puanlar detay aç/kapat
+function toggleAutoNotesDetail() {
+    const detailSection = document.getElementById('autoNotesDetailSection');
+    const summarySection = document.getElementById('autoNotesSummarySection');
+    
+    if (detailSection && summarySection) {
+        if (detailSection.style.display === 'none') {
+            detailSection.style.display = 'block';
+            summarySection.style.display = 'none';
+        } else {
+            detailSection.style.display = 'none';
+            summarySection.style.display = 'block';
+        }
+    }
+}
+
+// Otomatik puantaj notu sil
+async function deleteAutoNote(noteId) {
+    // Yetki kontrolü
+    const canManagePoints = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
+    if (!canManagePoints) {
+        toast('Bu işlem için yetkiniz yok', 'error');
+        return;
+    }
+    
+    confirmModal('Puantaj Kaydını Sil', 'Bu otomatik puan kaydını silmek istediğinize emin misiniz?', async () => {
+        try {
+            await db.collection('puantajNotes').doc(noteId).delete();
+            toast('Puan kaydı silindi', 'success');
+            loadPuantaj(); // Sayfayı yenile
+        } catch (e) {
+            console.error('Silme hatası:', e);
+            toast('Silme işlemi başarısız', 'error');
+        }
+    }, 'danger');
+}
+
+// Detaylı kural açıklamaları modalı
+function showPuantajRulesDetail() {
+    showModal('Performans Kuralları', `
+        <div style="max-height:60vh;overflow-y:auto">
+            <div style="margin-bottom:20px">
+                <div style="font-weight:600;color:var(--tx);margin-bottom:10px;font-size:.95rem">Checklist Puanları</div>
+                <div style="background:var(--bg3);border-radius:10px;padding:14px">
+                    <div style="display:grid;gap:8px;font-size:.85rem">
+                        <div style="display:flex;justify-content:space-between;color:var(--tx)">
+                            <span>Vaktinde tamamlanan check</span>
+                            <span style="color:#27ae60;font-weight:600">+1 puan</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;color:var(--tx)">
+                            <span>Geç tamamlanan check (pencere sonrası)</span>
+                            <span style="color:#f39c12;font-weight:600">-2 puan</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;color:var(--tx)">
+                            <span>Kaçırılan/doldurulmayan check</span>
+                            <span style="color:#e74c3c;font-weight:600">-2 puan</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-bottom:20px">
+                <div style="font-weight:600;color:var(--tx);margin-bottom:10px;font-size:.95rem">Platform Check</div>
+                <div style="background:var(--bg3);border-radius:10px;padding:14px">
+                    <div style="font-size:.85rem;color:var(--tx);margin-bottom:8px">Saatler: 10:00, 12:00, 15:00, 18:00, 21:00, 00:00</div>
+                    <div style="display:flex;justify-content:space-between;color:var(--tx);font-size:.85rem">
+                        <span>Her kaçırılan saat için</span>
+                        <span style="color:#9b59b6;font-weight:600">-1 puan</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-bottom:20px">
+                <div style="font-weight:600;color:var(--tx);margin-bottom:10px;font-size:.95rem">Temizlik Çizelgesi</div>
+                <div style="background:var(--bg3);border-radius:10px;padding:14px;font-size:.85rem">
+                    <div style="margin-bottom:8px;color:var(--tx)"><strong>Açılışçı:</strong> 10:00-11:00 shift başlangıcı → 15:00'a kadar tamamlanmalı</div>
+                    <div style="margin-bottom:8px;color:var(--tx)"><strong>Aracı:</strong> 11:00-16:00 shift başlangıcı → 19:00'a kadar tamamlanmalı</div>
+                    <div style="color:var(--tx)"><strong>Kapanışçı:</strong> 16:00+ shift başlangıcı → 02:00'a kadar tamamlanmalı</div>
+                </div>
+            </div>
+            
+            <div style="margin-bottom:20px">
+                <div style="font-weight:600;color:var(--tx);margin-bottom:10px;font-size:.95rem">Manuel Değerlendirme (Yönetici)</div>
+                <div style="background:var(--bg3);border-radius:10px;padding:14px">
+                    <div style="display:grid;gap:6px;font-size:.85rem">
+                        <div style="display:flex;justify-content:space-between;color:var(--tx)">
+                            <span>⭐ Ciddi ihlal</span>
+                            <span style="color:#e74c3c;font-weight:600">-3 puan</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;color:var(--tx)">
+                            <span>⭐⭐ Orta ihlal</span>
+                            <span style="color:#e67e22;font-weight:600">-2 puan</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;color:var(--tx)">
+                            <span>⭐⭐⭐ Hafif uyarı</span>
+                            <span style="color:#f39c12;font-weight:600">-1 puan</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;color:var(--tx)">
+                            <span>⭐⭐⭐⭐ İyi performans</span>
+                            <span style="color:#27ae60;font-weight:600">+1 puan</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;color:var(--tx)">
+                            <span>⭐⭐⭐⭐⭐ Mükemmel</span>
+                            <span style="color:#27ae60;font-weight:600">+2 puan</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.2);border-radius:10px;padding:14px">
+                <div style="font-weight:600;color:#e74c3c;margin-bottom:6px;font-size:.9rem">Prim Eşiği</div>
+                <div style="font-size:.85rem;color:var(--tx)">Toplam puan <strong>-5</strong> veya altına düşerse, o ay prim hakkı kaybedilir.</div>
+                <div style="font-size:.8rem;color:var(--tx3);margin-top:6px">Her ay başı puanlar sıfırlanır.</div>
+            </div>
+        </div>
+    `, '<button class="btn btn-primary" onclick="closeModal()">Anladım</button>');
 }
 
 function showPuantajModal(personelId, name, type = 'negatif') {
@@ -10953,14 +11139,11 @@ async function loadTodayChecks() {
         // ============== ŞUBE BAŞLIĞI ==============
         if (branches.length > 1) {
             const isMoonberryBranch = branch.includes('Şişli') || branch.includes('Merkez');
-            const brandName = isMoonberryBranch ? 'Moonberry Coffee' : 'Sunberry Juice';
-            const brandIcon = isMoonberryBranch ? '☕' : '🍹';
             const brandBorderColor = isMoonberryBranch ? '#008c95' : '#ff8674';
             html += `
-                <div style="display:flex;align-items:center;gap:8px;margin:16px 0 8px 0;padding-bottom:6px;border-bottom:2px solid ${brandBorderColor}">
-                    <span style="font-size:1rem">${brandIcon}</span>
-                    <span style="font-size:.85rem;font-weight:600;color:var(--tx)">${brandName}</span>
-                    <span style="font-size:.7rem;color:var(--tx3)">${branch}</span>
+                <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px 0;padding-bottom:8px;border-bottom:2px solid ${brandBorderColor}">
+                    <div style="width:8px;height:8px;background:${brandBorderColor};border-radius:50%"></div>
+                    <span style="font-size:.9rem;font-weight:600;color:var(--tx)">${branch}</span>
                 </div>
             `;
         }
@@ -11041,38 +11224,32 @@ async function loadTodayChecks() {
         `;
         
         // ============== TEMİZLİK CHECK ==============
-        const temizlikCheckType = checkTypes.find(t => t.id === 'aylik');
-        if (temizlikCheckType || true) {  // Her zaman göster
-            const currentHour = now.getHours();
-            const isSabah = currentHour >= 9 && currentHour < 16;
-            const isAksam = currentHour >= 20 || currentHour < 2;
-            
-            if (isSabah || isAksam) {
-                const shiftType = isSabah ? 'sabah' : 'aksam';
-                const temizlikSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_aylik_${todayStr}_${shiftType}`;
-                let temizlikCompleted = false;
-                
-                try {
-                    const doc = await db.collection('checklistSubmissions').doc(temizlikSubmissionId).get();
-                    temizlikCompleted = doc.exists;
-                } catch (e) {}
-                
-                const temizlikPersonnel = getShiftPersonnel(branch, isSabah ? 'acilis' : 'kapanis');
-                const temizlikPersonnelText = temizlikPersonnel.length > 0 ? temizlikPersonnel.slice(0, 2).map(p => p.split(' ')[0]).join(', ') : '';
-                const temizlikDeadline = isSabah ? '16:00' : '02:00';
-                const temizlikIcon = isSabah ? '🌅' : '🌙';
-                
-                html += `
-                    <div style="background:${temizlikCompleted ? 'rgba(39,174,96,.06)' : 'var(--bg3)'};border-left:3px solid ${temizlikCompleted ? '#27ae60' : isMoonberryBranch ? '#008c95' : '#ff8674'};border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .15s;opacity:${temizlikCompleted ? '0.6' : '1'}" onclick="goTo('checklist')" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='none'">
-                        <span style="font-size:.9rem">${temizlikIcon}</span>
-                        <span style="font-weight:500;font-size:.85rem;color:var(--tx)">Temizlik</span>
-                        <span style="font-size:.7rem;color:var(--tx3)">${isSabah ? 'Sabah' : 'Akşam'}</span>
-                        <span style="font-size:.7rem;color:var(--tx3);margin-left:auto">${temizlikPersonnelText}</span>
-                        <span style="font-size:.75rem;font-weight:600;color:${temizlikCompleted ? '#27ae60' : 'var(--tx2)'};padding:4px 10px;background:${temizlikCompleted ? 'rgba(39,174,96,.12)' : 'var(--bg4)'};border-radius:6px">${temizlikCompleted ? 'Tamam' : temizlikDeadline}</span>
-                    </div>
-                `;
-            }
-        }
+        // Her zaman göster - gün içinde sabah, akşam/gece akşam
+        const currentHour = now.getHours();
+        // 02:00-15:59 arası sabah, 16:00-01:59 arası akşam
+        const isSabahTemizlik = currentHour >= 2 && currentHour < 16;
+        const shiftType = isSabahTemizlik ? 'sabah' : 'aksam';
+        const temizlikSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_aylik_${todayStr}_${shiftType}`;
+        let temizlikCompleted = false;
+        
+        try {
+            const doc = await db.collection('checklistSubmissions').doc(temizlikSubmissionId).get();
+            temizlikCompleted = doc.exists;
+        } catch (e) {}
+        
+        const temizlikPersonnel = getShiftPersonnel(branch, isSabahTemizlik ? 'acilis' : 'kapanis');
+        const temizlikPersonnelText = temizlikPersonnel.length > 0 ? temizlikPersonnel.slice(0, 2).map(p => p.split(' ')[0]).join(', ') : '';
+        const temizlikDeadline = isSabahTemizlik ? '15:00' : '02:00';
+        
+        html += `
+            <div style="background:${temizlikCompleted ? 'rgba(39,174,96,.06)' : 'var(--bg3)'};border-left:3px solid ${temizlikCompleted ? '#27ae60' : isMoonberryBranch ? '#008c95' : '#ff8674'};border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .15s;opacity:${temizlikCompleted ? '0.6' : '1'}" onclick="goTo('checklist'); setTimeout(() => { selectChecklistType('aylik'); }, 200);" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='none'">
+                <svg width="16" height="16" fill="none" stroke="${temizlikCompleted ? '#27ae60' : isMoonberryBranch ? '#008c95' : '#ff8674'}" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6l3 1 2-3 2 3 3-1-1 3 3 2-3 2 1 3-3-1-2 3-2-3-3 1 1-3-3-2 3-2-1-3z"/></svg>
+                <span style="font-weight:500;font-size:.85rem;color:var(--tx)">Temizlik Çizelgesi</span>
+                <span style="font-size:.7rem;color:var(--tx3)">${isSabahTemizlik ? 'Sabah' : 'Akşam'}</span>
+                <span style="font-size:.7rem;color:var(--tx3);margin-left:auto">${temizlikPersonnelText}</span>
+                <span style="font-size:.75rem;font-weight:600;color:${temizlikCompleted ? '#27ae60' : 'var(--tx2)'};padding:4px 10px;background:${temizlikCompleted ? 'rgba(39,174,96,.12)' : 'var(--bg4)'};border-radius:6px">${temizlikCompleted ? 'Tamam' : temizlikDeadline + "'e kadar"}</span>
+            </div>
+        `;
     }
     
     if (hasActiveChecks) {
@@ -12086,6 +12263,27 @@ async function loadSystemConfig() {
             }
         }
         
+        // Temizlik Çizelgesi tipi yoksa ekle (her şube için)
+        const branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+        branches.forEach(branch => {
+            if (!CHECKLIST_TYPES[branch]) {
+                CHECKLIST_TYPES[branch] = [];
+            }
+            
+            // Temizlik tipi var mı kontrol et
+            const hasTemizlik = CHECKLIST_TYPES[branch].some(t => t.id === 'aylik');
+            if (!hasTemizlik) {
+                CHECKLIST_TYPES[branch].push({
+                    id: 'aylik',
+                    name: 'Temizlik Çizelgesi',
+                    icon: 'calendar',
+                    description: 'Günlük temizlik ve bakım maddeleri',
+                    managerOnly: false
+                });
+                console.log(`✅ ${branch} için Temizlik Çizelgesi eklendi`);
+            }
+        });
+        
         // Personel eşleştirmesi
         const persDoc = await db.collection('config').doc('personnel').get();
         if (persDoc.exists) {
@@ -12100,6 +12298,16 @@ async function loadSystemConfig() {
         });
     } catch (e) {
         console.warn('Config yüklenemedi:', e);
+        
+        // Fallback - default checklist türleri
+        const branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+        branches.forEach(branch => {
+            if (!CHECKLIST_TYPES[branch]) {
+                CHECKLIST_TYPES[branch] = [
+                    { id: 'aylik', name: 'Temizlik Çizelgesi', icon: 'calendar', description: 'Günlük temizlik ve bakım' }
+                ];
+            }
+        });
     }
 }
 
@@ -13119,9 +13327,13 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
             
             ${!checklistEditMode && !isSubmitted ? `
                 <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
-                    <button class="btn btn-ghost" onclick="loadChecklist()">🔄 Yenile</button>
-                    <button class="btn btn-primary" onclick="submitChecklist('${branch}', '${type}', '${date}', '${timeSlot || ''}')">
-                        ✅ Checklist'i Tamamla
+                    <button class="btn btn-ghost" onclick="loadChecklist()" style="display:flex;align-items:center;gap:6px">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                        Yenile
+                    </button>
+                    <button class="btn btn-primary" onclick="submitChecklist('${branch}', '${type}', '${date}', '${timeSlot || ''}')" style="display:flex;align-items:center;gap:6px">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                        Checklist'i Tamamla
                     </button>
                 </div>
             ` : ''}
@@ -13678,28 +13890,38 @@ async function submitChecklist(branch, type, date, timeSlot) {
         return;
     }
     
-    // SORUMLU PERSONEL KONTROLÜ
-    const canFillOthers = window.userCanFillOthersChecklist || ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
+    // YÖNETİCİ KONTROLÜ - yöneticiler her şeyi doldurabilir
+    const isManager = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
     
-    if (!canFillOthers) {
-        // Sorumlu personel listesini al
-        const responsibleEl = document.getElementById('responsiblePersonnelList');
-        const responsibleNames = responsibleEl ? 
-            Array.from(responsibleEl.querySelectorAll('span[style*="background"]')).map(s => s.textContent.trim().toLowerCase()) : [];
-        
+    if (!isManager) {
         // Giriş yapan kullanıcının adı
         const currentUserName = currentUser?.name?.toLowerCase() || '';
         const enteredName = personName.toLowerCase();
         
-        // Kontrol - girilen isim sorumlu listesinde mi veya giriş yapan kullanıcı mı?
-        const isResponsible = responsibleNames.some(n => 
-            enteredName.includes(n) || n.includes(enteredName) ||
-            currentUserName.includes(n) || n.includes(currentUserName)
-        ) || responsibleNames.length === 0;
+        // Kullanıcı kendi adını mı girdi?
+        const isSelf = currentUserName && (
+            enteredName.includes(currentUserName.split(' ')[0].toLowerCase()) ||
+            currentUserName.toLowerCase().includes(enteredName.split(' ')[0])
+        );
         
-        if (!isResponsible && responsibleNames.length > 0) {
-            // Uyarı modal göster
-            showNotResponsibleWarning(branch, type, date, timeSlot, personName, responsibleNames);
+        if (!isSelf) {
+            toast('Sadece kendi adınıza checklist doldurabilirsiniz', 'error');
+            return;
+        }
+        
+        // Sorumlu personel listesini kontrol et
+        const responsibleEl = document.getElementById('responsiblePersonnelList');
+        const responsibleNames = responsibleEl ? 
+            Array.from(responsibleEl.querySelectorAll('span[style*="background"]')).map(s => s.textContent.trim().toLowerCase()) : [];
+        
+        // Kullanıcı sorumlu listesinde mi?
+        const isResponsible = responsibleNames.length === 0 || responsibleNames.some(n => 
+            currentUserName.includes(n.split(' ')[0]) || n.includes(currentUserName.split(' ')[0])
+        );
+        
+        if (!isResponsible) {
+            // Bu saatte shift'i yok
+            toast('Bu saatte shift\'iniz bulunmuyor. Checklist dolduramıyorsunuz.', 'error');
             return;
         }
     }
@@ -14730,8 +14952,40 @@ function showChecklistSettings() {
 
 // Default checklist maddeleri - TÜM EXCEL MADDELERİ
 function getDefaultChecklistItems(branch, type) {
-    // Veriler artık Firebase'den yükleniyor
-    // seed.html programı ile veritabanına yüklendi
+    // Temizlik Çizelgesi maddeleri
+    if (type === 'aylik') {
+        return [
+            { id: 'tem_01', text: 'Tüm masalar ve sandalyeler temizlendi', category: 'Salon' },
+            { id: 'tem_02', text: 'Zemin süpürüldü ve silindi', category: 'Salon' },
+            { id: 'tem_03', text: 'Vitrin camları temizlendi', category: 'Salon' },
+            { id: 'tem_04', text: 'Menü tahtaları/standları temizlendi', category: 'Salon' },
+            { id: 'tem_05', text: 'Kapı girişi ve paspaslar temizlendi', category: 'Salon' },
+            { id: 'tem_06', text: 'Bar tezgahı dezenfekte edildi', category: 'Bar' },
+            { id: 'tem_07', text: 'Espresso makinesi temizlendi', category: 'Bar' },
+            { id: 'tem_08', text: 'Öğütücüler temizlendi', category: 'Bar' },
+            { id: 'tem_09', text: 'Blenderlar temizlendi', category: 'Bar' },
+            { id: 'tem_10', text: 'Buzdolabı rafları düzenlendi', category: 'Bar' },
+            { id: 'tem_11', text: 'Bardak ve fincanlar dizildi', category: 'Bar' },
+            { id: 'tem_12', text: 'Çöpler boşaltıldı', category: 'Genel' },
+            { id: 'tem_13', text: 'WC kontrol edildi ve temizlendi', category: 'WC' },
+            { id: 'tem_14', text: 'Sabunluk ve kağıt havlu dolduruldu', category: 'WC' },
+            { id: 'tem_15', text: 'Depo düzenlendi', category: 'Depo' },
+            { id: 'tem_16', text: 'Ürün son kullanma tarihleri kontrol edildi', category: 'Depo' }
+        ];
+    }
+    
+    // Günlük Check maddeleri (açılış/kapanış)
+    if (type === 'gunluk') {
+        return [
+            { id: 'gun_01', text: 'Kasa açılışı/kapanışı yapıldı', category: 'Kasa' },
+            { id: 'gun_02', text: 'Espresso makinesi kontrol edildi', category: 'Ekipman' },
+            { id: 'gun_03', text: 'Buzdolabı sıcaklıkları kontrol edildi', category: 'Gıda Güvenliği' },
+            { id: 'gun_04', text: 'Malzeme eksikleri not edildi', category: 'Stok' },
+            { id: 'gun_05', text: 'Tezgah temizliği yapıldı', category: 'Temizlik' }
+        ];
+    }
+    
+    // Diğer tipler için boş döndür - Firebase'den yüklenecek
     return [];
 }
     </script>
