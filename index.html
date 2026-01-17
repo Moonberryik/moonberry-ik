@@ -2797,6 +2797,7 @@ window.migrateShiftData = migrateShiftData;
 window.cleanOldPuantajNotes = cleanOldPuantajNotes;
 window.fixShiftOrdering = fixShiftOrdering;
 window.fullSystemMigration = fullSystemMigration;
+window.syncAllShiftPersonelNames = syncAllShiftPersonelNames; // Manuel senkronizasyon için
 
 // İsim kısaltma: "BÜŞRA SÖĞÜT" → "Büşra S."
 function formatShortName(fullName) {
@@ -2916,6 +2917,136 @@ function lookupPersonelDisplay(searchKey, branch = null) {
 // Cache'i temizle (yeni personel eklendiğinde)
 function refreshPersonelCache() {
     loadPersonelDisplayCache();
+    // Arka planda shift'leri senkronize et
+    syncAllShiftPersonelNames();
+}
+
+// ==================== OTOMATİK SHIFT-PERSONEL SENKRONİZASYONU ====================
+// Bu fonksiyon TÜM shift'lerdeki personel isimlerini güncel personel verileriyle eşleştirir
+async function syncAllShiftPersonelNames() {
+    if (!db) return;
+    
+    try {
+        // 1. Tüm personeli çek ve map oluştur
+        const personelSnap = await db.collection('personel').get();
+        const personelList = [];
+        
+        personelSnap.forEach(doc => {
+            const p = doc.data();
+            personelList.push({
+                name: p.name,
+                codeName: p.codeName,
+                displayName: getPersonelDisplayName(p),
+                uniqueId: p.uniqueId || normalizePersonelId(p.name),
+                branch: p.branch,
+                role: p.role
+            });
+        });
+        
+        // 2. Tüm shift'leri çek
+        const shiftsSnap = await db.collection('shifts').get();
+        let totalUpdated = 0;
+        
+        for (const shiftDoc of shiftsSnap.docs) {
+            const shift = shiftDoc.data();
+            const shiftBranch = shift.branch;
+            const personelShifts = shift.personelShifts || {};
+            const currentNames = shift.personelNames || {};
+            const currentFullNames = shift.personelFullNames || {};
+            let newNames = { ...currentNames };
+            let newFullNames = { ...currentFullNames };
+            let needsUpdate = false;
+            
+            // 3. Her key için doğru personeli bul
+            for (const key of Object.keys(personelShifts)) {
+                const keyLower = key.toLowerCase();
+                const keyNorm = normalizeTurkishChars(key);
+                const keyFirst = keyNorm.split(/[_\s\.]/)[0];
+                
+                // Önce aynı şubeden ara, sonra bölge müdürlerinden
+                let matchedPersonel = null;
+                
+                // Öncelik 1: Aynı şubeden + tam eşleşme
+                matchedPersonel = personelList.find(p => {
+                    if (p.branch !== shiftBranch && p.role !== 'bolge_muduru') return false;
+                    
+                    const pDisplayNorm = normalizeTurkishChars(p.displayName);
+                    const pCodeNorm = normalizeTurkishChars(p.codeName || '');
+                    const pNameNorm = normalizeTurkishChars(p.name);
+                    const pUniqueNorm = normalizeTurkishChars(p.uniqueId);
+                    
+                    // Tam eşleşmeler
+                    if (key === p.displayName || key === p.codeName || key === p.name || key === p.uniqueId) return true;
+                    if (keyLower === p.uniqueId) return true;
+                    if (keyNorm === pDisplayNorm || keyNorm === pCodeNorm || keyNorm === pNameNorm || keyNorm === pUniqueNorm) return true;
+                    
+                    // BÜYÜK/KÜÇÜK HARF FARKI İÇİN
+                    if (key.toUpperCase() === p.displayName?.toUpperCase()) return true;
+                    if (key.toUpperCase() === p.codeName?.toUpperCase()) return true;
+                    
+                    return false;
+                });
+                
+                // Öncelik 2: fullName eşleşmesi (mevcut kayıtlı isimle)
+                if (!matchedPersonel && currentFullNames[key]) {
+                    const currentFullNorm = normalizeTurkishChars(currentFullNames[key]);
+                    matchedPersonel = personelList.find(p => {
+                        if (p.branch !== shiftBranch && p.role !== 'bolge_muduru') return false;
+                        const pNameNorm = normalizeTurkishChars(p.name);
+                        // İlk isim de kontrol et
+                        const currentFirst = currentFullNorm.split(/[_\s]/)[0];
+                        const pNameFirst = pNameNorm.split(/[_\s]/)[0];
+                        return pNameNorm === currentFullNorm || (currentFirst.length > 2 && currentFirst === pNameFirst);
+                    });
+                }
+                
+                // Öncelik 3: İlk isim eşleşmesi (aynı şube) - EN GENİŞ
+                if (!matchedPersonel && keyFirst && keyFirst.length > 2) {
+                    matchedPersonel = personelList.find(p => {
+                        if (p.branch !== shiftBranch && p.role !== 'bolge_muduru') return false;
+                        
+                        const pNameFirst = normalizeTurkishChars(p.name).split(/[_\s]/)[0];
+                        const pCodeFirst = normalizeTurkishChars(p.codeName || '').split(/[_\s\.]/)[0];
+                        const pDisplayFirst = normalizeTurkishChars(p.displayName).split(/[_\s\.]/)[0];
+                        
+                        return keyFirst === pNameFirst || keyFirst === pCodeFirst || keyFirst === pDisplayFirst;
+                    });
+                }
+                
+                if (matchedPersonel) {
+                    // Güncelleme gerekli mi kontrol et
+                    if (newNames[key] !== matchedPersonel.displayName || newFullNames[key] !== matchedPersonel.name) {
+                        console.log(`[Senkron] ${shiftBranch}: "${key}" → "${matchedPersonel.displayName}" (${matchedPersonel.name})`);
+                        newNames[key] = matchedPersonel.displayName;
+                        newFullNames[key] = matchedPersonel.name;
+                        needsUpdate = true;
+                    }
+                } else {
+                    // Eşleşme bulunamadı - debug için log
+                    if (!newNames[key] || newNames[key] === key) {
+                        console.warn(`[Senkron] ⚠️ Eşleşme bulunamadı: "${key}" (${shiftBranch}) - keyNorm: "${keyNorm}", keyFirst: "${keyFirst}"`);
+                    }
+                }
+            }
+            
+            // 4. Güncelleme gerekiyorsa kaydet
+            if (needsUpdate) {
+                await db.collection('shifts').doc(shiftDoc.id).update({
+                    personelNames: newNames,
+                    personelFullNames: newFullNames
+                });
+                totalUpdated++;
+            }
+        }
+        
+        if (totalUpdated > 0) {
+            console.log(`[Senkron] ✓ Toplam ${totalUpdated} shift güncellendi`);
+        } else {
+            console.log(`[Senkron] ✓ Tüm shift'ler güncel`);
+        }
+    } catch (e) {
+        console.warn('[Senkron] Hata:', e.message);
+    }
 }
 
 // Varsayılan puantaj kuralları
@@ -6327,6 +6458,12 @@ async function savePersonel() {
             const oldUniqueId = oldData.uniqueId || '';
             const oldDisplayName = getPersonelDisplayName(oldData);
             
+            // İlk isimler (Türkçe normalize)
+            const oldFirstName = normalizeTurkishChars(oldName.split(' ')[0] || '');
+            const newFirstName = normalizeTurkishChars(name.split(' ')[0] || '');
+            
+            console.log(`[Personel Güncelleme] Eski: "${oldName}" (${oldCodeName}) → Yeni: "${name}" (${codeName})`);
+            
             // Şimdi güncelle
             await db.collection('personel').doc(editId).update(data);
             
@@ -6341,6 +6478,10 @@ async function savePersonel() {
                 
                 for (const shiftDoc of shiftsSnap.docs) {
                     const shift = shiftDoc.data();
+                    
+                    // Branch kontrolü (bölge müdürü hariç tüm şubeler)
+                    if (shift.branch !== data.branch && role !== 'bolge_muduru') continue;
+                    
                     const personelShifts = shift.personelShifts || {};
                     const personelNames = shift.personelNames || {};
                     const personelFullNames = shift.personelFullNames || {};
@@ -6351,32 +6492,41 @@ async function savePersonel() {
                     for (const key of Object.keys(personelShifts)) {
                         const keyLower = key.toLowerCase();
                         const keyNorm = normalizeTurkishChars(key);
+                        const keyFirst = keyNorm.split(/[_\s\.]/)[0]; // İlk isim
                         
                         // Eşleşme kontrolleri (eski ve yeni değerlerle)
                         const matches = 
-                            // Yeni değerlerle eşleşme
-                            keyNorm === normalizeTurkishChars(uniqueId) ||
-                            keyNorm === normalizeTurkishChars(codeName) ||
-                            keyNorm === normalizeTurkishChars(name) ||
-                            keyLower === uniqueId ||
+                            // TAM EŞLEŞMEler
                             key === codeName ||
                             key === name ||
-                            // Eski değerlerle eşleşme
-                            keyNorm === normalizeTurkishChars(oldUniqueId) ||
-                            keyNorm === normalizeTurkishChars(oldCodeName) ||
-                            keyNorm === normalizeTurkishChars(oldName) ||
-                            keyNorm === normalizeTurkishChars(oldDisplayName) ||
                             key === oldCodeName ||
                             key === oldName ||
                             key === oldDisplayName ||
                             key === oldUniqueId ||
-                            // personelNames'deki eski değerle eşleşme
+                            keyLower === uniqueId ||
+                            keyLower === oldUniqueId ||
+                            
+                            // NORMALİZE EŞLEŞMEler
+                            keyNorm === normalizeTurkishChars(uniqueId) ||
+                            keyNorm === normalizeTurkishChars(codeName) ||
+                            keyNorm === normalizeTurkishChars(name) ||
+                            keyNorm === normalizeTurkishChars(oldUniqueId) ||
+                            keyNorm === normalizeTurkishChars(oldCodeName) ||
+                            keyNorm === normalizeTurkishChars(oldName) ||
+                            keyNorm === normalizeTurkishChars(oldDisplayName) ||
+                            
+                            // personelNames/personelFullNames EŞLEŞMEsi
                             personelNames[key] === oldDisplayName ||
                             personelNames[key] === oldCodeName ||
-                            personelFullNames[key] === oldName;
+                            personelFullNames[key] === oldName ||
+                            normalizeTurkishChars(personelFullNames[key] || '') === normalizeTurkishChars(oldName) ||
+                            
+                            // İLK İSİM EŞLEŞMESİ (en önemli!)
+                            (keyFirst && keyFirst.length > 2 && keyFirst === oldFirstName);
                         
                         if (matches) {
                             matchedKey = key;
+                            console.log(`[Shift Eşleşme] ${shiftDoc.id}: key="${key}" → "${newDisplayName}"`);
                             break;
                         }
                     }
