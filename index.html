@@ -2103,15 +2103,72 @@ function normalizePersonelId(name) {
         .replace(/^_|_$/g, '');
 }
 
+// Tam isimden kısa görüntü formatı: "BÜŞRA SÖĞÜT" → "Büşra S."
+function formatDisplayName(fullName) {
+    if (!fullName) return '';
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length === 0) return '';
+    const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+    if (parts.length === 1) return capitalize(parts[0]);
+    const firstName = capitalize(parts[0]);
+    const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
+    return `${firstName} ${lastInitial}.`;
+}
+
 // ==================== MİGRASYON FONKSİYONLARI ====================
-// Mevcut personellere uniqueId ekle (bir kerelik)
+
+// Personel cache for migration
+let _migrationPersonelMap = null;
+
+// Personel map oluştur: displayName/codeName → {uniqueId, fullName}
+async function buildPersonelMap() {
+    if (_migrationPersonelMap) return _migrationPersonelMap;
+    
+    const snapshot = await db.collection('personel').get();
+    _migrationPersonelMap = new Map();
+    
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        const uniqueId = data.uniqueId || normalizePersonelId(data.name);
+        const fullName = data.name;
+        const displayName = formatDisplayName(fullName);
+        const codeName = data.codeName || displayName;
+        const firstName = fullName?.split(' ')[0] || '';
+        
+        // Tüm olası key'leri ekle
+        const keys = [
+            fullName,
+            fullName?.toLowerCase(),
+            displayName,
+            displayName?.toLowerCase(),
+            codeName,
+            codeName?.toLowerCase(),
+            firstName,
+            firstName?.toLowerCase(),
+            firstName?.toUpperCase(),
+            normalizePersonelId(fullName),
+            normalizePersonelId(firstName),
+        ].filter(k => k);
+        
+        keys.forEach(key => {
+            if (!_migrationPersonelMap.has(key)) {
+                _migrationPersonelMap.set(key, { uniqueId, fullName, displayName, branch: data.branch });
+            }
+        });
+    });
+    
+    console.log(`[Migration] Personel map oluşturuldu: ${_migrationPersonelMap.size} key`);
+    return _migrationPersonelMap;
+}
+
+// 1. Mevcut personellere uniqueId ekle
 async function migratePersonelUniqueIds() {
     if (!db) {
         console.error('Firebase bağlantısı yok');
-        return;
+        return { updated: 0, skipped: 0 };
     }
     
-    console.log('[Migration] Personel uniqueId migrasyon başlıyor...');
+    console.log('[Migration] 1/3 Personel uniqueId migrasyon başlıyor...');
     
     try {
         const snapshot = await db.collection('personel').get();
@@ -2131,22 +2188,206 @@ async function migratePersonelUniqueIds() {
             
             // Güncelle
             await db.collection('personel').doc(doc.id).update({ uniqueId });
-            console.log(`[Migration] ${data.name} → ${uniqueId}`);
+            console.log(`  ✓ ${data.name} → ${uniqueId}`);
             updated++;
         }
         
-        console.log(`[Migration] Tamamlandı! ${updated} güncellendi, ${skipped} atlandı.`);
-        toast(`Migrasyon tamamlandı: ${updated} personel güncellendi`, 'success');
-        
+        console.log(`[Migration] Personel: ${updated} güncellendi, ${skipped} atlandı`);
         return { updated, skipped };
     } catch (e) {
-        console.error('[Migration] Hata:', e);
-        toast('Migrasyon hatası: ' + e.message, 'error');
+        console.error('[Migration] Personel hatası:', e);
+        return { updated: 0, skipped: 0, error: e.message };
     }
 }
 
-// Console'dan çağrılabilir: migratePersonelUniqueIds()
+// 2. Shift verilerini uniqueId sistemine geçir
+async function migrateShiftData() {
+    if (!db) {
+        console.error('Firebase bağlantısı yok');
+        return { updated: 0, skipped: 0 };
+    }
+    
+    console.log('[Migration] 2/3 Shift verilerini güncelleme başlıyor...');
+    
+    try {
+        const personelMap = await buildPersonelMap();
+        const shiftsSnapshot = await db.collection('shifts').get();
+        let updated = 0, skipped = 0;
+        
+        for (const doc of shiftsSnapshot.docs) {
+            const shift = doc.data();
+            const oldPersonelShifts = shift.personelShifts || {};
+            const newPersonelShifts = {};
+            const newPersonelNames = {};
+            const newPersonelFullNames = {};
+            let hasChanges = false;
+            
+            for (const [oldKey, days] of Object.entries(oldPersonelShifts)) {
+                // Eski key'den personel bilgisi bul
+                const personelInfo = personelMap.get(oldKey) || personelMap.get(oldKey.toLowerCase());
+                
+                if (personelInfo) {
+                    const newKey = personelInfo.uniqueId;
+                    
+                    // Key değiştiyse güncelle
+                    if (newKey !== oldKey) {
+                        hasChanges = true;
+                        console.log(`  ${doc.id}: "${oldKey}" → "${newKey}"`);
+                    }
+                    
+                    newPersonelShifts[newKey] = days;
+                    newPersonelNames[newKey] = personelInfo.displayName;
+                    newPersonelFullNames[newKey] = personelInfo.fullName;
+                } else {
+                    // Bulunamadı, eski key'i koru
+                    newPersonelShifts[oldKey] = days;
+                    newPersonelNames[oldKey] = oldKey;
+                    newPersonelFullNames[oldKey] = oldKey;
+                    console.warn(`  ⚠️ ${doc.id}: "${oldKey}" için personel bulunamadı`);
+                }
+            }
+            
+            if (hasChanges || !shift.personelNames || !shift.personelFullNames) {
+                await db.collection('shifts').doc(doc.id).update({
+                    personelShifts: newPersonelShifts,
+                    personelNames: newPersonelNames,
+                    personelFullNames: newPersonelFullNames,
+                    migratedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                updated++;
+            } else {
+                skipped++;
+            }
+        }
+        
+        console.log(`[Migration] Shift: ${updated} güncellendi, ${skipped} atlandı`);
+        return { updated, skipped };
+    } catch (e) {
+        console.error('[Migration] Shift hatası:', e);
+        return { updated: 0, skipped: 0, error: e.message };
+    }
+}
+
+// 3. Eski puantajNotes kayıtlarını temizle
+async function cleanOldPuantajNotes() {
+    if (!db) {
+        console.error('Firebase bağlantısı yok');
+        return { deleted: 0 };
+    }
+    
+    console.log('[Migration] 3/3 Eski puantajNotes temizleniyor...');
+    
+    try {
+        const snapshot = await db.collection('puantajNotes').get();
+        let deleted = 0, kept = 0;
+        
+        const toDelete = [];
+        
+        for (const doc of snapshot.docs) {
+            const data = doc.data();
+            
+            // Eski format kontrolü: personelId kısa isim formatında mı?
+            // Yeni format: busra_sogut (tam isim normalize)
+            // Eski format: busra, b__ra, balra (kısa isim)
+            const personelId = data.personelId || '';
+            const hasUnderscore = personelId.includes('_');
+            const partsCount = personelId.split('_').filter(p => p).length;
+            
+            // Eski format: tek kelime veya çok kısa
+            const isOldFormat = !hasUnderscore || partsCount < 2 || personelId.length < 8;
+            
+            if (isOldFormat && data.autoGenerated) {
+                toDelete.push(doc.ref);
+                deleted++;
+            } else {
+                kept++;
+            }
+        }
+        
+        // Batch halinde sil (500'lük gruplar)
+        const batchSize = 450;
+        for (let i = 0; i < toDelete.length; i += batchSize) {
+            const batch = db.batch();
+            const chunk = toDelete.slice(i, i + batchSize);
+            chunk.forEach(ref => batch.delete(ref));
+            await batch.commit();
+            console.log(`  ${Math.min(i + batchSize, toDelete.length)}/${toDelete.length} silindi...`);
+        }
+        
+        console.log(`[Migration] PuantajNotes: ${deleted} silindi, ${kept} korundu`);
+        return { deleted, kept };
+    } catch (e) {
+        console.error('[Migration] PuantajNotes hatası:', e);
+        return { deleted: 0, error: e.message };
+    }
+}
+
+// ANA MİGRASYON FONKSİYONU
+async function fullSystemMigration() {
+    console.log('═══════════════════════════════════════════');
+    console.log('   🚀 TAM SİSTEM MİGRASYONU BAŞLIYOR');
+    console.log('═══════════════════════════════════════════');
+    
+    const startTime = Date.now();
+    
+    // 1. Personel uniqueId
+    const personelResult = await migratePersonelUniqueIds();
+    
+    // Cache'i sıfırla
+    _migrationPersonelMap = null;
+    
+    // 2. Shift verileri
+    const shiftResult = await migrateShiftData();
+    
+    // 3. Eski puantajNotes temizle
+    const notesResult = await cleanOldPuantajNotes();
+    
+    const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+    
+    console.log('═══════════════════════════════════════════');
+    console.log('   ✅ MİGRASYON TAMAMLANDI');
+    console.log('═══════════════════════════════════════════');
+    console.log(`   Personel: ${personelResult.updated} güncellendi`);
+    console.log(`   Shift: ${shiftResult.updated} güncellendi`);
+    console.log(`   PuantajNotes: ${notesResult.deleted} silindi`);
+    console.log(`   Süre: ${duration} saniye`);
+    console.log('═══════════════════════════════════════════');
+    
+    toast(`Migrasyon tamamlandı! (${duration}s)`, 'success');
+    
+    // Sayfayı yenile
+    setTimeout(() => {
+        if (typeof loadPuantaj === 'function') loadPuantaj();
+        if (typeof loadShiftWeek === 'function') loadShiftWeek();
+    }, 1000);
+    
+    return { personelResult, shiftResult, notesResult, duration };
+}
+
+// Console'dan çağrılabilir
 window.migratePersonelUniqueIds = migratePersonelUniqueIds;
+window.migrateShiftData = migrateShiftData;
+window.cleanOldPuantajNotes = cleanOldPuantajNotes;
+window.fullSystemMigration = fullSystemMigration;
+
+// İsim kısaltma: "BÜŞRA SÖĞÜT" → "Büşra S."
+function formatShortName(fullName) {
+    if (!fullName) return '';
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length === 0) return '';
+    
+    // İlk harf büyük, geri kalan küçük
+    const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+    
+    if (parts.length === 1) {
+        return capitalize(parts[0]);
+    }
+    
+    // "İsim S." formatı
+    const firstName = capitalize(parts[0]);
+    const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
+    return `${firstName} ${lastInitial}.`;
+}
 
 // ==================== AUTH & SESSION ====================
 let currentUser = null;
@@ -5963,7 +6204,8 @@ async function loadPuantaj() {
             
             personelList.push({ 
                 id: doc.id, 
-                name: p.name, 
+                name: p.name,
+                displayName: formatDisplayName(p.name),  // "Büşra S." formatı
                 tc: p.tc, 
                 position: p.position, 
                 toplamPuan,
@@ -6041,7 +6283,7 @@ async function loadPuantaj() {
                             <div style="background:linear-gradient(135deg,rgba(255,215,0,.15),rgba(255,215,0,.05));border:1px solid rgba(255,215,0,.3);border-radius:12px;padding:14px;text-align:center">
                                 <div style="font-size:1.5rem;margin-bottom:4px">🏆</div>
                                 <div style="font-size:.7rem;color:var(--tx2);margin-bottom:4px">En Yüksek Puan</div>
-                                <div style="font-weight:700;color:var(--tx);font-size:.9rem">${topPerformer.name}</div>
+                                <div style="font-weight:700;color:var(--tx);font-size:.9rem">${topPerformer.displayName}</div>
                                 <div style="font-size:.8rem;color:#27ae60;font-weight:600">+${topPerformer.toplamPuan} puan</div>
                             </div>
                         ` : ''}
@@ -6049,7 +6291,7 @@ async function loadPuantaj() {
                             <div style="background:linear-gradient(135deg,rgba(39,174,96,.15),rgba(39,174,96,.05));border:1px solid rgba(39,174,96,.3);border-radius:12px;padding:14px;text-align:center">
                                 <div style="font-size:1.5rem;margin-bottom:4px">⭐</div>
                                 <div style="font-size:.7rem;color:var(--tx2);margin-bottom:4px">En Çok Başarı</div>
-                                <div style="font-weight:700;color:var(--tx);font-size:.9rem">${mostImproved.name}</div>
+                                <div style="font-weight:700;color:var(--tx);font-size:.9rem">${mostImproved.displayName}</div>
                                 <div style="font-size:.8rem;color:#27ae60;font-weight:600">${mostImproved.pozitifOlay} başarı</div>
                             </div>
                         ` : ''}
@@ -6057,7 +6299,7 @@ async function loadPuantaj() {
                             <div style="background:linear-gradient(135deg,rgba(231,76,60,.1),rgba(231,76,60,.03));border:1px solid rgba(231,76,60,.2);border-radius:12px;padding:14px;text-align:center">
                                 <div style="font-size:1.5rem;margin-bottom:4px">⚠️</div>
                                 <div style="font-size:.7rem;color:var(--tx2);margin-bottom:4px">Dikkat Gerektiren</div>
-                                <div style="font-weight:700;color:var(--tx);font-size:.9rem">${needsAttention.name}</div>
+                                <div style="font-weight:700;color:var(--tx);font-size:.9rem">${needsAttention.displayName}</div>
                                 <div style="font-size:.8rem;color:#e74c3c;font-weight:600">${needsAttention.negatifOlay} ihlal</div>
                             </div>
                         ` : ''}
@@ -6089,7 +6331,7 @@ async function loadPuantaj() {
                             </div>
                             <div>
                                 <div style="display:flex;align-items:center;gap:8px">
-                                    <span style="font-weight:600;font-size:.95rem;color:var(--tx)">${p.name}</span>
+                                    <span style="font-weight:600;font-size:.95rem;color:var(--tx)">${p.displayName}</span>
                                     <span style="font-size:.9rem;color:${yildizColor};letter-spacing:1px">${yildizlar}</span>
                                 </div>
                                 <div style="font-size:.75rem;color:var(--tx3)">${p.position || 'Barista'}</div>
@@ -6389,7 +6631,7 @@ function showPersonelPuanDetay(personelId, personName) {
             <div style="background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(255,134,116,.05));border-radius:12px;padding:16px;margin-bottom:16px">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
                     <div>
-                        <div style="font-size:1.1rem;font-weight:700;color:var(--tx)">${personName}</div>
+                        <div style="font-size:1.1rem;font-weight:700;color:var(--tx)">${formatDisplayName(personName)}</div>
                         <div style="font-size:1.1rem;color:${yildizColor};letter-spacing:2px">${yildizlar}</div>
                     </div>
                     <div style="text-align:right">
@@ -6495,7 +6737,7 @@ function showPersonelPuanDetay(personelId, personName) {
         `;
     }
     
-    showModal(`${personName} - Puan Detayı`, body, footer);
+    showModal(`${formatDisplayName(personName)} - Puan Detayı`, body, footer);
 }
 
 // Otomatik puantaj notu sil
@@ -11554,10 +11796,111 @@ function getRemainingTime(checkType, targetTime, branch) {
     };
 }
 
-// Otomatik puantaj notu oluştur
+// Otomatik puantaj notu oluştur - TAM İSİM LOOKUP SİSTEMİ
+// Personel cache (performans için)
+let _personelCache = null;
+let _personelCacheTime = 0;
+const PERSONEL_CACHE_TTL = 60000; // 1 dakika
+
+async function getPersonelCache() {
+    const now = Date.now();
+    if (_personelCache && (now - _personelCacheTime) < PERSONEL_CACHE_TTL) {
+        return _personelCache;
+    }
+    
+    try {
+        const snapshot = await db.collection('personel').get();
+        _personelCache = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            _personelCache.push({
+                docId: doc.id,
+                name: data.name,
+                codeName: data.codeName,
+                uniqueId: data.uniqueId || normalizePersonelId(data.name),
+                branch: data.branch
+            });
+        });
+        _personelCacheTime = now;
+        return _personelCache;
+    } catch (e) {
+        console.error('Personel cache hatası:', e);
+        return [];
+    }
+}
+
+// Kısa isimden tam personel bilgisi bul
+async function findPersonelByDisplayName(displayName, branch) {
+    if (!displayName) return null;
+    
+    const personelList = await getPersonelCache();
+    const searchName = displayName.trim();
+    
+    // 1. Tam isim eşleşmesi
+    let found = personelList.find(p => 
+        p.name === searchName || 
+        p.name?.toLowerCase() === searchName.toLowerCase()
+    );
+    if (found) return found;
+    
+    // 2. codeName eşleşmesi
+    found = personelList.find(p => 
+        p.codeName === searchName || 
+        p.codeName?.toLowerCase() === searchName.toLowerCase()
+    );
+    if (found) return found;
+    
+    // 3. İlk isim eşleşmesi (branch ile filtrele)
+    const firstName = searchName.split(' ')[0];
+    const candidates = personelList.filter(p => {
+        const pFirstName = p.name?.split(' ')[0];
+        return (pFirstName?.toLowerCase() === firstName.toLowerCase()) &&
+               (!branch || p.branch === branch);
+    });
+    
+    // Tek aday varsa döndür
+    if (candidates.length === 1) return candidates[0];
+    
+    // 4. "İsim S." formatı eşleştirmesi
+    const match = searchName.match(/^(.+?)\s+([A-ZÇĞİÖŞÜa-zçğıöşü])\.?$/);
+    if (match) {
+        const [, fName, lastInitial] = match;
+        found = personelList.find(p => {
+            const pParts = p.name?.split(' ') || [];
+            const pFirstName = pParts[0];
+            const pLastName = pParts.slice(1).join(' ');
+            return pFirstName?.toLowerCase() === fName.toLowerCase() &&
+                   pLastName?.charAt(0)?.toUpperCase() === lastInitial.toUpperCase() &&
+                   (!branch || p.branch === branch);
+        });
+        if (found) return found;
+    }
+    
+    // Bulunamadı
+    return null;
+}
+
 async function createAutoPuantajNote(personelId, personelName, checkType, checkTime, status, points, branch, date) {
     const rules = CHECK_RULES[checkType];
     const checkName = rules?.name || checkType;
+    
+    // === TAM İSİM LOOKUP ===
+    // personelName kısa isim olabilir ("Büşra S."), tam personeli bul
+    const personelInfo = await findPersonelByDisplayName(personelName, branch);
+    
+    let finalPersonelId, finalPersonelName;
+    
+    if (personelInfo) {
+        // Tam isim bulundu
+        finalPersonelId = personelInfo.uniqueId;
+        finalPersonelName = personelInfo.name;
+        console.log(`[PuantajNote] ${personelName} → ${finalPersonelName} (${finalPersonelId})`);
+    } else {
+        // Bulunamadı, gelen değerleri kullan
+        finalPersonelId = personelId;
+        finalPersonelName = personelName;
+        console.warn(`[PuantajNote] ${personelName} için tam isim bulunamadı, gelen değer kullanılıyor`);
+    }
     
     let note = '';
     if (status === 'onTime') {
@@ -11568,7 +11911,7 @@ async function createAutoPuantajNote(personelId, personelName, checkType, checkT
         note = `${checkTime} ${checkName} doldurulmadı`;
     }
     
-    const noteId = `auto_${personelId}_${date}_${checkType}_${checkTime.replace(':', '')}`;
+    const noteId = `auto_${finalPersonelId}_${date}_${checkType}_${checkTime.replace(':', '')}`;
     
     try {
         // Önce var mı kontrol et
@@ -11579,8 +11922,8 @@ async function createAutoPuantajNote(personelId, personelName, checkType, checkT
         }
         
         await db.collection('puantajNotes').doc(noteId).set({
-            personelId,
-            personelName,
+            personelId: finalPersonelId,
+            personelName: finalPersonelName,
             branch,
             date,
             checkType,
@@ -11612,8 +11955,10 @@ async function processMissedChecks(branch, checkType, timeSlot, date, shiftPerso
     
     // Her sorumlu personel için puan notu oluştur
     for (const personName of shiftPersonnel) {
-        // Global normalize fonksiyonu kullan
+        // TAM İSİM'den normalize edilmiş ID oluştur
         const personId = normalizePersonelId(personName);
+        
+        console.log(`[puantajNote] Kayıt: personName="${personName}" → personId="${personId}"`);
         
         await createAutoPuantajNote(
             personId,
@@ -11776,6 +12121,39 @@ async function loadTodayChecks() {
         if (dayIndex < 0) dayIndex = 6;
         
         // Her şube için shift'i yükle
+        // Önce personel koleksiyonunu yükle (tam isim eşleştirme için)
+        const personelMap = {};
+        try {
+            const pSnap = await db.collection('personel').get();
+            pSnap.forEach(doc => {
+                const p = doc.data();
+                const firstName = p.name?.split(' ')[0] || '';
+                const lastName = p.name?.split(' ').slice(1).join(' ') || '';
+                const lastInitial = lastName.charAt(0);
+                
+                // Tüm olası key formatlarını oluştur
+                const keys = [
+                    p.uniqueId,
+                    p.codeName,
+                    p.name,
+                    normalizePersonelId(p.name),
+                    `${firstName} ${lastInitial}.`,
+                    `${firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase()} ${lastInitial.toUpperCase()}.`,
+                    firstName,
+                    firstName?.toLowerCase(),
+                    firstName?.toUpperCase(),
+                ].filter(k => k);
+                
+                keys.forEach(k => {
+                    personelMap[k] = p.name;
+                    if (k?.toLowerCase) personelMap[k.toLowerCase()] = p.name;
+                });
+            });
+            console.log('[Shift] personelMap oluşturuldu:', Object.keys(personelMap).length, 'key');
+        } catch (e) {
+            console.warn('Personel map yüklenemedi:', e);
+        }
+        
         for (const branch of branches) {
             try {
                 const shiftsSnapshot = await db.collection('shifts')
@@ -11798,8 +12176,11 @@ async function loadTodayChecks() {
                         const todayShift = days[dayIndex] || '';
                         const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
                         
-                        // Tam ismi al: personelFullNames'ten veya key'i kullan (eski veriler için)
-                        const fullName = personelFullNames[uniqueIdOrName] || uniqueIdOrName;
+                        // Tam ismi al: personelFullNames → personelMap → key (eski veriler için)
+                        const fullName = personelFullNames[uniqueIdOrName] 
+                            || personelMap[uniqueIdOrName] 
+                            || personelMap[uniqueIdOrName?.toLowerCase()]
+                            || uniqueIdOrName;
                         
                         if (cleanShift === 'A' || cleanShift === 'AÇILIŞ' || cleanShift.includes('AÇILI')) {
                             acilisPersonel.push(fullName);
@@ -12395,7 +12776,8 @@ function renderSimpleCheckCard(name, deadline, branch, isCompleted, isMissed, is
     // Personel
     let personnelHtml = '';
     if (responsiblePersonnel && responsiblePersonnel.length > 0 && !isCompleted) {
-        const names = responsiblePersonnel.slice(0, 2).map(p => p.split(' ')[0]).join(', ');
+        // Tam isimleri kısa formata çevir (örn: "BÜŞRA SÖĞÜT" → "Büşra S.")
+        const names = responsiblePersonnel.slice(0, 2).map(p => formatShortName(p)).join(', ');
         personnelHtml = `<span style="font-size:.7rem;color:var(--tx3);margin-left:auto">${names}</span>`;
     }
     
@@ -13370,6 +13752,38 @@ async function loadChecklistTodayPanel() {
     // Shift verilerini yükle - SADECE BU HAFTANIN SHİFT'İ
     const shiftData = {};
     
+    // Önce personel koleksiyonunu yükle (tam isim eşleştirme için)
+    const personelMap = {};
+    try {
+        const pSnap = await db.collection('personel').get();
+        pSnap.forEach(doc => {
+            const p = doc.data();
+            const firstName = p.name?.split(' ')[0] || '';
+            const lastName = p.name?.split(' ').slice(1).join(' ') || '';
+            const lastInitial = lastName.charAt(0);
+            
+            // Tüm olası key formatlarını oluştur
+            const keys = [
+                p.uniqueId,
+                p.codeName,
+                p.name,
+                normalizePersonelId(p.name),
+                `${firstName} ${lastInitial}.`,
+                `${firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase()} ${lastInitial.toUpperCase()}.`,
+                firstName,
+                firstName?.toLowerCase(),
+                firstName?.toUpperCase(),
+            ].filter(k => k);
+            
+            keys.forEach(k => {
+                personelMap[k] = p.name;
+                if (k?.toLowerCase) personelMap[k.toLowerCase()] = p.name;
+            });
+        });
+    } catch (e) {
+        console.warn('Personel map yüklenemedi:', e);
+    }
+    
     try {
         for (const branch of branches) {
             try {
@@ -13395,8 +13809,11 @@ async function loadChecklistTodayPanel() {
                         const todayShift = days[dayIndex] || '';
                         const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
                         
-                        // Tam ismi al: personelFullNames'ten veya key'i kullan (eski veriler için)
-                        const fullName = personelFullNames[uniqueIdOrName] || uniqueIdOrName;
+                        // Tam ismi al: personelFullNames → personelMap → key (eski veriler için)
+                        const fullName = personelFullNames[uniqueIdOrName] 
+                            || personelMap[uniqueIdOrName] 
+                            || personelMap[uniqueIdOrName?.toLowerCase()]
+                            || uniqueIdOrName;
                         
                         if (cleanShift === 'A' || cleanShift === 'AÇILIŞ' || cleanShift.includes('AÇILI')) acilisPersonel.push(fullName);
                         else if (cleanShift === 'K' || cleanShift === 'KAPANIŞ' || cleanShift.includes('KAPANI')) kapanisPersonel.push(fullName);
