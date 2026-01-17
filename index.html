@@ -2212,13 +2212,20 @@ function clearPersonelDisplayCache() {
 let _migrationPersonelMap = null;
 
 // Helper: Türkçe karakterleri normalize et
+// ÖNEMLİ: Önce büyük Türkçe harfleri replace et, sonra toLowerCase!
 function normalizeTurkishChars(str) {
     if (!str) return '';
-    return str.toLowerCase()
+    return str
+        // Önce büyük Türkçe harfleri küçült (toLowerCase'dan önce!)
+        .replace(/İ/g, 'i').replace(/I/g, 'i')
+        .replace(/Ğ/g, 'g').replace(/Ü/g, 'u').replace(/Ş/g, 's')
+        .replace(/Ö/g, 'o').replace(/Ç/g, 'c')
+        // Sonra toLowerCase
+        .toLowerCase()
+        // Sonra küçük Türkçe harfleri normalize et
         .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
         .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
-        .replace(/İ/gi, 'i').replace(/Ğ/g, 'g').replace(/Ü/g, 'u')
-        .replace(/Ş/g, 's').replace(/Ö/g, 'o').replace(/Ç/g, 'c');
+        .replace(/i̇/g, 'i'); // combining dot varsa temizle
 }
 
 // Personel map oluştur: displayName/codeName → {uniqueId, fullName}
@@ -12081,13 +12088,20 @@ async function findPersonelByDisplayName(displayName, branch) {
     const searchNormalized = normalizePersonelId(searchName);
     
     // Helper: Türkçe karakterleri normalize et (karşılaştırma için)
+    // ÖNEMLİ: Önce büyük Türkçe harfleri replace et, sonra toLowerCase!
     const normalizeTurkish = (str) => {
         if (!str) return '';
-        return str.toLowerCase()
+        return str
+            // Önce büyük Türkçe harfleri küçült (toLowerCase'dan önce!)
+            .replace(/İ/g, 'i').replace(/I/g, 'i')
+            .replace(/Ğ/g, 'g').replace(/Ü/g, 'u').replace(/Ş/g, 's')
+            .replace(/Ö/g, 'o').replace(/Ç/g, 'c')
+            // Sonra toLowerCase
+            .toLowerCase()
+            // Sonra küçük Türkçe harfleri normalize et
             .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
             .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
-            .replace(/İ/gi, 'i').replace(/Ğ/g, 'g').replace(/Ü/g, 'u')
-            .replace(/Ş/g, 's').replace(/Ö/g, 'o').replace(/Ç/g, 'c');
+            .replace(/i̇/g, 'i'); // combining dot varsa temizle
     };
     
     const searchTurkishNorm = normalizeTurkish(searchName);
