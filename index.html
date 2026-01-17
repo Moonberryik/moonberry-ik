@@ -2088,6 +2088,21 @@ const firebaseConfig = {
 // Firebase değişkenleri - DOMContentLoaded'da initialize edilecek
 let db = null;
 
+// ==================== GLOBAL YARDIMCI FONKSİYONLAR ====================
+// Türkçe karakter destekli isim normalize - puantajNotes ID için
+function normalizePersonelId(name) {
+    if (!name) return '';
+    return name
+        .toLowerCase()
+        .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
+        .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
+        .replace(/Ğ/g, 'g').replace(/Ü/g, 'u').replace(/Ş/g, 's')
+        .replace(/İ/g, 'i').replace(/Ö/g, 'o').replace(/Ç/g, 'c')
+        .replace(/[^a-z0-9]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+}
+
 // ==================== AUTH & SESSION ====================
 let currentUser = null;
 
@@ -5765,19 +5780,7 @@ async function loadPuantaj() {
         const endDay = new Date(yil, parseInt(ay), 0).getDate();
         const endDate = `${yil}-${ay}-${endDay.toString().padStart(2, '0')}`;
         
-        // İsim normalize fonksiyonları - farklı formatlar için
-        const normalizeName = (name) => {
-            if (!name) return '';
-            return name
-                .toLowerCase()
-                .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
-                .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
-                .replace(/[^a-z0-9]/g, '_')
-                .replace(/_+/g, '_')
-                .replace(/^_|_$/g, '');
-        };
-        
-        // Seed formatı - Türkçe karakterler _ olur
+        // Seed formatı - Türkçe karakterler _ olur (eski veriler için)
         const normalizeNameSeed = (name) => {
             if (!name) return '';
             return name
@@ -5826,18 +5829,17 @@ async function loadPuantaj() {
             const firstName = p.name?.split(' ')[0] || '';
             const lastName = p.name?.split(' ').slice(1).join(' ') || '';
             
-            // Tüm olası key formatlarını dene
+            // Tüm olası key formatlarını dene (öncelik sırasına göre)
             const possibleKeys = [
+                normalizePersonelId(p.name),               // YENİ: Global normalize (busra_sogut)
+                normalizePersonelId(firstName),            // YENİ: Global normalize ilk isim (busra)
                 doc.id,                                    // Firebase doc ID
+                normalizeNameSeed(p.name),                 // ESKİ: Seed format (b__ra_s____t)
+                normalizeNameSeed(firstName),              // ESKİ: Seed ilk isim (b__ra)
                 p.name,                                    // Tam isim: "BÜŞRA SÖĞÜT"
                 p.name?.toLowerCase(),                     // Küçük harf: "büşra söğüt"
-                normalizeName(p.name),                     // Transliterate: "busra_sogut"
-                normalizeNameSeed(p.name),                 // Seed format: "b__ra_s____t"
                 firstName,                                 // İlk isim: "BÜŞRA"
                 firstName?.toLowerCase(),                  // Küçük: "büşra"
-                normalizeName(firstName),                  // Transliterate: "busra"
-                normalizeNameSeed(firstName),              // Seed: "b__ra"
-                `${firstName?.toLowerCase()?.charAt(0)}${lastName?.charAt(0)?.toLowerCase() || ''}`.trim(), // Kısaltma
             ].filter(k => k);
             
             let otomatikPuanlar = [];
@@ -11498,8 +11500,8 @@ async function processMissedChecks(branch, checkType, timeSlot, date, shiftPerso
     
     // Her sorumlu personel için puan notu oluştur
     for (const personName of shiftPersonnel) {
-        // Basit ID oluştur (isimden)
-        const personId = personName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        // Global normalize fonksiyonu kullan
+        const personId = normalizePersonelId(personName);
         
         await createAutoPuantajNote(
             personId,
@@ -14905,9 +14907,9 @@ async function saveChecklistAndShare(branch, type, date, timeSlot, personName, r
             // Müdür hariç puan uygula
             const isMudur = ['magaza_muduru', 'bolge_muduru', 'yonetici'].includes(currentUser?.role);
             if (!isMudur && points !== 0) {
-                // Puantaj notunu oluştur
+                // Puantaj notunu oluştur - normalize edilmiş personelId kullan
                 await createAutoPuantajNote(
-                    currentUser?.id || personName,
+                    normalizePersonelId(personName),
                     personName,
                     type,
                     timeSlot,
