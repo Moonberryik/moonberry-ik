@@ -6417,6 +6417,11 @@ async function savePersonel() {
         // Personel cache'ini yenile
         refreshPersonelCache();
         
+        // Shift sayfası açıksa tabloyu yenile
+        if (document.querySelector('#shiftPage')?.style.display !== 'none') {
+            setTimeout(() => loadShiftWeek(), 500);
+        }
+        
         closeModal();
         loadPersonelList();
     } catch (error) {
@@ -10918,31 +10923,38 @@ function renderShiftTable(shift, docId) {
                 <select ${isBarista ? 'disabled' : ''} onchange="updateShiftCell('${docId}','${uniqueIdOrName}',${dayIdx},this.value)" 
                     style="width:100%;padding:8px 2px;border:${borderStyle};background:${colors.bg};color:${colors.text};border-radius:6px;font-size:.75rem;font-weight:600;cursor:${isBarista ? 'not-allowed' : 'pointer'};text-align:center;${isBarista ? 'opacity:.8;' : ''}">
                     <option value="" ${isEmpty ? 'selected' : ''} style="background:#fff;color:#999"></option>
-                    <optgroup label="── Shift Türleri ──">
-                        <option value="AÇILIŞ" ${displayVal === 'AÇILIŞ' && !hasStar ? 'selected' : ''} style="background:#99CCFF;color:#003366">AÇILIŞ</option>
-                        <option value="ARA" ${displayVal === 'ARA' && !hasStar ? 'selected' : ''} style="background:#FFFF99;color:#666600">ARA</option>
-                        <option value="KAPANIŞ" ${displayVal === 'KAPANIŞ' && !hasStar ? 'selected' : ''} style="background:#FFC000;color:#663300">KAPANIŞ</option>
-                        <option value="OFF" ${displayVal === 'OFF' && !hasStar ? 'selected' : ''} style="background:#FF6666;color:#FFFFFF">OFF</option>
-                        <option value="Y.İ" ${displayVal === 'Y.İ' && !hasStar ? 'selected' : ''} style="background:#D9EAD3;color:#274E13">Y.İ</option>
-                        <option value="RAPOR" ${displayVal === 'RAPOR' && !hasStar ? 'selected' : ''} style="background:#F4CCCC;color:#990000">RAPOR</option>
-                        <option value="BÖLGE MÜDÜRÜ" ${displayVal === 'BÖLGE MÜDÜRÜ' && !hasStar ? 'selected' : ''} style="background:#E1BEE7;color:#6A1B9A">BÖLGE MÜDÜRÜ</option>
-                        <option value="BÖLGE M" ${displayVal === 'BÖLGE M' && !hasStar ? 'selected' : ''} style="background:#E1BEE7;color:#6A1B9A">BÖLGE M</option>
-                        <option value="TUZLA" ${displayVal === 'TUZLA' && !hasStar ? 'selected' : ''} style="background:#E6B8AF;color:#660000">TUZLA</option>
+                    <optgroup label="── Shift Türleri ──" style="background:#f5f5f5">
+                        <option value="AÇILIŞ" ${displayVal === 'AÇILIŞ' && !hasStar ? 'selected' : ''} style="background:#99CCFF;color:#003366;font-weight:bold">AÇILIŞ</option>
+                        <option value="ARA" ${displayVal === 'ARA' && !hasStar ? 'selected' : ''} style="background:#FFFF99;color:#666600;font-weight:bold">ARA</option>
+                        <option value="KAPANIŞ" ${displayVal === 'KAPANIŞ' && !hasStar ? 'selected' : ''} style="background:#FFC000;color:#663300;font-weight:bold">KAPANIŞ</option>
+                        <option value="OFF" ${displayVal === 'OFF' && !hasStar ? 'selected' : ''} style="background:#FF6666;color:#fff;font-weight:bold">OFF</option>
+                        <option value="Y.İ" ${displayVal === 'Y.İ' && !hasStar ? 'selected' : ''} style="background:#D9EAD3;color:#274E13;font-weight:bold">Y.İ</option>
+                        <option value="RAPOR" ${displayVal === 'RAPOR' && !hasStar ? 'selected' : ''} style="background:#F4CCCC;color:#990000;font-weight:bold">RAPOR</option>
+                        <option value="BÖLGE MÜDÜRÜ" ${displayVal === 'BÖLGE MÜDÜRÜ' && !hasStar ? 'selected' : ''} style="background:#E1BEE7;color:#6A1B9A;font-weight:bold">BÖLGE MÜDÜRÜ</option>
+                        <option value="BÖLGE MÜD" ${displayVal === 'BÖLGE MÜD' && !hasStar ? 'selected' : ''} style="background:#E1BEE7;color:#6A1B9A;font-weight:bold">BÖLGE MÜD</option>
+                        <option value="BÖLGE M" ${displayVal === 'BÖLGE M' && !hasStar ? 'selected' : ''} style="background:#E1BEE7;color:#6A1B9A;font-weight:bold">BÖLGE M</option>
+                        <option value="TUZLA" ${displayVal === 'TUZLA' && !hasStar ? 'selected' : ''} style="background:#E6B8AF;color:#660000;font-weight:bold">TUZLA</option>
                     </optgroup>
-                    <optgroup label="── ⭐ Özel İstek ──">
+                    <optgroup label="── ⭐ Özel İstek ──" style="background:#fff3e0">
                         <option value="*AÇILIŞ" ${displayVal === 'AÇILIŞ' && hasStar ? 'selected' : ''} style="background:#99CCFF;color:#003366">⭐ AÇILIŞ</option>
                         <option value="*ARA" ${displayVal === 'ARA' && hasStar ? 'selected' : ''} style="background:#FFFF99;color:#666600">⭐ ARA</option>
                         <option value="*KAPANIŞ" ${displayVal === 'KAPANIŞ' && hasStar ? 'selected' : ''} style="background:#FFC000;color:#663300">⭐ KAPANIŞ</option>
+                        <option value="*OFF" ${displayVal === 'OFF' && hasStar ? 'selected' : ''} style="background:#FF6666;color:#fff">⭐ OFF</option>
+                        <option value="*Y.İ" ${displayVal === 'Y.İ' && hasStar ? 'selected' : ''} style="background:#D9EAD3;color:#274E13">⭐ Y.İ</option>
+                        <option value="*RAPOR" ${displayVal === 'RAPOR' && hasStar ? 'selected' : ''} style="background:#F4CCCC;color:#990000">⭐ RAPOR</option>
+                        <option value="*BÖLGE MÜDÜRÜ" ${displayVal === 'BÖLGE MÜDÜRÜ' && hasStar ? 'selected' : ''} style="background:#E1BEE7;color:#6A1B9A">⭐ BÖLGE MÜDÜRÜ</option>
+                        <option value="*BÖLGE M" ${displayVal === 'BÖLGE M' && hasStar ? 'selected' : ''} style="background:#E1BEE7;color:#6A1B9A">⭐ BÖLGE M</option>
+                        <option value="*TUZLA" ${displayVal === 'TUZLA' && hasStar ? 'selected' : ''} style="background:#E6B8AF;color:#660000">⭐ TUZLA</option>
                     </optgroup>
-                    <optgroup label="── Saatler ──">
+                    <optgroup label="── Saatler ──" style="background:#e3f2fd">
                         ${COMMON_TIMES.map(t => `<option value="${t}" ${cleanVal === t && !hasStar ? 'selected' : ''} style="background:#E8F4FD;color:#1E5B94">${t}</option>`).join('')}
                     </optgroup>
-                    <optgroup label="── ⭐ Özel Saat ──">
+                    <optgroup label="── ⭐ Özel Saat ──" style="background:#fff8e1">
                         ${COMMON_TIMES.map(t => `<option value="*${t}" ${cleanVal === t && hasStar ? 'selected' : ''} style="background:#FFF3E0;color:#E65100">⭐ ${t}</option>`).join('')}
                     </optgroup>
-                    ${cleanVal && !['AÇILIŞ','ARA','KAPANIŞ','OFF','Y.İ','RAPOR','BÖLGE MÜDÜRÜ','BÖLGE M','TUZLA'].includes(displayVal) && !COMMON_TIMES.includes(cleanVal) ? `<option value="${val}" selected style="background:${colors.bg};color:${colors.text};font-weight:700">${starIndicator}${displayVal}</option>` : ''}
-                    <optgroup label="── Diğer ──">
-                        <option value="parttime">Özel Saat Gir...</option>
+                    ${cleanVal && !['AÇILIŞ','ARA','KAPANIŞ','OFF','Y.İ','RAPOR','BÖLGE MÜDÜRÜ','BÖLGE MÜD','BÖLGE M','TUZLA'].includes(displayVal) && !COMMON_TIMES.includes(cleanVal) ? `<option value="${val}" selected style="background:${colors.bg};color:${colors.text};font-weight:700">${starIndicator}${displayVal}</option>` : ''}
+                    <optgroup label="── Diğer ──" style="background:#eceff1">
+                        <option value="parttime" style="color:#546e7a">Özel Saat Gir...</option>
                     </optgroup>
                 </select>
             </td>`;
@@ -11623,6 +11635,8 @@ async function createNewShift() {
         
         let ps = {};
         let personelOrder = [];
+        let personelNames = {};
+        let personelFullNames = {};
         
         // Önceki haftadan kopyala (TÜM shift verileri dahil)
         if (copy) {
@@ -11639,6 +11653,9 @@ async function createNewShift() {
                 personelOrder = prevShift.personelOrder || Object.keys(prevShift.personelShifts || {});
                 // TÜM shift verilerini kopyala (günler dahil)
                 ps = JSON.parse(JSON.stringify(prevShift.personelShifts || {}));
+                // personelNames ve personelFullNames kopyala
+                personelNames = JSON.parse(JSON.stringify(prevShift.personelNames || {}));
+                personelFullNames = JSON.parse(JSON.stringify(prevShift.personelFullNames || {}));
             }
         }
         
@@ -11679,8 +11696,11 @@ async function createNewShift() {
             
             personelList.forEach(p => {
                 const displayName = getPersonelDisplayName(p);
+                const uniqueId = p.uniqueId || normalizePersonelId(p.name);
                 ps[displayName] = {};
                 personelOrder.push(displayName);
+                personelNames[displayName] = displayName;
+                personelFullNames[displayName] = p.name;
             });
         }
         
@@ -11692,7 +11712,9 @@ async function createNewShift() {
             weekEnd: end, 
             weekLabel: label, 
             personelOrder: personelOrder,
-            personelShifts: ps, 
+            personelShifts: ps,
+            personelNames: personelNames,
+            personelFullNames: personelFullNames,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(), 
             createdBy: currentUser?.username || 'admin' 
         });
