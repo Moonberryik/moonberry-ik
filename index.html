@@ -2103,6 +2103,51 @@ function normalizePersonelId(name) {
         .replace(/^_|_$/g, '');
 }
 
+// ==================== MİGRASYON FONKSİYONLARI ====================
+// Mevcut personellere uniqueId ekle (bir kerelik)
+async function migratePersonelUniqueIds() {
+    if (!db) {
+        console.error('Firebase bağlantısı yok');
+        return;
+    }
+    
+    console.log('[Migration] Personel uniqueId migrasyon başlıyor...');
+    
+    try {
+        const snapshot = await db.collection('personel').get();
+        let updated = 0, skipped = 0;
+        
+        for (const doc of snapshot.docs) {
+            const data = doc.data();
+            
+            // Zaten uniqueId varsa atla
+            if (data.uniqueId) {
+                skipped++;
+                continue;
+            }
+            
+            // uniqueId oluştur
+            const uniqueId = normalizePersonelId(data.name);
+            
+            // Güncelle
+            await db.collection('personel').doc(doc.id).update({ uniqueId });
+            console.log(`[Migration] ${data.name} → ${uniqueId}`);
+            updated++;
+        }
+        
+        console.log(`[Migration] Tamamlandı! ${updated} güncellendi, ${skipped} atlandı.`);
+        toast(`Migrasyon tamamlandı: ${updated} personel güncellendi`, 'success');
+        
+        return { updated, skipped };
+    } catch (e) {
+        console.error('[Migration] Hata:', e);
+        toast('Migrasyon hatası: ' + e.message, 'error');
+    }
+}
+
+// Console'dan çağrılabilir: migratePersonelUniqueIds()
+window.migratePersonelUniqueIds = migratePersonelUniqueIds;
+
 // ==================== AUTH & SESSION ====================
 let currentUser = null;
 
@@ -5412,6 +5457,10 @@ async function savePersonel() {
         }
     }
     
+    // ====== YENİ: BENZERSİZ uniqueId OLUŞTUR ======
+    // Format: busra_sogut (tam isim, Türkçe karakterler transliterate)
+    const uniqueId = normalizePersonelId(name);
+    
     // Pozisyondan rol belirleme
     const positionToRole = {
         'Barista': 'barista',
@@ -5425,6 +5474,7 @@ async function savePersonel() {
     const data = {
         name,
         codeName,
+        uniqueId,  // ← YENİ: Benzersiz ID
         tc,
         phone: document.getElementById('personelPhone').value.trim(),
         email,
@@ -5438,6 +5488,16 @@ async function savePersonel() {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedBy: currentUser?.username || 'admin'
     };
+    
+    // ====== uniqueId ÇAKIŞMA KONTROLÜ ======
+    if (!editId) {
+        // Yeni personel ekleniyor, aynı uniqueId var mı kontrol et
+        const existingCheck = await db.collection('personel').where('uniqueId', '==', uniqueId).get();
+        if (!existingCheck.empty) {
+            toast(`"${name}" ile aynı ID'ye sahip personel zaten var!`, 'error');
+            return;
+        }
+    }
     
     // Şifre girilmişse kaydet
     if (password) {
@@ -5831,15 +5891,16 @@ async function loadPuantaj() {
             
             // Tüm olası key formatlarını dene (öncelik sırasına göre)
             const possibleKeys = [
-                normalizePersonelId(p.name),               // YENİ: Global normalize (busra_sogut)
-                normalizePersonelId(firstName),            // YENİ: Global normalize ilk isim (busra)
-                doc.id,                                    // Firebase doc ID
-                normalizeNameSeed(p.name),                 // ESKİ: Seed format (b__ra_s____t)
-                normalizeNameSeed(firstName),              // ESKİ: Seed ilk isim (b__ra)
-                p.name,                                    // Tam isim: "BÜŞRA SÖĞÜT"
-                p.name?.toLowerCase(),                     // Küçük harf: "büşra söğüt"
-                firstName,                                 // İlk isim: "BÜŞRA"
-                firstName?.toLowerCase(),                  // Küçük: "büşra"
+                p.uniqueId,                                // 1. Firebase'deki uniqueId (varsa)
+                normalizePersonelId(p.name),               // 2. Global normalize tam isim (busra_sogut)
+                normalizePersonelId(firstName),            // 3. Global normalize ilk isim (busra)
+                doc.id,                                    // 4. Firebase doc ID
+                normalizeNameSeed(p.name),                 // 5. ESKİ: Seed format (b__ra_s____t)
+                normalizeNameSeed(firstName),              // 6. ESKİ: Seed ilk isim (b__ra)
+                p.name,                                    // 7. Tam isim: "BÜŞRA SÖĞÜT"
+                p.name?.toLowerCase(),                     // 8. Küçük harf: "büşra söğüt"
+                firstName,                                 // 9. İlk isim: "BÜŞRA"
+                firstName?.toLowerCase(),                  // 10. Küçük: "büşra"
             ].filter(k => k);
             
             let otomatikPuanlar = [];
@@ -9814,11 +9875,15 @@ function renderShiftTable(shift, docId) {
                 </thead>
                 <tbody>`;
     
-    personelNames.forEach((name, idx) => {
-        const p = personelShifts[name];
+    personelNames.forEach((uniqueIdOrName, idx) => {
+        const p = personelShifts[uniqueIdOrName];
         const rowBg = idx % 2 === 0 ? '#fff' : '#f9f9f9';
+        
+        // Görüntü adı: personelNames map'inden al, yoksa key'i kullan (eski veriler için)
+        const displayName = shift.personelNames?.[uniqueIdOrName] || uniqueIdOrName;
+        
         html += `<tr style="background:${rowBg}">
-            <td style="padding:12px;font-weight:600;color:#333;border:1px solid #ddd;background:#FFFF00;min-width:100px">${name}</td>`;
+            <td style="padding:12px;font-weight:600;color:#333;border:1px solid #ddd;background:#FFFF00;min-width:100px">${displayName}</td>`;
         
         days.forEach((_, dayIdx) => {
             let val = p[dayIdx] || '';
@@ -9839,7 +9904,7 @@ function renderShiftTable(shift, docId) {
             const starIndicator = showStar ? '⭐' : '';
             
             html += `<td style="padding:4px;text-align:center;border:1px solid #ddd;min-width:90px">
-                <select ${isBarista ? 'disabled' : ''} onchange="updateShiftCell('${docId}','${name}',${dayIdx},this.value)" 
+                <select ${isBarista ? 'disabled' : ''} onchange="updateShiftCell('${docId}','${uniqueIdOrName}',${dayIdx},this.value)" 
                     style="width:100%;padding:8px 2px;border:${borderStyle};background:${colors.bg};color:${colors.text};border-radius:6px;font-size:.75rem;font-weight:600;cursor:${isBarista ? 'not-allowed' : 'pointer'};text-align:center;${isBarista ? 'opacity:.8;' : ''}">
                     <option value="" ${isEmpty ? 'selected' : ''} style="background:#fff;color:#999"></option>
                     <optgroup label="── Shift Türleri ──">
@@ -10231,7 +10296,15 @@ async function addPersonelToShift(docId) {
             if (p.branch === sube) {
                 // codeName varsa onu kullan, yoksa "Ad S." formatı
                 const displayName = p.codeName || (p.name.split(' ')[0] + ' ' + (p.name.split(' ')[1] || '').charAt(0) + '.');
-                personelList.push({ name: p.name, displayName, role: p.role });
+                // uniqueId yoksa oluştur
+                const uniqueId = p.uniqueId || normalizePersonelId(p.name);
+                personelList.push({ 
+                    name: p.name, 
+                    displayName, 
+                    uniqueId,
+                    role: p.role,
+                    docId: d.id
+                });
             }
         });
         
@@ -10243,14 +10316,17 @@ async function addPersonelToShift(docId) {
             return aIdx - bIdx;
         });
         
+        // Global'e kaydet (confirmAddPersonel'de kullanılacak)
+        window._shiftPersonelList = personelList;
+        
         if (personelList.length === 0) {
             const name = prompt('Personel adı girin:');
-            if (name) await doAddPersonel(docId, name);
+            if (name) await doAddPersonel(docId, name, name, normalizePersonelId(name));
             return;
         }
         
-        // Modal ile seçim
-        const opts = personelList.map(p => `<option value="${p.displayName}">${p.displayName} (${p.name})</option>`).join('');
+        // Modal ile seçim - uniqueId'yi value olarak kullan
+        const opts = personelList.map(p => `<option value="${p.uniqueId}" data-display="${p.displayName}" data-fullname="${p.name}">${p.displayName} (${p.name})</option>`).join('');
         showModal('Personel Ekle', `
             <div style="padding:8px 0">
                 <div class="form-group" style="margin-bottom:16px">
@@ -10267,30 +10343,55 @@ async function addPersonelToShift(docId) {
             <button class="btn btn-primary" onclick="confirmAddPersonel('${docId}')">Ekle</button>`);
     } catch (e) {
         const name = prompt('Personel adı girin:');
-        if (name) await doAddPersonel(docId, name);
+        if (name) await doAddPersonel(docId, name, name, normalizePersonelId(name));
     }
 }
 
 async function confirmAddPersonel(docId) {
     const select = document.getElementById('addPersonelSelect');
     const manual = document.getElementById('addPersonelManual');
-    const name = manual.value.trim() || select.value;
-    if (!name) { toast('Personel seçin veya girin', 'error'); return; }
-    closeModal();
-    await doAddPersonel(docId, name);
+    
+    if (manual.value.trim()) {
+        // Manuel giriş - ad olarak kullan
+        const manualName = manual.value.trim();
+        closeModal();
+        await doAddPersonel(docId, manualName, manualName, normalizePersonelId(manualName));
+    } else if (select.value) {
+        // Seçili personel
+        const uniqueId = select.value;
+        const displayName = select.selectedOptions[0]?.dataset?.display || uniqueId;
+        const fullName = select.selectedOptions[0]?.dataset?.fullname || displayName;
+        closeModal();
+        await doAddPersonel(docId, displayName, fullName, uniqueId);
+    } else {
+        toast('Personel seçin veya girin', 'error');
+    }
 }
 
-async function doAddPersonel(docId, name) {
+async function doAddPersonel(docId, displayName, fullName, uniqueId) {
     try {
         const doc = await db.collection('shifts').doc(docId).get();
         const data = doc.data();
         if (!data.personelShifts) data.personelShifts = {};
-        if (data.personelShifts[name]) {
+        if (!data.personelNames) data.personelNames = {};
+        if (!data.personelFullNames) data.personelFullNames = {};
+        
+        // uniqueId ile kontrol
+        if (data.personelShifts[uniqueId]) {
             toast('Bu personel zaten mevcut', 'error');
             return;
         }
-        data.personelShifts[name] = {};
-        await db.collection('shifts').doc(docId).update({ personelShifts: data.personelShifts });
+        
+        // uniqueId key olarak kullan
+        data.personelShifts[uniqueId] = {};
+        data.personelNames[uniqueId] = displayName;
+        data.personelFullNames[uniqueId] = fullName;
+        
+        await db.collection('shifts').doc(docId).update({ 
+            personelShifts: data.personelShifts,
+            personelNames: data.personelNames,
+            personelFullNames: data.personelFullNames
+        });
         toast('Personel eklendi', 'success');
         loadShiftWeek();
     } catch (e) { console.error(e); toast('Ekleme hatası!', 'error'); }
@@ -10323,14 +10424,25 @@ async function removePersonelFromShift(docId) {
 }
 
 async function confirmRemovePersonel(docId) {
-    const name = document.getElementById('removePersonelSelect').value;
-    if (!name) return;
+    const uniqueIdOrName = document.getElementById('removePersonelSelect').value;
+    if (!uniqueIdOrName) return;
     closeModal();
     try {
         const doc = await db.collection('shifts').doc(docId).get();
         const data = doc.data();
-        delete data.personelShifts[name];
-        await db.collection('shifts').doc(docId).update({ personelShifts: data.personelShifts });
+        
+        // personelShifts'ten sil
+        delete data.personelShifts[uniqueIdOrName];
+        
+        // personelNames ve personelFullNames'ten de sil (varsa)
+        if (data.personelNames) delete data.personelNames[uniqueIdOrName];
+        if (data.personelFullNames) delete data.personelFullNames[uniqueIdOrName];
+        
+        await db.collection('shifts').doc(docId).update({ 
+            personelShifts: data.personelShifts,
+            personelNames: data.personelNames || {},
+            personelFullNames: data.personelFullNames || {}
+        });
         toast('Personel çıkarıldı', 'success');
         loadShiftWeek();
     } catch (e) { console.error(e); toast('Silme hatası!', 'error'); }
@@ -11679,18 +11791,22 @@ async function loadTodayChecks() {
                 
                 if (targetShift) {
                     const personelShifts = targetShift.personelShifts || {};
+                    const personelFullNames = targetShift.personelFullNames || {};
                     const acilisPersonel = [], kapanisPersonel = [], araPersonel = [];
                     
-                    for (const [name, days] of Object.entries(personelShifts)) {
+                    for (const [uniqueIdOrName, days] of Object.entries(personelShifts)) {
                         const todayShift = days[dayIndex] || '';
                         const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
                         
+                        // Tam ismi al: personelFullNames'ten veya key'i kullan (eski veriler için)
+                        const fullName = personelFullNames[uniqueIdOrName] || uniqueIdOrName;
+                        
                         if (cleanShift === 'A' || cleanShift === 'AÇILIŞ' || cleanShift.includes('AÇILI')) {
-                            acilisPersonel.push(name);
+                            acilisPersonel.push(fullName);
                         } else if (cleanShift === 'K' || cleanShift === 'KAPANIŞ' || cleanShift.includes('KAPANI')) {
-                            kapanisPersonel.push(name);
+                            kapanisPersonel.push(fullName);
                         } else if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-' && cleanShift !== 'X') {
-                            araPersonel.push(name);
+                            araPersonel.push(fullName);
                         }
                     }
                     
@@ -11706,7 +11822,7 @@ async function loadTodayChecks() {
         console.warn('Shift yükleme hatası:', e);
     }
     
-    // Shift'teki personel isimlerini al
+    // Shift'teki personel isimlerini al (tam isim döner)
     function getShiftPersonnel(branch, shiftType) {
         const data = shiftData[branch];
         if (!data) return [];
@@ -13272,15 +13388,19 @@ async function loadChecklistTodayPanel() {
                 
                 if (targetShift) {
                     const personelShifts = targetShift.personelShifts || {};
+                    const personelFullNames = targetShift.personelFullNames || {};
                     const acilisPersonel = [], kapanisPersonel = [], araPersonel = [];
                     
-                    for (const [name, days] of Object.entries(personelShifts)) {
+                    for (const [uniqueIdOrName, days] of Object.entries(personelShifts)) {
                         const todayShift = days[dayIndex] || '';
                         const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
                         
-                        if (cleanShift === 'A' || cleanShift === 'AÇILIŞ' || cleanShift.includes('AÇILI')) acilisPersonel.push(name);
-                        else if (cleanShift === 'K' || cleanShift === 'KAPANIŞ' || cleanShift.includes('KAPANI')) kapanisPersonel.push(name);
-                        else if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-' && cleanShift !== 'X') araPersonel.push(name);
+                        // Tam ismi al: personelFullNames'ten veya key'i kullan (eski veriler için)
+                        const fullName = personelFullNames[uniqueIdOrName] || uniqueIdOrName;
+                        
+                        if (cleanShift === 'A' || cleanShift === 'AÇILIŞ' || cleanShift.includes('AÇILI')) acilisPersonel.push(fullName);
+                        else if (cleanShift === 'K' || cleanShift === 'KAPANIŞ' || cleanShift.includes('KAPANI')) kapanisPersonel.push(fullName);
+                        else if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-' && cleanShift !== 'X') araPersonel.push(fullName);
                     }
                     
                     shiftData[branch] = { acilis: acilisPersonel, kapanis: kapanisPersonel, ara: araPersonel };
