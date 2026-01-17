@@ -1817,7 +1817,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <div class="admin-card-title">📱 Platform Check Saatleri</div>
                             <button class="btn btn-sm btn-ghost" onclick="savePlatformCheckTimes()">💾 Kaydet</button>
                         </div>
-                        <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:16px">Platform check'lerinin yapılması gereken saatleri düzenleyin. Her saat için ±30 dakika tolerans vardır.</p>
+                        <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:16px">Platform check'lerinin yapılması gereken saatleri düzenleyin. Her saat için belirlenen tolerans süresi geçerlidir.</p>
                         <div style="display:flex;flex-wrap:wrap;gap:8px" id="platformCheckTimesContainer">
                             <input type="time" class="form-input platform-time" value="10:00" style="width:100px">
                             <input type="time" class="form-input platform-time" value="12:00" style="width:100px">
@@ -1825,6 +1825,99 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <input type="time" class="form-input platform-time" value="18:00" style="width:100px">
                             <input type="time" class="form-input platform-time" value="21:00" style="width:100px">
                             <input type="time" class="form-input platform-time" value="00:00" style="width:100px">
+                        </div>
+                        <div style="display:flex;gap:8px;margin-top:12px">
+                            <button class="btn btn-sm btn-ghost" onclick="addPlatformCheckTime()" style="font-size:.75rem">+ Saat Ekle</button>
+                            <button class="btn btn-sm btn-ghost" onclick="removePlatformCheckTime()" style="font-size:.75rem;color:var(--danger)">- Saat Çıkar</button>
+                        </div>
+                    </div>
+                    
+                    <!-- CHECK KURALLARI YÖNETİM PANELİ -->
+                    <div class="admin-card" style="margin-top:20px">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">⚙️ Check Sistem Ayarları</div>
+                            <button class="btn btn-sm btn-primary" onclick="saveCheckSystemSettings()">💾 Kaydet</button>
+                        </div>
+                        <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:16px">Checklist ve platform kontrol sisteminin temel ayarlarını yapılandırın.</p>
+                        
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+                            <!-- Süre Ayarları -->
+                            <div style="background:var(--bg2);border-radius:12px;padding:16px">
+                                <div style="font-weight:600;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                                    <span style="font-size:1.1rem">⏱️</span> Süre Ayarları
+                                </div>
+                                <div class="form-group" style="margin-bottom:12px">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Check Tolerans Süresi (dk)</label>
+                                    <input type="number" id="checkTolerance" class="form-input" value="30" min="5" max="120" style="font-size:.85rem">
+                                    <small style="color:var(--tx3);font-size:.7rem">Belirlenen saatten ± bu süre içinde check yapılabilir</small>
+                                </div>
+                                <div class="form-group" style="margin-bottom:12px">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Ekranda Kalma Süresi (sn)</label>
+                                    <input type="number" id="checkScreenTime" class="form-input" value="5" min="1" max="30" style="font-size:.85rem">
+                                    <small style="color:var(--tx3);font-size:.7rem">Onay ekranının görüntülenme süresi</small>
+                                </div>
+                                <div class="form-group" style="margin-bottom:0">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Gecikmeli Check Cezası (dk)</label>
+                                    <input type="number" id="checkLatePenalty" class="form-input" value="15" min="0" max="60" style="font-size:.85rem">
+                                    <small style="color:var(--tx3);font-size:.7rem">Bu süreden sonra puan düşer</small>
+                                </div>
+                            </div>
+                            
+                            <!-- Puanlama Ayarları -->
+                            <div style="background:var(--bg2);border-radius:12px;padding:16px">
+                                <div style="font-weight:600;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                                    <span style="font-size:1.1rem">⭐</span> Puanlama
+                                </div>
+                                <div class="form-group" style="margin-bottom:12px">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Platform Check Puanı</label>
+                                    <input type="number" id="checkPointPlatform" class="form-input" value="10" min="0" max="100" style="font-size:.85rem">
+                                </div>
+                                <div class="form-group" style="margin-bottom:12px">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Temizlik Check Puanı</label>
+                                    <input type="number" id="checkPointCleaning" class="form-input" value="5" min="0" max="100" style="font-size:.85rem">
+                                </div>
+                                <div class="form-group" style="margin-bottom:12px">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Açılış/Kapanış Puanı</label>
+                                    <input type="number" id="checkPointShift" class="form-input" value="15" min="0" max="100" style="font-size:.85rem">
+                                </div>
+                                <div class="form-group" style="margin-bottom:0">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Gecikme Puan Düşümü (%)</label>
+                                    <input type="number" id="checkLateDeduction" class="form-input" value="50" min="0" max="100" style="font-size:.85rem">
+                                    <small style="color:var(--tx3);font-size:.7rem">Gecikmeli check'te puandan düşülecek yüzde</small>
+                                </div>
+                            </div>
+                            
+                            <!-- Genel Ayarlar -->
+                            <div style="background:var(--bg2);border-radius:12px;padding:16px">
+                                <div style="font-weight:600;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                                    <span style="font-size:1.1rem">🔧</span> Genel Ayarlar
+                                </div>
+                                <div class="form-group" style="margin-bottom:12px">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Günlük Maksimum Check</label>
+                                    <input type="number" id="checkMaxDaily" class="form-input" value="20" min="1" max="50" style="font-size:.85rem">
+                                </div>
+                                <div class="form-group" style="margin-bottom:12px">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Fotoğraf Zorunluluğu</label>
+                                    <select id="checkPhotoRequired" class="form-select" style="font-size:.85rem">
+                                        <option value="always">Her Zaman</option>
+                                        <option value="platform" selected>Sadece Platform Check</option>
+                                        <option value="never">Hiçbir Zaman</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom:12px">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Konum Kontrolü</label>
+                                    <select id="checkLocationRequired" class="form-select" style="font-size:.85rem">
+                                        <option value="yes">Aktif</option>
+                                        <option value="no" selected>Pasif</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom:0">
+                                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                                        <input type="checkbox" id="checkNotifyManager" checked style="width:16px;height:16px">
+                                        <span style="font-size:.8rem;color:var(--tx2)">Eksik check'lerde yöneticiyi bilgilendir</span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -6226,13 +6319,25 @@ async function savePersonel() {
         }
         
         if (editId) {
+            // ====== ÖNCE ESKİ VERİYİ AL ======
+            const oldDoc = await db.collection('personel').doc(editId).get();
+            const oldData = oldDoc.exists ? oldDoc.data() : {};
+            const oldName = oldData.name || '';
+            const oldCodeName = oldData.codeName || '';
+            const oldUniqueId = oldData.uniqueId || '';
+            const oldDisplayName = getPersonelDisplayName(oldData);
+            
+            // Şimdi güncelle
             await db.collection('personel').doc(editId).update(data);
             
             // ====== SHIFT'LERDE İSİM GÜNCELLEMESİ ======
             // Personel adı/kod adı değişince mevcut shift'leri güncelle
             try {
                 const newDisplayName = getPersonelDisplayName(data);
-                const shiftsSnap = await db.collection('shifts').where('branch', '==', data.branch).get();
+                
+                // TÜM shift'leri kontrol et (bölge müdürü tüm şubelerde olabilir)
+                const shiftsSnap = await db.collection('shifts').get();
+                let updatedCount = 0;
                 
                 for (const shiftDoc of shiftsSnap.docs) {
                     const shift = shiftDoc.data();
@@ -6240,23 +6345,48 @@ async function savePersonel() {
                     const personelNames = shift.personelNames || {};
                     const personelFullNames = shift.personelFullNames || {};
                     let needsUpdate = false;
+                    let matchedKey = null;
                     
-                    // Bu personelin shift'teki key'ini bul
+                    // Bu personelin shift'teki key'ini bul - GENİŞLETİLMİŞ EŞLEŞME
                     for (const key of Object.keys(personelShifts)) {
+                        const keyLower = key.toLowerCase();
                         const keyNorm = normalizeTurkishChars(key);
-                        const uniqueNorm = normalizeTurkishChars(uniqueId);
-                        const oldNameNorm = normalizeTurkishChars(personelNames[key] || '');
                         
-                        // Eşleşme bul
-                        if (keyNorm === uniqueNorm || key === uniqueId || key.toLowerCase() === uniqueId) {
-                            // İsim değiştiyse güncelle
-                            if (personelNames[key] !== newDisplayName || personelFullNames[key] !== name) {
-                                personelNames[key] = newDisplayName;
-                                personelFullNames[key] = name;
-                                needsUpdate = true;
-                                console.log(`[Shift Güncelleme] ${shiftDoc.id}: "${key}" → "${newDisplayName}"`);
-                            }
+                        // Eşleşme kontrolleri (eski ve yeni değerlerle)
+                        const matches = 
+                            // Yeni değerlerle eşleşme
+                            keyNorm === normalizeTurkishChars(uniqueId) ||
+                            keyNorm === normalizeTurkishChars(codeName) ||
+                            keyNorm === normalizeTurkishChars(name) ||
+                            keyLower === uniqueId ||
+                            key === codeName ||
+                            key === name ||
+                            // Eski değerlerle eşleşme
+                            keyNorm === normalizeTurkishChars(oldUniqueId) ||
+                            keyNorm === normalizeTurkishChars(oldCodeName) ||
+                            keyNorm === normalizeTurkishChars(oldName) ||
+                            keyNorm === normalizeTurkishChars(oldDisplayName) ||
+                            key === oldCodeName ||
+                            key === oldName ||
+                            key === oldDisplayName ||
+                            key === oldUniqueId ||
+                            // personelNames'deki eski değerle eşleşme
+                            personelNames[key] === oldDisplayName ||
+                            personelNames[key] === oldCodeName ||
+                            personelFullNames[key] === oldName;
+                        
+                        if (matches) {
+                            matchedKey = key;
                             break;
+                        }
+                    }
+                    
+                    if (matchedKey) {
+                        // İsim değiştiyse güncelle
+                        if (personelNames[matchedKey] !== newDisplayName || personelFullNames[matchedKey] !== name) {
+                            personelNames[matchedKey] = newDisplayName;
+                            personelFullNames[matchedKey] = name;
+                            needsUpdate = true;
                         }
                     }
                     
@@ -6265,7 +6395,13 @@ async function savePersonel() {
                             personelNames,
                             personelFullNames
                         });
+                        updatedCount++;
+                        console.log(`[Shift Güncelleme] ${shiftDoc.id}: "${matchedKey}" → "${newDisplayName}"`);
                     }
+                }
+                
+                if (updatedCount > 0) {
+                    console.log(`[Shift Güncelleme] Toplam ${updatedCount} shift güncellendi`);
                 }
             } catch (shiftErr) {
                 console.warn('Shift güncelleme hatası (kritik değil):', shiftErr);
@@ -10097,6 +10233,118 @@ async function savePlatformCheckTimes() {
     }
 }
 
+// Platform saat ekleme/çıkarma
+function addPlatformCheckTime() {
+    const container = document.getElementById('platformCheckTimesContainer');
+    const input = document.createElement('input');
+    input.type = 'time';
+    input.className = 'form-input platform-time';
+    input.value = '14:00';
+    input.style.width = '100px';
+    container.appendChild(input);
+}
+
+function removePlatformCheckTime() {
+    const container = document.getElementById('platformCheckTimesContainer');
+    const inputs = container.querySelectorAll('.platform-time');
+    if (inputs.length > 1) {
+        inputs[inputs.length - 1].remove();
+    } else {
+        toast('En az bir saat olmalı', 'warning');
+    }
+}
+
+// Check sistem ayarlarını kaydet
+async function saveCheckSystemSettings() {
+    const settings = {
+        // Süre Ayarları
+        tolerance: parseInt(document.getElementById('checkTolerance')?.value || 30),
+        screenTime: parseInt(document.getElementById('checkScreenTime')?.value || 5),
+        latePenaltyMinutes: parseInt(document.getElementById('checkLatePenalty')?.value || 15),
+        
+        // Puanlama
+        points: {
+            platform: parseInt(document.getElementById('checkPointPlatform')?.value || 10),
+            cleaning: parseInt(document.getElementById('checkPointCleaning')?.value || 5),
+            shift: parseInt(document.getElementById('checkPointShift')?.value || 15)
+        },
+        lateDeductionPercent: parseInt(document.getElementById('checkLateDeduction')?.value || 50),
+        
+        // Genel Ayarlar
+        maxDaily: parseInt(document.getElementById('checkMaxDaily')?.value || 20),
+        photoRequired: document.getElementById('checkPhotoRequired')?.value || 'platform',
+        locationRequired: document.getElementById('checkLocationRequired')?.value === 'yes',
+        notifyManager: document.getElementById('checkNotifyManager')?.checked ?? true,
+        
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    
+    try {
+        await db.collection('systemConfig').doc('checkRules').set({
+            checkSystemSettings: settings
+        }, { merge: true });
+        
+        // Global değişkeni güncelle
+        window.CHECK_SYSTEM_SETTINGS = settings;
+        
+        toast('Check sistem ayarları kaydedildi ✓', 'success');
+    } catch (error) {
+        console.error('Check ayarları kayıt hatası:', error);
+        toast('Kayıt hatası!', 'error');
+    }
+}
+
+// Check sistem ayarlarını yükle
+async function loadCheckSystemSettings() {
+    try {
+        const doc = await db.collection('systemConfig').doc('checkRules').get();
+        if (doc.exists) {
+            const data = doc.data();
+            const settings = data.checkSystemSettings || {};
+            
+            // Form alanlarını doldur
+            if (document.getElementById('checkTolerance')) {
+                document.getElementById('checkTolerance').value = settings.tolerance || 30;
+            }
+            if (document.getElementById('checkScreenTime')) {
+                document.getElementById('checkScreenTime').value = settings.screenTime || 5;
+            }
+            if (document.getElementById('checkLatePenalty')) {
+                document.getElementById('checkLatePenalty').value = settings.latePenaltyMinutes || 15;
+            }
+            if (document.getElementById('checkPointPlatform')) {
+                document.getElementById('checkPointPlatform').value = settings.points?.platform || 10;
+            }
+            if (document.getElementById('checkPointCleaning')) {
+                document.getElementById('checkPointCleaning').value = settings.points?.cleaning || 5;
+            }
+            if (document.getElementById('checkPointShift')) {
+                document.getElementById('checkPointShift').value = settings.points?.shift || 15;
+            }
+            if (document.getElementById('checkLateDeduction')) {
+                document.getElementById('checkLateDeduction').value = settings.lateDeductionPercent || 50;
+            }
+            if (document.getElementById('checkMaxDaily')) {
+                document.getElementById('checkMaxDaily').value = settings.maxDaily || 20;
+            }
+            if (document.getElementById('checkPhotoRequired')) {
+                document.getElementById('checkPhotoRequired').value = settings.photoRequired || 'platform';
+            }
+            if (document.getElementById('checkLocationRequired')) {
+                document.getElementById('checkLocationRequired').value = settings.locationRequired ? 'yes' : 'no';
+            }
+            if (document.getElementById('checkNotifyManager')) {
+                document.getElementById('checkNotifyManager').checked = settings.notifyManager ?? true;
+            }
+            
+            // Global değişkene kaydet
+            window.CHECK_SYSTEM_SETTINGS = settings;
+        }
+    } catch (error) {
+        console.error('Check ayarları yükleme hatası:', error);
+    }
+}
+
 // ==================== TEMİZLİK ÇİZELGESİ AYARLARI ====================
 async function saveTemizlikShiftRules() {
     const rules = {
@@ -10180,6 +10428,29 @@ async function loadCheckRulesSettings() {
                     document.getElementById('kapanisci_end')?.setAttribute('value', rules.kapanisci.shiftStartMax || '23:59');
                     document.getElementById('kapanisci_deadline')?.setAttribute('value', rules.kapanisci.deadline || '02:00');
                 }
+            }
+            
+            // Check sistem ayarlarını yükle
+            if (data.checkSystemSettings) {
+                const settings = data.checkSystemSettings;
+                document.getElementById('checkTolerance')?.setAttribute('value', settings.tolerance || 30);
+                document.getElementById('checkScreenTime')?.setAttribute('value', settings.screenTime || 5);
+                document.getElementById('checkLatePenalty')?.setAttribute('value', settings.latePenaltyMinutes || 15);
+                document.getElementById('checkPointPlatform')?.setAttribute('value', settings.points?.platform || 10);
+                document.getElementById('checkPointCleaning')?.setAttribute('value', settings.points?.cleaning || 5);
+                document.getElementById('checkPointShift')?.setAttribute('value', settings.points?.shift || 15);
+                document.getElementById('checkLateDeduction')?.setAttribute('value', settings.lateDeductionPercent || 50);
+                document.getElementById('checkMaxDaily')?.setAttribute('value', settings.maxDaily || 20);
+                if (document.getElementById('checkPhotoRequired')) {
+                    document.getElementById('checkPhotoRequired').value = settings.photoRequired || 'platform';
+                }
+                if (document.getElementById('checkLocationRequired')) {
+                    document.getElementById('checkLocationRequired').value = settings.locationRequired ? 'yes' : 'no';
+                }
+                if (document.getElementById('checkNotifyManager')) {
+                    document.getElementById('checkNotifyManager').checked = settings.notifyManager ?? true;
+                }
+                window.CHECK_SYSTEM_SETTINGS = settings;
             }
         }
     } catch (error) {
@@ -10647,30 +10918,31 @@ function renderShiftTable(shift, docId) {
                 <select ${isBarista ? 'disabled' : ''} onchange="updateShiftCell('${docId}','${uniqueIdOrName}',${dayIdx},this.value)" 
                     style="width:100%;padding:8px 2px;border:${borderStyle};background:${colors.bg};color:${colors.text};border-radius:6px;font-size:.75rem;font-weight:600;cursor:${isBarista ? 'not-allowed' : 'pointer'};text-align:center;${isBarista ? 'opacity:.8;' : ''}">
                     <option value="" ${isEmpty ? 'selected' : ''} style="background:#fff;color:#999"></option>
-                    <optgroup label="🔵 AÇILIŞ / KAPANIŞ" style="background:#e3f2fd;font-weight:bold">
-                        <option value="AÇILIŞ" ${displayVal === 'AÇILIŞ' && !hasStar ? 'selected' : ''} style="background:#99CCFF;color:#003366;font-weight:600">☀️ AÇILIŞ</option>
-                        <option value="KAPANIŞ" ${displayVal === 'KAPANIŞ' && !hasStar ? 'selected' : ''} style="background:#FFC000;color:#663300;font-weight:600">🌙 KAPANIŞ</option>
-                        <option value="ARA" ${displayVal === 'ARA' && !hasStar ? 'selected' : ''} style="background:#FFFF99;color:#666600;font-weight:600">↔️ ARA</option>
+                    <optgroup label="── Shift Türleri ──">
+                        <option value="AÇILIŞ" ${displayVal === 'AÇILIŞ' && !hasStar ? 'selected' : ''} style="background:#99CCFF;color:#003366">AÇILIŞ</option>
+                        <option value="ARA" ${displayVal === 'ARA' && !hasStar ? 'selected' : ''} style="background:#FFFF99;color:#666600">ARA</option>
+                        <option value="KAPANIŞ" ${displayVal === 'KAPANIŞ' && !hasStar ? 'selected' : ''} style="background:#FFC000;color:#663300">KAPANIŞ</option>
+                        <option value="OFF" ${displayVal === 'OFF' && !hasStar ? 'selected' : ''} style="background:#FF6666;color:#FFFFFF">OFF</option>
+                        <option value="Y.İ" ${displayVal === 'Y.İ' && !hasStar ? 'selected' : ''} style="background:#D9EAD3;color:#274E13">Y.İ</option>
+                        <option value="RAPOR" ${displayVal === 'RAPOR' && !hasStar ? 'selected' : ''} style="background:#F4CCCC;color:#990000">RAPOR</option>
+                        <option value="BÖLGE MÜDÜRÜ" ${displayVal === 'BÖLGE MÜDÜRÜ' && !hasStar ? 'selected' : ''} style="background:#E1BEE7;color:#6A1B9A">BÖLGE MÜDÜRÜ</option>
+                        <option value="BÖLGE M" ${displayVal === 'BÖLGE M' && !hasStar ? 'selected' : ''} style="background:#E1BEE7;color:#6A1B9A">BÖLGE M</option>
+                        <option value="TUZLA" ${displayVal === 'TUZLA' && !hasStar ? 'selected' : ''} style="background:#E6B8AF;color:#660000">TUZLA</option>
                     </optgroup>
-                    <optgroup label="🔴 İZİN / ÖZEL" style="background:#ffebee">
-                        <option value="OFF" ${displayVal === 'OFF' && !hasStar ? 'selected' : ''} style="background:#FF6666;color:#fff;font-weight:600">⭐ OFF</option>
-                        <option value="Y.İ" ${displayVal === 'Y.İ' && !hasStar ? 'selected' : ''} style="background:#D9EAD3;color:#274E13">🏖️ Y.İ (Yıllık İzin)</option>
-                        <option value="RAPOR" ${displayVal === 'RAPOR' && !hasStar ? 'selected' : ''} style="background:#F4CCCC;color:#990000">📋 RAPOR</option>
+                    <optgroup label="── ⭐ Özel İstek ──">
+                        <option value="*AÇILIŞ" ${displayVal === 'AÇILIŞ' && hasStar ? 'selected' : ''} style="background:#99CCFF;color:#003366">⭐ AÇILIŞ</option>
+                        <option value="*ARA" ${displayVal === 'ARA' && hasStar ? 'selected' : ''} style="background:#FFFF99;color:#666600">⭐ ARA</option>
+                        <option value="*KAPANIŞ" ${displayVal === 'KAPANIŞ' && hasStar ? 'selected' : ''} style="background:#FFC000;color:#663300">⭐ KAPANIŞ</option>
                     </optgroup>
-                    <optgroup label="⭐ ÖZEL İSTEK" style="background:#fff3e0">
-                        <option value="*AÇILIŞ" ${displayVal === 'AÇILIŞ' && hasStar ? 'selected' : ''} style="background:#b3e5fc;color:#003366">⭐ AÇILIŞ</option>
-                        <option value="*KAPANIŞ" ${displayVal === 'KAPANIŞ' && hasStar ? 'selected' : ''} style="background:#ffe0b2;color:#663300">⭐ KAPANIŞ</option>
-                        <option value="*ARA" ${displayVal === 'ARA' && hasStar ? 'selected' : ''} style="background:#fff9c4;color:#666600">⭐ ARA</option>
+                    <optgroup label="── Saatler ──">
+                        ${COMMON_TIMES.map(t => `<option value="${t}" ${cleanVal === t && !hasStar ? 'selected' : ''} style="background:#E8F4FD;color:#1E5B94">${t}</option>`).join('')}
                     </optgroup>
-                    <optgroup label="⏰ SAATLER" style="background:#f5f5f5">
-                        ${COMMON_TIMES.map(t => `<option value="${t}" ${cleanVal === t && !hasStar ? 'selected' : ''} style="background:#e8f4fd;color:#1e5b94">${t}</option>`).join('')}
+                    <optgroup label="── ⭐ Özel Saat ──">
+                        ${COMMON_TIMES.map(t => `<option value="*${t}" ${cleanVal === t && hasStar ? 'selected' : ''} style="background:#FFF3E0;color:#E65100">⭐ ${t}</option>`).join('')}
                     </optgroup>
-                    <optgroup label="⭐ ÖZEL SAAT" style="background:#fff8e1">
-                        ${COMMON_TIMES.map(t => `<option value="*${t}" ${cleanVal === t && hasStar ? 'selected' : ''} style="background:#fff3e0;color:#e65100">⭐ ${t}</option>`).join('')}
-                    </optgroup>
-                    ${cleanVal && !SHIFT_TYPES.includes(displayVal) && !COMMON_TIMES.includes(cleanVal) ? `<option value="${val}" selected style="background:${colors.bg};color:${colors.text};font-weight:700">${starIndicator}${displayVal}</option>` : ''}
-                    <optgroup label="➕ DİĞER" style="background:#eceff1">
-                        <option value="parttime" style="color:#546e7a">⏰ Özel Saat Gir...</option>
+                    ${cleanVal && !['AÇILIŞ','ARA','KAPANIŞ','OFF','Y.İ','RAPOR','BÖLGE MÜDÜRÜ','BÖLGE M','TUZLA'].includes(displayVal) && !COMMON_TIMES.includes(cleanVal) ? `<option value="${val}" selected style="background:${colors.bg};color:${colors.text};font-weight:700">${starIndicator}${displayVal}</option>` : ''}
+                    <optgroup label="── Diğer ──">
+                        <option value="parttime">Özel Saat Gir...</option>
                     </optgroup>
                 </select>
             </td>`;
