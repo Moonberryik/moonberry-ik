@@ -6227,6 +6227,50 @@ async function savePersonel() {
         
         if (editId) {
             await db.collection('personel').doc(editId).update(data);
+            
+            // ====== SHIFT'LERDE İSİM GÜNCELLEMESİ ======
+            // Personel adı/kod adı değişince mevcut shift'leri güncelle
+            try {
+                const newDisplayName = getPersonelDisplayName(data);
+                const shiftsSnap = await db.collection('shifts').where('branch', '==', data.branch).get();
+                
+                for (const shiftDoc of shiftsSnap.docs) {
+                    const shift = shiftDoc.data();
+                    const personelShifts = shift.personelShifts || {};
+                    const personelNames = shift.personelNames || {};
+                    const personelFullNames = shift.personelFullNames || {};
+                    let needsUpdate = false;
+                    
+                    // Bu personelin shift'teki key'ini bul
+                    for (const key of Object.keys(personelShifts)) {
+                        const keyNorm = normalizeTurkishChars(key);
+                        const uniqueNorm = normalizeTurkishChars(uniqueId);
+                        const oldNameNorm = normalizeTurkishChars(personelNames[key] || '');
+                        
+                        // Eşleşme bul
+                        if (keyNorm === uniqueNorm || key === uniqueId || key.toLowerCase() === uniqueId) {
+                            // İsim değiştiyse güncelle
+                            if (personelNames[key] !== newDisplayName || personelFullNames[key] !== name) {
+                                personelNames[key] = newDisplayName;
+                                personelFullNames[key] = name;
+                                needsUpdate = true;
+                                console.log(`[Shift Güncelleme] ${shiftDoc.id}: "${key}" → "${newDisplayName}"`);
+                            }
+                            break;
+                        }
+                    }
+                    
+                    if (needsUpdate) {
+                        await db.collection('shifts').doc(shiftDoc.id).update({
+                            personelNames,
+                            personelFullNames
+                        });
+                    }
+                }
+            } catch (shiftErr) {
+                console.warn('Shift güncelleme hatası (kritik değil):', shiftErr);
+            }
+            
             toast('Personel güncellendi ✓', 'success');
         } else {
             data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
@@ -10603,21 +10647,30 @@ function renderShiftTable(shift, docId) {
                 <select ${isBarista ? 'disabled' : ''} onchange="updateShiftCell('${docId}','${uniqueIdOrName}',${dayIdx},this.value)" 
                     style="width:100%;padding:8px 2px;border:${borderStyle};background:${colors.bg};color:${colors.text};border-radius:6px;font-size:.75rem;font-weight:600;cursor:${isBarista ? 'not-allowed' : 'pointer'};text-align:center;${isBarista ? 'opacity:.8;' : ''}">
                     <option value="" ${isEmpty ? 'selected' : ''} style="background:#fff;color:#999"></option>
-                    <optgroup label="── Shift Türleri ──">
-                        ${SHIFT_TYPES.map(t => `<option value="${t}" ${displayVal === t && !hasStar ? 'selected' : ''} style="background:${SHIFT_COLORS[t]?.bg || '#fff'};color:${SHIFT_COLORS[t]?.text || '#333'}">${t === 'OFF' ? '⭐ ' : ''}${t}</option>`).join('')}
+                    <optgroup label="🔵 AÇILIŞ / KAPANIŞ" style="background:#e3f2fd;font-weight:bold">
+                        <option value="AÇILIŞ" ${displayVal === 'AÇILIŞ' && !hasStar ? 'selected' : ''} style="background:#99CCFF;color:#003366;font-weight:600">☀️ AÇILIŞ</option>
+                        <option value="KAPANIŞ" ${displayVal === 'KAPANIŞ' && !hasStar ? 'selected' : ''} style="background:#FFC000;color:#663300;font-weight:600">🌙 KAPANIŞ</option>
+                        <option value="ARA" ${displayVal === 'ARA' && !hasStar ? 'selected' : ''} style="background:#FFFF99;color:#666600;font-weight:600">↔️ ARA</option>
                     </optgroup>
-                    <optgroup label="── ⭐ Özel İstek ──">
-                        ${SHIFT_TYPES.filter(t => t !== 'OFF').map(t => `<option value="*${t}" ${displayVal === t && hasStar ? 'selected' : ''} style="background:${SHIFT_COLORS[t]?.bg || '#fff'};color:${SHIFT_COLORS[t]?.text || '#333'}">⭐ ${t}</option>`).join('')}
+                    <optgroup label="🔴 İZİN / ÖZEL" style="background:#ffebee">
+                        <option value="OFF" ${displayVal === 'OFF' && !hasStar ? 'selected' : ''} style="background:#FF6666;color:#fff;font-weight:600">⭐ OFF</option>
+                        <option value="Y.İ" ${displayVal === 'Y.İ' && !hasStar ? 'selected' : ''} style="background:#D9EAD3;color:#274E13">🏖️ Y.İ (Yıllık İzin)</option>
+                        <option value="RAPOR" ${displayVal === 'RAPOR' && !hasStar ? 'selected' : ''} style="background:#F4CCCC;color:#990000">📋 RAPOR</option>
                     </optgroup>
-                    <optgroup label="── Saatler ──">
-                        ${COMMON_TIMES.map(t => `<option value="${t}" ${cleanVal === t && !hasStar ? 'selected' : ''}>${t}</option>`).join('')}
+                    <optgroup label="⭐ ÖZEL İSTEK" style="background:#fff3e0">
+                        <option value="*AÇILIŞ" ${displayVal === 'AÇILIŞ' && hasStar ? 'selected' : ''} style="background:#b3e5fc;color:#003366">⭐ AÇILIŞ</option>
+                        <option value="*KAPANIŞ" ${displayVal === 'KAPANIŞ' && hasStar ? 'selected' : ''} style="background:#ffe0b2;color:#663300">⭐ KAPANIŞ</option>
+                        <option value="*ARA" ${displayVal === 'ARA' && hasStar ? 'selected' : ''} style="background:#fff9c4;color:#666600">⭐ ARA</option>
                     </optgroup>
-                    <optgroup label="── ⭐ Özel Saat ──">
-                        ${COMMON_TIMES.map(t => `<option value="*${t}" ${cleanVal === t && hasStar ? 'selected' : ''}>⭐ ${t}</option>`).join('')}
+                    <optgroup label="⏰ SAATLER" style="background:#f5f5f5">
+                        ${COMMON_TIMES.map(t => `<option value="${t}" ${cleanVal === t && !hasStar ? 'selected' : ''} style="background:#e8f4fd;color:#1e5b94">${t}</option>`).join('')}
+                    </optgroup>
+                    <optgroup label="⭐ ÖZEL SAAT" style="background:#fff8e1">
+                        ${COMMON_TIMES.map(t => `<option value="*${t}" ${cleanVal === t && hasStar ? 'selected' : ''} style="background:#fff3e0;color:#e65100">⭐ ${t}</option>`).join('')}
                     </optgroup>
                     ${cleanVal && !SHIFT_TYPES.includes(displayVal) && !COMMON_TIMES.includes(cleanVal) ? `<option value="${val}" selected style="background:${colors.bg};color:${colors.text};font-weight:700">${starIndicator}${displayVal}</option>` : ''}
-                    <optgroup label="── Diğer ──">
-                        <option value="parttime">⏰ Özel Saat Gir...</option>
+                    <optgroup label="➕ DİĞER" style="background:#eceff1">
+                        <option value="parttime" style="color:#546e7a">⏰ Özel Saat Gir...</option>
                     </optgroup>
                 </select>
             </td>`;
@@ -11463,7 +11516,14 @@ async function downloadShiftPDF() {
     // Personel satırları - HER HÜCRE RENK ALACAK
     personelOrder.forEach((name, idx) => {
         if (!personelShifts[name]) return;
-        const row = [{ text: name, fillColor: '#FFFF00', color: '#000000', bold: true, fontSize: 9 }];
+        
+        // DOĞRU İSİM: personelNames mapping > lookup > name
+        let displayName = shiftData.personelNames?.[name];
+        if (!displayName || displayName === name) {
+            displayName = lookupPersonelDisplay(name, branch);
+        }
+        
+        const row = [{ text: displayName, fillColor: '#FFFF00', color: '#000000', bold: true, fontSize: 9 }];
         
         for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
             let val = personelShifts[name][dayIdx] || '';
@@ -11478,9 +11538,8 @@ async function downloadShiftPDF() {
             } else {
                 // Renk al
                 const colors = getShiftColorExcel(cleanVal);
-                // Yıldız için Unicode karakter (★ = U+2605)
-                const starSymbol = String.fromCharCode(0x2605);
-                const displayText = (showStar ? starSymbol + ' ' : '') + cleanVal;
+                // Yıldız için basit ASCII * kullan (PDF uyumlu)
+                const displayText = (showStar ? '* ' : '') + cleanVal;
                 
                 row.push({ 
                     text: displayText, 
@@ -11679,8 +11738,15 @@ async function printShift() {
     
     personelOrder.forEach(name => {
         if (!personelShifts[name]) return;
+        
+        // DOĞRU İSİM: personelNames mapping > lookup > name
+        let displayName = shiftData.personelNames?.[name];
+        if (!displayName || displayName === name) {
+            displayName = lookupPersonelDisplay(name, branch);
+        }
+        
         const rowData = [];
-        rowData.push({ text: name, bg: '#FFFF00', color: '#000' });
+        rowData.push({ text: displayName, bg: '#FFFF00', color: '#000' });
         
         for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
             let val = personelShifts[name][dayIdx] || '';
