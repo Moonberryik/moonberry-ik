@@ -1360,16 +1360,58 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <!-- ARŞİV SEKMESİ -->
                 <div id="puantajArsivTab" style="display:none">
                     <div class="form-section">
-                        <div class="form-section-title">📁 Geçmiş Dönemler</div>
-                        <div class="form-grid">
+                        <div class="form-section-title" style="display:flex;align-items:center;gap:8px">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg>
+                            Geçmiş Dönemler
+                        </div>
+                        <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
                             <div class="form-group">
                                 <label class="form-label">Şube</label>
                                 <select id="arsivSube" class="form-select" onchange="loadPuantajArsiv()"></select>
                             </div>
+                            <div class="form-group">
+                                <label class="form-label">Yıl</label>
+                                <select id="arsivYil" class="form-select" onchange="loadPuantajArsiv()">
+                                    <option value="2026">2026</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2024">2024</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
-                    <div id="puantajArsivContainer">
-                        <p style="color:var(--tx2);text-align:center;padding:40px">Arşiv yükleniyor...</p>
+                    
+                    <!-- Özet İstatistikler -->
+                    <div id="arsivSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">
+                        <!-- Dinamik doldurulacak -->
+                    </div>
+                    
+                    <!-- Grafikler -->
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:20px">
+                        <!-- Aylık Trend -->
+                        <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:16px">
+                            <div style="font-weight:600;margin-bottom:16px;font-size:.9rem;color:var(--tx)">Aylık Puan Trendi</div>
+                            <div id="arsivTrendChart" style="height:200px;position:relative">
+                                <!-- Chart SVG -->
+                            </div>
+                        </div>
+                        
+                        <!-- Dağılım Pasta -->
+                        <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:16px">
+                            <div style="font-weight:600;margin-bottom:16px;font-size:.9rem;color:var(--tx)">Puan Dağılımı</div>
+                            <div id="arsivPieChart" style="height:200px;display:flex;align-items:center;justify-content:center">
+                                <!-- Pie Chart SVG -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Aylık Dönem Kartları -->
+                    <div id="puantajArsivContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+                        <p style="color:var(--tx2);text-align:center;padding:40px;grid-column:1/-1">Arşiv yükleniyor...</p>
+                    </div>
+                    
+                    <!-- Detay Modal Alanı -->
+                    <div id="arsivDetailPanel" style="display:none;margin-top:20px;background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px">
+                        <!-- Dinamik detay içeriği -->
                     </div>
                 </div>
             </div>
@@ -5637,22 +5679,23 @@ async function loadPuantaj() {
                     </div>
                     
                     ${isDanger ? `
-                        <div style="background:rgba(231,76,60,.1);border-radius:8px;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
-                            <svg width="14" height="14" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                            <span style="font-size:.75rem;color:#c0392b;font-weight:600">Prim eşiği aşıldı</span>
+                        <div style="background:rgba(231,76,60,.1);border-radius:8px;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <svg width="14" height="14" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                <span style="font-size:.75rem;color:#c0392b;font-weight:600">Prim eşiği aşıldı</span>
+                            </div>
+                            <button onclick="resetPersonelPrim('${p.id}', '${p.name}')" style="padding:4px 10px;background:#e74c3c;color:#fff;border:none;border-radius:6px;font-size:.7rem;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                                Primi Sıfırla
+                            </button>
                         </div>
                     ` : ''}
                     
                     <!-- Action Buttons -->
                     ${!isBarista ? `
                     <div style="display:flex;gap:8px">
-                        <button style="flex:1;padding:10px;background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.2);color:#e74c3c;border-radius:8px;font-weight:500;font-size:.8rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px" onclick="showPuantajModal('${p.id}', '${p.name}', 'negatif')" onmouseover="this.style.background='rgba(231,76,60,.15)'" onmouseout="this.style.background='rgba(231,76,60,.08)'">
-                            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
-                            İhlal
-                        </button>
-                        <button style="flex:1;padding:10px;background:rgba(39,174,96,.08);border:1px solid rgba(39,174,96,.2);color:#27ae60;border-radius:8px;font-weight:500;font-size:.8rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px" onclick="showPuantajModal('${p.id}', '${p.name}', 'pozitif')" onmouseover="this.style.background='rgba(39,174,96,.15)'" onmouseout="this.style.background='rgba(39,174,96,.08)'">
-                            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                            Başarı
+                        <button style="flex:1;padding:10px;background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(255,134,116,.1));border:1px solid rgba(0,140,149,.25);color:#008c95;border-radius:8px;font-weight:500;font-size:.8rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px" onclick="showPuantajModal('${p.id}', '${p.name}')" onmouseover="this.style.background='linear-gradient(135deg,rgba(0,140,149,.15),rgba(255,134,116,.15))'" onmouseout="this.style.background='linear-gradient(135deg,rgba(0,140,149,.1),rgba(255,134,116,.1))'">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            Değerlendir
                         </button>
                     </div>
                     ` : ''}
@@ -5987,83 +6030,72 @@ function showPuantajRulesDetail() {
     `, '<button class="btn btn-primary" onclick="closeModal()">Anladım</button>');
 }
 
-function showPuantajModal(personelId, name, type = 'negatif') {
-    const isNegative = type === 'negatif';
-    const title = isNegative ? `${name} - İhlal Kaydet` : `${name} - Başarı Kaydet`;
-    const titleColor = isNegative ? '#e74c3c' : '#27ae60';
+function showPuantajModal(personelId, name, type = 'all') {
+    const title = `${name} - Manuel Değerlendirme`;
     
-    // Kural seçenekleri (cache'ten)
-    const kurallar = (puantajRulesCache || []).filter(r => {
-        if (isNegative) return r.effect && r.effect.includes('-');
-        return r.effect && !r.effect.includes('-');
-    });
+    // Tüm kurallar (cache'ten)
+    const kurallar = puantajRulesCache || [];
     
     let kuralOptions = '<option value="">-- Kural Seçin (Opsiyonel) --</option>';
     kurallar.forEach(k => {
-        kuralOptions += `<option value="${k.id}" data-title="${k.title}">${k.title}</option>`;
+        kuralOptions += `<option value="${k.id}" data-title="${k.title}">${k.title} (${k.effect || ''})</option>`;
     });
-    kuralOptions += '<option value="other">📝 Diğer (Manuel Giriş)</option>';
+    kuralOptions += '<option value="other">Diğer (Manuel Giriş)</option>';
     
-    // Yıldız seçenekleri
-    let starOptions = '';
-    if (isNegative) {
-        starOptions = `
-            <div class="star-option" onclick="selectPuantajStar(1, this)" style="padding:14px 8px;background:rgba(192,57,43,.12);border:2px solid transparent;border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
-                <div style="font-size:1.3rem;margin-bottom:4px">⭐</div>
-                <div style="font-size:.8rem;color:#c0392b;font-weight:700">Ciddi İhlal</div>
-                <div style="font-size:.85rem;color:#e74c3c;font-weight:600;margin-top:2px">-3 Puan</div>
-            </div>
-            <div class="star-option" onclick="selectPuantajStar(2, this)" style="padding:14px 8px;background:rgba(211,84,0,.12);border:2px solid transparent;border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
-                <div style="font-size:1.3rem;margin-bottom:4px">⭐⭐</div>
-                <div style="font-size:.8rem;color:#d35400;font-weight:700">Orta İhlal</div>
-                <div style="font-size:.85rem;color:#e67e22;font-weight:600;margin-top:2px">-2 Puan</div>
-            </div>
-            <div class="star-option" onclick="selectPuantajStar(3, this)" style="padding:14px 8px;background:rgba(241,196,15,.12);border:2px solid transparent;border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
-                <div style="font-size:1.3rem;margin-bottom:4px">⭐⭐⭐</div>
-                <div style="font-size:.8rem;color:#f39c12;font-weight:700">Hafif Uyarı</div>
-                <div style="font-size:.85rem;color:#f1c40f;font-weight:600;margin-top:2px">-1 Puan</div>
-            </div>
-        `;
-    } else {
-        starOptions = `
-            <div class="star-option" onclick="selectPuantajStar(4, this)" style="padding:14px 8px;background:rgba(39,174,96,.12);border:2px solid transparent;border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
-                <div style="font-size:1.3rem;margin-bottom:4px">⭐⭐⭐⭐</div>
-                <div style="font-size:.8rem;color:#27ae60;font-weight:700">İyi Performans</div>
-                <div style="font-size:.85rem;color:#2ecc71;font-weight:600;margin-top:2px">+1 Puan</div>
-            </div>
-            <div class="star-option" onclick="selectPuantajStar(5, this)" style="padding:14px 8px;background:rgba(46,204,113,.12);border:2px solid transparent;border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
-                <div style="font-size:1.3rem;margin-bottom:4px">⭐⭐⭐⭐⭐</div>
-                <div style="font-size:.8rem;color:#2ecc71;font-weight:700">Mükemmel</div>
-                <div style="font-size:.85rem;color:#27ae60;font-weight:600;margin-top:2px">+2 Puan</div>
-            </div>
-        `;
-    }
+    // Tüm yıldız seçenekleri - 5'li grid
+    const starOptions = `
+        <div class="star-option" onclick="selectPuantajStar(1, this)" style="padding:12px 6px;background:rgba(192,57,43,.12);border:2px solid transparent;border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+            <div style="font-size:1.1rem;margin-bottom:4px;color:#c0392b">★</div>
+            <div style="font-size:.75rem;color:#c0392b;font-weight:700">Ciddi İhlal</div>
+            <div style="font-size:.8rem;color:#e74c3c;font-weight:600;margin-top:2px">-3</div>
+        </div>
+        <div class="star-option" onclick="selectPuantajStar(2, this)" style="padding:12px 6px;background:rgba(211,84,0,.12);border:2px solid transparent;border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+            <div style="font-size:1.1rem;margin-bottom:4px;color:#d35400">★★</div>
+            <div style="font-size:.75rem;color:#d35400;font-weight:700">Orta İhlal</div>
+            <div style="font-size:.8rem;color:#e67e22;font-weight:600;margin-top:2px">-2</div>
+        </div>
+        <div class="star-option" onclick="selectPuantajStar(3, this)" style="padding:12px 6px;background:rgba(241,196,15,.12);border:2px solid transparent;border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+            <div style="font-size:1.1rem;margin-bottom:4px;color:#f39c12">★★★</div>
+            <div style="font-size:.75rem;color:#f39c12;font-weight:700">Hafif Uyarı</div>
+            <div style="font-size:.8rem;color:#f1c40f;font-weight:600;margin-top:2px">-1</div>
+        </div>
+        <div class="star-option" onclick="selectPuantajStar(4, this)" style="padding:12px 6px;background:rgba(39,174,96,.12);border:2px solid transparent;border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+            <div style="font-size:1.1rem;margin-bottom:4px;color:#27ae60">★★★★</div>
+            <div style="font-size:.75rem;color:#27ae60;font-weight:700">İyi Performans</div>
+            <div style="font-size:.8rem;color:#2ecc71;font-weight:600;margin-top:2px">+1</div>
+        </div>
+        <div class="star-option" onclick="selectPuantajStar(5, this)" style="padding:12px 6px;background:rgba(46,204,113,.12);border:2px solid transparent;border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+            <div style="font-size:1.1rem;margin-bottom:4px;color:#2ecc71">★★★★★</div>
+            <div style="font-size:.75rem;color:#2ecc71;font-weight:700">Mükemmel</div>
+            <div style="font-size:.8rem;color:#27ae60;font-weight:600;margin-top:2px">+2</div>
+        </div>
+    `;
     
     const body = `
         <div style="padding:8px 0">
-            <div style="text-align:center;margin-bottom:20px">
-                <div style="font-size:2.5rem">${isNegative ? '⚠️' : '🏆'}</div>
-                <div style="color:${titleColor};font-weight:700;font-size:1rem;margin-top:6px">${isNegative ? 'İhlal/Uyarı Kaydı' : 'Başarı/Ödül Kaydı'}</div>
+            <div style="text-align:center;margin-bottom:16px">
+                <svg width="32" height="32" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <div style="color:#008c95;font-weight:700;font-size:1rem;margin-top:6px">Manuel Değerlendirme</div>
             </div>
             
-            <div style="display:grid;grid-template-columns:repeat(${isNegative ? 3 : 2}, 1fr);gap:12px;margin-bottom:20px">
+            <div style="display:grid;grid-template-columns:repeat(5, 1fr);gap:8px;margin-bottom:20px">
                 ${starOptions}
             </div>
             
             <div style="margin-bottom:16px">
-                <label style="display:block;font-size:.85rem;color:var(--tx2);margin-bottom:8px;font-weight:500">📋 Kural Seç</label>
+                <label style="display:block;font-size:.85rem;color:var(--tx2);margin-bottom:8px;font-weight:500">Kural Seç</label>
                 <select id="puantajKural" class="form-select" onchange="onPuantajKuralChange()" style="background:var(--bg3);color:var(--tx);border-color:var(--bg4)">
                     ${kuralOptions}
                 </select>
             </div>
             
             <div style="margin-bottom:16px">
-                <label style="display:block;font-size:.85rem;color:var(--tx2);margin-bottom:8px;font-weight:500">📝 Açıklama <span style="color:#e74c3c">*</span></label>
-                <textarea id="puantajNote" class="form-input" rows="3" placeholder="${isNegative ? 'Örn: Check listi yanlış işaretledi, müşteriye kaba davrandı...' : 'Örn: Mükemmel temizlik yaptı, ekstra mesai çalıştı...'}" style="background:var(--bg3);color:var(--tx);border-color:var(--bg4);resize:vertical;min-height:80px;font-family:inherit"></textarea>
+                <label style="display:block;font-size:.85rem;color:var(--tx2);margin-bottom:8px;font-weight:500">Açıklama <span style="color:#e74c3c">*</span></label>
+                <textarea id="puantajNote" class="form-input" rows="3" placeholder="Değerlendirme açıklaması yazın..." style="background:var(--bg3);color:var(--tx);border-color:var(--bg4);resize:vertical;min-height:80px;font-family:inherit"></textarea>
             </div>
             
             <div style="margin-bottom:16px">
-                <label style="display:block;font-size:.85rem;color:var(--tx2);margin-bottom:8px;font-weight:500">📅 Olay Tarihi</label>
+                <label style="display:block;font-size:.85rem;color:var(--tx2);margin-bottom:8px;font-weight:500">Olay Tarihi</label>
                 <input type="date" id="puantajDate" class="form-input" value="${new Date().toISOString().split('T')[0]}" style="background:var(--bg3);color:var(--tx);border-color:var(--bg4)">
             </div>
             
@@ -6074,7 +6106,7 @@ function showPuantajModal(personelId, name, type = 'negatif') {
     
     showModal(title, body, `
         <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
-        <button class="btn" style="background:${titleColor};color:#fff" onclick="savePuantajFromModal()">Kaydet</button>
+        <button class="btn btn-primary" onclick="savePuantajFromModal()">Kaydet</button>
     `);
 }
 
@@ -6175,6 +6207,46 @@ async function savePuantajFromModal() {
         console.error('Puantaj kayıt hatası:', error);
         toast('Kayıt hatası!', 'error');
     }
+}
+
+// Prim Sıfırlama Fonksiyonu
+async function resetPersonelPrim(personelId, name) {
+    // Yetki kontrolü
+    const canReset = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
+    if (!canReset) {
+        toast('Bu işlem için yetkiniz yok', 'error');
+        return;
+    }
+    
+    const ay = document.getElementById('puantajAy')?.value || String(new Date().getMonth() + 1).padStart(2, '0');
+    const yil = document.getElementById('puantajYil')?.value || new Date().getFullYear();
+    const period = `${yil}-${ay}`;
+    
+    confirmModal(
+        'Primi Sıfırla',
+        `<strong>${name}</strong> için <strong>${ay}/${yil}</strong> dönemi primi sıfırlanacak.<br><br>
+        <span style="color:var(--tx2);font-size:.85rem">Tüm puantaj kayıtları geçmişte saklanır, sadece prim durumu sıfırlanır.</span>`,
+        async () => {
+            try {
+                // Prim sıfırlama kaydı oluştur
+                await db.collection('primResets').add({
+                    personelId,
+                    personelName: name,
+                    period,
+                    resetAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    resetBy: currentUser?.email || currentUser?.username || 'admin',
+                    reason: 'Manuel sıfırlama'
+                });
+                
+                toast(`${name} için prim sıfırlandı`, 'success');
+                loadPuantaj();
+            } catch (error) {
+                console.error('Prim sıfırlama hatası:', error);
+                toast('Sıfırlama hatası!', 'error');
+            }
+        },
+        'warning'
+    );
 }
 
 // Analiz yükleme
@@ -6329,14 +6401,19 @@ async function loadPuantajAnaliz() {
     }
 }
 
-// Arşiv yükleme
+// Arşiv yükleme - Gelişmiş versiyon
 async function loadPuantajArsiv() {
     const container = document.getElementById('puantajArsivContainer');
+    const summaryContainer = document.getElementById('arsivSummary');
+    const trendChart = document.getElementById('arsivTrendChart');
+    const pieChart = document.getElementById('arsivPieChart');
+    
     if (!container) return;
     
     const sube = document.getElementById('arsivSube')?.value || '';
+    const yil = document.getElementById('arsivYil')?.value || new Date().getFullYear();
     
-    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx2)">Arşiv yükleniyor...</div>';
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx2);grid-column:1/-1">Arşiv yükleniyor...</div>';
     
     try {
         let query = db.collection('puantaj');
@@ -6346,31 +6423,160 @@ async function loadPuantajArsiv() {
         
         // Dönem bazında gruplama
         const donemler = {};
+        let toplamKayit = 0;
+        let toplamNegatif = 0;
+        let toplamPozitif = 0;
+        let yildizDagilim = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        
         snapshot.forEach(doc => {
             const d = doc.data();
             const period = d.period || 'unknown';
+            const [pYil] = period.split('-');
+            
+            // Sadece seçili yıl
+            if (pYil !== String(yil)) return;
+            
             if (!donemler[period]) {
-                donemler[period] = { kayitSayisi: 0, personeller: {} };
+                donemler[period] = { kayitSayisi: 0, personeller: {}, negatif: 0, pozitif: 0, kayitlar: [] };
             }
             donemler[period].kayitSayisi++;
+            toplamKayit++;
             
             if (!donemler[period].personeller[d.personelId]) {
-                donemler[period].personeller[d.personelId] = { toplamPuan: 0 };
+                donemler[period].personeller[d.personelId] = { toplamPuan: 0, name: d.personelName || 'Bilinmeyen' };
             }
+            
             const yildiz = d.score || 3;
-            // Yeni puan sistemi: 1★=-3, 2★=-2, 3★=-1, 4★=+1, 5★=+2
-            if (yildiz === 1) {
-                donemler[period].personeller[d.personelId].toplamPuan -= 3;
-            } else if (yildiz === 2) {
-                donemler[period].personeller[d.personelId].toplamPuan -= 2;
-            } else if (yildiz === 3) {
-                donemler[period].personeller[d.personelId].toplamPuan -= 1;
-            } else if (yildiz === 4) {
-                donemler[period].personeller[d.personelId].toplamPuan += 1;
-            } else if (yildiz === 5) {
-                donemler[period].personeller[d.personelId].toplamPuan += 2;
-            }
+            yildizDagilim[yildiz] = (yildizDagilim[yildiz] || 0) + 1;
+            
+            let puan = 0;
+            if (yildiz === 1) { puan = -3; toplamNegatif++; donemler[period].negatif++; }
+            else if (yildiz === 2) { puan = -2; toplamNegatif++; donemler[period].negatif++; }
+            else if (yildiz === 3) { puan = -1; toplamNegatif++; donemler[period].negatif++; }
+            else if (yildiz === 4) { puan = 1; toplamPozitif++; donemler[period].pozitif++; }
+            else if (yildiz === 5) { puan = 2; toplamPozitif++; donemler[period].pozitif++; }
+            
+            donemler[period].personeller[d.personelId].toplamPuan += puan;
+            donemler[period].kayitlar.push({ ...d, id: doc.id, puan });
         });
+        
+        // Özet İstatistikler
+        const primYokToplam = Object.values(donemler).reduce((acc, d) => 
+            acc + Object.values(d.personeller).filter(p => p.toplamPuan <= -5).length, 0);
+        
+        if (summaryContainer) {
+            summaryContainer.innerHTML = `
+                <div style="background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(0,140,149,.05));border:1px solid rgba(0,140,149,.2);border-radius:12px;padding:16px;text-align:center">
+                    <div style="font-size:1.8rem;font-weight:800;color:#008c95">${toplamKayit}</div>
+                    <div style="font-size:.75rem;color:var(--tx2)">Toplam Kayıt</div>
+                </div>
+                <div style="background:linear-gradient(135deg,rgba(231,76,60,.1),rgba(231,76,60,.05));border:1px solid rgba(231,76,60,.2);border-radius:12px;padding:16px;text-align:center">
+                    <div style="font-size:1.8rem;font-weight:800;color:#e74c3c">${toplamNegatif}</div>
+                    <div style="font-size:.75rem;color:var(--tx2)">Negatif</div>
+                </div>
+                <div style="background:linear-gradient(135deg,rgba(39,174,96,.1),rgba(39,174,96,.05));border:1px solid rgba(39,174,96,.2);border-radius:12px;padding:16px;text-align:center">
+                    <div style="font-size:1.8rem;font-weight:800;color:#27ae60">${toplamPozitif}</div>
+                    <div style="font-size:.75rem;color:var(--tx2)">Pozitif</div>
+                </div>
+                <div style="background:linear-gradient(135deg,rgba(243,156,18,.1),rgba(243,156,18,.05));border:1px solid rgba(243,156,18,.2);border-radius:12px;padding:16px;text-align:center">
+                    <div style="font-size:1.8rem;font-weight:800;color:#f39c12">${primYokToplam}</div>
+                    <div style="font-size:.75rem;color:var(--tx2)">Prim Kaybı</div>
+                </div>
+            `;
+        }
+        
+        // Trend Chart (Aylık bar chart)
+        if (trendChart) {
+            const aylar = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+            const ayAdilar = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+            let maxKayit = 1;
+            aylar.forEach(ay => {
+                const period = `${yil}-${ay}`;
+                if (donemler[period]) maxKayit = Math.max(maxKayit, donemler[period].kayitSayisi);
+            });
+            
+            let barHtml = '<svg width="100%" height="180" viewBox="0 0 360 180" preserveAspectRatio="xMidYMid meet">';
+            barHtml += '<line x1="30" y1="150" x2="350" y2="150" stroke="var(--cardBorder)" stroke-width="1"/>';
+            
+            aylar.forEach((ay, i) => {
+                const period = `${yil}-${ay}`;
+                const kayit = donemler[period]?.kayitSayisi || 0;
+                const negatif = donemler[period]?.negatif || 0;
+                const pozitif = donemler[period]?.pozitif || 0;
+                const height = kayit > 0 ? (kayit / maxKayit) * 120 : 0;
+                const x = 35 + i * 27;
+                
+                // Negatif (kırmızı) ve pozitif (yeşil) yığılı bar
+                const negHeight = kayit > 0 ? (negatif / kayit) * height : 0;
+                const posHeight = height - negHeight;
+                
+                if (posHeight > 0) {
+                    barHtml += `<rect x="${x}" y="${150 - height}" width="20" height="${posHeight}" fill="#27ae60" rx="3" style="cursor:pointer" onclick="showArsivDetail('${period}')"><title>${ayAdilar[i]}: ${kayit} kayıt</title></rect>`;
+                }
+                if (negHeight > 0) {
+                    barHtml += `<rect x="${x}" y="${150 - negHeight}" width="20" height="${negHeight}" fill="#e74c3c" rx="3" style="cursor:pointer" onclick="showArsivDetail('${period}')"><title>${ayAdilar[i]}: ${negatif} negatif</title></rect>`;
+                }
+                
+                // Ay etiketi
+                barHtml += `<text x="${x + 10}" y="168" text-anchor="middle" font-size="9" fill="var(--tx3)">${ayAdilar[i]}</text>`;
+            });
+            
+            barHtml += '</svg>';
+            trendChart.innerHTML = barHtml;
+        }
+        
+        // Pie Chart (Yıldız dağılımı)
+        if (pieChart) {
+            const total = Object.values(yildizDagilim).reduce((a, b) => a + b, 0);
+            if (total > 0) {
+                const colors = ['#c0392b', '#d35400', '#f39c12', '#27ae60', '#2ecc71'];
+                const labels = ['Ciddi İhlal', 'Orta İhlal', 'Hafif Uyarı', 'İyi Performans', 'Mükemmel'];
+                let startAngle = 0;
+                let pieHtml = '<svg width="160" height="160" viewBox="0 0 160 160">';
+                
+                [1,2,3,4,5].forEach((star, i) => {
+                    const value = yildizDagilim[star] || 0;
+                    if (value === 0) return;
+                    const percentage = value / total;
+                    const angle = percentage * 360;
+                    const endAngle = startAngle + angle;
+                    
+                    const startRad = (startAngle - 90) * Math.PI / 180;
+                    const endRad = (endAngle - 90) * Math.PI / 180;
+                    
+                    const x1 = 80 + 60 * Math.cos(startRad);
+                    const y1 = 80 + 60 * Math.sin(startRad);
+                    const x2 = 80 + 60 * Math.cos(endRad);
+                    const y2 = 80 + 60 * Math.sin(endRad);
+                    
+                    const largeArc = angle > 180 ? 1 : 0;
+                    
+                    pieHtml += `<path d="M80,80 L${x1},${y1} A60,60 0 ${largeArc},1 ${x2},${y2} Z" fill="${colors[i]}" style="cursor:pointer" onclick="alert('${labels[i]}: ${value} kayıt (${Math.round(percentage*100)}%)')"><title>${labels[i]}: ${value}</title></path>`;
+                    
+                    startAngle = endAngle;
+                });
+                
+                // Merkez daire (donut efekti)
+                pieHtml += '<circle cx="80" cy="80" r="35" fill="var(--cardBg)"/>';
+                pieHtml += `<text x="80" y="85" text-anchor="middle" font-size="14" font-weight="700" fill="var(--tx)">${total}</text>`;
+                pieHtml += '</svg>';
+                
+                // Legend
+                pieHtml += '<div style="margin-left:20px;font-size:.75rem">';
+                [1,2,3,4,5].forEach((star, i) => {
+                    const value = yildizDagilim[star] || 0;
+                    if (value === 0) return;
+                    pieHtml += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="width:10px;height:10px;background:${colors[i]};border-radius:2px"></div><span style="color:var(--tx2)">${labels[i]}: ${value}</span></div>`;
+                });
+                pieHtml += '</div>';
+                
+                pieChart.innerHTML = pieHtml;
+                pieChart.style.display = 'flex';
+                pieChart.style.alignItems = 'center';
+            } else {
+                pieChart.innerHTML = '<div style="color:var(--tx3);font-size:.85rem">Veri yok</div>';
+            }
+        }
         
         // Sırala (yeniden eskiye)
         const sortedDonemler = Object.entries(donemler).sort((a, b) => b[0].localeCompare(a[0]));
@@ -6378,48 +6584,132 @@ async function loadPuantajArsiv() {
         let html = '';
         
         if (sortedDonemler.length === 0) {
-            html = '<div style="text-align:center;padding:60px;color:var(--tx3)">Henüz arşivlenmiş dönem yok</div>';
+            html = '<div style="text-align:center;padding:60px;color:var(--tx3);grid-column:1/-1">Bu yıla ait arşivlenmiş dönem yok</div>';
         } else {
-            html = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">`;
-            
             sortedDonemler.forEach(([period, data]) => {
-                const [yil, ay] = period.split('-');
+                const [pYil, ay] = period.split('-');
                 const ayAdi = getMonthName(ay);
                 const personelSayisi = Object.keys(data.personeller).length;
                 const primYokSayisi = Object.values(data.personeller).filter(p => p.toplamPuan <= -5).length;
+                const avgPuan = personelSayisi > 0 ? 
+                    (Object.values(data.personeller).reduce((a, p) => a + p.toplamPuan, 0) / personelSayisi).toFixed(1) : 0;
+                
+                const isMoonberry = sube.includes('Şişli') || sube.includes('Merkez');
+                const brandColor = isMoonberry ? '#008c95' : '#ff8674';
                 
                 html += `
-                    <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:16px;padding:20px;transition:all .2s">
-                        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px">
+                    <div onclick="showArsivDetail('${period}')" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-left:4px solid ${brandColor};border-radius:12px;padding:16px;transition:all .2s;cursor:pointer" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
                             <div>
-                                <div style="font-size:1.1rem;font-weight:700;color:var(--tx)">${ayAdi} ${yil}</div>
-                                <div style="font-size:.8rem;color:var(--tx2)">${personelSayisi} personel</div>
+                                <div style="font-size:1.05rem;font-weight:700;color:var(--tx)">${ayAdi} ${pYil}</div>
+                                <div style="font-size:.75rem;color:var(--tx3)">${personelSayisi} personel · ${data.kayitSayisi} kayıt</div>
                             </div>
-                            <div style="font-size:2rem">📅</div>
+                            <div style="text-align:right">
+                                <div style="font-size:1.3rem;font-weight:800;color:${parseFloat(avgPuan) < 0 ? '#e74c3c' : '#27ae60'}">${avgPuan > 0 ? '+' : ''}${avgPuan}</div>
+                                <div style="font-size:.65rem;color:var(--tx3)">Ort. Puan</div>
+                            </div>
                         </div>
-                        <div style="display:flex;gap:12px">
-                            <div style="flex:1;background:var(--bg3);border-radius:10px;padding:12px;text-align:center">
-                                <div style="font-size:1.4rem;font-weight:700;color:var(--tx)">${data.kayitSayisi}</div>
-                                <div style="font-size:.65rem;color:var(--tx3)">Kayıt</div>
+                        <div style="display:flex;gap:8px">
+                            <div style="flex:1;background:rgba(39,174,96,.1);border-radius:8px;padding:8px;text-align:center">
+                                <div style="font-size:1rem;font-weight:700;color:#27ae60">${data.pozitif}</div>
+                                <div style="font-size:.6rem;color:var(--tx3)">Pozitif</div>
                             </div>
-                            <div style="flex:1;background:rgba(231,76,60,.1);border-radius:10px;padding:12px;text-align:center">
-                                <div style="font-size:1.4rem;font-weight:700;color:#e74c3c">${primYokSayisi}</div>
-                                <div style="font-size:.65rem;color:var(--tx3)">Prim Yok</div>
+                            <div style="flex:1;background:rgba(231,76,60,.1);border-radius:8px;padding:8px;text-align:center">
+                                <div style="font-size:1rem;font-weight:700;color:#e74c3c">${data.negatif}</div>
+                                <div style="font-size:.6rem;color:var(--tx3)">Negatif</div>
+                            </div>
+                            <div style="flex:1;background:rgba(243,156,18,.1);border-radius:8px;padding:8px;text-align:center">
+                                <div style="font-size:1rem;font-weight:700;color:#f39c12">${primYokSayisi}</div>
+                                <div style="font-size:.6rem;color:var(--tx3)">Prim Yok</div>
                             </div>
                         </div>
                     </div>
                 `;
             });
-            
-            html += `</div>`;
         }
         
         container.innerHTML = html;
         
+        // Cache'e kaydet
+        window.arsivDataCache = donemler;
+        
     } catch (error) {
         console.error('Arşiv yükleme hatası:', error);
-        container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red)">Yükleme hatası!</div>';
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);grid-column:1/-1">Yükleme hatası!</div>';
     }
+}
+
+// Arşiv Detay Gösterimi
+function showArsivDetail(period) {
+    const detailPanel = document.getElementById('arsivDetailPanel');
+    const donemler = window.arsivDataCache || {};
+    const data = donemler[period];
+    
+    if (!data || !detailPanel) return;
+    
+    const [yil, ay] = period.split('-');
+    const ayAdi = getMonthName(ay);
+    
+    // Personel listesi (puana göre sırala)
+    const personelList = Object.entries(data.personeller)
+        .map(([id, p]) => ({ id, ...p }))
+        .sort((a, b) => b.toplamPuan - a.toplamPuan);
+    
+    let html = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+            <div>
+                <div style="font-size:1.2rem;font-weight:700;color:var(--tx)">${ayAdi} ${yil} Detayı</div>
+                <div style="font-size:.85rem;color:var(--tx2)">${personelList.length} personel · ${data.kayitSayisi} kayıt</div>
+            </div>
+            <button onclick="document.getElementById('arsivDetailPanel').style.display='none'" style="padding:8px 16px;background:var(--bg3);border:none;border-radius:8px;color:var(--tx);cursor:pointer;font-weight:500">Kapat</button>
+        </div>
+        
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+    `;
+    
+    personelList.forEach(p => {
+        const puanColor = p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx)');
+        const isDanger = p.toplamPuan <= -5;
+        
+        html += `
+            <div style="background:${isDanger ? 'rgba(231,76,60,.05)' : 'var(--bg3)'};border:1px solid ${isDanger ? 'rgba(231,76,60,.2)' : 'var(--cardBorder)'};border-radius:10px;padding:12px">
+                <div style="font-weight:600;color:var(--tx);margin-bottom:4px;font-size:.9rem">${p.name || 'Bilinmeyen'}</div>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                    <span style="font-size:1.4rem;font-weight:800;color:${puanColor}">${p.toplamPuan > 0 ? '+' : ''}${p.toplamPuan}</span>
+                    ${isDanger ? '<span style="font-size:.65rem;background:#e74c3c;color:#fff;padding:2px 6px;border-radius:4px">PRİM YOK</span>' : ''}
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    
+    // Son kayıtlar
+    html += `
+        <div style="margin-top:20px">
+            <div style="font-weight:600;color:var(--tx);margin-bottom:12px">Son Kayıtlar</div>
+            <div style="max-height:200px;overflow-y:auto">
+    `;
+    
+    const sonKayitlar = data.kayitlar.slice(-10).reverse();
+    sonKayitlar.forEach(k => {
+        const puanColor = k.puan < 0 ? '#e74c3c' : '#27ae60';
+        html += `
+            <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg3);border-radius:8px;margin-bottom:6px">
+                <div style="width:36px;height:36px;background:${k.puan < 0 ? 'rgba(231,76,60,.1)' : 'rgba(39,174,96,.1)'};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:${puanColor}">${k.puan > 0 ? '+' : ''}${k.puan}</div>
+                <div style="flex:1">
+                    <div style="font-size:.85rem;color:var(--tx);font-weight:500">${k.note || 'Açıklama yok'}</div>
+                    <div style="font-size:.7rem;color:var(--tx3)">${k.eventDate || k.createdAt?.toDate?.()?.toLocaleDateString('tr-TR') || '-'}</div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div></div>';
+    
+    detailPanel.innerHTML = html;
+    detailPanel.style.display = 'block';
+    detailPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function getMonthName(ay) {
