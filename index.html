@@ -1195,7 +1195,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                         <div class="form-group" style="margin-bottom:0;min-width:140px">
                             <label class="form-label">Tarih</label>
-                            <input type="date" id="checklistDate" class="form-input" onchange="loadChecklist()">
+                            <input type="date" id="checklistDate" class="form-input" disabled readonly style="background:var(--bg3);cursor:not-allowed;opacity:0.7" title="Checklist sadece bugün için yapılabilir">
                         </div>
                         <div class="form-group" style="margin-bottom:0;min-width:120px;display:none" id="checklistTimeSlotGroup">
                             <label class="form-label">Saat Dilimi</label>
@@ -2493,36 +2493,60 @@ async function cleanOldPuantajNotes() {
     }
 }
 
-// 4. Shift sıralama düzeltme - SADECE ROLE GÖRE
+// 4. Shift sıralama düzeltme - BÖLGE MÜDÜRÜ TÜM ŞUBELERDE + ROLE SIRALAMA
 async function fixShiftOrdering() {
     console.log('[Migration] 4/4 Shift sıralaması düzeltiliyor...');
     
     try {
         // Önce tüm personeli çek
         const personelSnap = await db.collection('personel').get();
-        const personelByBranch = {};
+        const allPersonel = [];
+        const bolgeMudurleri = []; // Bölge müdürleri TÜM şubelerde görünecek
         
         personelSnap.forEach(doc => {
             const p = doc.data();
-            const branch = p.branch;
-            if (!personelByBranch[branch]) personelByBranch[branch] = [];
-            personelByBranch[branch].push({
+            const info = {
+                docId: doc.id,
                 name: p.name,
                 codeName: p.codeName,
                 displayName: getPersonelDisplayName(p),
                 uniqueId: p.uniqueId || normalizePersonelId(p.name),
-                role: p.role || 'barista' // undefined ise barista varsay
-            });
+                role: p.role || 'barista',
+                branch: p.branch
+            };
+            allPersonel.push(info);
+            
+            // Bölge müdürlerini ayır - TÜM şubelerde görünecekler
+            if (p.role === 'bolge_muduru') {
+                bolgeMudurleri.push(info);
+                console.log(`[Bölge Müdürü] ${info.displayName} tüm şubelerde görünecek`);
+            }
         });
         
-        // Her şube için SADECE ROLE'E GÖRE sırala
+        // Şubelere göre grupla
+        const branches = [...new Set(allPersonel.map(p => p.branch))];
+        const personelByBranch = {};
+        
+        branches.forEach(branch => {
+            // Bu şubenin personeli + TÜM bölge müdürleri
+            const branchPersonel = allPersonel.filter(p => p.branch === branch);
+            
+            // Bölge müdürlerini ekle (zaten bu şubede değilse)
+            bolgeMudurleri.forEach(bm => {
+                if (!branchPersonel.find(p => p.uniqueId === bm.uniqueId)) {
+                    branchPersonel.push(bm);
+                }
+            });
+            
+            personelByBranch[branch] = branchPersonel;
+        });
+        
+        // Her şube için RÜTBEYE GÖRE sırala
         const roleOrder = ['bolge_muduru', 'magaza_muduru', 'magaza_muduru_yardimcisi', 'kidemli_barista', 'barista', 'part_time'];
         Object.keys(personelByBranch).forEach(branch => {
             personelByBranch[branch].sort((a, b) => {
-                // Sadece rütbeye göre sırala
                 const aRoleIdx = roleOrder.indexOf(a.role);
                 const bRoleIdx = roleOrder.indexOf(b.role);
-                // undefined role (-1) en sona gitsin
                 const aIdx = aRoleIdx === -1 ? 100 : aRoleIdx;
                 const bIdx = bRoleIdx === -1 ? 100 : bRoleIdx;
                 return aIdx - bIdx;
@@ -2538,34 +2562,40 @@ async function fixShiftOrdering() {
             const shift = doc.data();
             const branch = shift.branch;
             const orderedPersonel = personelByBranch[branch] || [];
-            const personelShifts = shift.personelShifts || {};
+            let personelShifts = shift.personelShifts || {};
+            let personelNames = shift.personelNames || {};
+            let personelFullNames = shift.personelFullNames || {};
             
-            // Yeni sıralama oluştur - sadece shift'te olan personeli dahil et
+            // Bölge müdürlerini shift'e ekle (yoksa)
+            bolgeMudurleri.forEach(bm => {
+                const key = bm.displayName;
+                if (!personelShifts[key]) {
+                    personelShifts[key] = {}; // Boş vardiya
+                    personelNames[key] = bm.displayName;
+                    personelFullNames[key] = bm.name;
+                    console.log(`  ✓ ${branch}: Bölge müdürü "${key}" eklendi`);
+                }
+            });
+            
+            // Yeni sıralama oluştur
             const newOrder = [];
             const matched = new Set();
             
             // Sıralı listedeki her personel için
             orderedPersonel.forEach(p => {
-                // personelShifts'te bu personel var mı? - GENİŞLETİLMİŞ EŞLEŞME
                 const existingKey = Object.keys(personelShifts).find(key => {
-                    if (matched.has(key)) return false; // Zaten eşleşmiş
+                    if (matched.has(key)) return false;
                     
-                    const keyLower = key.toLowerCase();
                     const keyNorm = normalizeTurkishChars(key);
                     const displayNorm = normalizeTurkishChars(p.displayName);
                     const codeNorm = normalizeTurkishChars(p.codeName);
                     const nameNorm = normalizeTurkishChars(p.name);
                     const uniqueNorm = normalizeTurkishChars(p.uniqueId);
-                    const codeFirstNorm = normalizeTurkishChars(p.codeName?.split(' ')[0]);
-                    const nameFirstNorm = normalizeTurkishChars(p.name?.split(' ')[0]);
                     
                     return keyNorm === displayNorm || 
                            keyNorm === codeNorm || 
                            keyNorm === nameNorm ||
                            keyNorm === uniqueNorm ||
-                           keyNorm === codeFirstNorm ||
-                           keyNorm === nameFirstNorm ||
-                           keyLower === p.uniqueId ||
                            key === p.displayName ||
                            key === p.codeName ||
                            key === p.name ||
@@ -2578,21 +2608,21 @@ async function fixShiftOrdering() {
                 }
             });
             
-            // Sıralamada olmayan ama shift'te olan personeli EN SONA ekle (veri kaybı önleme)
+            // Sıralamada olmayan personeli EN SONA ekle
             Object.keys(personelShifts).forEach(key => {
                 if (!newOrder.includes(key)) {
                     newOrder.push(key);
-                    console.log(`  ⚠️ ${branch}: "${key}" sıralamada yok, sona eklendi`);
                 }
             });
             
             // Güncelle
-            if (JSON.stringify(newOrder) !== JSON.stringify(shift.personelOrder)) {
-                await db.collection('shifts').doc(doc.id).update({ 
-                    personelOrder: newOrder 
-                });
-                updated++;
-            }
+            await db.collection('shifts').doc(doc.id).update({ 
+                personelOrder: newOrder,
+                personelShifts: personelShifts,
+                personelNames: personelNames,
+                personelFullNames: personelFullNames
+            });
+            updated++;
         }
         
         console.log(`[Migration] Shift sıralama: ${updated} güncellendi`);
@@ -2611,6 +2641,25 @@ async function fullSystemMigration() {
     
     const startTime = Date.now();
     
+    // 0. Esin'i bölge müdürü yap (codeName "Esin İ." olan)
+    console.log('[Migration] 0/4 Bölge müdürü rol kontrolü...');
+    try {
+        const personelSnap = await db.collection('personel').get();
+        for (const doc of personelSnap.docs) {
+            const p = doc.data();
+            // Esin İ. veya Merve İlgar → bolge_muduru
+            if ((p.codeName && p.codeName.toLowerCase().includes('esin')) || 
+                (p.name && p.name.toLowerCase().includes('merve') && p.name.toLowerCase().includes('ilgar'))) {
+                if (p.role !== 'bolge_muduru') {
+                    await db.collection('personel').doc(doc.id).update({ role: 'bolge_muduru' });
+                    console.log(`  ✓ ${p.name || p.codeName} → bolge_muduru`);
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('[Migration] Bölge müdürü rol hatası:', e);
+    }
+    
     // 1. Personel uniqueId
     const personelResult = await migratePersonelUniqueIds();
     
@@ -2623,7 +2672,7 @@ async function fullSystemMigration() {
     // 3. Eski puantajNotes temizle
     const notesResult = await cleanOldPuantajNotes();
     
-    // 4. Shift sıralamasını düzelt
+    // 4. Shift sıralamasını düzelt + bölge müdürünü tüm şubelere ekle
     const orderResult = await fixShiftOrdering();
     
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -10519,8 +10568,18 @@ function renderShiftTable(shift, docId) {
             displayName = lookupPersonelDisplay(uniqueIdOrName, shift.branch);
         }
         
-        html += `<tr style="background:${rowBg}">
-            <td style="padding:12px;font-weight:600;color:#333;border:1px solid #ddd;background:#FFFF00;min-width:100px">${displayName}</td>`;
+        // Sürükle-bırak için TR özellikleri (Barista için devre dışı)
+        const dragAttrs = isBarista ? '' : `draggable="true" 
+            ondragstart="handleShiftDragStart(event, '${docId}', ${idx})" 
+            ondragover="handleShiftDragOver(event)" 
+            ondrop="handleShiftDrop(event, '${docId}', ${idx})"
+            ondragend="handleShiftDragEnd(event)"
+            style="cursor:grab"`;
+        
+        html += `<tr ${dragAttrs} data-idx="${idx}" data-key="${uniqueIdOrName}" style="background:${rowBg}">
+            <td style="padding:12px;font-weight:600;color:#333;border:1px solid #ddd;background:#FFFF00;min-width:100px;${isBarista ? '' : 'cursor:grab'}">
+                ${isBarista ? '' : '<span style="opacity:0.4;margin-right:4px">☰</span>'}${displayName}
+            </td>`;
         
         days.forEach((_, dayIdx) => {
             let val = p[dayIdx] || '';
@@ -10639,6 +10698,79 @@ function renderShiftTable(shift, docId) {
     html += `</div>`; // shiftTablePrint close
     
     container.innerHTML = html;
+}
+
+// ==================== SÜRÜKLE-BIRAK FONKSİYONLARI ====================
+let draggedShiftRowIdx = null;
+let draggedShiftDocId = null;
+
+function handleShiftDragStart(e, docId, idx) {
+    draggedShiftRowIdx = idx;
+    draggedShiftDocId = docId;
+    e.target.style.opacity = '0.5';
+    e.target.style.background = '#e3f2fd';
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleShiftDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const tr = e.target.closest('tr');
+    if (tr && tr.dataset.idx !== undefined) {
+        tr.style.borderTop = '3px solid #008c95';
+    }
+}
+
+function handleShiftDrop(e, docId, targetIdx) {
+    e.preventDefault();
+    const tr = e.target.closest('tr');
+    if (tr) tr.style.borderTop = '';
+    
+    if (draggedShiftDocId !== docId) return;
+    if (draggedShiftRowIdx === null || draggedShiftRowIdx === targetIdx) return;
+    
+    // Sıralamayı güncelle
+    reorderShiftPersonel(docId, draggedShiftRowIdx, targetIdx);
+}
+
+function handleShiftDragEnd(e) {
+    e.target.style.opacity = '1';
+    e.target.style.background = '';
+    draggedShiftRowIdx = null;
+    draggedShiftDocId = null;
+    
+    // Tüm border'ları temizle
+    document.querySelectorAll('#shiftTableContainer tr').forEach(tr => {
+        tr.style.borderTop = '';
+    });
+}
+
+async function reorderShiftPersonel(docId, fromIdx, toIdx) {
+    try {
+        const doc = await db.collection('shifts').doc(docId).get();
+        if (!doc.exists) return;
+        
+        const shift = doc.data();
+        const order = shift.personelOrder || Object.keys(shift.personelShifts || {});
+        
+        // Taşı
+        const [moved] = order.splice(fromIdx, 1);
+        order.splice(toIdx, 0, moved);
+        
+        // Kaydet
+        await db.collection('shifts').doc(docId).update({
+            personelOrder: order
+        });
+        
+        console.log(`[Sıralama] ${moved} taşındı: ${fromIdx} → ${toIdx}`);
+        toast('Sıralama güncellendi ✓', 'success');
+        
+        // Tabloyu yenile
+        loadShiftWeek();
+    } catch (e) {
+        console.error('Sıralama hatası:', e);
+        toast('Sıralama hatası!', 'error');
+    }
 }
 
 // Excel renk sistemi
@@ -11189,22 +11321,38 @@ async function createNewShift() {
         if (Object.keys(ps).length === 0) {
             const pSnap = await db.collection('personel').get();
             const personelList = [];
+            const bolgeMudurleri = [];
+            
             pSnap.forEach(d => {
                 const p = d.data();
-                if (p.branch === sube) personelList.push(p);
+                // Bölge müdürlerini ayrı tut - TÜM şubelere eklenecek
+                if (p.role === 'bolge_muduru') {
+                    bolgeMudurleri.push(p);
+                }
+                // Bu şubenin personelini ekle
+                if (p.branch === sube) {
+                    personelList.push(p);
+                }
             });
-            // SADECE RÜTBEYE GÖRE sırala
+            
+            // Bölge müdürlerini listeye ekle (zaten yoksa)
+            bolgeMudurleri.forEach(bm => {
+                if (!personelList.find(p => p.name === bm.name)) {
+                    personelList.push(bm);
+                }
+            });
+            
+            // RÜTBEYE GÖRE sırala
             const roleOrder = ['bolge_muduru', 'magaza_muduru', 'magaza_muduru_yardimcisi', 'kidemli_barista', 'barista', 'part_time'];
             personelList.sort((a, b) => {
                 const aRoleIdx = roleOrder.indexOf(a.role);
                 const bRoleIdx = roleOrder.indexOf(b.role);
-                // undefined role (-1) en sona gitsin
                 const aIdx = aRoleIdx === -1 ? 100 : aRoleIdx;
                 const bIdx = bRoleIdx === -1 ? 100 : bRoleIdx;
                 return aIdx - bIdx;
             });
+            
             personelList.forEach(p => {
-                // getPersonelDisplayName: codeName varsa onu, yoksa formatDisplayName kullanır
                 const displayName = getPersonelDisplayName(p);
                 ps[displayName] = {};
                 personelOrder.push(displayName);
