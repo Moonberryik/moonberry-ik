@@ -5593,7 +5593,7 @@ async function loadPrimSettings() {
                 </div>
             </div>
             <div style="background:var(--bg2);border-radius:10px;padding:14px">
-                <div style="font-size:.8rem;font-weight:600;color:var(--tx);margin-bottom:10px">Manuel Değerlendirme</div>
+                <div style="font-size:.8rem;font-weight:600;color:var(--tx);margin-bottom:10px">Yönetici Değerlendirmesi</div>
                 <div style="display:flex;flex-direction:column;gap:6px;font-size:.75rem">
                     <div style="display:flex;justify-content:space-between"><span style="color:var(--tx2)">★ Ciddi ihlal</span><span style="color:#c0392b;font-weight:600">-3</span></div>
                     <div style="display:flex;justify-content:space-between"><span style="color:var(--tx2)">★★ Orta ihlal</span><span style="color:#d35400;font-weight:600">-2</span></div>
@@ -5765,26 +5765,51 @@ async function loadPuantaj() {
         const endDay = new Date(yil, parseInt(ay), 0).getDate();
         const endDate = `${yil}-${ay}-${endDay.toString().padStart(2, '0')}`;
         
+        // İsim normalize fonksiyonları - farklı formatlar için
+        const normalizeName = (name) => {
+            if (!name) return '';
+            return name
+                .toLowerCase()
+                .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
+                .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
+                .replace(/[^a-z0-9]/g, '_')
+                .replace(/_+/g, '_')
+                .replace(/^_|_$/g, '');
+        };
+        
+        // Seed formatı - Türkçe karakterler _ olur
+        const normalizeNameSeed = (name) => {
+            if (!name) return '';
+            return name
+                .toLowerCase()
+                .replace(/[^a-z0-9]/g, '_')
+                .replace(/_+/g, '_')
+                .replace(/^_|_$/g, '');
+        };
+        
         const autoNotesData = {};
         let totalAutoRecords = 0;
         try {
-            // Tüm puantajNotes'u çek, sonra filtrele (daha güvenilir)
             const autoSnapshot = await db.collection('puantajNotes').get();
             autoSnapshot.forEach(doc => {
                 const note = doc.data();
-                // Branch kontrolü - hem tam eşleşme hem kısmi eşleşme
                 const branchMatch = note.branch === sube || 
                                    (note.branch && note.branch.includes(sube.split(' ')[1])) ||
                                    (sube && sube.includes(note.branch));
                 
                 if (branchMatch && note.date >= startDate && note.date <= endDate) {
                     const pid = note.personelId;
-                    if (!autoNotesData[pid]) autoNotesData[pid] = [];
-                    autoNotesData[pid].push({ id: doc.id, ...note });
+                    
+                    // personelId ile kaydet
+                    if (pid) {
+                        if (!autoNotesData[pid]) autoNotesData[pid] = [];
+                        autoNotesData[pid].push({ id: doc.id, ...note });
+                    }
+                    
                     totalAutoRecords++;
                 }
             });
-            console.log(`[Puantaj] ${sube} için ${totalAutoRecords} otomatik kayıt bulundu (${startDate} - ${endDate})`);
+            console.log(`[Puantaj] ${sube} için ${totalAutoRecords} otomatik kayıt bulundu`);
             console.log('[Puantaj] autoNotesData keys:', Object.keys(autoNotesData));
         } catch (e) {
             console.error('Otomatik puanlar yüklenemedi:', e);
@@ -5796,8 +5821,34 @@ async function loadPuantaj() {
         personelSnapshot.forEach(doc => {
             const p = doc.data();
             const puanlar = puantajData[doc.id] || [];
-            // personelId ile de dene
-            const otomatikPuanlar = autoNotesData[doc.id] || autoNotesData[p.name] || [];
+            
+            // Otomatik puanları bul - ÇOKLU FORMAT EŞLEŞTİRME
+            const firstName = p.name?.split(' ')[0] || '';
+            const lastName = p.name?.split(' ').slice(1).join(' ') || '';
+            
+            // Tüm olası key formatlarını dene
+            const possibleKeys = [
+                doc.id,                                    // Firebase doc ID
+                p.name,                                    // Tam isim: "BÜŞRA SÖĞÜT"
+                p.name?.toLowerCase(),                     // Küçük harf: "büşra söğüt"
+                normalizeName(p.name),                     // Transliterate: "busra_sogut"
+                normalizeNameSeed(p.name),                 // Seed format: "b__ra_s____t"
+                firstName,                                 // İlk isim: "BÜŞRA"
+                firstName?.toLowerCase(),                  // Küçük: "büşra"
+                normalizeName(firstName),                  // Transliterate: "busra"
+                normalizeNameSeed(firstName),              // Seed: "b__ra"
+                `${firstName?.toLowerCase()?.charAt(0)}${lastName?.charAt(0)?.toLowerCase() || ''}`.trim(), // Kısaltma
+            ].filter(k => k);
+            
+            let otomatikPuanlar = [];
+            for (const key of possibleKeys) {
+                if (autoNotesData[key] && autoNotesData[key].length > 0) {
+                    otomatikPuanlar = autoNotesData[key];
+                    console.log(`[Puantaj] ${p.name} için eşleşme bulundu: key="${key}", ${otomatikPuanlar.length} kayıt`);
+                    break;
+                }
+            }
+            
             const kayitSayisi = puanlar.length;
             
             // === BİRLEŞİK PUAN HESAPLAMA ===
@@ -5906,9 +5957,9 @@ async function loadPuantaj() {
         window.puantajStats = { ortalama: ortalama.toFixed(1), stdSapma: stdSapma.toFixed(1), n };
         
         // Personel Kartları - Düzenli Grid, Marka Renkleri
-        const isMoonberry = sube.includes('Şişli') || sube.includes('Merkez');
-        const brandColor = isMoonberry ? '#008c95' : '#ff8674';
-        const brandBg = isMoonberry ? 'rgba(0,140,149,.08)' : 'rgba(255,134,116,.08)';
+        // Her iki şubede de Moonberry teal rengi
+        const brandColor = '#008c95';
+        const brandBg = 'rgba(0,140,149,.08)';
         
         // === AYLIK ŞAMPIYONLAR ===
         if (personelList.length > 1 && !isBarista) {
@@ -6023,7 +6074,7 @@ async function loadPuantaj() {
         
         // Bu Ay Kayıtlar
         html += `<div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:16px;padding:20px">`;
-        html += `<div style="font-weight:600;margin-bottom:16px;color:var(--tx);font-size:1rem;display:flex;align-items:center;gap:8px"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg> Bu Ay Kayıtları</div>`;
+        html += `<div style="font-weight:600;margin-bottom:16px;color:var(--tx);font-size:1rem;display:flex;align-items:center;gap:8px"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg> Yönetici Değerlendirmeleri</div>`;
         
         
         let hasRecords = false;
@@ -6033,22 +6084,26 @@ async function loadPuantaj() {
                 html += `<div style="margin-bottom:16px">`;
                 html += `<div style="font-size:.9rem;font-weight:600;color:var(--tx);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--cardBorder)">${p.name}</div>`;
                 p.puanlar.forEach(puan => {
+                    if (puan.type === 'prim_reset') return; // Prim sıfırlama kayıtlarını atla
                     const tarih = puan.createdAt?.toDate?.() ? puan.createdAt.toDate().toLocaleDateString('tr-TR') : '-';
                     const yildiz = puan.score || 3;
-                    const stars = '⭐'.repeat(yildiz);
+                    const stars = '★'.repeat(yildiz) + '☆'.repeat(5 - yildiz);
                     const isNegative = yildiz <= 3;
-                    // Yeni puan sistemi: 1★=-3, 2★=-2, 3★=-1, 4★=+1, 5★=+2
                     const puanEtki = yildiz === 1 ? '-3' : (yildiz === 2 ? '-2' : (yildiz === 3 ? '-1' : (yildiz === 5 ? '+2' : '+1')));
                     const bgColor = isNegative ? 'rgba(231,76,60,.08)' : 'rgba(39,174,96,.08)';
                     const borderColor = isNegative ? 'rgba(231,76,60,.2)' : 'rgba(39,174,96,.2)';
                     
+                    // Yönetici adını göster
+                    const yonetici = puan.createdBy || 'Bilinmiyor';
+                    const yoneticiKisa = yonetici.includes('@') ? yonetici.split('@')[0] : yonetici;
+                    
                     html += `
                         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:${bgColor};border:1px solid ${borderColor};border-radius:10px;margin-bottom:8px">
                             <div style="display:flex;align-items:center;gap:12px">
-                                <span style="font-size:.9rem">${stars}</span>
+                                <span style="font-size:.85rem;color:#f1c40f">${stars}</span>
                                 <div>
                                     <div style="color:var(--tx);font-size:.85rem;font-weight:500">${puan.note || '-'}</div>
-                                    <div style="color:var(--tx3);font-size:.75rem">${tarih}</div>
+                                    <div style="color:var(--tx3);font-size:.7rem">${tarih} · ${yoneticiKisa}</div>
                                 </div>
                             </div>
                             <div style="display:flex;align-items:center;gap:10px">
@@ -6120,8 +6175,7 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
         // Cache'e kaydet (detay modal için)
         window.autoNotesCache = { byDate: notesByDate, byPerson: notesByPerson, personelList };
         
-        const isMoonberry = sube.includes('Şişli') || sube.includes('Merkez');
-        const brandColor = isMoonberry ? '#008c95' : '#ff8674';
+        const brandColor = '#008c95';
         const canManagePoints = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
         
         // Gün adları
