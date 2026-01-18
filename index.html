@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
     <title>Moonberry Coffee | Yönetim Paneli</title>
-    <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/760af2_0e846222ae5b4021930a757e498f30e9~mv2.png">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%23ff8674'/%3E%3Cpath d='M30 65 Q35 40 50 35 Q65 40 70 65 Q60 70 50 68 Q40 70 30 65' fill='white'/%3E%3Ccircle cx='40' cy='50' r='4' fill='%23ff8674'/%3E%3Ccircle cx='60' cy='50' r='4' fill='%23ff8674'/%3E%3Cpath d='M45 58 Q50 62 55 58' stroke='%23ff8674' stroke-width='2' fill='none'/%3E%3C/svg%3E">
     <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/760af2_0e846222ae5b4021930a757e498f30e9~mv2.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <!-- pdfmake - Türkçe karakter desteği -->
@@ -16012,6 +16012,13 @@ async function loadChecklist() {
     const timeSlotGroup = document.getElementById('checklistTimeSlotGroup');
     const timeSlotSelect = document.getElementById('checklistTimeSlot');
     
+    // Saat seçimi GEREKTİRMEYEN türler - direkt yükle
+    const noTimeSlotTypes = ['acilis', 'kapanis', 'aylik', 'mudur', 'haftalik', 'temizlik'];
+    if (noTimeSlotTypes.includes(type) || noTimeSlotTypes.some(t => type.includes(t))) {
+        timeSlotGroup.style.display = 'none';
+        // Direkt checklist yükle - timeSlot olmadan
+    }
+    
     // Platform check için özel işlem - timeSlots olmadan direkt render
     if (type === 'platform') {
         timeSlotGroup.style.display = 'none';
@@ -16020,7 +16027,10 @@ async function loadChecklist() {
         return;
     }
     
-    if (timeSlots.length > 0) {
+    // Sadece gunluk/guncel için saat seçimi gerekli
+    const requiresTimeSlot = ['gunluk', 'guncel'].includes(type) && timeSlots.length > 0;
+    
+    if (requiresTimeSlot) {
         // Otomatik saat seçimi - mevcut saate göre uygun pencereyi bul
         const now = new Date();
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -16154,8 +16164,13 @@ async function loadChecklist() {
     </div>`;
     
     try {
-        // Type ID mapping - config'deki türler seed.html'deki türlerle eşleşmeyebilir
+        // Type ID mapping - seed.html ve index.html arasındaki farkları çöz
         const TYPE_ID_MAP = {
+            // seed.html → index.html uyumu
+            'guncel': 'guncel',       // seed.html'de guncel kullanılıyor
+            'gunluk': 'guncel',       // index.html'de gunluk deniyor ama guncel aranmalı
+            'gunluk_check': 'guncel',
+            'gunluk_genel': 'guncel',
             'aylik_temizlik': 'aylik',
             'temizlik_acilis': 'aylik',
             'temizlik_araci': 'aylik',
@@ -16163,57 +16178,49 @@ async function loadChecklist() {
             'temizlik_cizelgesi': 'aylik',
             'acilis_hazirlik': 'acilis',
             'kapanis_hazirlik': 'kapanis',
-            'gunluk_check': 'gunluk',
-            'gunluk_genel': 'gunluk',
             'mudur_kontrol': 'mudur',
             'platform_check': 'platform',
             'haftalik_gorev': 'haftalik'
         };
         
-        // Base type'ı bul (mapping veya underscore'dan önceki kısım)
-        let baseType = TYPE_ID_MAP[type] || type;
-        if (!TYPE_ID_MAP[type] && type.includes('_')) {
-            // Örn: "aylik_temizlik" -> "aylik", "temizlik_acilis" -> "temizlik"
-            const parts = type.split('_');
-            baseType = parts[0];
-        }
+        // Doğru Firebase belge ID'sini bul
+        const mappedType = TYPE_ID_MAP[type] || type;
+        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${mappedType}`;
         
-        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
-        const baseChecklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${baseType}`;
+        // Alternatif ID'ler - farklı kombinasyonları dene
+        const alternativeIds = [
+            checklistId,
+            `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`,
+            `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_guncel`, // gunluk→guncel
+            `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_gunluk`  // guncel→gunluk
+        ].filter((v, i, a) => a.indexOf(v) === i); // unique
+        
         let items = [];
+        let foundDocId = null;
         
-        // Önce Firebase'den çek - tam ID ile
-        try {
-            const checklistDoc = await db.collection('checklists').doc(checklistId).get();
-            if (checklistDoc.exists && checklistDoc.data().items?.length > 0) {
-                items = checklistDoc.data().items;
-                console.log(`✅ Checklist yüklendi: ${checklistId} (${items.length} madde)`);
-            }
-        } catch (dbError) {
-            console.warn('Firestore erişim hatası:', dbError);
-        }
-        
-        // Tam ID ile bulunamadıysa base ID ile dene
-        if (items.length === 0 && baseType !== type) {
+        // Tüm alternatif ID'leri dene
+        for (const docId of alternativeIds) {
+            if (items.length > 0) break;
             try {
-                const baseDoc = await db.collection('checklists').doc(baseChecklistId).get();
-                if (baseDoc.exists && baseDoc.data().items?.length > 0) {
-                    items = baseDoc.data().items;
-                    console.log(`✅ Checklist yüklendi (base): ${baseChecklistId} (${items.length} madde)`);
+                const checklistDoc = await db.collection('checklists').doc(docId).get();
+                if (checklistDoc.exists && checklistDoc.data().items?.length > 0) {
+                    items = checklistDoc.data().items;
+                    foundDocId = docId;
+                    console.log(`✅ Checklist yüklendi: ${docId} (${items.length} madde)`);
                 }
             } catch (dbError) {
-                console.warn('Base checklist erişim hatası:', dbError);
+                console.warn(`Checklist bulunamadı: ${docId}`);
             }
         }
         
         // Firebase'de yoksa default maddeleri kullan ve kaydet (ilk kurulum)
         if (items.length === 0) {
-            items = getDefaultChecklistItems(branch, type) || getDefaultChecklistItems(branch, baseType);
+            items = getDefaultChecklistItems(branch, type) || getDefaultChecklistItems(branch, mappedType);
             if (items.length > 0) {
                 try {
                     await db.collection('checklists').doc(checklistId).set({
                         branch,
-                        type,
+                        type: mappedType,
                         items,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
@@ -18223,7 +18230,7 @@ function getDefaultChecklistItems(branch, type) {
     const checkType = ['aylik', 'temizlik'].includes(baseType) ? 'aylik' : 
                       ['acilis', 'hazirlik'].includes(baseType) ? 'acilis' : 
                       ['kapanis'].includes(baseType) ? 'kapanis' : 
-                      ['gunluk', 'check'].includes(baseType) ? 'gunluk' : 
+                      ['gunluk', 'guncel', 'check'].includes(baseType) ? 'guncel' : 
                       baseType;
     
     // Açılış Hazırlıkları
@@ -18262,8 +18269,8 @@ function getDefaultChecklistItems(branch, type) {
         ];
     }
     
-    // Günlük Check
-    if (checkType === 'gunluk') {
+    // Günlük/Güncel Check
+    if (checkType === 'gunluk' || checkType === 'guncel') {
         return [
             { id: 'gun_01', text: 'Espresso makinesi durumu kontrol edildi', category: 'Ekipman' },
             { id: 'gun_02', text: 'Kahve kalitesi test edildi', category: 'Kalite' },
