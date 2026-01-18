@@ -1,0 +1,95 @@
+<!-- Sözleşme Page -->
+<div class="page-header">
+    <h1 class="page-title">📄 İş Sözleşmesi</h1>
+    <p class="page-subtitle">Belirsiz veya belirli süreli iş sözleşmesi oluşturun</p>
+</div>
+
+<div class="form-container">
+    <div class="form-section">
+        <h3>👤 Personel Bilgileri</h3>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Personel Seçin *</label>
+                <select id="sozlesmePersonel" onchange="fillPersonelInfo('sozlesme')">
+                    <option value="">Seçiniz...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Ad Soyad</label>
+                <input type="text" id="sozlesmeAdSoyad" placeholder="Otomatik doldurulacak">
+            </div>
+            <div class="form-group">
+                <label>TC Kimlik No</label>
+                <input type="text" id="sozlesmeTcNo" maxlength="11">
+            </div>
+            <div class="form-group">
+                <label>Doğum Tarihi</label>
+                <input type="date" id="sozlesmeDogumTarihi">
+            </div>
+            <div class="form-group full">
+                <label>Adres</label>
+                <textarea id="sozlesmeAdres" rows="2"></textarea>
+            </div>
+        </div>
+    </div>
+    
+    <div class="form-section">
+        <h3>📋 Sözleşme Bilgileri</h3>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Sözleşme Türü *</label>
+                <select id="sozlesmeTuru">
+                    <option value="belirsiz">Belirsiz Süreli</option>
+                    <option value="belirli">Belirli Süreli</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>İşe Başlama Tarihi *</label>
+                <input type="date" id="sozlesmeBaslama">
+            </div>
+            <div class="form-group">
+                <label>Pozisyon *</label>
+                <select id="sozlesmePozisyon">
+                    <option value="barista">Barista</option>
+                    <option value="kasaci">Kasacı</option>
+                    <option value="magaza_muduru">Mağaza Müdürü</option>
+                    <option value="part_time">Part-Time</option>
+                    <option value="stajyer">Stajyer</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Şube *</label>
+                <select id="sozlesmeSube"></select>
+            </div>
+            <div class="form-group">
+                <label>Brüt Maaş (TL)</label>
+                <input type="number" id="sozlesmeMaas" placeholder="0.00">
+            </div>
+            <div class="form-group">
+                <label>Haftalık Çalışma Saati</label>
+                <input type="number" id="sozlesmeSaat" value="45">
+            </div>
+        </div>
+    </div>
+    
+    <div class="form-actions">
+        <button class="btn btn-secondary" onclick="clearForm('sozlesme')">🗑️ Temizle</button>
+        <button class="btn btn-secondary" onclick="previewDocument('sozlesme')">👁️ Önizle</button>
+        <button class="btn btn-primary" onclick="generateDocument('sozlesme')">📄 PDF Oluştur</button>
+    </div>
+</div>
+
+<style>
+.form-container{background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:14px;padding:25px}
+.form-section{margin-bottom:25px;padding-bottom:20px;border-bottom:1px solid var(--cardBorder)}
+.form-section:last-of-type{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.form-section h3{margin:0 0 15px;font-size:1rem;color:var(--tx)}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group.full{grid-column:1/-1}
+.form-group label{font-size:.85rem;color:var(--tx2);font-weight:500}
+.form-group input,.form-group select,.form-group textarea{padding:10px 12px;border:1px solid var(--cardBorder);border-radius:8px;background:var(--bg);color:var(--tx);font-size:.9rem}
+.form-group textarea{resize:vertical}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--accent)}
+.form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:20px;border-top:1px solid var(--cardBorder)}
+</style>

@@ -1,0 +1,29 @@
+<!-- Savunma İstem Page -->
+<div class="page-header">
+    <h1 class="page-title">📝 Savunma İstem</h1>
+    <p class="page-subtitle">Personelden yazılı savunma talep edin</p>
+</div>
+<div class="form-container">
+    <div class="form-section">
+        <h3>👤 Personel Bilgileri</h3>
+        <div class="form-grid">
+            <div class="form-group"><label>Personel *</label><select id="savunmaPersonel" onchange="fillPersonelInfo('savunma')"><option value="">Seçiniz...</option></select></div>
+            <div class="form-group"><label>Tarih *</label><input type="date" id="savunmaTarih"></div>
+            <div class="form-group"><label>Şube *</label><select id="savunmaSube"></select></div>
+        </div>
+    </div>
+    <div class="form-section">
+        <h3>📝 Savunma Konusu</h3>
+        <div class="form-grid">
+            <div class="form-group"><label>Olay Tarihi *</label><input type="date" id="savunmaOlayTarihi"></div>
+            <div class="form-group full"><label>Savunma Konusu *</label><textarea id="savunmaKonu" rows="4" placeholder="Savunma istenen konu..."></textarea></div>
+            <div class="form-group"><label>Savunma Süresi (Gün)</label><input type="number" id="savunmaSure" value="3"></div>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button class="btn btn-secondary" onclick="clearForm('savunma')">🗑️ Temizle</button>
+        <button class="btn btn-secondary" onclick="previewDocument('savunma')">👁️ Önizle</button>
+        <button class="btn btn-primary" onclick="generateDocument('savunma')">📄 PDF Oluştur</button>
+    </div>
+</div>
+<style>.form-container{background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:14px;padding:25px}.form-section{margin-bottom:25px;padding-bottom:20px;border-bottom:1px solid var(--cardBorder)}.form-section:last-of-type{border-bottom:none}.form-section h3{margin:0 0 15px;font-size:1rem}.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px}.form-group{display:flex;flex-direction:column;gap:6px}.form-group.full{grid-column:1/-1}.form-group label{font-size:.85rem;color:var(--tx2)}.form-group input,.form-group select,.form-group textarea{padding:10px 12px;border:1px solid var(--cardBorder);border-radius:8px;background:var(--bg);color:var(--tx)}.form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:20px;border-top:1px solid var(--cardBorder)}</style>

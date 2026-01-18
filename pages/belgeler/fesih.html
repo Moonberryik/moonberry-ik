@@ -1,0 +1,31 @@
+<!-- Fesih Bildirimi Page -->
+<div class="page-header">
+    <h1 class="page-title">📑 Fesih Bildirimi</h1>
+    <p class="page-subtitle">İş sözleşmesi fesih bildirimi oluşturun</p>
+</div>
+<div class="form-container">
+    <div class="form-section">
+        <h3>👤 Personel Bilgileri</h3>
+        <div class="form-grid">
+            <div class="form-group"><label>Personel *</label><select id="fesihPersonel" onchange="fillPersonelInfo('fesih')"><option value="">Seçiniz...</option></select></div>
+            <div class="form-group"><label>Fesih Tarihi *</label><input type="date" id="fesihTarih"></div>
+            <div class="form-group"><label>Son Çalışma Tarihi</label><input type="date" id="fesihSonTarih"></div>
+        </div>
+    </div>
+    <div class="form-section">
+        <h3>📋 Fesih Detayları</h3>
+        <div class="form-grid">
+            <div class="form-group"><label>Fesih Türü *</label><select id="fesihTuru"><option value="ihbarli">İhbarlı Fesih</option><option value="ihbarsiz">İhbarsız Fesih</option><option value="hakli">Haklı Nedenle Fesih</option></select></div>
+            <div class="form-group"><label>İhbar Süresi (Gün)</label><input type="number" id="fesihIhbar" value="14"></div>
+            <div class="form-group full"><label>Fesih Gerekçesi *</label><textarea id="fesihGerekce" rows="4" placeholder="Fesih gerekçesini yazınız..."></textarea></div>
+            <div class="form-group"><label>Kıdem Tazminatı</label><input type="checkbox" id="fesihKidem"> <span>Ödenecek</span></div>
+            <div class="form-group"><label>İhbar Tazminatı</label><input type="checkbox" id="fesihIhbarTaz"> <span>Ödenecek</span></div>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button class="btn btn-secondary" onclick="clearForm('fesih')">🗑️ Temizle</button>
+        <button class="btn btn-secondary" onclick="previewDocument('fesih')">👁️ Önizle</button>
+        <button class="btn btn-primary" onclick="generateDocument('fesih')">📄 PDF Oluştur</button>
+    </div>
+</div>
+<style>.form-container{background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:14px;padding:25px}.form-section{margin-bottom:25px;padding-bottom:20px;border-bottom:1px solid var(--cardBorder)}.form-section:last-of-type{border-bottom:none}.form-section h3{margin:0 0 15px;font-size:1rem}.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px}.form-group{display:flex;flex-direction:column;gap:6px}.form-group.full{grid-column:1/-1}.form-group label{font-size:.85rem;color:var(--tx2)}.form-group input,.form-group select,.form-group textarea{padding:10px 12px;border:1px solid var(--cardBorder);border-radius:8px;background:var(--bg);color:var(--tx)}.form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:20px;border-top:1px solid var(--cardBorder)}</style>
