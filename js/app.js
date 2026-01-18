@@ -539,6 +539,9 @@ async function initApp() {
     // Dashboard'ı yükle
     await router.loadPage('dashboard');
     
+    // Uygulamayı görünür yap
+    document.querySelector('.app').style.opacity = '1';
+    
     console.log('[App] Uygulama hazır');
 }
 
