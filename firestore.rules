@@ -156,5 +156,11 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
     
+    // Sistem Config
+    match /systemConfig/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isManager();
+    }
+    
   }
 }
