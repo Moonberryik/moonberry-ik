@@ -2498,6 +2498,11 @@ async function getPersonelDisplayNameFromList(searchKey, branch) {
                 const data = doc.data();
                 const displayName = getPersonelDisplayName(data);
                 const uniqueId = data.uniqueId || normalizePersonelId(data.name);
+                
+                // Underscore formatı oluştur (örn: "baran_akdemir")
+                const underscoreName = data.name?.toLowerCase().replace(/\s+/g, '_').replace(/[ğ]/g, 'g').replace(/[ü]/g, 'u').replace(/[ş]/g, 's').replace(/[ı]/g, 'i').replace(/[ö]/g, 'o').replace(/[ç]/g, 'c');
+                const underscoreCodeName = data.codeName?.toLowerCase().replace(/\s+/g, '_').replace(/[ğ]/g, 'g').replace(/[ü]/g, 'u').replace(/[ş]/g, 's').replace(/[ı]/g, 'i').replace(/[ö]/g, 'o').replace(/[ç]/g, 'c');
+                
                 const keys = [
                     data.name,
                     data.name?.toLowerCase(),
@@ -2518,6 +2523,9 @@ async function getPersonelDisplayNameFromList(searchKey, branch) {
                     normalizeTurkishChars(data.codeName),
                     normalizeTurkishChars(data.name?.split(' ')[0]),
                     normalizeTurkishChars(data.codeName?.split(' ')[0]),
+                    // Underscore formatları (shift'ten gelen)
+                    underscoreName,
+                    underscoreCodeName,
                 ].filter(k => k);
                 
                 keys.forEach(key => {
@@ -2538,12 +2546,16 @@ async function getPersonelDisplayNameFromList(searchKey, branch) {
         }
     }
     
+    // Underscore formatına çevir (arama için)
+    const underscoreSearch = searchKey?.toLowerCase().replace(/\s+/g, '_').replace(/[ğ]/g, 'g').replace(/[ü]/g, 'u').replace(/[ş]/g, 's').replace(/[ı]/g, 'i').replace(/[ö]/g, 'o').replace(/[ç]/g, 'c');
+    
     // Cache'ten ara
     const result = _personelDisplayCache.get(searchKey) || 
                    _personelDisplayCache.get(searchKey?.toLowerCase()) ||
                    _personelDisplayCache.get(searchKey?.toUpperCase()) ||
                    _personelDisplayCache.get(normalizeTurkishChars(searchKey)) ||
-                   _personelDisplayCache.get(normalizePersonelId(searchKey));
+                   _personelDisplayCache.get(normalizePersonelId(searchKey)) ||
+                   _personelDisplayCache.get(underscoreSearch);
     
     if (result && (!branch || result.branch === branch)) {
         return result.displayName;
@@ -16460,13 +16472,15 @@ async function loadChecklist() {
                                 }
                             } else {
                                 // Saat formatı bulunamazsa vardiya tipine göre karar ver
-                                // A (Açılış): 08:00-17:00 arası çalışır
-                                // K (Kapanış): 15:00-24:00 arası çalışır  
+                                // Tuzla mesai: 10:00-01:00, Vardiya 9 saat (8+1 mola)
+                                // A (Açılış): 10:00-19:00 arası çalışır
+                                // K (Kapanış): 16:00-01:00 arası çalışır (gece geçer)
                                 // Aracı: 12:00-21:00 arası çalışır
                                 if (cleanShift === 'A' || cleanShift === 'AÇILIŞ') {
-                                    if (checkHour >= 8 && checkHour < 17) rawPersonnel.push(name);
+                                    if (checkHour >= 10 && checkHour < 19) rawPersonnel.push(name);
                                 } else if (cleanShift === 'K' || cleanShift === 'KAPANIŞ') {
-                                    if (checkHour >= 15 && checkHour <= 23) rawPersonnel.push(name);
+                                    // Kapanışçı gece yarısını geçiyor
+                                    if (checkHour >= 16 || checkHour < 2) rawPersonnel.push(name);
                                 } else if (cleanShift.includes('ARACI') || cleanShift === 'ORTA') {
                                     if (checkHour >= 12 && checkHour < 21) rawPersonnel.push(name);
                                 } else {
@@ -16622,10 +16636,13 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                 <div id="editToolbar" style="position:sticky;top:60px;z-index:99;margin-bottom:16px;padding:12px 16px;background:var(--bg);border:1px solid var(--cardBorder);border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.08)">
                     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
                         <div style="font-size:.85rem;color:var(--tx);display:flex;align-items:center;gap:8px">
-                            <span style="font-size:1.1rem">📝</span>
-                            <strong>Düzenleme Modu</strong>
-                            <span id="editedItemsCount" style="display:none;padding:4px 10px;background:#f39c12;color:#fff;border-radius:12px;font-size:.75rem">0 değişiklik</span>
+                            <button class="btn btn-sm ${checklistEditMode ? 'btn-primary' : 'btn-ghost'}" onclick="toggleChecklistEditMode('${branch}', '${type}', '${date}', '${timeSlot}')" style="display:flex;align-items:center;gap:4px">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                ${checklistEditMode ? 'Düzenlemeyi Kapat' : 'Maddeleri Düzenle'}
+                            </button>
+                            ${checklistEditMode ? `<span id="editedItemsCount" style="display:none;padding:4px 10px;background:#f39c12;color:#fff;border-radius:12px;font-size:.75rem">0 değişiklik</span>` : ''}
                         </div>
+                        ${checklistEditMode ? `
                         <div style="display:flex;gap:8px;flex-wrap:wrap">
                             <button class="btn btn-sm" style="background:#27ae60;color:#fff;display:flex;align-items:center;gap:4px" onclick="saveAllChecklistItemEdits('${branch}', '${type}')" id="saveEditsBtn">
                                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -16645,6 +16662,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                                 Seçilenleri Sil
                             </button>
                         </div>
+                        ` : ''}
                     </div>
                 </div>
             ` : ''}
