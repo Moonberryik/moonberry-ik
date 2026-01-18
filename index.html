@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
     <title>Moonberry Coffee | Yönetim Paneli</title>
+    <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/760af2_755f54f13b654f1bb318c97f16a029a3~mv2.png/v1/fill/w_32,h_32,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Moonberry%20Coffee%20Logo.png">
+    <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/760af2_755f54f13b654f1bb318c97f16a029a3~mv2.png/v1/fill/w_180,h_180,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Moonberry%20Coffee%20Logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <!-- pdfmake - Türkçe karakter desteği -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
@@ -1531,6 +1533,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">Oturumlar</button>
                     <button class="admin-tab" onclick="showAdminTab('magazaSaatleri',this)">Mağaza Saatleri</button>
                     <button class="admin-tab" onclick="showAdminTab('checkKurallari',this)">Check Kuralları</button>
+                    <button class="admin-tab" onclick="showAdminTab('checklistTurleri',this)">Checklist Türleri</button>
                     <button class="admin-tab" onclick="showAdminTab('puantajKurallar',this)">Puantaj Kuralları</button>
                     <button class="admin-tab" onclick="showAdminTab('subeler',this)">Şubeler</button>
                     <button class="admin-tab" onclick="showAdminTab('pozisyonlar',this)">Pozisyonlar</button>
@@ -1753,6 +1756,81 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <div class="form-group">
                                 <label class="form-label">Kaçırılmış Mesaj</label>
                                 <input type="text" class="form-input" id="dashboardMsgMissed" placeholder="örn: Maalesef kaçırıldı" value="Kaçırıldı">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Checklist Türleri Yönetimi -->
+                <div class="admin-section" id="admin-checklistTurleri">
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>
+                                Checklist Türleri Yönetimi
+                            </div>
+                            <div style="display:flex;gap:8px">
+                                <button class="btn btn-sm btn-ghost" onclick="loadChecklistTypesConfig()" style="display:flex;align-items:center;gap:4px">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                                    Yenile
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="saveChecklistTypesConfig()" style="display:flex;align-items:center;gap:4px">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                    Kaydet
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div style="background:linear-gradient(135deg,rgba(0,140,149,.08),rgba(0,140,149,.02));border:1px solid rgba(0,140,149,.15);border-radius:12px;padding:16px;margin-bottom:24px">
+                            <div style="font-size:.85rem;color:var(--tx2);line-height:1.5">
+                                Her şube için checklist türlerini düzenleyebilirsiniz. Türlerin <strong>isimlerini</strong>, <strong>ikonlarını</strong> ve <strong>sıralamalarını</strong> değiştirebilirsiniz. 
+                                Bu değişiklikler dashboard ve checklist sayfalarında görünür.
+                            </div>
+                        </div>
+                        
+                        <!-- Şube Seçimi -->
+                        <div style="display:flex;gap:12px;margin-bottom:20px">
+                            <button class="checklist-branch-tab active" onclick="selectChecklistTypeBranch('Tuzla Port')" data-branch="Tuzla Port" style="flex:1;padding:12px 16px;border:2px solid var(--bg4);background:var(--bg3);border-radius:10px;cursor:pointer;font-weight:600;color:var(--tx);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px">
+                                <span style="width:10px;height:10px;background:#ff8674;border-radius:50%"></span>
+                                Tuzla Port
+                            </button>
+                            <button class="checklist-branch-tab" onclick="selectChecklistTypeBranch('Şişli (Merkez)')" data-branch="Şişli (Merkez)" style="flex:1;padding:12px 16px;border:2px solid var(--bg4);background:var(--bg3);border-radius:10px;cursor:pointer;font-weight:600;color:var(--tx);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px">
+                                <span style="width:10px;height:10px;background:#008c95;border-radius:50%"></span>
+                                Şişli (Merkez)
+                            </button>
+                        </div>
+                        
+                        <!-- Checklist Türleri Listesi -->
+                        <div id="checklistTypesContainer" style="display:grid;gap:12px">
+                            <!-- Dinamik olarak doldurulacak -->
+                        </div>
+                        
+                        <!-- Yeni Tür Ekleme -->
+                        <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--bg4)">
+                            <div style="font-weight:600;color:var(--tx);margin-bottom:12px">Yeni Checklist Türü Ekle</div>
+                            <div style="display:grid;grid-template-columns:1fr 150px 120px auto;gap:12px;align-items:end">
+                                <div class="form-group" style="margin:0">
+                                    <label class="form-label">Tür Adı</label>
+                                    <input type="text" class="form-input" id="newChecklistTypeName" placeholder="örn: Haftalık Görevler">
+                                </div>
+                                <div class="form-group" style="margin:0">
+                                    <label class="form-label">Tür ID</label>
+                                    <input type="text" class="form-input" id="newChecklistTypeId" placeholder="örn: haftalik">
+                                </div>
+                                <div class="form-group" style="margin:0">
+                                    <label class="form-label">İkon</label>
+                                    <select class="form-select" id="newChecklistTypeIcon">
+                                        <option value="clipboard-check">📋 Checklist</option>
+                                        <option value="sunrise">🌅 Açılış</option>
+                                        <option value="sunset">🌆 Kapanış</option>
+                                        <option value="smartphone">📱 Platform</option>
+                                        <option value="user-check">👤 Müdür</option>
+                                        <option value="calendar">📆 Takvim</option>
+                                        <option value="calendar-week">📅 Haftalık</option>
+                                        <option value="sparkle">✨ Temizlik</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-primary" onclick="addNewChecklistType()" style="height:42px">Ekle</button>
                             </div>
                         </div>
                     </div>
@@ -5244,6 +5322,7 @@ function switchAdminTab(tab, btn) {
     if (tab === 'aktiviteler') loadActivityLogs();
     if (tab === 'magazaSaatleri') renderBranchHoursSettings();
     if (tab === 'checkKurallari') renderCheckRulesSettings();
+    if (tab === 'checklistTurleri') loadChecklistTypesConfig();
     if (tab === 'tumCheckler') {
         populateSubeSelect('allChecksBranchFilter', true);
         loadAllChecksOverview();
@@ -14493,6 +14572,230 @@ async function saveBranchHours() {
     } catch (e) {
         console.error('Kayıt hatası:', e);
         toast('Kayıt hatası!', 'error');
+    }
+}
+
+// ==================== ADMIN - CHECKLIST TÜRLERİ YÖNETİMİ ====================
+
+let selectedChecklistTypeBranch = 'Tuzla Port';
+let checklistTypesData = {};
+
+// Checklist türlerini Firebase'den yükle
+async function loadChecklistTypesConfig() {
+    try {
+        const doc = await db.collection('config').doc('checklistTypes').get();
+        if (doc.exists) {
+            const data = doc.data();
+            checklistTypesData = {};
+            for (const [key, value] of Object.entries(data)) {
+                if (Array.isArray(value)) {
+                    checklistTypesData[key] = value;
+                }
+            }
+        } else {
+            // Varsayılan türler
+            checklistTypesData = {
+                'Tuzla Port': [
+                    {id: 'acilis', name: 'Açılış', icon: 'sunrise'},
+                    {id: 'kapanis', name: 'Kapanış', icon: 'sunset'},
+                    {id: 'gunluk', name: 'Günlük Check', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
+                    {id: 'mudur', name: 'Müdür Kontrol', icon: 'user-check', managerOnly: true},
+                    {id: 'platform', name: 'Platform Check', icon: 'smartphone'},
+                    {id: 'haftalik', name: 'Haftalık Görevler', icon: 'calendar-week'},
+                    {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
+                ],
+                'Şişli (Merkez)': [
+                    {id: 'acilis', name: 'Açılış', icon: 'sunrise'},
+                    {id: 'kapanis', name: 'Kapanış', icon: 'sunset'},
+                    {id: 'gunluk', name: 'Günlük Check', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
+                    {id: 'mudur', name: 'Müdür Kontrol', icon: 'user-check', managerOnly: true},
+                    {id: 'platform', name: 'Platform Check', icon: 'smartphone'},
+                    {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
+                ]
+            };
+        }
+        renderChecklistTypes();
+    } catch (e) {
+        console.error('Checklist türleri yüklenemedi:', e);
+        showToast('Checklist türleri yüklenemedi', 'error');
+    }
+}
+
+// Şube seçimi
+function selectChecklistTypeBranch(branch) {
+    selectedChecklistTypeBranch = branch;
+    
+    // Tab stillerini güncelle
+    document.querySelectorAll('.checklist-branch-tab').forEach(tab => {
+        const isActive = tab.dataset.branch === branch;
+        tab.classList.toggle('active', isActive);
+        tab.style.borderColor = isActive ? (branch.includes('Şişli') ? '#008c95' : '#ff8674') : 'var(--bg4)';
+        tab.style.background = isActive ? (branch.includes('Şişli') ? 'rgba(0,140,149,.1)' : 'rgba(255,134,116,.1)') : 'var(--bg3)';
+    });
+    
+    renderChecklistTypes();
+}
+
+// Checklist türlerini render et
+function renderChecklistTypes() {
+    const container = document.getElementById('checklistTypesContainer');
+    if (!container) return;
+    
+    const types = checklistTypesData[selectedChecklistTypeBranch] || [];
+    const isMoonberry = selectedChecklistTypeBranch.includes('Şişli');
+    const brandColor = isMoonberry ? '#008c95' : '#ff8674';
+    
+    const iconMap = {
+        'sunrise': '🌅',
+        'sunset': '🌆',
+        'clipboard-check': '📋',
+        'user-check': '👤',
+        'smartphone': '📱',
+        'calendar': '📆',
+        'calendar-week': '📅',
+        'sparkle': '✨'
+    };
+    
+    if (types.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center;padding:40px;color:var(--tx3)">
+                <div style="font-size:2rem;margin-bottom:12px">📋</div>
+                <div>Bu şube için checklist türü tanımlanmamış</div>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = types.map((type, idx) => `
+        <div class="checklist-type-card" style="background:var(--bg3);border:1px solid var(--bg4);border-radius:12px;padding:16px;display:flex;align-items:center;gap:16px;transition:all .2s" data-id="${type.id}" draggable="true">
+            <div style="cursor:grab;color:var(--tx3);padding:4px" title="Sürükle">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></svg>
+            </div>
+            <div style="width:40px;height:40px;background:linear-gradient(135deg,${brandColor}22,${brandColor}11);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">
+                ${iconMap[type.icon] || '📋'}
+            </div>
+            <div style="flex:1">
+                <input type="text" class="form-input" value="${type.name}" onchange="updateChecklistTypeName('${type.id}', this.value)" style="font-weight:600;background:transparent;border:none;padding:0;font-size:.95rem;color:var(--tx);width:100%">
+                <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                    <span style="font-size:.7rem;color:var(--tx3);background:var(--bg4);padding:2px 8px;border-radius:4px">${type.id}</span>
+                    ${type.managerOnly ? '<span style="font-size:.65rem;color:#f39c12;background:rgba(243,156,18,.1);padding:2px 8px;border-radius:4px">Sadece Yönetici</span>' : ''}
+                    ${type.timeSlots ? `<span style="font-size:.65rem;color:var(--tx3)">${type.timeSlots.length} saat dilimi</span>` : ''}
+                </div>
+            </div>
+            <select class="form-select" style="width:130px" onchange="updateChecklistTypeIcon('${type.id}', this.value)">
+                <option value="clipboard-check" ${type.icon === 'clipboard-check' ? 'selected' : ''}>📋 Checklist</option>
+                <option value="sunrise" ${type.icon === 'sunrise' ? 'selected' : ''}>🌅 Açılış</option>
+                <option value="sunset" ${type.icon === 'sunset' ? 'selected' : ''}>🌆 Kapanış</option>
+                <option value="smartphone" ${type.icon === 'smartphone' ? 'selected' : ''}>📱 Platform</option>
+                <option value="user-check" ${type.icon === 'user-check' ? 'selected' : ''}>👤 Müdür</option>
+                <option value="calendar" ${type.icon === 'calendar' ? 'selected' : ''}>📆 Takvim</option>
+                <option value="calendar-week" ${type.icon === 'calendar-week' ? 'selected' : ''}>📅 Haftalık</option>
+                <option value="sparkle" ${type.icon === 'sparkle' ? 'selected' : ''}>✨ Temizlik</option>
+            </select>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.8rem;color:var(--tx2)">
+                <input type="checkbox" ${type.managerOnly ? 'checked' : ''} onchange="updateChecklistTypeManager('${type.id}', this.checked)" style="width:16px;height:16px;accent-color:${brandColor}">
+                Yönetici
+            </label>
+            <button onclick="deleteChecklistType('${type.id}')" style="background:none;border:none;cursor:pointer;color:var(--tx3);padding:8px;border-radius:8px;transition:all .2s" onmouseover="this.style.background='rgba(231,76,60,.1)';this.style.color='#e74c3c'" onmouseout="this.style.background='none';this.style.color='var(--tx3)'" title="Sil">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+        </div>
+    `).join('');
+}
+
+// Checklist türü adını güncelle
+function updateChecklistTypeName(typeId, newName) {
+    const types = checklistTypesData[selectedChecklistTypeBranch] || [];
+    const type = types.find(t => t.id === typeId);
+    if (type) {
+        type.name = newName;
+    }
+}
+
+// Checklist türü ikonunu güncelle
+function updateChecklistTypeIcon(typeId, newIcon) {
+    const types = checklistTypesData[selectedChecklistTypeBranch] || [];
+    const type = types.find(t => t.id === typeId);
+    if (type) {
+        type.icon = newIcon;
+        renderChecklistTypes();
+    }
+}
+
+// Checklist türü yönetici özelliğini güncelle
+function updateChecklistTypeManager(typeId, isManager) {
+    const types = checklistTypesData[selectedChecklistTypeBranch] || [];
+    const type = types.find(t => t.id === typeId);
+    if (type) {
+        type.managerOnly = isManager;
+    }
+}
+
+// Yeni checklist türü ekle
+function addNewChecklistType() {
+    const name = document.getElementById('newChecklistTypeName').value.trim();
+    const id = document.getElementById('newChecklistTypeId').value.trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const icon = document.getElementById('newChecklistTypeIcon').value;
+    
+    if (!name || !id) {
+        showToast('Tür adı ve ID gerekli', 'warning');
+        return;
+    }
+    
+    if (!checklistTypesData[selectedChecklistTypeBranch]) {
+        checklistTypesData[selectedChecklistTypeBranch] = [];
+    }
+    
+    // ID kontrolü
+    if (checklistTypesData[selectedChecklistTypeBranch].some(t => t.id === id)) {
+        showToast('Bu ID zaten kullanılıyor', 'warning');
+        return;
+    }
+    
+    checklistTypesData[selectedChecklistTypeBranch].push({
+        id: id,
+        name: name,
+        icon: icon
+    });
+    
+    // Inputları temizle
+    document.getElementById('newChecklistTypeName').value = '';
+    document.getElementById('newChecklistTypeId').value = '';
+    
+    renderChecklistTypes();
+    showToast('Yeni tür eklendi', 'success');
+}
+
+// Checklist türü sil
+function deleteChecklistType(typeId) {
+    if (!confirm('Bu checklist türünü silmek istediğinize emin misiniz?')) return;
+    
+    const types = checklistTypesData[selectedChecklistTypeBranch] || [];
+    const idx = types.findIndex(t => t.id === typeId);
+    if (idx > -1) {
+        types.splice(idx, 1);
+        renderChecklistTypes();
+        showToast('Tür silindi', 'success');
+    }
+}
+
+// Checklist türlerini Firebase'e kaydet
+async function saveChecklistTypesConfig() {
+    try {
+        await db.collection('config').doc('checklistTypes').set({
+            ...checklistTypesData,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // Global CHECKLIST_TYPES'ı da güncelle
+        for (const [branch, types] of Object.entries(checklistTypesData)) {
+            CHECKLIST_TYPES[branch] = types;
+        }
+        
+        showToast('Checklist türleri kaydedildi', 'success');
+    } catch (e) {
+        console.error('Checklist türleri kaydedilemedi:', e);
+        showToast('Kaydetme hatası: ' + e.message, 'error');
     }
 }
 
