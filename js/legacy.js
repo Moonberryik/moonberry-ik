@@ -11003,32 +11003,42 @@ async function updateDashboardCheckCards() {
             }
         }
         
+        // UI Güncelle - Güvenli helper fonksiyon
+        const safeUpdate = (id, property, value) => {
+            const el = document.getElementById(id);
+            if (el) {
+                if (property === 'style.width') el.style.width = value;
+                else if (property === 'textContent') el.textContent = value;
+            }
+        };
+        
         // UI Güncelle - Checklist
         const checklistProgress = checklistTotal > 0 ? Math.round((checklistDone / checklistTotal) * 100) : 0;
-        document.getElementById('checklistProgressFill').style.width = checklistProgress + '%';
-        document.getElementById('checklistDoneCount').textContent = checklistDone + ' tamamlandı';
-        document.getElementById('checklistRemainingCount').textContent = (checklistTotal - checklistDone) + ' bekliyor';
-        document.getElementById('checklistStatusText').textContent = checklistProgress === 100 ? 'Tamamlandı ✓' : `${checklistProgress}% tamamlandı`;
+        safeUpdate('checklistProgressFill', 'style.width', checklistProgress + '%');
+        safeUpdate('checklistDoneCount', 'textContent', checklistDone + ' tamamlandı');
+        safeUpdate('checklistRemainingCount', 'textContent', (checklistTotal - checklistDone) + ' bekliyor');
+        safeUpdate('checklistStatusText', 'textContent', checklistProgress === 100 ? 'Tamamlandı ✓' : `${checklistProgress}% tamamlandı`);
         
         // UI Güncelle - Temizlik
         const temizlikProgress = temizlikTotal > 0 ? Math.round((temizlikDone / temizlikTotal) * 100) : 0;
-        document.getElementById('temizlikProgressFill').style.width = temizlikProgress + '%';
-        document.getElementById('temizlikDoneCount').textContent = temizlikDone + ' tamamlandı';
-        document.getElementById('temizlikRemainingCount').textContent = (temizlikTotal - temizlikDone) + ' bekliyor';
-        document.getElementById('temizlikStatusText').textContent = temizlikProgress === 100 ? 'Tamamlandı ✓' : `${temizlikProgress}% tamamlandı`;
+        safeUpdate('temizlikProgressFill', 'style.width', temizlikProgress + '%');
+        safeUpdate('temizlikDoneCount', 'textContent', temizlikDone + ' tamamlandı');
+        safeUpdate('temizlikRemainingCount', 'textContent', (temizlikTotal - temizlikDone) + ' bekliyor');
+        safeUpdate('temizlikStatusText', 'textContent', temizlikProgress === 100 ? 'Tamamlandı ✓' : `${temizlikProgress}% tamamlandı`);
         
         // UI Güncelle - Platform
         const platformProgress = platformTotal > 0 ? Math.round((platformDone / platformTotal) * 100) : 0;
-        document.getElementById('platformProgressFill').style.width = platformProgress + '%';
-        document.getElementById('platformDoneCount').textContent = platformDone + ' tamamlandı';
-        document.getElementById('platformRemainingCount').textContent = (platformTotal - platformDone) + ' bekliyor';
-        document.getElementById('platformStatusText').textContent = platformProgress === 100 ? 'Tamamlandı ✓' : `${platformProgress}% tamamlandı`;
+        safeUpdate('platformProgressFill', 'style.width', platformProgress + '%');
+        safeUpdate('platformDoneCount', 'textContent', platformDone + ' tamamlandı');
+        safeUpdate('platformRemainingCount', 'textContent', (platformTotal - platformDone) + ' bekliyor');
+        safeUpdate('platformStatusText', 'textContent', platformProgress === 100 ? 'Tamamlandı ✓' : `${platformProgress}% tamamlandı`);
         
     } catch (e) {
         console.warn('Dashboard check kartları yüklenemedi:', e);
         // Hata durumunda varsayılan değerler
         ['checklist', 'temizlik', 'platform'].forEach(type => {
-            document.getElementById(type + 'StatusText').textContent = 'Kontrol et →';
+            const el = document.getElementById(type + 'StatusText');
+            if (el) el.textContent = 'Kontrol et →';
         });
     }
 }
