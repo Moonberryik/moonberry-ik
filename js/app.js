@@ -545,6 +545,82 @@ async function initApp() {
     console.log('[App] Uygulama hazır');
 }
 
+// ==================== NAV TOGGLE ====================
+function toggleNavGroup(label) {
+    label.classList.toggle('collapsed');
+    const items = label.nextElementSibling;
+    if (items) {
+        items.classList.toggle('collapsed');
+    }
+}
+
+// ==================== ADMIN ACCESS ====================
+function openAdminWithPin() {
+    if (!currentUser) {
+        showToast('Lütfen önce giriş yapın', 'error');
+        return;
+    }
+    
+    // Yönetici her zaman erişebilir
+    if (currentUser.role === 'yonetici') {
+        goTo('admin');
+        return;
+    }
+    
+    // Diğer roller için izin kontrolü
+    if (checkPermission('admin', 'admin_genel', 'access')) {
+        goTo('admin');
+    } else {
+        showToast('Bu sayfaya erişim yetkiniz yok', 'error');
+    }
+}
+
+// Basit izin kontrolü
+function checkPermission(page, section, action) {
+    // Yönetici her şeye erişebilir
+    if (currentUser?.role === 'yonetici') return true;
+    
+    // Bölge müdürü ve mağaza müdürü bazı sayfalara erişebilir
+    const managerRoles = ['bolge_muduru', 'magaza_muduru'];
+    if (managerRoles.includes(currentUser?.role)) {
+        const allowedPages = ['dashboard', 'checklist', 'shift', 'personel', 'puantaj'];
+        return allowedPages.includes(page);
+    }
+    
+    return false;
+}
+
+// ==================== DARK MODE ====================
+function toggleDarkMode() {
+    const html = document.documentElement;
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    const newTheme = isDark ? 'light' : 'dark';
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    updateDarkModeIcon(newTheme);
+}
+
+function updateDarkModeIcon(theme) {
+    const icon = document.getElementById('darkModeIcon');
+    const btn = document.getElementById('darkModeBtn');
+    if (!icon) return;
+    
+    if (theme === 'dark') {
+        icon.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+        if (btn) { btn.style.background = 'var(--bg3)'; btn.style.borderColor = 'var(--bg4)'; }
+    } else {
+        icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+        if (btn) { btn.style.background = 'var(--surface2)'; btn.style.borderColor = 'var(--surface3)'; }
+    }
+}
+
+// Tema başlangıcı
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateDarkModeIcon(savedTheme);
+}
+
 // Sayfa yüklendiğinde başlat
 document.addEventListener('DOMContentLoaded', initApp);
 
