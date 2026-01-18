@@ -4329,6 +4329,8 @@ function toast(message, type = '') {
     const icons = {
         success: '<svg width="16" height="16" fill="none" stroke="#27ae60" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>',
         error: '<svg width="16" height="16" fill="none" stroke="#e74c3c" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+        warning: '<svg width="16" height="16" fill="none" stroke="#f39c12" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>',
+        info: '<svg width="16" height="16" fill="none" stroke="#3498db" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
         '': '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
     };
     t.innerHTML = `<span class="toast-icon" style="display:flex;align-items:center">${icons[type] || icons['']}</span>${message}`;
@@ -4339,6 +4341,9 @@ function toast(message, type = '') {
         setTimeout(() => t.remove(), 300);
     }, 3000);
 }
+
+// Alias for showToast
+const showToast = toast;
 
 // ==================== TYPE SELECTION ====================
 function selectType(form, type, el) {
@@ -16012,118 +16017,45 @@ async function loadChecklist() {
     const timeSlotGroup = document.getElementById('checklistTimeSlotGroup');
     const timeSlotSelect = document.getElementById('checklistTimeSlot');
     
-    // Saat seçimi GEREKTİRMEYEN türler - direkt yükle
-    const noTimeSlotTypes = ['acilis', 'kapanis', 'aylik', 'mudur', 'haftalik', 'temizlik'];
-    if (noTimeSlotTypes.includes(type) || noTimeSlotTypes.some(t => type.includes(t))) {
-        timeSlotGroup.style.display = 'none';
-        // Direkt checklist yükle - timeSlot olmadan
-    }
+    // Tarih ve saat otomatik - saat seçimi TAMAMEN kaldırıldı
+    // Tüm checkler için saat seçimi yok, sistem otomatik Türkiye saati kullanır
+    timeSlotGroup.style.display = 'none';
     
-    // Platform check için özel işlem - timeSlots olmadan direkt render
+    // Platform check için özel işlem
     if (type === 'platform') {
-        timeSlotGroup.style.display = 'none';
         await renderPlatformChecklistWithStatus(container, branch, date);
         checklistLoadingLock = false;
         return;
     }
     
-    // Sadece gunluk/guncel için saat seçimi gerekli
-    const requiresTimeSlot = ['gunluk', 'guncel'].includes(type) && timeSlots.length > 0;
+    // Otomatik saat belirleme - mevcut Türkiye saati
+    const now = new Date();
+    const turkeyTime = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', hour12: false });
+    let autoTimeSlot = null;
     
-    if (requiresTimeSlot) {
-        // Otomatik saat seçimi - mevcut saate göre uygun pencereyi bul
-        const now = new Date();
+    // Eğer timeSlots varsa, en yakın slot'u otomatik seç
+    if (timeSlots.length > 0) {
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
-        
-        let autoSelectedSlot = null;
-        let availableSlots = [];
+        let closestSlot = timeSlots[0];
+        let minDiff = Infinity;
         
         timeSlots.forEach(slot => {
-            const window = getCheckTimeWindow(type, slot, branch);
-            if (window) {
-                const slotInfo = {
-                    time: slot,
-                    window,
-                    status: getCheckStatus(type, slot, branch, false)
-                };
-                
-                // Aktif veya geç penceresindeki slotları ekle
-                if (window.isInWindow || window.isLate) {
-                    availableSlots.push(slotInfo);
-                    if (!autoSelectedSlot) autoSelectedSlot = slot;
-                }
-                // Henüz açılmamış ama bugün için olan slotlar
-                else if (window.isBeforeWindow && !window.isMissed) {
-                    availableSlots.push(slotInfo);
-                }
+            const [h, m] = slot.split(':').map(Number);
+            const slotMinutes = h * 60 + m;
+            const diff = Math.abs(currentMinutes - slotMinutes);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closestSlot = slot;
             }
         });
-        
-        // Yönetici tüm saatleri görebilir
-        const isAdmin = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
-        
-        if (isAdmin) {
-            timeSlotGroup.style.display = 'block';
-            timeSlotSelect.innerHTML = '<option value="">-- Tüm Saatler --</option>' + 
-                timeSlots.map(t => {
-                    const window = getCheckTimeWindow(type, t, branch);
-                    const status = window ? getCheckStatus(type, t, branch, false) : null;
-                    let badge = '';
-                    if (status) {
-                        if (status.status === 'active') badge = ' 🟢';
-                        else if (status.status === 'lateWindow') badge = ' 🟡';
-                        else if (status.status === 'missed') badge = ' 🔴';
-                        else if (status.status === 'waiting') badge = ' ⏳';
-                    }
-                    return `<option value="${t}" ${t === autoSelectedSlot ? 'selected' : ''}>${t}${badge}</option>`;
-                }).join('');
-        } else {
-            // Normal personel - sadece aktif penceredeki slotları göster
-            if (availableSlots.length === 0) {
-                timeSlotGroup.style.display = 'none';
-                container.innerHTML = `
-                    <div style="text-align:center;padding:60px;color:var(--tx2)">
-                        <div style="font-size:4rem;margin-bottom:16px">🔒</div>
-                        <div style="font-size:1.1rem;margin-bottom:8px">Aktif Check Yok</div>
-                        <div style="font-size:.9rem">Şu an doldurmanız gereken bir check bulunmuyor</div>
-                        <div style="margin-top:16px;padding:12px;background:var(--bg3);border-radius:10px;font-size:.85rem">
-                            <strong>Check Saatleri:</strong> ${timeSlots.join(', ')}
-                        </div>
-                    </div>
-                `;
-                return;
-            }
-            
-            // Otomatik olarak uygun slot'u seç
-            if (autoSelectedSlot) {
-                timeSlotGroup.style.display = 'none';
-                timeSlotSelect.value = autoSelectedSlot;
-            } else {
-                timeSlotGroup.style.display = 'block';
-                timeSlotSelect.innerHTML = availableSlots.map(s => 
-                    `<option value="${s.time}">${s.time}</option>`
-                ).join('');
-            }
-        }
-        
-        // Saat seçilmemişse ve admin değilse bekle
-        if (!timeSlotSelect.value && !autoSelectedSlot) {
-            container.innerHTML = `
-                <div style="text-align:center;padding:60px;color:var(--tx2)">
-                    <div style="font-size:4rem;margin-bottom:16px">⏰</div>
-                    <div style="font-size:1.1rem;margin-bottom:8px">Saat Dilimi Seçin</div>
-                    <div style="font-size:.9rem">Bu checklist günün belirli saatlerinde doldurulur</div>
-                </div>
-            `;
-            return;
-        }
-    } else {
-        timeSlotGroup.style.display = 'none';
+        autoTimeSlot = closestSlot;
+        timeSlotSelect.value = autoTimeSlot;
     }
     
-    const timeSlot = timeSlotSelect?.value || null;
+    // Zaman bilgisi (otomatik - Türkiye saati)
+    const timeSlot = autoTimeSlot || timeSlotSelect?.value || null;
     
-    // Zaman penceresi bilgisi göster
+    // Zaman penceresi bilgisi göster (sadece gunluk/guncel için)
     let windowInfo = '';
     if (timeSlot && CHECK_RULES[type]) {
         const window = getCheckTimeWindow(type, timeSlot, branch);
@@ -16261,12 +16193,12 @@ async function loadChecklist() {
         }
         
         // Formu render et - shift personeli ile
-        // Shift'ten sorumlu personeli bul
+        // Shift'ten sorumlu personeli bul ve displayName'e çevir
         let shiftPersonnel = [];
         try {
             const weekStart = getWeekStart(new Date(date));
             const weekKey = formatDateLocal(weekStart);
-            const checkHour = timeSlot ? parseInt(timeSlot.split(':')[0]) : 12;
+            const checkHour = timeSlot ? parseInt(timeSlot.split(':')[0]) : new Date().getHours();
             const dayIndex = new Date(date).getDay() - 1 < 0 ? 6 : new Date(date).getDay() - 1;
             
             const shiftsSnapshot = await db.collection('shifts')
@@ -16280,21 +16212,42 @@ async function loadChecklist() {
             const targetShift = allShifts.find(s => s.weekStart === weekKey) || allShifts[0];
             
             if (targetShift && targetShift.personelShifts) {
+                const rawPersonnel = [];
                 for (const [name, days] of Object.entries(targetShift.personelShifts)) {
                     const todayShift = days[dayIndex] || '';
                     const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
                     
-                    if (checkHour < 15 && (cleanShift === 'A' || cleanShift === 'AÇILIŞ' || cleanShift.includes('AÇILI'))) {
-                        shiftPersonnel.push(name);
-                    } else if (checkHour >= 20 && (cleanShift === 'K' || cleanShift === 'KAPANIŞ' || cleanShift.includes('KAPANI'))) {
-                        shiftPersonnel.push(name);
-                    } else if (checkHour >= 15 && checkHour < 20) {
-                        if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-' && cleanShift !== 'X') {
-                            shiftPersonnel.push(name);
+                    // Tüm aktif personeli topla (check türüne göre filtreleme)
+                    if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-' && cleanShift !== 'X') {
+                        // Açılış check'i için sadece açılışçılar
+                        if (type === 'acilis' && (cleanShift === 'A' || cleanShift === 'AÇILIŞ' || cleanShift.includes('AÇILI'))) {
+                            rawPersonnel.push(name);
+                        }
+                        // Kapanış check'i için sadece kapanışçılar
+                        else if (type === 'kapanis' && (cleanShift === 'K' || cleanShift === 'KAPANIŞ' || cleanShift.includes('KAPANI'))) {
+                            rawPersonnel.push(name);
+                        }
+                        // Müdür kontrolü için müdürler
+                        else if (type === 'mudur') {
+                            rawPersonnel.push(name);
+                        }
+                        // Diğer tüm checkler için tüm aktif personel
+                        else if (!['acilis', 'kapanis', 'mudur'].includes(type)) {
+                            rawPersonnel.push(name);
                         }
                     }
                 }
+                
+                // Personel isimlerini displayName'e çevir
+                for (const rawName of rawPersonnel) {
+                    const displayName = await getPersonelDisplayNameFromList(rawName, branch) || rawName;
+                    if (!shiftPersonnel.includes(displayName)) {
+                        shiftPersonnel.push(displayName);
+                    }
+                }
             }
+            
+            console.log('Shift personeli bulundu:', shiftPersonnel);
         } catch (e) {
             console.warn('Shift personeli alınamadı:', e.message);
         }
