@@ -1,4 +1,3 @@
-[README.md](https://github.com/user-attachments/files/24695840/README.md)
 # 🌙 Moonberry İK - Modüler Versiyon 2.0
 
 ## 📁 Dosya Yapısı
