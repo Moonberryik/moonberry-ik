@@ -1,0 +1,71 @@
+<!-- Shift Page -->
+<div class="page-header">
+    <h1 class="page-title">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        Shift Planı
+    </h1>
+</div>
+
+<!-- Filtre Bar -->
+<div class="filter-bar">
+    <div class="filter-group">
+        <label>Şube:</label>
+        <select id="shiftSube" onchange="loadShiftWeeks()"></select>
+    </div>
+    <div class="filter-group">
+        <label>Hafta:</label>
+        <select id="shiftWeek" onchange="loadShiftPlan()">
+            <option value="">Hafta seçiniz...</option>
+        </select>
+    </div>
+    <div class="filter-actions manager-only">
+        <button class="btn btn-primary btn-sm" onclick="createNewShift()">➕ Yeni Shift</button>
+        <button class="btn btn-sm" onclick="downloadShiftPDF()">📄 PDF</button>
+    </div>
+</div>
+
+<!-- Shift Tablosu -->
+<div class="shift-container" id="shiftContainer">
+    <div class="empty-state">
+        <svg width="64" height="64" fill="none" stroke="var(--tx3)" stroke-width="1.5" viewBox="0 0 24 24">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <p>Şube ve hafta seçerek shift planını görüntüleyin</p>
+    </div>
+</div>
+
+<!-- Özet -->
+<div class="shift-summary" id="shiftSummary" style="display:none">
+    <h3>📊 Haftalık Özet</h3>
+    <div class="summary-grid" id="shiftSummaryContent"></div>
+</div>
+
+<style>
+.shift-container{background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;overflow-x:auto}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:var(--tx3);text-align:center}
+.empty-state svg{margin-bottom:20px;opacity:.5}
+.shift-table{width:100%;border-collapse:collapse;font-size:.85rem;min-width:800px}
+.shift-table th,.shift-table td{padding:10px 8px;text-align:center;border:1px solid var(--cardBorder)}
+.shift-table th{background:var(--bg3);font-weight:600;color:var(--tx);position:sticky;top:0}
+.shift-table .name-cell{text-align:left;font-weight:500;min-width:140px;cursor:grab}
+.shift-table .name-cell:active{cursor:grabbing}
+.shift-cell{min-width:55px;padding:8px 4px;cursor:pointer;transition:all .15s;border-radius:4px}
+.shift-cell:hover{background:var(--accentLight)}
+.shift-cell.izin{background:rgba(231,76,60,.12);color:#e74c3c}
+.shift-cell.tam{background:rgba(46,204,113,.12);color:#27ae60}
+.shift-cell.yarim{background:rgba(241,196,15,.12);color:#f39c12}
+.shift-cell.off{background:var(--bg3);color:var(--tx3)}
+.shift-cell.acilisci{border-left:3px solid #3498db}
+.shift-cell.kapanisci{border-left:3px solid #9b59b6}
+.shift-summary{background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;margin-top:20px}
+.shift-summary h3{margin:0 0 15px;font-size:1rem}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.summary-item{text-align:center;padding:15px;background:var(--bg2);border-radius:10px}
+.summary-value{font-size:1.4rem;font-weight:700;color:var(--accent)}
+.summary-label{font-size:.8rem;color:var(--tx2);margin-top:4px}
+.shift-legend{display:flex;gap:15px;flex-wrap:wrap;margin-top:15px;padding-top:15px;border-top:1px solid var(--cardBorder)}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--tx2)}
+.legend-color{width:14px;height:14px;border-radius:3px}
+</style>
