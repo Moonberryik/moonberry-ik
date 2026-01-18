@@ -13522,13 +13522,15 @@ async function loadTodayChecks() {
                         const todayShift = days[dayIndex] || '';
                         const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
                         const fullName = personelFullNames[uniqueIdOrName] || uniqueIdOrName;
+                        // fullName'i displayName formatına çevir (Baran Akdemir → Baran A.)
+                        const displayName = formatDisplayName(fullName);
                         
                         if (cleanShift === 'A' || cleanShift.includes('AÇILI')) {
-                            acilisPersonel.push(fullName);
+                            acilisPersonel.push(displayName);
                         } else if (cleanShift === 'K' || cleanShift.includes('KAPANI')) {
-                            kapanisPersonel.push(fullName);
+                            kapanisPersonel.push(displayName);
                         } else if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-') {
-                            araPersonel.push(fullName);
+                            araPersonel.push(displayName);
                         }
                     }
                     shiftData[branch] = { acilis: acilisPersonel, kapanis: kapanisPersonel, ara: araPersonel };
@@ -16441,9 +16443,14 @@ async function loadChecklist() {
             
             if (targetShift && targetShift.personelShifts) {
                 const rawPersonnel = [];
-                for (const [name, days] of Object.entries(targetShift.personelShifts)) {
+                const personelFullNames = targetShift.personelFullNames || {};
+                
+                for (const [key, days] of Object.entries(targetShift.personelShifts)) {
                     const todayShift = days[dayIndex] || '';
                     const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
+                    
+                    // personelFullNames varsa onu kullan, yoksa key'i kullan
+                    const name = personelFullNames[key] || key;
                     
                     // Tüm aktif personeli topla (check türüne göre filtreleme)
                     if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-' && cleanShift !== 'X') {
@@ -16534,7 +16541,17 @@ async function loadChecklist() {
             console.warn('Shift personeli alınamadı:', e.message);
         }
         
-        renderChecklistForm(items, branch, type, date, timeSlot, submittedData, shiftPersonnel);
+        // Haftalık görevler için atama bilgisini çek
+        let weeklyAssignments = null;
+        if (type === 'haftalik') {
+            const weekStart = getWeekStart(new Date(date));
+            const weekKey = formatDateLocal(weekStart);
+            weeklyAssignments = await getWeeklyTaskAssignments(branch, weekKey);
+            window._weeklyTaskAssignments = weeklyAssignments;
+            console.log('Haftalık görev atamaları:', weeklyAssignments);
+        }
+        
+        renderChecklistForm(items, branch, type, date, timeSlot, submittedData, shiftPersonnel, weeklyAssignments);
         checklistLoadingLock = false;
         
     } catch (error) {
@@ -16553,12 +16570,50 @@ let checklistEditMode = false;
 // Temizlik ve Bakım için tümünü göster flag'i
 let showAllAylikItems = false;
 
-function renderChecklistForm(items, branch, type, date, timeSlot, submittedData, shiftPersonnel = []) {
+function renderChecklistForm(items, branch, type, date, timeSlot, submittedData, shiftPersonnel = [], weeklyAssignments = null) {
     const container = document.getElementById('checklistFormContainer');
     const isAdmin = currentUser?.role === 'yonetici' || currentUser?.role === 'bolge_muduru';
     const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
     const isSubmitted = !!submittedData;
     const isAylik = type === 'aylik';
+    const isHaftalik = type === 'haftalik';
+    
+    // Haftalık görevler için atama bilgisini sakla (global erişim için)
+    window._weeklyTaskAssignments = null;
+    
+    // ==================== PERSONEL ERİŞİM KONTROLÜ ====================
+    // Giriş yapan kullanıcının displayName'ini al
+    const currentUserDisplayName = getPersonelDisplayName(currentUser) || currentUser?.name || '';
+    const currentUserFirstName = currentUserDisplayName.split(' ')[0]?.toLowerCase();
+    
+    // shiftPersonnel listesinde kendisi var mı kontrol et
+    let isAssignedToMe = false;
+    
+    if (isManager) {
+        // Müdürler tüm checklere erişebilir
+        isAssignedToMe = true;
+    } else if (shiftPersonnel && shiftPersonnel.length > 0) {
+        // Personel listesinde kendisi var mı?
+        isAssignedToMe = shiftPersonnel.some(p => {
+            const pLower = p.toLowerCase();
+            const pFirstName = p.split(' ')[0]?.toLowerCase();
+            return pLower === currentUserDisplayName.toLowerCase() ||
+                   pFirstName === currentUserFirstName ||
+                   p === currentUser?.name ||
+                   p === currentUser?.codeName;
+        });
+    } else {
+        // shiftPersonnel boşsa herkese açık (fallback)
+        isAssignedToMe = true;
+    }
+    
+    console.log('Erişim kontrolü:', { 
+        currentUserDisplayName, 
+        shiftPersonnel, 
+        isAssignedToMe, 
+        isManager 
+    });
+    // ==================== ERİŞİM KONTROLÜ SONU ====================
     
     // Temizlik ve Bakım için tarih filtreleme
     const selectedDate = new Date(date);
@@ -16668,6 +16723,27 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
             ` : ''}
             
             ${!checklistEditMode ? `
+                ${!isAssignedToMe && !isSubmitted ? `
+                <!-- ERİŞİM UYARISI - Bu checklist başka personele atanmış -->
+                <div style="margin-bottom:20px;padding:20px;background:linear-gradient(135deg,rgba(231,76,60,.1),rgba(231,76,60,.05));border:2px solid rgba(231,76,60,.3);border-radius:14px">
+                    <div style="display:flex;align-items:flex-start;gap:14px">
+                        <div style="width:44px;height:44px;background:rgba(231,76,60,.2);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                            <svg width="24" height="24" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                        </div>
+                        <div>
+                            <div style="font-weight:700;color:#e74c3c;font-size:1rem;margin-bottom:6px">Bu Checklist Size Atanmamış</div>
+                            <div style="font-size:.9rem;color:var(--tx2);line-height:1.5">
+                                Bu görevi <strong>${shiftPersonnel.join(', ')}</strong> dolduracak. 
+                                Yalnızca size atanan checklisti doldurabilirsiniz.
+                            </div>
+                            <div style="margin-top:12px;font-size:.85rem;color:var(--tx3)">
+                                <strong>Giriş yapan:</strong> ${currentUserDisplayName}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+                
                 <!-- Personel ve Zaman Bilgisi -->
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
                     <div style="padding:16px;background:var(--bg3);border-radius:12px">
@@ -16737,6 +16813,20 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
         const itemColor = item.color || '#6b7280';
         const hasColor = isAylik && responsibleLabel;
         
+        // Haftalık görevler için atanan personel
+        let assignedPersonel = '';
+        let isMyTask = true; // Varsayılan: herkese açık
+        
+        if (isHaftalik && weeklyAssignments?.assignments) {
+            assignedPersonel = weeklyAssignments.assignments[item.id] || '';
+            // Bu görev bana mı atanmış?
+            if (assignedPersonel && !isManager) {
+                const currentUserDisplayName = getPersonelDisplayName(currentUser) || currentUser?.name || '';
+                isMyTask = assignedPersonel.toLowerCase() === currentUserDisplayName.toLowerCase() ||
+                           assignedPersonel.split(' ')[0]?.toLowerCase() === currentUserDisplayName.split(' ')[0]?.toLowerCase();
+            }
+        }
+        
         // Tarih bilgisi
         const hasDates = item.dates && item.dates.length > 0;
         
@@ -16754,6 +16844,21 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                 // Her gün
                 datesHtml = '<span style="font-size:.8rem;padding:4px 12px;border-radius:5px;background:rgba(255,255,255,.9);color:#1e293b;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.1)">Her gün</span>';
             }
+        }
+        
+        // Haftalık görevler için atanan personel badge
+        let assignedBadgeHtml = '';
+        if (isHaftalik && assignedPersonel) {
+            const weekStart = formatDateLocal(getWeekStart(new Date(date)));
+            const badgeColor = isMyTask ? '#008c95' : '#6b7280';
+            const badgeBg = isMyTask ? 'rgba(0,140,149,.15)' : 'rgba(107,114,128,.15)';
+            assignedBadgeHtml = `
+                <span style="font-size:.85rem;padding:5px 12px;border-radius:6px;background:${badgeBg};color:${badgeColor};font-weight:600;display:inline-flex;align-items:center;gap:6px">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    ${assignedPersonel}
+                    ${isManager && !isSubmitted ? `<span onclick="showTaskAssignmentModal('${item.id}', '${item.text.replace(/'/g, "\\'")}', '${assignedPersonel}', '${branch}', '${weekStart}')" style="cursor:pointer;opacity:.7;margin-left:4px" title="Değiştir">✏️</span>` : ''}
+                </span>
+            `;
         }
         
         if (checklistEditMode) {
@@ -16797,34 +16902,39 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
         } else {
             // Normal mod - TAM DOLGU RENGİ
             const canEdit = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
+            // Erişim kontrolü - isSubmitted veya atanmamışsa disable
+            // Haftalık görevlerde: isMyTask kontrolü, diğerlerinde: isAssignedToMe kontrolü
+            const canInteract = (isHaftalik ? isMyTask : isAssignedToMe) && !isSubmitted;
+            
             html += `
-                <div class="checklist-item" data-item-id="${item.id}" style="display:flex;align-items:flex-start;gap:14px;padding:18px 20px;border-radius:14px;margin-bottom:14px;background:${hasColor ? itemColor : 'var(--bg2)'};box-shadow:0 3px 12px rgba(0,0,0,.1)">
+                <div class="checklist-item" data-item-id="${item.id}" style="display:flex;align-items:flex-start;gap:14px;padding:18px 20px;border-radius:14px;margin-bottom:14px;background:${hasColor ? itemColor : 'var(--bg2)'};box-shadow:0 3px 12px rgba(0,0,0,.1);${!canInteract ? 'opacity:0.7;' : ''}">
                     <!-- Madde Numarası -->
                     <div style="min-width:28px;height:28px;background:${hasColor ? 'rgba(255,255,255,.2)' : 'var(--bg3)'};border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;color:${hasColor ? 'rgba(255,255,255,.9)' : 'var(--tx2)'};flex-shrink:0">${itemNum}</div>
                     
                     <div style="display:flex;flex-direction:row;gap:8px;flex-shrink:0">
-                        <label style="cursor:${isSubmitted ? 'default' : 'pointer'}">
-                            <input type="radio" name="check_${item.id}" value="done" ${isChecked ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''} style="display:none">
-                            <span class="check-btn done" onclick="${isSubmitted ? '' : `selectCheckOption(this, '${item.id}', 'done')`}"
+                        <label style="cursor:${canInteract ? 'pointer' : 'default'}">
+                            <input type="radio" name="check_${item.id}" value="done" ${isChecked ? 'checked' : ''} ${!canInteract ? 'disabled' : ''} style="display:none">
+                            <span class="check-btn done" onclick="${canInteract ? `selectCheckOption(this, '${item.id}', 'done')` : ''}"
                                 style="width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;
                                 background:${isChecked ? '#22c55e' : 'rgba(255,255,255,.95)'};
                                 border:3px solid ${isChecked ? '#22c55e' : 'rgba(34,197,94,.4)'};
                                 color:${isChecked ? '#fff' : '#22c55e'};
-                                transition:all .15s;font-weight:bold;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.1)">✓</span>
+                                transition:all .15s;font-weight:bold;cursor:${canInteract ? 'pointer' : 'not-allowed'};box-shadow:0 2px 6px rgba(0,0,0,.1)">✓</span>
                         </label>
-                        <label style="cursor:${isSubmitted ? 'default' : 'pointer'}">
-                            <input type="radio" name="check_${item.id}" value="notdone" ${isNotDone ? 'checked' : ''} ${isSubmitted ? 'disabled' : ''} style="display:none">
-                            <span class="check-btn notdone" onclick="${isSubmitted ? '' : `selectCheckOption(this, '${item.id}', 'notdone')`}"
+                        <label style="cursor:${canInteract ? 'pointer' : 'default'}">
+                            <input type="radio" name="check_${item.id}" value="notdone" ${isNotDone ? 'checked' : ''} ${!canInteract ? 'disabled' : ''} style="display:none">
+                            <span class="check-btn notdone" onclick="${canInteract ? `selectCheckOption(this, '${item.id}', 'notdone')` : ''}"
                                 style="width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;
                                 background:${isNotDone ? '#ef4444' : 'rgba(255,255,255,.95)'};
                                 border:3px solid ${isNotDone ? '#ef4444' : 'rgba(239,68,68,.4)'};
                                 color:${isNotDone ? '#fff' : '#ef4444'};
-                                transition:all .15s;font-weight:bold;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.1)">✗</span>
+                                transition:all .15s;font-weight:bold;cursor:${canInteract ? 'pointer' : 'not-allowed'};box-shadow:0 2px 6px rgba(0,0,0,.1)">✗</span>
                         </label>
                     </div>
                     <div style="flex:1">
                         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
                             ${hasColor ? `<span style="font-size:.85rem;padding:5px 14px;border-radius:6px;background:rgba(255,255,255,.95);color:${itemColor};font-weight:700">${responsibleLabel}</span>` : ''}
+                            ${assignedBadgeHtml}
                             ${datesHtml}
                         </div>
                         <div style="font-size:1rem;color:${hasColor ? '#fff' : 'var(--tx)'};line-height:1.6;font-weight:500">${item.text}</div>
@@ -16842,7 +16952,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
     html += `
             </div>
             
-            ${!checklistEditMode && !isSubmitted ? `
+            ${!checklistEditMode && !isSubmitted && isAssignedToMe ? `
                 <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
                     <button class="btn btn-ghost" onclick="loadChecklist()" style="display:flex;align-items:center;gap:6px">
                         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -16852,6 +16962,14 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
                         Checklist'i Tamamla
                     </button>
+                </div>
+            ` : ''}
+            ${!checklistEditMode && !isSubmitted && !isAssignedToMe ? `
+                <div style="margin-top:24px;text-align:center;padding:20px;background:var(--bg3);border-radius:12px">
+                    <div style="color:var(--tx3);font-size:.9rem">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px;opacity:.6"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                        Bu checklist'i sadece atanan personel doldurabilir
+                    </div>
                 </div>
             ` : ''}
             ${!checklistEditMode && isSubmitted ? `
@@ -16958,6 +17076,195 @@ async function saveAllChecklistItemEdits(branch, type) {
         console.error('Kaydetme hatası:', e);
         toast('Kaydetme hatası: ' + e.message, 'error');
     }
+}
+
+// ==================== HAFTALIK GÖREV ROTASYON SİSTEMİ ====================
+
+/**
+ * Haftalık görevleri personele otomatik dağıt
+ * Algoritma:
+ * 1. Tüm haftalık görevleri al
+ * 2. Aktif personeli shift'ten al
+ * 3. Görevleri personel sayısına eşit böl
+ * 4. rotationIndex'e göre dağıt (her hafta sıra kayar)
+ */
+async function getWeeklyTaskAssignments(branch, weekStart) {
+    const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekStart}`;
+    
+    try {
+        // Mevcut atamaları kontrol et
+        const existingDoc = await db.collection('weeklyTaskAssignments').doc(assignmentDocId).get();
+        if (existingDoc.exists) {
+            return existingDoc.data();
+        }
+        
+        // Yoksa otomatik oluştur
+        return await generateWeeklyTaskAssignments(branch, weekStart);
+    } catch (e) {
+        console.error('Haftalık görev atamaları alınamadı:', e);
+        return null;
+    }
+}
+
+async function generateWeeklyTaskAssignments(branch, weekStart) {
+    const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekStart}`;
+    
+    try {
+        // 1. Haftalık görevleri al
+        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_haftalik`;
+        const checklistDoc = await db.collection('checklists').doc(checklistId).get();
+        
+        if (!checklistDoc.exists) {
+            console.warn('Haftalık görev listesi bulunamadı');
+            return { assignments: {}, rotationIndex: 0 };
+        }
+        
+        const tasks = checklistDoc.data().items || [];
+        if (tasks.length === 0) {
+            return { assignments: {}, rotationIndex: 0 };
+        }
+        
+        // 2. Aktif personeli shift'ten al
+        const shiftsSnapshot = await db.collection('shifts')
+            .where('branch', '==', branch)
+            .get();
+        
+        const allShifts = [];
+        shiftsSnapshot.forEach(doc => allShifts.push(doc.data()));
+        allShifts.sort((a, b) => (b.weekStart || '').localeCompare(a.weekStart || ''));
+        
+        const targetShift = allShifts.find(s => s.weekStart === weekStart) || allShifts[0];
+        
+        if (!targetShift || !targetShift.personelShifts) {
+            return { assignments: {}, rotationIndex: 0 };
+        }
+        
+        // Aktif personeli topla (izinli olmayanlar)
+        const personelFullNames = targetShift.personelFullNames || {};
+        const activePersonnel = [];
+        
+        for (const [key, days] of Object.entries(targetShift.personelShifts)) {
+            // Haftada en az 1 gün çalışan personeli al
+            const hasWorkDay = Object.values(days).some(d => {
+                const cleanShift = (d || '').replace(/\*/g, '').trim().toUpperCase();
+                return cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-' && cleanShift !== 'X';
+            });
+            
+            if (hasWorkDay) {
+                const fullName = personelFullNames[key] || key;
+                const displayName = formatDisplayName(fullName);
+                if (!activePersonnel.includes(displayName)) {
+                    activePersonnel.push(displayName);
+                }
+            }
+        }
+        
+        if (activePersonnel.length === 0) {
+            return { assignments: {}, rotationIndex: 0 };
+        }
+        
+        // 3. Önceki haftanın rotationIndex'ini al
+        let rotationIndex = 0;
+        try {
+            const prevWeekStart = new Date(weekStart);
+            prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+            const prevDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${formatDateLocal(prevWeekStart)}`;
+            const prevDoc = await db.collection('weeklyTaskAssignments').doc(prevDocId).get();
+            if (prevDoc.exists) {
+                rotationIndex = ((prevDoc.data().rotationIndex || 0) + 1) % activePersonnel.length;
+            }
+        } catch (e) {}
+        
+        // 4. Görevleri dağıt
+        const assignments = {};
+        tasks.forEach((task, index) => {
+            const personelIndex = (rotationIndex + index) % activePersonnel.length;
+            assignments[task.id] = activePersonnel[personelIndex];
+        });
+        
+        // 5. Firebase'e kaydet
+        const assignmentData = {
+            branch,
+            weekStart,
+            assignments,
+            rotationIndex,
+            personnel: activePersonnel,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            autoGenerated: true
+        };
+        
+        await db.collection('weeklyTaskAssignments').doc(assignmentDocId).set(assignmentData);
+        console.log('Haftalık görev atamaları oluşturuldu:', assignmentData);
+        
+        return assignmentData;
+        
+    } catch (e) {
+        console.error('Haftalık görev ataması oluşturma hatası:', e);
+        return { assignments: {}, rotationIndex: 0 };
+    }
+}
+
+/**
+ * Tek bir görevi başka personele ata (müdür yetkisi)
+ */
+async function reassignWeeklyTask(branch, weekStart, taskId, newPersonel) {
+    const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekStart}`;
+    
+    try {
+        await db.collection('weeklyTaskAssignments').doc(assignmentDocId).update({
+            [`assignments.${taskId}`]: newPersonel,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            autoGenerated: false // Manuel değişiklik yapıldı
+        });
+        
+        toast(`Görev ${newPersonel} kişisine atandı`, 'success');
+        loadChecklist();
+    } catch (e) {
+        console.error('Görev atama hatası:', e);
+        toast('Görev atama hatası: ' + e.message, 'error');
+    }
+}
+
+/**
+ * Görev atama modalını göster
+ */
+function showTaskAssignmentModal(taskId, taskText, currentAssignee, branch, weekStart) {
+    const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
+    
+    if (!isManager) {
+        toast('Bu işlem için yetkiniz yok', 'error');
+        return;
+    }
+    
+    // Personel listesini al
+    const assignmentData = window._weeklyTaskAssignments;
+    const personnel = assignmentData?.personnel || [];
+    
+    const personnelOptions = personnel.map(p => 
+        `<option value="${p}" ${p === currentAssignee ? 'selected' : ''}>${p}</option>`
+    ).join('');
+    
+    showModal('Görev Ata', `
+        <div class="form-group">
+            <label class="form-label">Görev</label>
+            <div style="padding:12px;background:var(--bg3);border-radius:8px;font-size:.9rem;color:var(--tx)">${taskText}</div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Atanan Personel</label>
+            <select id="taskAssigneeSelect" class="form-select">
+                ${personnelOptions}
+            </select>
+        </div>
+    `, `
+        <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
+        <button class="btn btn-primary" onclick="confirmTaskAssignment('${taskId}', '${branch}', '${weekStart}')">Ata</button>
+    `);
+}
+
+function confirmTaskAssignment(taskId, branch, weekStart) {
+    const newPersonel = document.getElementById('taskAssigneeSelect').value;
+    closeModal();
+    reassignWeeklyTask(branch, weekStart, taskId, newPersonel);
 }
 
 // ==================== SÜRÜKLE BIRAK ====================
