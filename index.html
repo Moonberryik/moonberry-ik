@@ -100,8 +100,32 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .nav-item .icon svg{width:18px;height:18px;stroke:currentColor;stroke-width:2;fill:none}
 .nav-divider{height:1px;background:rgba(255,255,255,.1);margin:12px 12px}
 
+/* Sidebar Toggle */
+.sidebar{transition:width .3s ease}
+.sidebar.collapsed{width:60px}
+.sidebar.collapsed .logo-text,.sidebar.collapsed .logo-sub{display:none}
+.sidebar.collapsed .sidebar-header{padding:24px 12px;justify-content:center}
+.sidebar.collapsed .logo{justify-content:center}
+.sidebar.collapsed .nav{padding:16px 6px}
+.sidebar.collapsed .nav-label{padding:10px;justify-content:center;font-size:0}
+.sidebar.collapsed .nav-label .nav-arrow{display:none}
+.sidebar.collapsed .nav-item{padding:10px;justify-content:center;font-size:0}
+.sidebar.collapsed .nav-item .icon{margin:0}
+.sidebar.collapsed .nav-items.collapsed{max-height:500px}
+.sidebar.collapsed .nav-group{position:relative}
+.sidebar.collapsed .nav-item[data-tooltip]:hover::after{content:attr(data-tooltip);position:absolute;left:65px;top:50%;transform:translateY(-50%);background:var(--bg2);color:var(--tx);padding:6px 12px;border-radius:6px;font-size:.8rem;white-space:nowrap;box-shadow:var(--shadow);z-index:1000;pointer-events:none}
+.sidebar.collapsed #userInfo>div:last-child{display:none}
+.sidebar.collapsed #userInfo{justify-content:center}
+.sidebar.collapsed #userInfo+button{font-size:0;padding:10px;justify-content:center}
+.sidebar.collapsed #userInfo+button svg{margin:0}
+.sidebar-toggle{width:36px;height:36px;background:var(--bg3);border:1px solid var(--bg4);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;margin-right:12px;flex-shrink:0}
+.sidebar-toggle:hover{background:var(--bg4);border-color:var(--accent)}
+.sidebar-toggle svg{transition:transform .3s}
+.sidebar-toggle.rotated svg{transform:rotate(180deg)}
+
 /* Main Content */
-.main{flex:1;margin-left:260px;background:var(--bg);min-height:100vh;position:relative}
+.main{flex:1;margin-left:260px;background:var(--bg);min-height:100vh;position:relative;transition:margin-left .3s ease}
+.main.sidebar-collapsed{margin-left:60px}
 .main-header{position:sticky;top:0;right:0;z-index:50;display:flex;justify-content:flex-end;padding:16px 32px;background:var(--bg);border-bottom:1px solid var(--bg4)}
 .page{display:none;padding:24px 32px;animation:fadeUp .3s}
 .page.active{display:block}
@@ -491,12 +515,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
         <main class="main">
             <!-- Global Header with Breadcrumb and Dark Mode -->
             <div class="main-header" style="display:flex;justify-content:space-between;align-items:center;padding:16px 32px;background:var(--bg2);border-bottom:1px solid var(--bg4)">
-                <div id="breadcrumb" style="display:flex;align-items:center;gap:10px;font-size:.9rem">
+                <div style="display:flex;align-items:center">
+                    <button class="sidebar-toggle" onclick="toggleSidebar()" id="sidebarToggle" title="Menüyü Aç/Kapat">
+                        <svg width="18" height="18" fill="none" stroke="var(--tx)" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+                    </button>
+                    <div id="breadcrumb" style="display:flex;align-items:center;gap:10px;font-size:.9rem">
                     <a onclick="goTo('dashboard')" style="color:var(--accent);font-weight:600;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:8px">
                         <img id="breadcrumbLogo" src="https://static.wixstatic.com/media/760af2_cb121a61291f4f07adb48cfb70f3e2d9~mv2.png" style="width:28px;height:24px;object-fit:contain" onerror="this.outerHTML='☕'"> Moonberry
                     </a>
                     <span style="color:var(--tx3);font-size:.8rem">›</span>
                     <span id="currentPageName" style="color:var(--tx);font-weight:500">Ana Sayfa</span>
+                    </div>
                 </div>
                 <button onclick="toggleDarkMode()" id="darkModeBtn" style="background:var(--bg3);border:1px solid var(--bg4);border-radius:8px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s" title="Karanlık/Aydınlık Mod">
                     <svg id="darkModeIcon" width="18" height="18" fill="none" stroke="var(--tx)" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -3595,7 +3624,40 @@ function toggleNavGroup(label) {
     }
 }
 
+// Sidebar toggle (collapse/expand)
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const main = document.querySelector('.main');
+    const toggle = document.getElementById('sidebarToggle');
+    
+    sidebar.classList.toggle('collapsed');
+    main.classList.toggle('sidebar-collapsed');
+    toggle.classList.toggle('rotated');
+    
+    // Tercihi kaydet
+    localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+}
+
+function initSidebarState() {
+    const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    if (isCollapsed) {
+        const sidebar = document.querySelector('.sidebar');
+        const main = document.querySelector('.main');
+        const toggle = document.getElementById('sidebarToggle');
+        if (sidebar) sidebar.classList.add('collapsed');
+        if (main) main.classList.add('sidebar-collapsed');
+        if (toggle) toggle.classList.add('rotated');
+    }
+    
+    // Nav item'lara tooltip ekle
+    document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+        const text = item.textContent.trim();
+        item.setAttribute('data-tooltip', text);
+    });
+}
+
 function initUI() {
+    initSidebarState();
     document.getElementById('companyName').textContent = STATE.company.name;
     populateSelects();
     renderPositionCards();
