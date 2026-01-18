@@ -104,24 +104,28 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .sidebar{transition:width .3s ease}
 .sidebar.collapsed{width:60px}
 .sidebar.collapsed .logo-text,.sidebar.collapsed .logo-sub{display:none}
-.sidebar.collapsed .sidebar-header{padding:24px 12px;justify-content:center}
+.sidebar.collapsed .sidebar-header{padding:16px 10px}
 .sidebar.collapsed .logo{justify-content:center}
-.sidebar.collapsed .nav{padding:16px 6px}
+.sidebar.collapsed .logo-icon{width:36px;height:36px;font-size:1.1rem}
+.sidebar.collapsed .nav{padding:12px 6px}
 .sidebar.collapsed .nav-label{padding:10px;justify-content:center;font-size:0}
 .sidebar.collapsed .nav-label .nav-arrow{display:none}
-.sidebar.collapsed .nav-item{padding:10px;justify-content:center;font-size:0}
+.sidebar.collapsed .nav-item{padding:12px 0;justify-content:center;font-size:0}
 .sidebar.collapsed .nav-item .icon{margin:0}
 .sidebar.collapsed .nav-items.collapsed{max-height:500px}
 .sidebar.collapsed .nav-group{position:relative}
-.sidebar.collapsed .nav-item[data-tooltip]:hover::after{content:attr(data-tooltip);position:absolute;left:65px;top:50%;transform:translateY(-50%);background:var(--bg2);color:var(--tx);padding:6px 12px;border-radius:6px;font-size:.8rem;white-space:nowrap;box-shadow:var(--shadow);z-index:1000;pointer-events:none}
-.sidebar.collapsed #userInfo>div:last-child{display:none}
-.sidebar.collapsed #userInfo{justify-content:center}
-.sidebar.collapsed #userInfo+button{font-size:0;padding:10px;justify-content:center}
-.sidebar.collapsed #userInfo+button svg{margin:0}
-.sidebar-toggle{width:36px;height:36px;background:var(--bg3);border:1px solid var(--bg4);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;margin-right:12px;flex-shrink:0}
-.sidebar-toggle:hover{background:var(--bg4);border-color:var(--accent)}
-.sidebar-toggle svg{transition:transform .3s}
-.sidebar-toggle.rotated svg{transform:rotate(180deg)}
+.sidebar.collapsed .nav-item:hover::after{content:attr(data-tooltip);position:absolute;left:65px;top:50%;transform:translateY(-50%);background:var(--bg2);color:var(--tx);padding:8px 14px;border-radius:8px;font-size:.8rem;white-space:nowrap;box-shadow:var(--shadow);z-index:1000;pointer-events:none;border:1px solid var(--bg4)}
+.sidebar.collapsed .sidebar-user{padding:12px 6px}
+.sidebar.collapsed .sidebar-user .user-details{display:none}
+.sidebar.collapsed .sidebar-user .user-avatar{margin:0 auto}
+.sidebar.collapsed .logout-btn{padding:10px;font-size:0;justify-content:center}
+.sidebar.collapsed .logout-btn svg{margin:0}
+.sidebar.collapsed .sidebar-toggle-inner{justify-content:center}
+.sidebar.collapsed .sidebar-toggle-inner span{display:none}
+.sidebar-toggle-inner{display:flex;align-items:center;gap:10px;padding:10px 14px;margin:8px 12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;cursor:pointer;transition:all .2s;color:var(--sidebarTx2);font-size:.8rem;font-weight:500}
+.sidebar-toggle-inner:hover{background:rgba(255,134,116,.15);border-color:rgba(255,134,116,.3);color:#fff}
+.sidebar-toggle-inner svg{flex-shrink:0;transition:transform .3s}
+.sidebar.collapsed .sidebar-toggle-inner svg{transform:rotate(180deg)}
 
 /* Main Content */
 .main{flex:1;margin-left:260px;background:var(--bg);min-height:100vh;position:relative;transition:margin-left .3s ease}
@@ -315,6 +319,43 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .floating-bubble{position:absolute;border-radius:50%;background:rgba(255,255,255,.3);animation:float-bubble 3s ease-in-out infinite}
 .check-card-shimmer{background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);background-size:200% 100%;animation:shimmer 2s infinite}
 
+/* Premium Dashboard Check Cards */
+.branch-group{margin-bottom:20px;animation:fadeUp .4s ease}
+.branch-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-left:2px}
+.branch-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:16px;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.02em}
+.branch-badge.tuzla{background:linear-gradient(135deg,rgba(255,134,116,.12),rgba(255,134,116,.04));color:#ff8674;border:1px solid rgba(255,134,116,.15)}
+.branch-badge.sisli{background:linear-gradient(135deg,rgba(0,140,149,.12),rgba(0,140,149,.04));color:#008c95;border:1px solid rgba(0,140,149,.15)}
+.branch-check-count{font-size:.7rem;color:var(--tx3);font-weight:400;margin-left:auto}
+.check-cards-grid{display:flex;flex-direction:column;gap:8px}
+.check-card-premium{background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .2s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden}
+.check-card-premium:hover{transform:translateX(4px);box-shadow:0 4px 16px rgba(0,0,0,.06);border-color:rgba(0,140,149,.2)}
+.check-card-premium.active{border-left:3px solid var(--card-accent,#008c95);background:linear-gradient(90deg,rgba(0,140,149,.03),transparent)}
+.check-card-premium.active.coral{--card-accent:#ff8674;border-left-color:#ff8674;background:linear-gradient(90deg,rgba(255,134,116,.03),transparent)}
+.check-card-premium.urgent{border-left:3px solid #f39c12;animation:soft-pulse 1.5s ease-in-out infinite;--pulse-color:rgba(243,156,18,.25)}
+.check-card-premium.completed{opacity:.55;border-left:3px solid #27ae60}
+.check-card-premium.missed{opacity:.45;border-left:3px solid #9ca3af}
+.check-icon-wrap{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.check-icon-wrap.teal{background:linear-gradient(135deg,rgba(0,140,149,.12),rgba(0,140,149,.06))}
+.check-icon-wrap.coral{background:linear-gradient(135deg,rgba(255,134,116,.12),rgba(255,134,116,.06))}
+.check-icon-wrap.green{background:rgba(39,174,96,.1)}
+.check-icon-wrap.gray{background:var(--bg3)}
+.check-icon-wrap.orange{background:rgba(243,156,18,.1)}
+.check-info{flex:1;min-width:0}
+.check-name{font-weight:600;font-size:.85rem;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.check-meta{display:flex;align-items:center;gap:6px;margin-top:2px}
+.check-time-badge{font-size:.7rem;color:var(--tx3)}
+.check-personnel-tag{font-size:.65rem;color:var(--tx3);padding:2px 6px;background:var(--bg3);border-radius:4px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.check-status-wrap{display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0}
+.check-countdown-pill{font-size:.75rem;font-weight:600;font-family:var(--mono);padding:4px 10px;border-radius:6px}
+.check-countdown-pill.active{background:rgba(0,140,149,.1);color:#008c95}
+.check-countdown-pill.coral{background:rgba(255,134,116,.1);color:#ff8674}
+.check-countdown-pill.urgent{background:rgba(243,156,18,.1);color:#f39c12}
+.check-countdown-pill.done{background:rgba(39,174,96,.1);color:#27ae60}
+.check-countdown-pill.missed{background:rgba(156,163,175,.1);color:#9ca3af}
+.check-points-badge{font-size:.65rem;font-weight:700;padding:2px 6px;border-radius:4px}
+.check-points-badge.positive{background:rgba(39,174,96,.1);color:#27ae60}
+.check-points-badge.negative{background:rgba(231,76,60,.1);color:#e74c3c}
+
 /* Sürükle Bırak Stilleri */
 .checklist-item[draggable="true"]:hover{box-shadow:0 4px 20px rgba(0,0,0,.15)}
 .checklist-item[draggable="true"]:hover .drag-handle{opacity:1}
@@ -496,18 +537,22 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Ayarlar
                 </div>
                 <!-- Kullanıcı Bilgisi ve Çıkış -->
-                <div style="margin-top:auto;padding:16px 20px;border-top:1px solid rgba(255,255,255,.1)">
+                <div class="sidebar-user" style="margin-top:auto;padding:16px 20px;border-top:1px solid rgba(255,255,255,.1)">
                     <div id="userInfo" style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-                        <div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600" id="userAvatar">👤</div>
-                        <div style="flex:1;overflow:hidden">
+                        <div class="user-avatar" style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;flex-shrink:0" id="userAvatar">👤</div>
+                        <div class="user-details" style="flex:1;overflow:hidden">
                             <div id="userName" style="color:var(--sidebarTx);font-size:.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Yükleniyor...</div>
                             <div id="userRole" style="color:var(--sidebarTx2);font-size:.7rem">-</div>
                         </div>
                     </div>
-                    <button onclick="logout()" style="width:100%;padding:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--sidebarTx2);font-size:.8rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.background='rgba(231,76,60,.2)';this.style.borderColor='rgba(231,76,60,.4)';this.style.color='#e74c3c'" onmouseout="this.style.background='rgba(255,255,255,.1)';this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--sidebarTx2)'">
+                    <button class="logout-btn" onclick="logout()" style="width:100%;padding:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--sidebarTx2);font-size:.8rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.background='rgba(231,76,60,.2)';this.style.borderColor='rgba(231,76,60,.4)';this.style.color='#e74c3c'" onmouseout="this.style.background='rgba(255,255,255,.1)';this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--sidebarTx2)'">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                         Çıkış Yap
                     </button>
+                    <div class="sidebar-toggle-inner" onclick="toggleSidebar()" title="Menüyü Daralt/Genişlet" style="margin-top:12px">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 19l-7-7 7-7"/><path d="M18 19l-7-7 7-7"/></svg>
+                        <span>Daralt</span>
+                    </div>
                 </div>
             </nav>
         </aside>
@@ -515,17 +560,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
         <main class="main">
             <!-- Global Header with Breadcrumb and Dark Mode -->
             <div class="main-header" style="display:flex;justify-content:space-between;align-items:center;padding:16px 32px;background:var(--bg2);border-bottom:1px solid var(--bg4)">
-                <div style="display:flex;align-items:center">
-                    <button class="sidebar-toggle" onclick="toggleSidebar()" id="sidebarToggle" title="Menüyü Aç/Kapat">
-                        <svg width="18" height="18" fill="none" stroke="var(--tx)" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
-                    </button>
-                    <div id="breadcrumb" style="display:flex;align-items:center;gap:10px;font-size:.9rem">
+                <div id="breadcrumb" style="display:flex;align-items:center;gap:10px;font-size:.9rem">
                     <a onclick="goTo('dashboard')" style="color:var(--accent);font-weight:600;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:8px">
                         <img id="breadcrumbLogo" src="https://static.wixstatic.com/media/760af2_cb121a61291f4f07adb48cfb70f3e2d9~mv2.png" style="width:28px;height:24px;object-fit:contain" onerror="this.outerHTML='☕'"> Moonberry
                     </a>
                     <span style="color:var(--tx3);font-size:.8rem">›</span>
                     <span id="currentPageName" style="color:var(--tx);font-weight:500">Ana Sayfa</span>
-                    </div>
                 </div>
                 <button onclick="toggleDarkMode()" id="darkModeBtn" style="background:var(--bg3);border:1px solid var(--bg4);border-radius:8px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s" title="Karanlık/Aydınlık Mod">
                     <svg id="darkModeIcon" width="18" height="18" fill="none" stroke="var(--tx)" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -582,68 +622,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 
                 <!-- Bugünkü Checklerim - Dinamik -->
                 <div id="todayChecksSection" class="dashboard-section" style="margin-bottom:28px">
-                    <div style="font-size:.8rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;padding-left:4px;display:flex;align-items:center;gap:8px">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-                        Bugünkü Görevlerim
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:0 4px">
+                        <div style="font-size:.8rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:8px">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                            Bugünkü Görevlerim
+                        </div>
+                        <div id="checksTotalCount" style="font-size:.7rem;color:var(--tx3)"></div>
                     </div>
-                    <div id="todayChecksContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
-                        <!-- Dinamik içerik buraya gelecek -->
-                        <div class="dashboard-card" onclick="goTo('checklist')" style="background:linear-gradient(135deg,var(--cardBg),rgba(0,140,149,.05));border:1px solid var(--cardBorder);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s">
-                            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-                                <div style="width:44px;height:44px;background:linear-gradient(135deg,#00c9a7,#008c95);border-radius:10px;display:flex;align-items:center;justify-content:center">
-                                    <svg width="22" height="22" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-                                </div>
-                                <div>
-                                    <div style="font-weight:600;color:var(--tx);font-size:1rem">Checklist</div>
-                                    <div id="checklistStatusText" style="font-size:.75rem;color:var(--tx2)">Yükleniyor...</div>
-                                </div>
-                            </div>
-                            <div id="checklistProgressBar" style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
-                                <div id="checklistProgressFill" style="width:0%;height:100%;background:linear-gradient(90deg,#00c9a7,#008c95);border-radius:3px;transition:width .5s ease"></div>
-                            </div>
-                            <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:.7rem;color:var(--tx3)">
-                                <span id="checklistDoneCount">0 tamamlandı</span>
-                                <span id="checklistRemainingCount">- bekliyor</span>
-                            </div>
-                        </div>
-                        
-                        <div class="dashboard-card" onclick="goTo('checklist');setTimeout(()=>document.querySelector('[data-tab=temizlik]')?.click(),100)" style="background:linear-gradient(135deg,var(--cardBg),rgba(241,196,15,.05));border:1px solid var(--cardBorder);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s">
-                            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-                                <div style="width:44px;height:44px;background:linear-gradient(135deg,#f1c40f,#f39c12);border-radius:10px;display:flex;align-items:center;justify-content:center">
-                                    <svg width="22" height="22" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-                                </div>
-                                <div>
-                                    <div style="font-weight:600;color:var(--tx);font-size:1rem">Temizlik</div>
-                                    <div id="temizlikStatusText" style="font-size:.75rem;color:var(--tx2)">Yükleniyor...</div>
-                                </div>
-                            </div>
-                            <div id="temizlikProgressBar" style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
-                                <div id="temizlikProgressFill" style="width:0%;height:100%;background:linear-gradient(90deg,#f1c40f,#f39c12);border-radius:3px;transition:width .5s ease"></div>
-                            </div>
-                            <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:.7rem;color:var(--tx3)">
-                                <span id="temizlikDoneCount">0 tamamlandı</span>
-                                <span id="temizlikRemainingCount">- bekliyor</span>
-                            </div>
-                        </div>
-                        
-                        <div class="dashboard-card" onclick="goTo('checklist');setTimeout(()=>document.querySelector('[data-tab=platform]')?.click(),100)" style="background:linear-gradient(135deg,var(--cardBg),rgba(155,89,182,.05));border:1px solid var(--cardBorder);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s">
-                            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-                                <div style="width:44px;height:44px;background:linear-gradient(135deg,#9b59b6,#8e44ad);border-radius:10px;display:flex;align-items:center;justify-content:center">
-                                    <svg width="22" height="22" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                                </div>
-                                <div>
-                                    <div style="font-weight:600;color:var(--tx);font-size:1rem">Platform</div>
-                                    <div id="platformStatusText" style="font-size:.75rem;color:var(--tx2)">Yükleniyor...</div>
-                                </div>
-                            </div>
-                            <div id="platformProgressBar" style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
-                                <div id="platformProgressFill" style="width:0%;height:100%;background:linear-gradient(90deg,#9b59b6,#8e44ad);border-radius:3px;transition:width .5s ease"></div>
-                            </div>
-                            <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:.7rem;color:var(--tx3)">
-                                <span id="platformDoneCount">0 tamamlandı</span>
-                                <span id="platformRemainingCount">- bekliyor</span>
-                            </div>
-                        </div>
+                    <div id="todayChecksContainer">
+                        <!-- Şube grupları dinamik olarak yüklenecek -->
                     </div>
                 </div>
                 
@@ -3628,11 +3615,9 @@ function toggleNavGroup(label) {
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const main = document.querySelector('.main');
-    const toggle = document.getElementById('sidebarToggle');
     
     sidebar.classList.toggle('collapsed');
     main.classList.toggle('sidebar-collapsed');
-    toggle.classList.toggle('rotated');
     
     // Tercihi kaydet
     localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
@@ -3640,13 +3625,12 @@ function toggleSidebar() {
 
 function initSidebarState() {
     const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-    if (isCollapsed) {
-        const sidebar = document.querySelector('.sidebar');
-        const main = document.querySelector('.main');
-        const toggle = document.getElementById('sidebarToggle');
-        if (sidebar) sidebar.classList.add('collapsed');
-        if (main) main.classList.add('sidebar-collapsed');
-        if (toggle) toggle.classList.add('rotated');
+    const sidebar = document.querySelector('.sidebar');
+    const main = document.querySelector('.main');
+    
+    if (isCollapsed && sidebar && main) {
+        sidebar.classList.add('collapsed');
+        main.classList.add('sidebar-collapsed');
     }
     
     // Nav item'lara tooltip ekle
@@ -3654,6 +3638,31 @@ function initSidebarState() {
         const text = item.textContent.trim();
         item.setAttribute('data-tooltip', text);
     });
+    
+    // Collapsed sidebar'a tıklayınca aç (toggle butonu ve nav-item hariç)
+    if (sidebar) {
+        sidebar.addEventListener('click', (e) => {
+            if (sidebar.classList.contains('collapsed')) {
+                // Toggle butonu veya nav-item'a tıklanmadıysa aç
+                const isToggle = e.target.closest('.sidebar-toggle-inner');
+                const isNavItem = e.target.closest('.nav-item');
+                const isLogout = e.target.closest('.logout-btn');
+                if (!isToggle && !isNavItem && !isLogout) {
+                    toggleSidebar();
+                }
+            }
+        });
+    }
+    
+    // Main alana tıklayınca sidebar'ı kapat (açıksa)
+    if (main) {
+        main.addEventListener('click', () => {
+            if (sidebar && !sidebar.classList.contains('collapsed')) {
+                // Sadece mobilde veya kullanıcı isterse - şimdilik pasif
+                // toggleSidebar();
+            }
+        });
+    }
 }
 
 function initUI() {
@@ -13557,12 +13566,41 @@ async function loadTodayChecks() {
     
     let html = '';
     let hasActiveChecks = false;
+    let totalChecks = 0;
+    let completedChecks = 0;
+    
+    // Şube sıralaması: Tuzla önce, Şişli sonra (localStorage'dan özelleştirilebilir)
+    const branchOrder = JSON.parse(localStorage.getItem('dashboardBranchOrder') || '["Tuzla Port", "Şişli (Merkez)"]');
+    const sortedBranches = [...branches].sort((a, b) => {
+        const aIndex = branchOrder.findIndex(o => a.includes(o) || o.includes(a));
+        const bIndex = branchOrder.findIndex(o => b.includes(o) || o.includes(b));
+        return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+    });
     
     // Her şube için checkleri topla ve sırala
-    for (const branch of branches) {
+    for (const branch of sortedBranches) {
         const checkTypes = CHECKLIST_TYPES[branch] || [];
         const isMoonberry = branch.includes('Şişli') || branch.includes('Merkez');
         const brandColor = isMoonberry ? '#008c95' : '#ff8674';
+        const branchClass = isMoonberry ? 'sisli' : 'tuzla';
+        const branchShortName = isMoonberry ? 'Şişli' : 'Tuzla';
+        
+        let branchHtml = '';
+        let branchCheckCount = 0;
+        
+        // Birden fazla şube varsa şube başlığı ekle
+        if (sortedBranches.length > 1) {
+            html += `
+                <div class="branch-group">
+                    <div class="branch-header">
+                        <span class="branch-badge ${branchClass}">
+                            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                            ${branchShortName}
+                        </span>
+                    </div>
+                    <div class="check-cards-grid">
+            `;
+        }
         
         // Check'leri diziye topla
         const checksArray = [];
@@ -13898,14 +13936,28 @@ async function loadTodayChecks() {
         }
         
         hasActiveChecks = true;
+        totalChecks++;
+        if (platformCompleted) completedChecks++;
+        
+        const platformCardClass = platformCompleted ? 'completed' : (activePlatformTime ? 'active' : '');
+        const platformPulse = activePlatformTime && !platformCompleted ? 'check-pulse-active' : '';
+        
         html += `
-            <div class="${activePlatformTime && !platformCompleted ? 'check-pulse-active' : ''}" style="background:${platformBg};border-left:3px solid ${platformCompleted ? '#27ae60' : platformBrandColor};border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .15s;opacity:${platformCompleted ? '0.6' : '1'}" onclick="goTo('checklist'); setTimeout(() => { document.querySelector('[data-type=platform]')?.click(); }, 100);" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='none'">
-                <svg width="16" height="16" fill="none" stroke="${platformCompleted ? '#27ae60' : platformBrandColor}" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-                <span style="font-weight:500;font-size:.85rem;color:var(--tx)">Platform</span>
-                ${activePlatformTime ? `<span style="font-size:.7rem;color:var(--tx3)">${activePlatformTime}</span>` : ''}
-                <span style="font-size:.7rem;color:var(--tx3);margin-left:auto">${platformPersonnelText}</span>
-                ${!platformCompleted && activePlatformTime ? `<span style="font-size:.65rem;color:#27ae60;font-weight:600">-1</span>` : ''}
-                <span style="font-size:.75rem;font-weight:600;color:${platformStatusColor};padding:4px 10px;background:${platformCompleted ? 'rgba(39,174,96,.12)' : platformBrandBg};border-radius:6px">${platformStatus}</span>
+            <div class="check-card-premium ${platformCardClass} ${platformPulse} ${isMoonberryBranch ? '' : 'coral'}" onclick="goTo('checklist'); setTimeout(() => { document.querySelector('[data-type=platform]')?.click(); }, 100);">
+                <div class="check-icon-wrap ${platformCompleted ? 'green' : isMoonberryBranch ? 'teal' : 'coral'}">
+                    <svg width="16" height="16" fill="none" stroke="${platformCompleted ? '#27ae60' : platformBrandColor}" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                </div>
+                <div class="check-info">
+                    <div class="check-name">Platform Kontrolü</div>
+                    <div class="check-meta">
+                        ${activePlatformTime ? `<span class="check-time-badge">${activePlatformTime}</span>` : ''}
+                        ${platformPersonnelText ? `<span class="check-personnel-tag">${platformPersonnelText}</span>` : ''}
+                    </div>
+                </div>
+                <div class="check-status-wrap">
+                    ${!platformCompleted && activePlatformTime ? `<span class="check-points-badge negative">-1</span>` : ''}
+                    <span class="check-countdown-pill ${platformCompleted ? 'done' : activePlatformTime ? (isMoonberryBranch ? 'active' : 'coral') : 'missed'}">${platformStatus}</span>
+                </div>
             </div>
         `;
         
@@ -13928,19 +13980,40 @@ async function loadTodayChecks() {
         const temizlikDeadline = isSabahTemizlik ? '15:00' : '02:00';
         
         html += `
-            <div style="background:${temizlikCompleted ? 'rgba(39,174,96,.06)' : 'var(--bg3)'};border-left:3px solid ${temizlikCompleted ? '#27ae60' : isMoonberryBranch ? '#008c95' : '#ff8674'};border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .15s;opacity:${temizlikCompleted ? '0.6' : '1'}" onclick="goTo('checklist'); setTimeout(() => { selectChecklistType('aylik'); }, 200);" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='none'">
-                <svg width="16" height="16" fill="none" stroke="${temizlikCompleted ? '#27ae60' : isMoonberryBranch ? '#008c95' : '#ff8674'}" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6l3 1 2-3 2 3 3-1-1 3 3 2-3 2 1 3-3-1-2 3-2-3-3 1 1-3-3-2 3-2-1-3z"/></svg>
-                <span style="font-weight:500;font-size:.85rem;color:var(--tx)">Temizlik Çizelgesi</span>
-                <span style="font-size:.7rem;color:var(--tx3)">${isSabahTemizlik ? 'Sabah' : 'Akşam'}</span>
-                <span style="font-size:.7rem;color:var(--tx3);margin-left:auto">${temizlikPersonnelText}</span>
-                <span style="font-size:.75rem;font-weight:600;color:${temizlikCompleted ? '#27ae60' : 'var(--tx2)'};padding:4px 10px;background:${temizlikCompleted ? 'rgba(39,174,96,.12)' : 'var(--bg4)'};border-radius:6px">${temizlikCompleted ? 'Tamam' : temizlikDeadline + "'e kadar"}</span>
+            <div class="check-card-premium ${temizlikCompleted ? 'completed' : 'active'} ${isMoonberryBranch ? '' : 'coral'}" onclick="goTo('checklist'); setTimeout(() => { selectChecklistType('aylik'); }, 200);">
+                <div class="check-icon-wrap ${temizlikCompleted ? 'green' : isMoonberryBranch ? 'teal' : 'coral'}">
+                    <svg width="16" height="16" fill="none" stroke="${temizlikCompleted ? '#27ae60' : brandColor}" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6l3 1 2-3 2 3 3-1-1 3 3 2-3 2 1 3-3-1-2 3-2-3-3 1 1-3-3-2 3-2-1-3z"/></svg>
+                </div>
+                <div class="check-info">
+                    <div class="check-name">Temizlik Çizelgesi</div>
+                    <div class="check-meta">
+                        <span class="check-time-badge">${isSabahTemizlik ? 'Sabah' : 'Akşam'}</span>
+                        ${temizlikPersonnelText ? `<span class="check-personnel-tag">${temizlikPersonnelText}</span>` : ''}
+                    </div>
+                </div>
+                <div class="check-status-wrap">
+                    <span class="check-countdown-pill ${temizlikCompleted ? 'done' : isMoonberryBranch ? 'active' : 'coral'}">${temizlikCompleted ? 'Tamam' : temizlikDeadline}</span>
+                </div>
             </div>
         `;
+        totalChecks++;
+        if (temizlikCompleted) completedChecks++;
+        
+        // Şube grubunu kapat (birden fazla şube varsa)
+        if (sortedBranches.length > 1) {
+            html += `</div></div>`; // check-cards-grid ve branch-group kapat
+        }
     }
     
     if (hasActiveChecks) {
         section.style.display = 'block';
         container.innerHTML = html;
+        
+        // Toplam sayaç güncelle
+        const totalEl = document.getElementById('checksTotalCount');
+        if (totalEl) {
+            totalEl.textContent = `${completedChecks}/${totalChecks} tamamlandı`;
+        }
         
         // Canlı geriye sayım başlat
         startDashboardCountdown();
