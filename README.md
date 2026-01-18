@@ -1,82 +1,88 @@
-# MOONBERRY İK v20 - MODÜLER YAPI
+[README.md](https://github.com/user-attachments/files/24695840/README.md)
+# 🌙 Moonberry İK - Modüler Versiyon 2.0
 
-## 📦 KURULUM
+## 📁 Dosya Yapısı
 
-Bu klasörü (`moonberry-ik/`) sunucuya olduğu gibi yükleyin.
-
-### Dosya Yapısı
 ```
-moonberry-ik/
-├── index.html              ← Ana uygulama
-├── login.html              ← Giriş sayfası
+moonberry-ik-modular/
+├── index.html              # Ana shell (sidebar + page container)
+├── login.html              # Giriş sayfası
+├── firestore.rules         # Firebase güvenlik kuralları
 ├── css/
-│   └── styles.css          ← Tüm stiller
+│   └── styles.css          # Global stiller
 ├── js/
-│   ├── legacy.js           ← Tüm JavaScript
-│   └── modules-reference/  ← Gelecek modüller (referans)
-└── README.md
+│   ├── app.js              # Router, Auth, State, Page Loader
+│   ├── legacy-backup.js    # Eski monolitik JS (referans)
+│   └── modules/            # Sayfa modülleri (opsiyonel)
+├── pages/                  # HTML şablonları (Lazy Load)
+│   ├── dashboard.html
+│   ├── checklist.html
+│   ├── shift.html
+│   ├── puantaj.html
+│   ├── personel.html
+│   ├── admin.html
+│   ├── preview.html
+│   ├── katalog.html
+│   └── belgeler/
+│       ├── sozlesme.html
+│       ├── tutanak.html
+│       ├── savunma.html
+│       ├── fesih.html
+│       ├── istifa.html
+│       ├── ibraname.html
+│       ├── borc.html
+│       ├── avans.html
+│       └── zimmet.html
+└── tools/
+    ├── seed-checklist.html
+    └── test-tool.html
 ```
 
-## 🚀 KULLANIM
+## 🔐 Güvenlik Özellikleri
 
-1. Tüm klasörü web sunucusuna yükleyin
-2. `index.html` ana sayfa olarak ayarlayın
-3. Firebase yapılandırması `js/legacy.js` içinde
+### Rol Bazlı Erişim
+- **Barista/Kasacı**: Dashboard, Checklist, Shift (görüntüleme)
+- **Mağaza Müdürü**: + Puantaj, Personel, Belgeler
+- **Yönetici**: + Admin panel
 
-## 📊 VERSİYON BİLGİLERİ
+### Lazy Loading
+- Sayfalar ihtiyaç halinde yüklenir
+- Yetkisiz sayfalar HTML olarak bile yüklenmez
+- F12 ile erişilemez
 
-| Metrik | Değer |
-|--------|-------|
-| Versiyon | v20 |
-| Tarih | 17 Ocak 2026 |
-| index.html | 1,915 satır |
-| styles.css | 320 satır |
-| legacy.js | 15,513 satır |
-| **TOPLAM** | **17,748 satır** |
+## 🚀 Kurulum
 
-## 🔄 GERİ DÖNÜŞ
+1. Tüm dosyaları GitHub'a yükleyin
+2. Firebase Console'da `firestore.rules` güncelleyin
+3. GitHub Pages veya hosting servisi ile yayınlayın
 
-Sorun çıkarsa monolitik versiyona dönün:
-```
-../backup_20260117_225012_index.html → index.html olarak kullanın
-```
+## 📋 Sayfa Erişim Matrisi
 
-## 📁 REFERANS MODÜLLER
+| Sayfa | Barista | Kasacı | Müdür | Yönetici |
+|-------|---------|--------|-------|----------|
+| Dashboard | ✅ | ✅ | ✅ | ✅ |
+| Checklist | ✅ | ✅ | ✅ | ✅ |
+| Shift | 👁️ | 👁️ | ✅ | ✅ |
+| Puantaj | ❌ | ❌ | ✅ | ✅ |
+| Personel | ❌ | ❌ | ✅ | ✅ |
+| Belgeler | ❌ | ❌ | ✅ | ✅ |
+| Admin | ❌ | ❌ | ❌ | ✅ |
 
-`js/modules-reference/` klasöründe gelecekte kullanılabilecek modüller:
+## 🔄 Migration Notları
 
-| Modül | Satır | Açıklama |
-|-------|-------|----------|
-| config.js | 177 | Firebase, sabitler |
-| utils.js | 232 | Yardımcı fonksiyonlar |
-| auth.js | 110 | Kimlik doğrulama |
-| personel.js | 265 | Personel yönetimi |
-| shift.js | 671 | Shift planlama |
-| puantaj.js | 346 | Puantaj sistemi |
-| checklist.js | 621 | Checklist sistemi |
-| admin.js | 337 | Yönetici paneli |
-| app.js | 176 | Ana uygulama |
+Bu versiyon mevcut legacy.js'i kullanmaya devam eder.
+Sadece HTML şablonları ayrı dosyalara taşındı.
 
-Bu modüller `legacy.js`'den fonksiyonları parça parça alarak aktifleştirilebilir.
+### Avantajlar:
+- ✅ Mevcut fonksiyonlar bozulmaz
+- ✅ Güvenlik iyileştirildi
+- ✅ Aşamalı geçiş mümkün
 
-## ✅ ÖZELLİKLER
+### Sonraki Adımlar:
+1. JS modüllerini ayrı dosyalara taşı
+2. Her sayfa için bağımsız modül oluştur
+3. Legacy.js'i kademeli olarak kaldır
 
-- ✅ Personel yönetimi
-- ✅ Shift planlama (sürükle-bırak)
-- ✅ Puantaj sistemi (otomatik puan)
-- ✅ Checklist sistemi (günlük/temizlik/platform)
-- ✅ Check kuralları yönetim paneli
-- ✅ Belge oluşturma (sözleşme, tutanak, vb.)
-- ✅ Dashboard check kartları
-- ✅ Dark mode
-- ✅ Responsive tasarım
+## 📞 Destek
 
-## 🔐 GÜVENLİK
-
-- Firebase Authentication aktif
-- Firestore güvenlik kuralları: `../firestore.rules`
-- Session yönetimi dahil
-
----
-
-**Moonberry Coffee © 2026**
+Moonberry Coffee - Tamaslan Kafe Restoran ve Gıda Hizmetleri
