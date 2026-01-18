@@ -104,6 +104,8 @@ const PAGE_MODULES = {
     'puantaj': 'js/modules/puantaj.js',
     'personel': 'js/modules/personel.js',
     'admin': 'js/modules/admin.js',
+    'katalog': 'js/modules/admin.js',
+    'preview': 'js/modules/admin.js',
     'sozlesme': 'js/modules/belgeler.js',
     'tutanak': 'js/modules/belgeler.js',
     'savunma': 'js/modules/belgeler.js',

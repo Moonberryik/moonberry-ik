@@ -1,4 +1,14 @@
-# 🌙 Moonberry İK - Modüler Versiyon 2.0
+# 🌙 Moonberry İK - Modüler v2.0
+
+## 📊 Proje Özeti
+
+| Metrik | Değer |
+|--------|-------|
+| Toplam JS | ~4,000 satır |
+| Toplam HTML | ~35KB |
+| Modül Sayısı | 8 |
+| Sayfa Sayısı | 17 |
+| Belge Türü | 9 |
 
 ## 📁 Dosya Yapısı
 
@@ -7,22 +17,30 @@ moonberry-ik-modular/
 ├── index.html              # Ana shell (sidebar + page container)
 ├── login.html              # Giriş sayfası
 ├── firestore.rules         # Firebase güvenlik kuralları
+├── README.md
 ├── css/
-│   └── styles.css          # Global stiller
+│   └── styles.css          # Global stiller (23KB)
 ├── js/
-│   ├── app.js              # Router, Auth, State, Page Loader
-│   ├── legacy-backup.js    # Eski monolitik JS (referans)
-│   └── modules/            # Sayfa modülleri (opsiyonel)
-├── pages/                  # HTML şablonları (Lazy Load)
+│   ├── app.js              # Router, Auth, State (19KB)
+│   └── modules/
+│       ├── utils.js        # Ortak fonksiyonlar (531 satır)
+│       ├── dashboard.js    # Ana sayfa (203 satır)
+│       ├── checklist.js    # Günlük/Temizlik/Platform (591 satır)
+│       ├── shift.js        # Vardiya planı (490 satır)
+│       ├── puantaj.js      # Puan sistemi (316 satır)
+│       ├── personel.js     # Personel yönetimi (369 satır)
+│       ├── belgeler.js     # PDF belgeler (475 satır)
+│       └── admin.js        # Yönetim paneli (476 satır)
+├── pages/
 │   ├── dashboard.html
 │   ├── checklist.html
 │   ├── shift.html
 │   ├── puantaj.html
 │   ├── personel.html
 │   ├── admin.html
-│   ├── preview.html
 │   ├── katalog.html
-│   └── belgeler/
+│   ├── preview.html
+│   └── belgeler/           # 9 belge şablonu
 │       ├── sozlesme.html
 │       ├── tutanak.html
 │       ├── savunma.html
@@ -33,55 +51,49 @@ moonberry-ik-modular/
 │       ├── avans.html
 │       └── zimmet.html
 └── tools/
-    ├── seed-checklist.html
-    └── test-tool.html
+    ├── test-tool.html      # Test aracı
+    └── seed-checklist.html # Veri ekleme
 ```
 
-## 🔐 Güvenlik Özellikleri
+## 🔐 Güvenlik & Erişim
 
-### Rol Bazlı Erişim
-- **Barista/Kasacı**: Dashboard, Checklist, Shift (görüntüleme)
-- **Mağaza Müdürü**: + Puantaj, Personel, Belgeler
-- **Yönetici**: + Admin panel
+### Rol Hiyerarşisi
+1. **Yönetici**: Tüm erişim + Admin panel
+2. **Bölge Müdürü**: Tüm şubeler
+3. **Mağaza Müdürü**: Kendi şubesi + belgeler
+4. **Kasacı/Barista**: Dashboard, Checklist, Shift (görüntüleme)
 
-### Lazy Loading
-- Sayfalar ihtiyaç halinde yüklenir
-- Yetkisiz sayfalar HTML olarak bile yüklenmez
-- F12 ile erişilemez
+### Sayfa Erişim Matrisi
+
+| Sayfa | Barista | Müdür | Yönetici |
+|-------|---------|-------|----------|
+| Dashboard | ✅ | ✅ | ✅ |
+| Checklist | ✅ | ✅ | ✅ |
+| Shift | 👁️ | ✅ | ✅ |
+| Puantaj | ❌ | ✅ | ✅ |
+| Personel | ❌ | ✅ | ✅ |
+| Belgeler | ❌ | ✅ | ✅ |
+| Admin | ❌ | ❌ | ✅ |
 
 ## 🚀 Kurulum
 
-1. Tüm dosyaları GitHub'a yükleyin
-2. Firebase Console'da `firestore.rules` güncelleyin
-3. GitHub Pages veya hosting servisi ile yayınlayın
+1. Firebase Console'da proje oluşturun
+2. `firestore.rules` dosyasını yükleyin
+3. GitHub Pages veya hosting'e deploy edin
+4. İlk kullanıcıyı Firebase Auth'a ekleyin
 
-## 📋 Sayfa Erişim Matrisi
+## ⚡ Lazy Loading
 
-| Sayfa | Barista | Kasacı | Müdür | Yönetici |
-|-------|---------|--------|-------|----------|
-| Dashboard | ✅ | ✅ | ✅ | ✅ |
-| Checklist | ✅ | ✅ | ✅ | ✅ |
-| Shift | 👁️ | 👁️ | ✅ | ✅ |
-| Puantaj | ❌ | ❌ | ✅ | ✅ |
-| Personel | ❌ | ❌ | ✅ | ✅ |
-| Belgeler | ❌ | ❌ | ✅ | ✅ |
-| Admin | ❌ | ❌ | ❌ | ✅ |
+- Sayfalar ilk açılışta değil, ihtiyaç halinde yüklenir
+- Her modül sadece bir kez yüklenir
+- Yetkisiz sayfalar HTML olarak bile yüklenmez
 
-## 🔄 Migration Notları
+## 📱 Responsive
 
-Bu versiyon mevcut legacy.js'i kullanmaya devam eder.
-Sadece HTML şablonları ayrı dosyalara taşındı.
+- Mobil uyumlu tasarım
+- PWA hazır yapı
+- Touch-friendly kontroller
 
-### Avantajlar:
-- ✅ Mevcut fonksiyonlar bozulmaz
-- ✅ Güvenlik iyileştirildi
-- ✅ Aşamalı geçiş mümkün
+---
 
-### Sonraki Adımlar:
-1. JS modüllerini ayrı dosyalara taşı
-2. Her sayfa için bağımsız modül oluştur
-3. Legacy.js'i kademeli olarak kaldır
-
-## 📞 Destek
-
-Moonberry Coffee - Tamaslan Kafe Restoran ve Gıda Hizmetleri
+**Moonberry Coffee** | Tamaslan Kafe Restoran ve Gıda Hizmetleri
