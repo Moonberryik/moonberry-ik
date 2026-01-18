@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
     <title>Moonberry Coffee | Yönetim Paneli</title>
-    <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/760af2_755f54f13b654f1bb318c97f16a029a3~mv2.png/v1/fill/w_32,h_32,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Moonberry%20Coffee%20Logo.png">
-    <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/760af2_755f54f13b654f1bb318c97f16a029a3~mv2.png/v1/fill/w_180,h_180,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Moonberry%20Coffee%20Logo.png">
+    <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/760af2_0e846222ae5b4021930a757e498f30e9~mv2.png">
+    <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/760af2_0e846222ae5b4021930a757e498f30e9~mv2.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <!-- pdfmake - Türkçe karakter desteği -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
@@ -1773,6 +1773,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                                 <button class="btn btn-sm btn-ghost" onclick="loadChecklistTypesConfig()" style="display:flex;align-items:center;gap:4px">
                                     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                                     Yenile
+                                </button>
+                                <button class="btn btn-sm btn-ghost" onclick="syncChecklistTypesWithSeed()" style="display:flex;align-items:center;gap:4px;color:#f39c12">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+                                    Orijinale Sıfırla
                                 </button>
                                 <button class="btn btn-sm btn-primary" onclick="saveChecklistTypesConfig()" style="display:flex;align-items:center;gap:4px">
                                     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -14799,6 +14803,53 @@ async function saveChecklistTypesConfig() {
     }
 }
 
+// Checklist türlerini seed.html orijinalleriyle sync et
+async function syncChecklistTypesWithSeed() {
+    if (!confirm('Checklist türleri seed.html orijinal değerlerine sıfırlanacak. Devam etmek istiyor musunuz?')) return;
+    
+    // seed.html'deki orijinal CHECKLIST_TYPES
+    const SEED_CHECKLIST_TYPES = {
+        'Tuzla Port': [
+            {id: 'acilis', name: 'Açılış Hazırlıkları', icon: 'sunrise'},
+            {id: 'kapanis', name: 'Kapanış Hazırlıkları', icon: 'sunset'},
+            {id: 'gunluk', name: 'Günlük Genel Check', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
+            {id: 'mudur', name: 'Müdür Kontrol', icon: 'user-check', managerOnly: true},
+            {id: 'platform', name: 'Platform Check', icon: 'smartphone'},
+            {id: 'haftalik', name: 'Haftalık Görevler', icon: 'calendar-week'},
+            {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
+        ],
+        'Şişli (Merkez)': [
+            {id: 'acilis', name: 'Açılış Hazırlıkları', icon: 'sunrise'},
+            {id: 'kapanis', name: 'Kapanış Hazırlıkları', icon: 'sunset'},
+            {id: 'gunluk', name: 'Günlük Genel Check', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
+            {id: 'mudur', name: 'Müdür Kontrol', icon: 'user-check', managerOnly: true},
+            {id: 'platform', name: 'Platform Check', icon: 'smartphone'},
+            {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
+        ]
+    };
+    
+    try {
+        await db.collection('config').doc('checklistTypes').set({
+            ...SEED_CHECKLIST_TYPES,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // Global CHECKLIST_TYPES'ı da güncelle
+        for (const [branch, types] of Object.entries(SEED_CHECKLIST_TYPES)) {
+            CHECKLIST_TYPES[branch] = types;
+        }
+        
+        // UI'ı güncelle
+        checklistTypesData = { ...SEED_CHECKLIST_TYPES };
+        renderChecklistTypes();
+        
+        showToast('Checklist türleri orijinal değerlere sıfırlandı', 'success');
+    } catch (e) {
+        console.error('Sync hatası:', e);
+        showToast('Sync hatası: ' + e.message, 'error');
+    }
+}
+
 // ==================== ADMIN - CHECK KURALLARI ====================
 // ============== GELİŞMİŞ CHECK KURALLARI SİSTEMİ ==============
 
@@ -16103,22 +16154,61 @@ async function loadChecklist() {
     </div>`;
     
     try {
+        // Type ID mapping - config'deki türler seed.html'deki türlerle eşleşmeyebilir
+        const TYPE_ID_MAP = {
+            'aylik_temizlik': 'aylik',
+            'temizlik_acilis': 'aylik',
+            'temizlik_araci': 'aylik',
+            'temizlik_kapanis': 'aylik',
+            'temizlik_cizelgesi': 'aylik',
+            'acilis_hazirlik': 'acilis',
+            'kapanis_hazirlik': 'kapanis',
+            'gunluk_check': 'gunluk',
+            'gunluk_genel': 'gunluk',
+            'mudur_kontrol': 'mudur',
+            'platform_check': 'platform',
+            'haftalik_gorev': 'haftalik'
+        };
+        
+        // Base type'ı bul (mapping veya underscore'dan önceki kısım)
+        let baseType = TYPE_ID_MAP[type] || type;
+        if (!TYPE_ID_MAP[type] && type.includes('_')) {
+            // Örn: "aylik_temizlik" -> "aylik", "temizlik_acilis" -> "temizlik"
+            const parts = type.split('_');
+            baseType = parts[0];
+        }
+        
         const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
+        const baseChecklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${baseType}`;
         let items = [];
         
-        // Önce Firebase'den çek
+        // Önce Firebase'den çek - tam ID ile
         try {
             const checklistDoc = await db.collection('checklists').doc(checklistId).get();
             if (checklistDoc.exists && checklistDoc.data().items?.length > 0) {
                 items = checklistDoc.data().items;
+                console.log(`✅ Checklist yüklendi: ${checklistId} (${items.length} madde)`);
             }
         } catch (dbError) {
             console.warn('Firestore erişim hatası:', dbError);
         }
         
+        // Tam ID ile bulunamadıysa base ID ile dene
+        if (items.length === 0 && baseType !== type) {
+            try {
+                const baseDoc = await db.collection('checklists').doc(baseChecklistId).get();
+                if (baseDoc.exists && baseDoc.data().items?.length > 0) {
+                    items = baseDoc.data().items;
+                    console.log(`✅ Checklist yüklendi (base): ${baseChecklistId} (${items.length} madde)`);
+                }
+            } catch (dbError) {
+                console.warn('Base checklist erişim hatası:', dbError);
+            }
+        }
+        
         // Firebase'de yoksa default maddeleri kullan ve kaydet (ilk kurulum)
         if (items.length === 0) {
-            items = getDefaultChecklistItems(branch, type);
+            items = getDefaultChecklistItems(branch, type) || getDefaultChecklistItems(branch, baseType);
             if (items.length > 0) {
                 try {
                     await db.collection('checklists').doc(checklistId).set({
@@ -18128,8 +18218,66 @@ function showChecklistSettings() {
 
 // Default checklist maddeleri - TÜM EXCEL MADDELERİ
 function getDefaultChecklistItems(branch, type) {
-    // Temizlik Çizelgesi maddeleri
-    if (type === 'aylik') {
+    // Type mapping - farklı ID'ler aynı base type'a işaret edebilir
+    const baseType = type.includes('_') ? type.split('_')[0] : type;
+    const checkType = ['aylik', 'temizlik'].includes(baseType) ? 'aylik' : 
+                      ['acilis', 'hazirlik'].includes(baseType) ? 'acilis' : 
+                      ['kapanis'].includes(baseType) ? 'kapanis' : 
+                      ['gunluk', 'check'].includes(baseType) ? 'gunluk' : 
+                      baseType;
+    
+    // Açılış Hazırlıkları
+    if (checkType === 'acilis') {
+        return [
+            { id: 'ac_01', text: 'Mağaza açıldı, ışıklar ve klima kontrol edildi', category: 'Açılış' },
+            { id: 'ac_02', text: 'Kasa açılışı yapıldı', category: 'Kasa' },
+            { id: 'ac_03', text: 'Espresso makinesi ısıtıldı ve kontrol edildi', category: 'Ekipman' },
+            { id: 'ac_04', text: 'Öğütücü ayarları kontrol edildi', category: 'Ekipman' },
+            { id: 'ac_05', text: 'Buzdolabı sıcaklıkları kontrol edildi', category: 'Gıda Güvenliği' },
+            { id: 'ac_06', text: 'SKT kontrolleri yapıldı', category: 'Gıda Güvenliği' },
+            { id: 'ac_07', text: 'Tezgah ve bar alanı hazırlandı', category: 'Hazırlık' },
+            { id: 'ac_08', text: 'Müzik açıldı, ses seviyesi ayarlandı', category: 'Ortam' },
+            { id: 'ac_09', text: 'Masalar ve sandalyeler düzenlendi', category: 'Salon' },
+            { id: 'ac_10', text: 'Vitrin düzeni kontrol edildi', category: 'Sunum' },
+            { id: 'ac_11', text: 'Platform sistemleri açıldı ve kontrol edildi', category: 'Teknoloji' },
+            { id: 'ac_12', text: 'WhatsApp grubuna açılış mesajı gönderildi', category: 'İletişim' }
+        ];
+    }
+    
+    // Kapanış Hazırlıkları
+    if (checkType === 'kapanis') {
+        return [
+            { id: 'kp_01', text: 'Z raporu alındı ve paylaşıldı', category: 'Kasa' },
+            { id: 'kp_02', text: 'Kasa kapatıldı, nakit sayıldı', category: 'Kasa' },
+            { id: 'kp_03', text: 'Espresso makinesi temizlendi', category: 'Ekipman' },
+            { id: 'kp_04', text: 'Öğütücüler temizlendi', category: 'Ekipman' },
+            { id: 'kp_05', text: 'Tezgah ve bar alanı temizlendi', category: 'Temizlik' },
+            { id: 'kp_06', text: 'Buzdolapları düzenlendi', category: 'Düzen' },
+            { id: 'kp_07', text: 'Çöpler boşaltıldı', category: 'Temizlik' },
+            { id: 'kp_08', text: 'Zemin temizlendi', category: 'Temizlik' },
+            { id: 'kp_09', text: 'Masalar silindi ve düzenlendi', category: 'Salon' },
+            { id: 'kp_10', text: 'WC kontrol edildi', category: 'Temizlik' },
+            { id: 'kp_11', text: 'Platform sistemleri kapatıldı', category: 'Teknoloji' },
+            { id: 'kp_12', text: 'Klima, ışıklar kapatıldı, mağaza kilitlendi', category: 'Kapanış' }
+        ];
+    }
+    
+    // Günlük Check
+    if (checkType === 'gunluk') {
+        return [
+            { id: 'gun_01', text: 'Espresso makinesi durumu kontrol edildi', category: 'Ekipman' },
+            { id: 'gun_02', text: 'Kahve kalitesi test edildi', category: 'Kalite' },
+            { id: 'gun_03', text: 'Buzdolabı sıcaklıkları kontrol edildi', category: 'Gıda Güvenliği' },
+            { id: 'gun_04', text: 'Malzeme eksikleri not edildi', category: 'Stok' },
+            { id: 'gun_05', text: 'Tezgah temizliği yapıldı', category: 'Temizlik' },
+            { id: 'gun_06', text: 'Müşteri alanı kontrol edildi', category: 'Salon' },
+            { id: 'gun_07', text: 'WC durumu kontrol edildi', category: 'Temizlik' },
+            { id: 'gun_08', text: 'Platform siparişleri kontrol edildi', category: 'Sipariş' }
+        ];
+    }
+    
+    // Temizlik Çizelgesi (aylık)
+    if (checkType === 'aylik') {
         return [
             { id: 'tem_01', text: 'Tüm masalar ve sandalyeler temizlendi', category: 'Salon' },
             { id: 'tem_02', text: 'Zemin süpürüldü ve silindi', category: 'Salon' },
@@ -18150,18 +18298,45 @@ function getDefaultChecklistItems(branch, type) {
         ];
     }
     
-    // Günlük Check maddeleri (açılış/kapanış)
-    if (type === 'gunluk') {
+    // Müdür Kontrol
+    if (checkType === 'mudur') {
         return [
-            { id: 'gun_01', text: 'Kasa açılışı/kapanışı yapıldı', category: 'Kasa' },
-            { id: 'gun_02', text: 'Espresso makinesi kontrol edildi', category: 'Ekipman' },
-            { id: 'gun_03', text: 'Buzdolabı sıcaklıkları kontrol edildi', category: 'Gıda Güvenliği' },
-            { id: 'gun_04', text: 'Malzeme eksikleri not edildi', category: 'Stok' },
-            { id: 'gun_05', text: 'Tezgah temizliği yapıldı', category: 'Temizlik' }
+            { id: 'mud_01', text: 'Personel devamsızlık kontrolü', category: 'Personel' },
+            { id: 'mud_02', text: 'Vardiya devir teslim kontrolü', category: 'Operasyon' },
+            { id: 'mud_03', text: 'Kasa sayımı doğrulandı', category: 'Mali' },
+            { id: 'mud_04', text: 'Stok durumu gözden geçirildi', category: 'Stok' },
+            { id: 'mud_05', text: 'Müşteri şikayetleri değerlendirildi', category: 'Müşteri' },
+            { id: 'mud_06', text: 'Ekipman durumu kontrol edildi', category: 'Ekipman' },
+            { id: 'mud_07', text: 'Temizlik standardı kontrol edildi', category: 'Kalite' },
+            { id: 'mud_08', text: 'Günlük satış performansı değerlendirildi', category: 'Performans' }
+        ];
+    }
+    
+    // Platform Check
+    if (checkType === 'platform') {
+        return [
+            { id: 'plt_01', text: 'Trendyol Yemek tablet/uygulama açık', category: 'Platform' },
+            { id: 'plt_02', text: 'Yemeksepeti tablet/uygulama açık', category: 'Platform' },
+            { id: 'plt_03', text: 'Getir Yemek tablet/uygulama açık', category: 'Platform' },
+            { id: 'plt_04', text: 'Migros Yemek tablet/uygulama açık', category: 'Platform' },
+            { id: 'plt_05', text: 'Tüm menüler güncel ve fiyatlar doğru', category: 'Menü' },
+            { id: 'plt_06', text: 'Stokta olmayan ürünler kapatıldı', category: 'Stok' }
+        ];
+    }
+    
+    // Haftalık Görevler
+    if (checkType === 'haftalik') {
+        return [
+            { id: 'hft_01', text: 'Derin temizlik yapıldı', category: 'Temizlik' },
+            { id: 'hft_02', text: 'Depo sayımı yapıldı', category: 'Stok' },
+            { id: 'hft_03', text: 'Ekipman bakımı yapıldı', category: 'Ekipman' },
+            { id: 'hft_04', text: 'Haftalık sipariş listesi hazırlandı', category: 'Sipariş' },
+            { id: 'hft_05', text: 'Personel performans değerlendirmesi', category: 'Personel' }
         ];
     }
     
     // Diğer tipler için boş döndür - Firebase'den yüklenecek
+    console.warn(`Varsayılan maddeler bulunamadı: ${type} (baseType: ${checkType})`);
     return [];
 }
     </script>
