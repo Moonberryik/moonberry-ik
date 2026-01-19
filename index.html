@@ -2503,6 +2503,8 @@ function getPersonelDisplayName(personelData) {
 // Personel listesinden isim getir (cache kullanarak)
 let _personelDisplayCache = null;
 async function getPersonelDisplayNameFromList(searchKey, branch) {
+    if (!searchKey) return searchKey;
+    
     // Cache'i kontrol et
     if (!_personelDisplayCache) {
         try {
@@ -2517,6 +2519,15 @@ async function getPersonelDisplayNameFromList(searchKey, branch) {
                 const underscoreName = data.name?.toLowerCase().replace(/\s+/g, '_').replace(/[ğ]/g, 'g').replace(/[ü]/g, 'u').replace(/[ş]/g, 's').replace(/[ı]/g, 'i').replace(/[ö]/g, 'o').replace(/[ç]/g, 'c');
                 const underscoreCodeName = data.codeName?.toLowerCase().replace(/\s+/g, '_').replace(/[ğ]/g, 'g').replace(/[ü]/g, 'u').replace(/[ş]/g, 's').replace(/[ı]/g, 'i').replace(/[ö]/g, 'o').replace(/[ç]/g, 'c');
                 
+                // İsmin ilk harfini al (örn: "Baran" -> "baran", "BARAN" -> "baran")
+                const firstName = data.name?.split(' ')[0];
+                const firstNameLower = firstName?.toLowerCase();
+                const firstNameNorm = normalizeTurkishChars(firstName);
+                
+                const codeFirst = data.codeName?.split(' ')[0];
+                const codeFirstLower = codeFirst?.toLowerCase();
+                const codeFirstNorm = normalizeTurkishChars(codeFirst);
+                
                 const keys = [
                     data.name,
                     data.name?.toLowerCase(),
@@ -2524,26 +2535,31 @@ async function getPersonelDisplayNameFromList(searchKey, branch) {
                     data.codeName,
                     data.codeName?.toLowerCase(),
                     data.codeName?.toUpperCase(),
-                    data.codeName?.split(' ')[0],
-                    data.codeName?.split(' ')[0]?.toLowerCase(),
-                    data.codeName?.split(' ')[0]?.toUpperCase(),
-                    data.name?.split(' ')[0],
-                    data.name?.split(' ')[0]?.toLowerCase(),
-                    data.name?.split(' ')[0]?.toUpperCase(),
+                    firstName,
+                    firstNameLower,
+                    firstNameNorm,
+                    codeFirst,
+                    codeFirstLower,
+                    codeFirstNorm,
                     uniqueId,
                     normalizePersonelId(data.name),
                     normalizePersonelId(data.codeName),
                     normalizeTurkishChars(data.name),
                     normalizeTurkishChars(data.codeName),
-                    normalizeTurkishChars(data.name?.split(' ')[0]),
-                    normalizeTurkishChars(data.codeName?.split(' ')[0]),
                     // Underscore formatları (shift'ten gelen)
                     underscoreName,
                     underscoreCodeName,
+                    // Karışık format denemeleri
+                    underscoreName?.replace(/_/g, ' '),
+                    underscoreCodeName?.replace(/_/g, ' '),
+                    // İlk isim underscore (örn: "tuana" veya "busra")
+                    underscoreName?.split('_')[0],
+                    underscoreCodeName?.split('_')[0],
                 ].filter(k => k);
                 
+                // Tüm keyleri kaydet
                 keys.forEach(key => {
-                    if (!_personelDisplayCache.has(key)) {
+                    if (key && !_personelDisplayCache.has(key)) {
                         _personelDisplayCache.set(key, { 
                             displayName, 
                             fullName: data.name,
@@ -2554,27 +2570,39 @@ async function getPersonelDisplayNameFromList(searchKey, branch) {
                     }
                 });
             });
+            console.log('[Cache] Personel cache oluşturuldu:', _personelDisplayCache.size, 'kayıt');
         } catch (e) {
             console.error('Personel cache hatası:', e);
             return searchKey;
         }
     }
     
-    // Underscore formatına çevir (arama için)
+    // Arama varyasyonları oluştur
     const underscoreSearch = searchKey?.toLowerCase().replace(/\s+/g, '_').replace(/[ğ]/g, 'g').replace(/[ü]/g, 'u').replace(/[ş]/g, 's').replace(/[ı]/g, 'i').replace(/[ö]/g, 'o').replace(/[ç]/g, 'c');
+    const spaceSearch = searchKey?.replace(/_/g, ' ');
+    const firstWord = searchKey?.split(/[_\s]/)[0];
     
-    // Cache'ten ara
+    // Cache'ten ara - çoklu deneme
     const result = _personelDisplayCache.get(searchKey) || 
                    _personelDisplayCache.get(searchKey?.toLowerCase()) ||
                    _personelDisplayCache.get(searchKey?.toUpperCase()) ||
                    _personelDisplayCache.get(normalizeTurkishChars(searchKey)) ||
                    _personelDisplayCache.get(normalizePersonelId(searchKey)) ||
-                   _personelDisplayCache.get(underscoreSearch);
+                   _personelDisplayCache.get(underscoreSearch) ||
+                   _personelDisplayCache.get(spaceSearch) ||
+                   _personelDisplayCache.get(spaceSearch?.toLowerCase()) ||
+                   _personelDisplayCache.get(firstWord) ||
+                   _personelDisplayCache.get(firstWord?.toLowerCase()) ||
+                   _personelDisplayCache.get(normalizeTurkishChars(firstWord));
     
-    if (result && (!branch || result.branch === branch)) {
-        return result.displayName;
+    if (result) {
+        // Branch kontrolü - branch null/"all" ise veya eşleşiyorsa döndür
+        if (!branch || branch === 'all' || !result.branch || result.branch === branch || result.branch === 'all') {
+            return result.displayName;
+        }
     }
     
+    console.warn('[Cache] Personel bulunamadı:', searchKey, '-> orijinal değer kullanılıyor');
     return searchKey; // Bulunamadı, gelen değeri döndür
 }
 
@@ -4292,6 +4320,14 @@ function goTo(page) {
 }
 
 function goBack() { goTo(previousPage); }
+
+// Checklist sayfasına parametre ile gitme
+let _pendingChecklistParams = null;
+
+function goToChecklist(branch, type, timeSlot) {
+    _pendingChecklistParams = { branch, type, timeSlot };
+    goTo('checklist');
+}
 
 // ==================== MODAL SYSTEM ====================
 function showModal(title, body, footer) {
@@ -13644,7 +13680,7 @@ async function loadTodayChecks() {
                 personnel: platformPersonnel,
                 points: { onTime: 1, missed: -1 },
                 priority: platformCompleted ? 90 : (activePlatformTime ? 10 : 50),
-                onClick: "goTo('checklist'); setTimeout(() => { document.querySelector('[data-type=platform]')?.click(); }, 100);"
+                onClick: `goToChecklist('${branch}', 'platform', '${activePlatformTime || nextPlatformTime || '10:00'}')`
             });
             totalChecks++;
             if (platformCompleted) completedChecks++;
@@ -13669,7 +13705,7 @@ async function loadTodayChecks() {
             name: 'Temizlik Çizelgesi',
             icon: 'sparkle',
             deadline: temizlikDeadline,
-            subLabel: isSabahTemizlik ? 'Sabah Vardiyası' : 'Akşam Vardiyası',
+            subLabel: isSabahTemizlik ? 'Açılış' : 'Kapanış',
             isCompleted: temizlikCompleted,
             isActive: !temizlikCompleted,
             isMissed: false,
@@ -13677,7 +13713,7 @@ async function loadTodayChecks() {
             personnel: temizlikPersonnel,
             points: { onTime: 1, missed: -1 },
             priority: temizlikCompleted ? 90 : 20,
-            onClick: "goTo('checklist'); setTimeout(() => { selectChecklistType('aylik'); }, 200);"
+            onClick: `goToChecklist('${branch}', 'aylik', '${shiftType}')`
         });
         totalChecks++;
         if (temizlikCompleted) completedChecks++;
@@ -13704,7 +13740,7 @@ async function loadTodayChecks() {
                 personnel: acilisPersonnel,
                 points: { onTime: 5, missed: -5 },
                 priority: acilisCompleted ? 95 : 5,
-                onClick: "goTo('checklist'); setTimeout(() => { selectChecklistType('acilis'); }, 200);"
+                onClick: `goToChecklist('${branch}', 'acilis', null)`
             });
             totalChecks++;
             if (acilisCompleted) completedChecks++;
@@ -13732,7 +13768,7 @@ async function loadTodayChecks() {
                 personnel: kapanisPersonnel,
                 points: { onTime: 5, missed: -5 },
                 priority: kapanisCompleted ? 95 : 5,
-                onClick: "goTo('checklist'); setTimeout(() => { selectChecklistType('kapanis'); }, 200);"
+                onClick: `goToChecklist('${branch}', 'kapanis', null)`
             });
             totalChecks++;
             if (kapanisCompleted) completedChecks++;
@@ -13780,7 +13816,7 @@ async function loadTodayChecks() {
                 personnel: allPersonnel,
                 points: { onTime: 2, missed: -2 },
                 priority: gunlukCompleted ? 92 : 15,
-                onClick: "goTo('checklist'); setTimeout(() => { selectChecklistType('guncel'); }, 200);"
+                onClick: `goToChecklist('${branch}', 'guncel', '${activeGunlukTime}')`
             });
             totalChecks++;
             if (gunlukCompleted) completedChecks++;
@@ -13807,7 +13843,7 @@ async function loadTodayChecks() {
                 personnel: [userName],
                 points: { onTime: 10, missed: -10 },
                 priority: mudurCompleted ? 93 : 25,
-                onClick: "goTo('checklist'); setTimeout(() => { selectChecklistType('mudur'); }, 200);"
+                onClick: `goToChecklist('${branch}', 'mudur', null)`
             });
             totalChecks++;
             if (mudurCompleted) completedChecks++;
@@ -13836,7 +13872,7 @@ async function loadTodayChecks() {
                 personnel: [],
                 points: { onTime: 3, missed: -3 },
                 priority: haftalikCompleted ? 91 : 30,
-                onClick: "goTo('checklist'); setTimeout(() => { selectChecklistType('haftalik'); }, 200);"
+                onClick: `goToChecklist('${branch}', 'haftalik', null)`
             });
             totalChecks++;
             if (haftalikCompleted) completedChecks++;
@@ -15337,8 +15373,8 @@ const DEFAULT_CHECK_RULES = {
         name: 'Temizlik Çizelgesi', 
         description: 'Sabah ve akşam temizlik görevleri',
         periods: [
-            { id: 'sabah', name: 'Sabah Vardiyası', start: '10:00', end: '15:00', shift: 'acilis' },
-            { id: 'aksam', name: 'Akşam Vardiyası', start: '20:00', end: '02:00', shift: 'kapanis' }
+            { id: 'sabah', name: 'Açılış', start: '10:00', end: '15:00', shift: 'acilis' },
+            { id: 'aksam', name: 'Kapanış', start: '20:00', end: '02:00', shift: 'kapanis' }
         ],
         points: { onTime: 0, late: -1, missed: -1 },
         branches: ['all']
@@ -16019,6 +16055,30 @@ async function initChecklistPage() {
         adminBtns.style.display = (currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru') ? 'block' : 'none';
     }
     
+    // Dashboard'dan parametre ile geldiyse
+    if (_pendingChecklistParams) {
+        const { branch, type, timeSlot } = _pendingChecklistParams;
+        _pendingChecklistParams = null; // Temizle
+        
+        // Şubeyi seç
+        if (branch && subeSelect) {
+            const branchOption = Array.from(subeSelect.options).find(o => o.value === branch);
+            if (branchOption) subeSelect.value = branch;
+        }
+        
+        // Checklist türlerini yükle ve doğru tipi seç
+        await loadChecklistTypes();
+        
+        // Kısa bir gecikme ile checklist türünü seç
+        setTimeout(() => {
+            if (type) {
+                selectChecklistType(subeSelect.value, type, timeSlot || null);
+            }
+        }, 100);
+        
+        return; // Early return
+    }
+    
     // Bugünkü checkler panelini yükle
     loadChecklistTodayPanel();
     
@@ -16669,8 +16729,8 @@ async function loadChecklist() {
                     const todayShift = days[dayIndex] || '';
                     const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
                     
-                    // personelFullNames varsa onu kullan, yoksa key'i kullan
-                    const name = personelFullNames[key] || key;
+                    // personelFullNames varsa onu kullan, yoksa key'in underscore'larını temizle
+                    const name = personelFullNames[key] || key.replace(/_/g, ' ');
                     
                     // Tüm aktif personeli topla (check türüne göre filtreleme)
                     if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-' && cleanShift !== 'X') {
@@ -16748,8 +16808,16 @@ async function loadChecklist() {
                 } else {
                     // Personel isimlerini displayName'e çevir
                     for (const rawName of rawPersonnel) {
-                        const displayName = await getPersonelDisplayNameFromList(rawName, branch) || rawName;
-                        if (!shiftPersonnel.includes(displayName)) {
+                        let displayName = await getPersonelDisplayNameFromList(rawName, branch);
+                        
+                        // Cache'te bulunamadıysa underscore formatını temizle ve formatla
+                        if (!displayName || displayName === rawName) {
+                            // underscore formatını temizle: "tuana_yasar" → "Tuana Yasar"
+                            const cleaned = rawName.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+                            displayName = formatDisplayName(cleaned);
+                        }
+                        
+                        if (displayName && !shiftPersonnel.includes(displayName)) {
                             shiftPersonnel.push(displayName);
                         }
                     }
@@ -17487,7 +17555,8 @@ async function saveAllChecklistItemEdits(branch, type) {
         
         toast(`${updateCount} madde güncellendi`, 'success');
         
-        // Sayfayı yenile
+        // Edit mode'u kapat ve sayfayı yenile
+        checklistEditMode = false;
         loadChecklist();
         
     } catch (e) {
@@ -17701,9 +17770,10 @@ async function generateWeeklyTaskAssignments(branch, weekStart) {
             });
             
             if (hasWorkDay) {
-                const fullName = personelFullNames[key] || key;
-                const displayName = formatDisplayName(fullName);
-                if (!activePersonnel.includes(displayName)) {
+                // underscore formatını temizle: "tuana_yasar" → "Tuana Yasar"
+                const rawName = personelFullNames[key] || key.replace(/_/g, ' ');
+                const displayName = formatDisplayName(rawName);
+                if (displayName && !activePersonnel.includes(displayName)) {
                     activePersonnel.push(displayName);
                 }
             }
