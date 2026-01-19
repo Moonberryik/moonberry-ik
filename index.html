@@ -1631,6 +1631,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <button class="btn btn-ghost btn-sm" onclick="cleanDuplicateShifts()">📅 Duplicate Shift Temizle</button>
                         </div>
                         <div id="cleanupResults" style="margin-top:12px;padding:12px;background:var(--bg3);border-radius:8px;display:none"></div>
+                        
+                        <!-- Veri Migrasyon Araçları -->
+                        <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--bg4)">
+                            <div style="font-weight:600;color:var(--tx);margin-bottom:12px">🔄 Veri Migrasyon</div>
+                            <p style="color:var(--tx2);font-size:.8rem;margin-bottom:12px">Shift ve personel verilerini standartlaştır. Tüm key'ler uniqueId formatına çevrilir.</p>
+                            <div style="display:flex;gap:12px;flex-wrap:wrap">
+                                <button class="btn btn-warning btn-sm" onclick="runDataMigration()" style="background:#f39c12;border-color:#f39c12">⚡ Veri Migrasyonu Çalıştır</button>
+                                <button class="btn btn-ghost btn-sm" onclick="debugPersonelShiftData()">🔍 Debug: Veri Durumu</button>
+                            </div>
+                            <div style="margin-top:10px;padding:10px;background:rgba(243,156,18,.1);border:1px solid rgba(243,156,18,.3);border-radius:8px">
+                                <div style="font-size:.75rem;color:#f39c12">⚠️ <strong>Dikkat:</strong> Migrasyon tüm shift'leri günceller. Çalıştırmadan önce Firebase konsolundan yedek alın.</div>
+                            </div>
+                        </div>
                     </div>
                     <!-- Rol Önizleme - Sadece admin görecek -->
                     <div class="admin-card" id="rolePreviewCard" style="margin-top:20px;display:none">
@@ -12261,12 +12274,13 @@ async function createNewShift() {
             });
             
             personelList.forEach(p => {
-                const displayName = getPersonelDisplayName(p);
+                const codeName = p.codeName || formatDisplayName(p.name);
                 const uniqueId = p.uniqueId || normalizePersonelId(p.name);
-                ps[displayName] = {};
-                personelOrder.push(displayName);
-                personelNames[displayName] = displayName;
-                personelFullNames[displayName] = p.name;
+                // KEY OLARAK uniqueId KULLAN (tutarlılık için)
+                ps[uniqueId] = {};
+                personelOrder.push(uniqueId);
+                personelNames[uniqueId] = codeName;  // Görüntü adı
+                personelFullNames[uniqueId] = p.name; // Tam isim
             });
         }
         
@@ -16774,24 +16788,29 @@ async function loadChecklist() {
             
             if (targetShift && targetShift.personelShifts) {
                 const rawPersonnel = [];
-                const personelFullNames = targetShift.personelFullNames || {};
+                const personelNames = targetShift.personelNames || {};      // codeName (görüntü adı)
+                const personelFullNames = targetShift.personelFullNames || {}; // tam isim
                 
                 for (const [key, days] of Object.entries(targetShift.personelShifts)) {
                     const todayShift = days[dayIndex] || '';
                     const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
                     
-                    // personelFullNames varsa onu kullan, yoksa key'in underscore'larını temizle
-                    const name = personelFullNames[key] || key.replace(/_/g, ' ');
+                    // ÖNCE personelNames (codeName), yoksa fullName'den formatla, yoksa key temizle
+                    let displayName = personelNames[key];
+                    if (!displayName) {
+                        const fullName = personelFullNames[key];
+                        displayName = fullName ? formatDisplayName(fullName) : formatDisplayName(key.replace(/_/g, ' '));
+                    }
                     
                     // Tüm aktif personeli topla (check türüne göre filtreleme)
                     if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-' && cleanShift !== 'X') {
                         // Açılış check'i için sadece açılışçılar
                         if (type === 'acilis' && (cleanShift === 'A' || cleanShift === 'AÇILIŞ' || cleanShift.includes('AÇILI'))) {
-                            rawPersonnel.push(name);
+                            rawPersonnel.push(displayName);
                         }
                         // Kapanış check'i için sadece kapanışçılar
                         else if (type === 'kapanis' && (cleanShift === 'K' || cleanShift === 'KAPANIŞ' || cleanShift.includes('KAPANI'))) {
-                            rawPersonnel.push(name);
+                            rawPersonnel.push(displayName);
                         }
                         // Müdür kontrolü için - shift'ten değil, rol bazlı çekeceğiz
                         else if (type === 'mudur') {
@@ -16806,30 +16825,24 @@ async function loadChecklist() {
                                 const shiftEnd = parseInt(shiftTimeMatch[3]);
                                 // Check saati shift saatleri arasında mı?
                                 if (checkHour >= shiftStart && checkHour < shiftEnd) {
-                                    rawPersonnel.push(name);
+                                    rawPersonnel.push(displayName);
                                 }
                             } else {
                                 // Saat formatı bulunamazsa vardiya tipine göre karar ver
-                                // Tuzla mesai: 10:00-01:00, Vardiya 9 saat (8+1 mola)
-                                // A (Açılış): 10:00-19:00 arası çalışır
-                                // K (Kapanış): 16:00-01:00 arası çalışır (gece geçer)
-                                // Aracı: 12:00-21:00 arası çalışır
                                 if (cleanShift === 'A' || cleanShift === 'AÇILIŞ') {
-                                    if (checkHour >= 10 && checkHour < 19) rawPersonnel.push(name);
+                                    if (checkHour >= 10 && checkHour < 19) rawPersonnel.push(displayName);
                                 } else if (cleanShift === 'K' || cleanShift === 'KAPANIŞ') {
-                                    // Kapanışçı gece yarısını geçiyor
-                                    if (checkHour >= 16 || checkHour < 2) rawPersonnel.push(name);
+                                    if (checkHour >= 16 || checkHour < 2) rawPersonnel.push(displayName);
                                 } else if (cleanShift.includes('ARACI') || cleanShift === 'ORTA') {
-                                    if (checkHour >= 12 && checkHour < 21) rawPersonnel.push(name);
+                                    if (checkHour >= 12 && checkHour < 21) rawPersonnel.push(displayName);
                                 } else {
-                                    // Bilinmeyen format - tüm gün aktif say
-                                    rawPersonnel.push(name);
+                                    rawPersonnel.push(displayName);
                                 }
                             }
                         }
                         // Diğer tüm checkler için tüm aktif personel
                         else if (!['acilis', 'kapanis', 'mudur', 'gunluk', 'guncel'].includes(type)) {
-                            rawPersonnel.push(name);
+                            rawPersonnel.push(displayName);
                         }
                     }
                 }
@@ -16857,17 +16870,8 @@ async function loadChecklist() {
                         console.warn('Müdür listesi alınamadı:', e);
                     }
                 } else {
-                    // Personel isimlerini displayName'e çevir
-                    for (const rawName of rawPersonnel) {
-                        let displayName = await getPersonelDisplayNameFromList(rawName, branch);
-                        
-                        // Cache'te bulunamadıysa underscore formatını temizle ve formatla
-                        if (!displayName || displayName === rawName) {
-                            // underscore formatını temizle: "tuana_yasar" → "Tuana Yasar"
-                            const cleaned = rawName.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
-                            displayName = formatDisplayName(cleaned);
-                        }
-                        
+                    // rawPersonnel zaten displayName formatında, direkt kullan
+                    for (const displayName of rawPersonnel) {
                         if (displayName && !shiftPersonnel.includes(displayName)) {
                             shiftPersonnel.push(displayName);
                         }
@@ -17614,6 +17618,178 @@ async function saveAllChecklistItemEdits(branch, type) {
         console.error('Kaydetme hatası:', e);
         toast('Kaydetme hatası: ' + e.message, 'error');
     }
+}
+
+// ==================== VERİ MİGRASYON VE DÜZELTME ====================
+
+/**
+ * MASTER FIX: Tüm personel ve shift verilerini düzelt
+ * - Her personele uniqueId ekle
+ * - Shift key'lerini uniqueId formatına çevir
+ * - personelFullNames ve personelNames güncelle
+ */
+async function runDataMigration() {
+    if (!confirm('⚠️ VERİ MİGRASYONU\n\nBu işlem tüm personel ve shift verilerini düzeltecek.\nDevam etmek istiyor musunuz?')) return;
+    
+    const log = (msg) => console.log(`[Migration] ${msg}`);
+    log('Başlıyor...');
+    
+    try {
+        // 1. TÜM PERSONELİ ÇEK VE uniqueId EKLE
+        const personelSnap = await db.collection('personel').get();
+        const personelMap = new Map(); // uniqueId -> {name, codeName, branch, docId}
+        
+        for (const doc of personelSnap.docs) {
+            const data = doc.data();
+            const uniqueId = normalizePersonelId(data.name);
+            const codeName = data.codeName || formatDisplayName(data.name);
+            
+            // uniqueId yoksa veya farklıysa güncelle
+            if (data.uniqueId !== uniqueId || !data.codeName) {
+                await db.collection('personel').doc(doc.id).update({
+                    uniqueId: uniqueId,
+                    codeName: codeName
+                });
+                log(`Personel güncellendi: ${data.name} -> uniqueId: ${uniqueId}, codeName: ${codeName}`);
+            }
+            
+            personelMap.set(uniqueId, {
+                name: data.name,
+                codeName: codeName,
+                branch: data.branch,
+                docId: doc.id,
+                role: data.role
+            });
+        }
+        log(`${personelMap.size} personel işlendi`);
+        
+        // 2. TÜM SHIFT'LERİ DÜZELT
+        const shiftsSnap = await db.collection('shifts').get();
+        let shiftFixCount = 0;
+        
+        for (const doc of shiftsSnap.docs) {
+            const shift = doc.data();
+            const branch = shift.branch;
+            
+            if (!shift.personelShifts) continue;
+            
+            const newPersonelShifts = {};
+            const newPersonelOrder = [];
+            const newPersonelNames = {};
+            const newPersonelFullNames = {};
+            
+            // Mevcut key'leri uniqueId'ye çevir
+            for (const [oldKey, days] of Object.entries(shift.personelShifts)) {
+                // oldKey'den personeli bul
+                let matchedPersonel = null;
+                let matchedUniqueId = null;
+                
+                // Direkt uniqueId eşleşmesi
+                if (personelMap.has(oldKey)) {
+                    matchedPersonel = personelMap.get(oldKey);
+                    matchedUniqueId = oldKey;
+                } else {
+                    // İsim bazlı arama
+                    const normalizedOldKey = normalizeTurkishChars(oldKey.replace(/_/g, ' ').toLowerCase());
+                    
+                    for (const [uid, p] of personelMap.entries()) {
+                        const normalizedName = normalizeTurkishChars(p.name.toLowerCase());
+                        const normalizedCodeName = normalizeTurkishChars((p.codeName || '').toLowerCase());
+                        const firstName = normalizeTurkishChars(p.name.split(' ')[0].toLowerCase());
+                        
+                        if (normalizedName === normalizedOldKey ||
+                            normalizedCodeName === normalizedOldKey ||
+                            firstName === normalizedOldKey ||
+                            uid === normalizedOldKey) {
+                            matchedPersonel = p;
+                            matchedUniqueId = uid;
+                            break;
+                        }
+                    }
+                }
+                
+                if (matchedPersonel && matchedUniqueId) {
+                    // Aynı branch veya bölge müdürü ise ekle
+                    if (matchedPersonel.branch === branch || matchedPersonel.branch === 'all' || matchedPersonel.role === 'bolge_muduru') {
+                        newPersonelShifts[matchedUniqueId] = days;
+                        newPersonelOrder.push(matchedUniqueId);
+                        newPersonelNames[matchedUniqueId] = matchedPersonel.codeName;
+                        newPersonelFullNames[matchedUniqueId] = matchedPersonel.name;
+                    }
+                } else {
+                    log(`⚠️ Eşleşme bulunamadı: ${oldKey} (branch: ${branch})`);
+                }
+            }
+            
+            // Shift'te olmayan ama bu branch'teki personeli ekle
+            for (const [uid, p] of personelMap.entries()) {
+                if ((p.branch === branch || p.role === 'bolge_muduru') && !newPersonelShifts[uid]) {
+                    newPersonelShifts[uid] = {};
+                    newPersonelOrder.push(uid);
+                    newPersonelNames[uid] = p.codeName;
+                    newPersonelFullNames[uid] = p.name;
+                    log(`Eksik personel eklendi: ${p.name} (${uid}) -> ${branch}`);
+                }
+            }
+            
+            // RÜTBEYE GÖRE SIRALA
+            const roleOrder = ['bolge_muduru', 'magaza_muduru', 'magaza_mudur_yardimcisi', 'kidemli_barista', 'barista', 'part_time'];
+            newPersonelOrder.sort((a, b) => {
+                const aRole = personelMap.get(a)?.role || 'barista';
+                const bRole = personelMap.get(b)?.role || 'barista';
+                const aIdx = roleOrder.indexOf(aRole);
+                const bIdx = roleOrder.indexOf(bRole);
+                return (aIdx === -1 ? 100 : aIdx) - (bIdx === -1 ? 100 : bIdx);
+            });
+            
+            // Güncelle
+            await db.collection('shifts').doc(doc.id).update({
+                personelShifts: newPersonelShifts,
+                personelOrder: newPersonelOrder,
+                personelNames: newPersonelNames,
+                personelFullNames: newPersonelFullNames,
+                migratedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+            shiftFixCount++;
+            log(`Shift düzeltildi: ${branch} - ${shift.weekStart}`);
+        }
+        
+        log(`✅ MİGRASYON TAMAMLANDI: ${personelMap.size} personel, ${shiftFixCount} shift`);
+        toast(`Migrasyon tamamlandı! ${personelMap.size} personel, ${shiftFixCount} shift düzeltildi.`, 'success');
+        
+        // Cache'i temizle
+        clearPersonelDisplayCache();
+        _migrationPersonelMap = null;
+        
+        // Sayfayı yenile
+        setTimeout(() => location.reload(), 2000);
+        
+    } catch (e) {
+        console.error('Migrasyon hatası:', e);
+        toast('Migrasyon hatası: ' + e.message, 'error');
+    }
+}
+
+/**
+ * Debug: Personel ve Shift verilerini konsola yazdır
+ */
+async function debugPersonelShiftData() {
+    console.log('=== PERSONEL VERİLERİ ===');
+    const personelSnap = await db.collection('personel').get();
+    personelSnap.forEach(doc => {
+        const d = doc.data();
+        console.log(`${d.name} | uniqueId: ${d.uniqueId || 'YOK'} | codeName: ${d.codeName || 'YOK'} | branch: ${d.branch}`);
+    });
+    
+    console.log('\n=== SHIFT KEY\'LERİ ===');
+    const shiftsSnap = await db.collection('shifts').get();
+    shiftsSnap.forEach(doc => {
+        const s = doc.data();
+        console.log(`\n${s.branch} - ${s.weekStart}:`);
+        console.log('Keys:', Object.keys(s.personelShifts || {}));
+        console.log('FullNames:', s.personelFullNames);
+    });
 }
 
 // ==================== KPI DASHBOARD ====================
