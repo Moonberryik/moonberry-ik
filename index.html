@@ -13497,6 +13497,9 @@ async function loadTodayChecks() {
     
     if (!section || !container) return;
     
+    // HIZLI LOADING - önce UI göster
+    container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--tx3)"><div style="width:24px;height:24px;border:3px solid var(--bg4);border-top-color:#008c95;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px"></div>Görevler yükleniyor...</div>';
+    
     // GÜN SONU SAATİ: 02:00 - Bu saatten önce önceki gün sayılır
     const DAY_END_HOUR = 2;
     
@@ -17562,6 +17565,36 @@ async function saveAllChecklistItemEdits(branch, type) {
     } catch (e) {
         console.error('Kaydetme hatası:', e);
         toast('Kaydetme hatası: ' + e.message, 'error');
+    }
+}
+
+// ==================== GÖREV ATAMALARINI TEMİZLE (Shift değişiminde) ====================
+async function clearTaskAssignmentsForBranch(branch, weekStart) {
+    try {
+        const branchKey = branch.replace(/[^a-zA-Z0-9]/g, '_');
+        
+        // Haftalık atamaları sil
+        const weeklyDocId = `${branchKey}_${weekStart}`;
+        await db.collection('weeklyTaskAssignments').doc(weeklyDocId).delete().catch(() => {});
+        
+        // Bu haftanın günlük atamalarını sil
+        const weekStartDate = new Date(weekStart);
+        for (let i = 0; i < 7; i++) {
+            const dayDate = new Date(weekStartDate);
+            dayDate.setDate(dayDate.getDate() + i);
+            const dateStr = formatDateLocal(dayDate);
+            
+            // Tüm check türleri için
+            const types = ['acilis', 'kapanis', 'guncel', 'platform'];
+            for (const type of types) {
+                const dailyDocId = `${branchKey}_${type}_${dateStr}`;
+                await db.collection('dailyTaskAssignments').doc(dailyDocId).delete().catch(() => {});
+            }
+        }
+        
+        console.log(`[TaskAssignment] ${branch} için ${weekStart} haftası atamaları temizlendi`);
+    } catch (e) {
+        console.warn('Görev atamaları temizleme hatası:', e);
     }
 }
 
