@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
     <title>Moonberry Coffee | Yönetim Paneli</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%23ff8674'/%3E%3Cpath d='M30 65 Q35 40 50 35 Q65 40 70 65 Q60 70 50 68 Q40 70 30 65' fill='white'/%3E%3Ccircle cx='40' cy='50' r='4' fill='%23ff8674'/%3E%3Ccircle cx='60' cy='50' r='4' fill='%23ff8674'/%3E%3Cpath d='M45 58 Q50 62 55 58' stroke='%23ff8674' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%23008c95'/%3E%3Ctext x='50' y='68' text-anchor='middle' font-family='Arial,sans-serif' font-weight='bold' font-size='60' fill='white'%3EM%3C/text%3E%3C/svg%3E">
     <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/760af2_0e846222ae5b4021930a757e498f30e9~mv2.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <!-- pdfmake - Türkçe karakter desteği -->
@@ -16541,17 +16541,59 @@ async function loadChecklist() {
             console.warn('Shift personeli alınamadı:', e.message);
         }
         
+        // ==================== BÖLGE MÜDÜRLERİNİ HARİÇ TUT ====================
+        // Bölge müdürleri hiçbir checkliste dahil değil (shift'te saati olsa bile)
+        if (shiftPersonnel.length > 0 && type !== 'mudur') {
+            try {
+                const bolgeMudurleri = [];
+                const personelSnapshot = await db.collection('personel')
+                    .where('role', '==', 'bolge_muduru')
+                    .get();
+                
+                personelSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    const displayName = formatDisplayName(data.name);
+                    bolgeMudurleri.push(displayName);
+                    bolgeMudurleri.push(data.name); // Tam ismi de ekle
+                });
+                
+                if (bolgeMudurleri.length > 0) {
+                    const filteredPersonnel = shiftPersonnel.filter(p => {
+                        const pLower = p.toLowerCase();
+                        return !bolgeMudurleri.some(bm => 
+                            bm.toLowerCase() === pLower || 
+                            bm.split(' ')[0]?.toLowerCase() === p.split(' ')[0]?.toLowerCase()
+                        );
+                    });
+                    
+                    if (filteredPersonnel.length !== shiftPersonnel.length) {
+                        console.log('Bölge müdürleri hariç tutuldu:', shiftPersonnel.length - filteredPersonnel.length);
+                        shiftPersonnel = filteredPersonnel;
+                    }
+                }
+            } catch (e) {
+                console.warn('Bölge müdürü filtreleme hatası:', e);
+            }
+        }
+        
         // Haftalık görevler için atama bilgisini çek
         let weeklyAssignments = null;
+        let dailyAssignments = null;
+        
         if (type === 'haftalik') {
             const weekStart = getWeekStart(new Date(date));
             const weekKey = formatDateLocal(weekStart);
             weeklyAssignments = await getWeeklyTaskAssignments(branch, weekKey);
             window._weeklyTaskAssignments = weeklyAssignments;
             console.log('Haftalık görev atamaları:', weeklyAssignments);
+        } else if (['acilis', 'kapanis', 'gunluk', 'guncel'].includes(type)) {
+            // Günlük checkler için atama bilgisini çek veya OTOMATİK OLUŞTUR
+            dailyAssignments = await getDailyTaskAssignments(branch, type, date, items, shiftPersonnel);
+            window._dailyTaskAssignments = dailyAssignments;
+            console.log('Günlük görev atamaları:', dailyAssignments);
         }
         
-        renderChecklistForm(items, branch, type, date, timeSlot, submittedData, shiftPersonnel, weeklyAssignments);
+        renderChecklistForm(items, branch, type, date, timeSlot, submittedData, shiftPersonnel, weeklyAssignments, dailyAssignments);
         checklistLoadingLock = false;
         
     } catch (error) {
@@ -16570,16 +16612,22 @@ let checklistEditMode = false;
 // Temizlik ve Bakım için tümünü göster flag'i
 let showAllAylikItems = false;
 
-function renderChecklistForm(items, branch, type, date, timeSlot, submittedData, shiftPersonnel = [], weeklyAssignments = null) {
+function renderChecklistForm(items, branch, type, date, timeSlot, submittedData, shiftPersonnel = [], weeklyAssignments = null, dailyAssignments = null) {
     const container = document.getElementById('checklistFormContainer');
     const isAdmin = currentUser?.role === 'yonetici' || currentUser?.role === 'bolge_muduru';
     const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
     const isSubmitted = !!submittedData;
     const isAylik = type === 'aylik';
     const isHaftalik = type === 'haftalik';
+    const isDailyShareable = ['acilis', 'kapanis', 'gunluk', 'guncel'].includes(type);
+    const hasMultiplePersonnel = shiftPersonnel && shiftPersonnel.length > 1;
+    const hasDailySharing = isDailyShareable && dailyAssignments?.assignments;
     
-    // Haftalık görevler için atama bilgisini sakla (global erişim için)
-    window._weeklyTaskAssignments = null;
+    // Atama bilgisini sakla (global erişim için)
+    window._weeklyTaskAssignments = weeklyAssignments;
+    window._dailyTaskAssignments = dailyAssignments;
+    window._currentChecklistItems = items;
+    window._currentShiftPersonnel = shiftPersonnel;
     
     // ==================== PERSONEL ERİŞİM KONTROLÜ ====================
     // Giriş yapan kullanıcının displayName'ini al
@@ -16744,6 +16792,51 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                 </div>
                 ` : ''}
                 
+                ${isDailyShareable && hasMultiplePersonnel && !isSubmitted ? `
+                <!-- GÖREV PAYLAŞIMI PANELI - Otomatik veya Manuel -->
+                <div style="margin-bottom:20px;padding:16px;background:linear-gradient(135deg,rgba(0,140,149,.08),rgba(0,140,149,.02));border:1px solid rgba(0,140,149,.2);border-radius:14px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+                        <div style="display:flex;align-items:center;gap:12px">
+                            <div style="width:40px;height:40px;background:rgba(0,140,149,.15);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                                <svg width="20" height="20" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                            </div>
+                            <div>
+                                <div style="font-weight:600;color:var(--tx);font-size:.95rem;display:flex;align-items:center;gap:6px">
+                                    ${hasDailySharing ? '✓ Görevler Paylaşıldı' : 'Görev Paylaşımı Bekleniyor'}
+                                    ${hasDailySharing && dailyAssignments?.autoGenerated ? '<span style="font-size:.7rem;padding:2px 6px;background:rgba(39,174,96,.2);color:#27ae60;border-radius:4px">Otomatik</span>' : ''}
+                                </div>
+                                <div style="font-size:.8rem;color:var(--tx2)">
+                                    ${shiftPersonnel.length} personel: ${shiftPersonnel.join(', ')}
+                                </div>
+                            </div>
+                        </div>
+                        ${isManager ? `
+                        <div style="display:flex;gap:8px">
+                            ${hasDailySharing ? `
+                                <button class="btn btn-sm btn-ghost" onclick="distributeDailyTasks('${branch}', '${type}', '${date}', window._currentChecklistItems, window._currentShiftPersonnel)" title="Görevleri yeniden dağıt">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                                    Yeniden Dağıt
+                                </button>
+                                <button class="btn btn-sm btn-ghost" onclick="clearDailyTaskAssignments('${branch}', '${type}', '${date}')" style="color:#e74c3c">
+                                    Paylaşımı Kaldır
+                                </button>
+                            ` : `
+                                <button class="btn btn-sm btn-primary" onclick="distributeDailyTasks('${branch}', '${type}', '${date}', window._currentChecklistItems, window._currentShiftPersonnel)">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:4px"><path d="M8 7h12M8 12h12M8 17h12M4 7h.01M4 12h.01M4 17h.01"/></svg>
+                                    Görevleri Paylaştır
+                                </button>
+                            `}
+                        </div>
+                        ` : ''}
+                    </div>
+                    ${hasDailySharing ? `
+                        <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(0,140,149,.15);font-size:.8rem;color:var(--tx3)">
+                            Her personel sadece kendine atanan maddeleri işaretleyebilir ${isManager ? '• Müdür olarak tüm maddelere erişebilirsiniz' : ''}
+                        </div>
+                    ` : ''}
+                </div>
+                ` : ''}
+                
                 <!-- Personel ve Zaman Bilgisi -->
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
                     <div style="padding:16px;background:var(--bg3);border-radius:12px">
@@ -16813,13 +16906,21 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
         const itemColor = item.color || '#6b7280';
         const hasColor = isAylik && responsibleLabel;
         
-        // Haftalık görevler için atanan personel
+        // Görev ataması kontrolü (haftalık veya günlük)
         let assignedPersonel = '';
         let isMyTask = true; // Varsayılan: herkese açık
         
         if (isHaftalik && weeklyAssignments?.assignments) {
+            // Haftalık görevler
             assignedPersonel = weeklyAssignments.assignments[item.id] || '';
-            // Bu görev bana mı atanmış?
+            if (assignedPersonel && !isManager) {
+                const currentUserDisplayName = getPersonelDisplayName(currentUser) || currentUser?.name || '';
+                isMyTask = assignedPersonel.toLowerCase() === currentUserDisplayName.toLowerCase() ||
+                           assignedPersonel.split(' ')[0]?.toLowerCase() === currentUserDisplayName.split(' ')[0]?.toLowerCase();
+            }
+        } else if (hasDailySharing && dailyAssignments?.assignments) {
+            // Günlük checkler (açılış, kapanış, günlük)
+            assignedPersonel = dailyAssignments.assignments[item.id] || '';
             if (assignedPersonel && !isManager) {
                 const currentUserDisplayName = getPersonelDisplayName(currentUser) || currentUser?.name || '';
                 isMyTask = assignedPersonel.toLowerCase() === currentUserDisplayName.toLowerCase() ||
@@ -16846,17 +16947,28 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
             }
         }
         
-        // Haftalık görevler için atanan personel badge
+        // Görev atama badge (haftalık veya günlük paylaşım)
         let assignedBadgeHtml = '';
-        if (isHaftalik && assignedPersonel) {
-            const weekStart = formatDateLocal(getWeekStart(new Date(date)));
+        if (assignedPersonel) {
             const badgeColor = isMyTask ? '#008c95' : '#6b7280';
             const badgeBg = isMyTask ? 'rgba(0,140,149,.15)' : 'rgba(107,114,128,.15)';
+            
+            // Atama değiştirme butonu için doğru fonksiyon
+            let editOnClick = '';
+            if (isManager && !isSubmitted) {
+                if (isHaftalik) {
+                    const weekStart = formatDateLocal(getWeekStart(new Date(date)));
+                    editOnClick = `showTaskAssignmentModal('${item.id}', '${item.text.replace(/'/g, "\\'")}', '${assignedPersonel}', '${branch}', '${weekStart}')`;
+                } else if (hasDailySharing) {
+                    editOnClick = `showDailyTaskAssignmentModal('${item.id}', '${item.text.replace(/'/g, "\\'")}', '${assignedPersonel}', '${branch}', '${type}', '${date}')`;
+                }
+            }
+            
             assignedBadgeHtml = `
                 <span style="font-size:.85rem;padding:5px 12px;border-radius:6px;background:${badgeBg};color:${badgeColor};font-weight:600;display:inline-flex;align-items:center;gap:6px">
                     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     ${assignedPersonel}
-                    ${isManager && !isSubmitted ? `<span onclick="showTaskAssignmentModal('${item.id}', '${item.text.replace(/'/g, "\\'")}', '${assignedPersonel}', '${branch}', '${weekStart}')" style="cursor:pointer;opacity:.7;margin-left:4px" title="Değiştir">✏️</span>` : ''}
+                    ${editOnClick ? `<span onclick="${editOnClick}" style="cursor:pointer;opacity:.7;margin-left:4px" title="Değiştir">✏️</span>` : ''}
                 </span>
             `;
         }
@@ -17106,6 +17218,138 @@ async function getWeeklyTaskAssignments(branch, weekStart) {
     }
 }
 
+// ==================== GÜNLÜK CHECKLIST GÖREV PAYLAŞIMI ====================
+
+/**
+ * Günlük/Açılış/Kapanış checklist görevlerini paylaştır
+ * shiftPersonnel listesi varsa ve birden fazla kişi varsa aktif
+ */
+async function getDailyTaskAssignments(branch, type, date, items = [], personnel = []) {
+    const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}_${date}`;
+    
+    try {
+        const existingDoc = await db.collection('dailyTaskAssignments').doc(assignmentDocId).get();
+        if (existingDoc.exists) {
+            return existingDoc.data();
+        }
+        
+        // OTOMATİK OLUŞTUR: 2+ personel varsa otomatik paylaştır
+        if (personnel && personnel.length >= 2 && items && items.length > 0) {
+            console.log('Otomatik günlük görev paylaşımı başlatılıyor:', personnel);
+            
+            // Görevleri eşit dağıt
+            const assignments = {};
+            items.forEach((item, index) => {
+                const personelIndex = index % personnel.length;
+                assignments[item.id] = personnel[personelIndex];
+            });
+            
+            const assignmentData = {
+                branch,
+                type,
+                date,
+                assignments,
+                personnel,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                autoGenerated: true,
+                distributedBy: 'Sistem (Otomatik)'
+            };
+            
+            await db.collection('dailyTaskAssignments').doc(assignmentDocId).set(assignmentData);
+            console.log('Otomatik günlük görev atamaları oluşturuldu:', assignmentData);
+            
+            return assignmentData;
+        }
+        
+        return null; // Tek personel veya items yoksa paylaşım yok
+    } catch (e) {
+        console.error('Günlük görev atamaları alınamadı:', e);
+        return null;
+    }
+}
+
+/**
+ * Günlük checklist görevlerini otomatik dağıt
+ * Müdür "Görevleri Paylaştır" butonuna tıkladığında çağrılır
+ */
+async function distributeDailyTasks(branch, type, date, items, personnel) {
+    if (!personnel || personnel.length < 2) {
+        toast('Paylaşım için en az 2 personel gerekli', 'warning');
+        return null;
+    }
+    
+    const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}_${date}`;
+    
+    try {
+        // Görevleri eşit dağıt
+        const assignments = {};
+        items.forEach((item, index) => {
+            const personelIndex = index % personnel.length;
+            assignments[item.id] = personnel[personelIndex];
+        });
+        
+        const assignmentData = {
+            branch,
+            type,
+            date,
+            assignments,
+            personnel,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            autoGenerated: false, // Müdür manuel dağıttı
+            distributedBy: currentUser?.name || 'Bilinmiyor'
+        };
+        
+        await db.collection('dailyTaskAssignments').doc(assignmentDocId).set(assignmentData);
+        console.log('Günlük görev atamaları oluşturuldu:', assignmentData);
+        
+        toast(`${items.length} görev ${personnel.length} kişiye paylaştırıldı`, 'success');
+        loadChecklist();
+        
+        return assignmentData;
+    } catch (e) {
+        console.error('Görev dağıtım hatası:', e);
+        toast('Görev dağıtım hatası: ' + e.message, 'error');
+        return null;
+    }
+}
+
+/**
+ * Günlük görev atamasını temizle (paylaşımı kaldır)
+ */
+async function clearDailyTaskAssignments(branch, type, date) {
+    const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}_${date}`;
+    
+    try {
+        await db.collection('dailyTaskAssignments').doc(assignmentDocId).delete();
+        toast('Görev paylaşımı kaldırıldı', 'success');
+        loadChecklist();
+    } catch (e) {
+        console.error('Paylaşım kaldırma hatası:', e);
+        toast('Hata: ' + e.message, 'error');
+    }
+}
+
+/**
+ * Tek bir günlük görevi başka personele ata
+ */
+async function reassignDailyTask(branch, type, date, taskId, newPersonel) {
+    const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}_${date}`;
+    
+    try {
+        await db.collection('dailyTaskAssignments').doc(assignmentDocId).update({
+            [`assignments.${taskId}`]: newPersonel,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            autoGenerated: false
+        });
+        
+        toast(`Görev ${newPersonel} kişisine atandı`, 'success');
+        loadChecklist();
+    } catch (e) {
+        console.error('Görev atama hatası:', e);
+        toast('Görev atama hatası: ' + e.message, 'error');
+    }
+}
+
 async function generateWeeklyTaskAssignments(branch, weekStart) {
     const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekStart}`;
     
@@ -17265,6 +17509,48 @@ function confirmTaskAssignment(taskId, branch, weekStart) {
     const newPersonel = document.getElementById('taskAssigneeSelect').value;
     closeModal();
     reassignWeeklyTask(branch, weekStart, taskId, newPersonel);
+}
+
+/**
+ * Günlük görev atama modalını göster
+ */
+function showDailyTaskAssignmentModal(taskId, taskText, currentAssignee, branch, type, date) {
+    const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
+    
+    if (!isManager) {
+        toast('Bu işlem için yetkiniz yok', 'error');
+        return;
+    }
+    
+    // Personel listesini al
+    const assignmentData = window._dailyTaskAssignments;
+    const personnel = assignmentData?.personnel || window._currentShiftPersonnel || [];
+    
+    const personnelOptions = personnel.map(p => 
+        `<option value="${p}" ${p === currentAssignee ? 'selected' : ''}>${p}</option>`
+    ).join('');
+    
+    showModal('Görev Ata', `
+        <div class="form-group">
+            <label class="form-label">Görev</label>
+            <div style="padding:12px;background:var(--bg3);border-radius:8px;font-size:.9rem;color:var(--tx)">${taskText}</div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Atanan Personel</label>
+            <select id="dailyTaskAssigneeSelect" class="form-select">
+                ${personnelOptions}
+            </select>
+        </div>
+    `, `
+        <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
+        <button class="btn btn-primary" onclick="confirmDailyTaskAssignment('${taskId}', '${branch}', '${type}', '${date}')">Ata</button>
+    `);
+}
+
+function confirmDailyTaskAssignment(taskId, branch, type, date) {
+    const newPersonel = document.getElementById('dailyTaskAssigneeSelect').value;
+    closeModal();
+    reassignDailyTask(branch, type, date, taskId, newPersonel);
 }
 
 // ==================== SÜRÜKLE BIRAK ====================
