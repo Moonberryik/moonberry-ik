@@ -18624,9 +18624,21 @@ async function saveChecklistAndShare(branch, type, date, timeSlot, personName, r
             points = status.points;
             pointStatus = status.status;
             
-            // Müdür hariç puan uygula
-            const isMudur = ['magaza_muduru', 'bolge_muduru', 'yonetici'].includes(currentUser?.role);
-            if (!isMudur && points !== 0) {
+            // Müdür hariç puan uygula - DOLDURAN KİŞİNİN rolüne bak, giriş yapanın değil
+            // personName'in müdür olup olmadığını kontrol et
+            let isPersonMudur = false;
+            try {
+                const personelSnap = await db.collection('personel')
+                    .where('name', '==', personName)
+                    .limit(1)
+                    .get();
+                if (!personelSnap.empty) {
+                    const personRole = personelSnap.docs[0].data().role || '';
+                    isPersonMudur = ['magaza_muduru', 'bolge_muduru', 'yonetici'].includes(personRole);
+                }
+            } catch (e) { console.warn('Personel rol kontrolü hatası:', e); }
+            
+            if (!isPersonMudur && points !== 0) {
                 // Puantaj notunu oluştur - normalize edilmiş personelId kullan
                 await createAutoPuantajNote(
                     normalizePersonelId(personName),
