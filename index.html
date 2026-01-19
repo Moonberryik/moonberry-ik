@@ -659,6 +659,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                 </div>
                 
+                <!-- Bu Ay Puan Sıralaması - Sadece Yöneticiler -->
+                <div id="leaderboardSection" class="dashboard-section" style="margin-bottom:28px;display:none">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:0 4px">
+                        <div style="font-size:.8rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:8px">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            Bu Ay Puan Sıralaması
+                        </div>
+                        <button onclick="loadLeaderboard()" class="btn btn-sm btn-ghost" style="font-size:.7rem">🔄 Yenile</button>
+                    </div>
+                    <div id="leaderboardContainer" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:16px;overflow:hidden">
+                        <div style="padding:20px;text-align:center;color:var(--tx3)">Yükleniyor...</div>
+                    </div>
+                </div>
+                
                 <!-- Personel Yönetimi -->
                 <div class="dashboard-section" style="margin-bottom:28px">
                     <div style="font-size:.8rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;padding-left:4px;display:flex;align-items:center;gap:8px">
@@ -13493,8 +13507,14 @@ async function loadTodayChecks() {
     // Aylık puan kartı (sadece personel için)
     if (monthlyCard && !isAdmin) {
         monthlyCard.style.display = 'block';
+        loadMonthlyPoints(); // Puan verilerini yükle
     } else if (monthlyCard) {
         monthlyCard.style.display = 'none';
+    }
+    
+    // Leaderboard (sadece yöneticiler için)
+    if (isAdmin) {
+        loadLeaderboard();
     }
     
     // Shift verilerini yükle
@@ -13908,6 +13928,206 @@ async function loadTodayChecks() {
         startDashboardCountdown();
     } else {
         section.style.display = 'none';
+    }
+}
+
+// ==================== AYLIK PUAN KARTI ====================
+async function loadMonthlyPoints() {
+    const totalEl = document.getElementById('monthlyPointsTotal');
+    const detailsEl = document.getElementById('monthlyPointsDetails');
+    
+    if (!totalEl || !detailsEl || !currentUser) return;
+    
+    try {
+        // Bu ayın başlangıcı
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const monthStartStr = formatDateLocal(monthStart);
+        const monthEndStr = formatDateLocal(monthEnd);
+        
+        // Kullanıcının puantaj notlarını çek (daha güvenilir)
+        const userName = currentUser.name || '';
+        const userBranch = currentUser.branch || '';
+        const personelId = normalizePersonelId(userName);
+        
+        let totalPoints = 0;
+        let onTimeCount = 0;
+        let lateCount = 0;
+        let missedCount = 0;
+        
+        // puantajNotes koleksiyonundan çek (normalize edilmiş personelId ile)
+        const notesSnapshot = await db.collection('puantajNotes')
+            .where('personelId', '==', personelId)
+            .where('date', '>=', monthStartStr)
+            .where('date', '<=', monthEndStr)
+            .get();
+        
+        notesSnapshot.forEach(doc => {
+            const data = doc.data();
+            const points = data.points || 0;
+            totalPoints += points;
+            
+            if (data.status === 'onTime') onTimeCount++;
+            else if (data.status === 'late') lateCount++;
+            else if (data.status === 'missed') missedCount++;
+        });
+        
+        // Eğer puantajNotes boşsa checklistSubmissions'dan da dene
+        if (notesSnapshot.empty) {
+            const submissions = await db.collection('checklistSubmissions')
+                .where('personName', '==', userName)
+                .where('date', '>=', monthStartStr)
+                .where('date', '<=', monthEndStr)
+                .get();
+            
+            submissions.forEach(doc => {
+                const data = doc.data();
+                const points = data.points || 0;
+                totalPoints += points;
+                
+                if (data.pointStatus === 'onTime') onTimeCount++;
+                else if (data.pointStatus === 'late') lateCount++;
+            });
+        }
+        
+        const totalCompleted = onTimeCount + lateCount;
+        
+        // Toplam puanı göster
+        const pointColor = totalPoints > 0 ? '#27ae60' : totalPoints < 0 ? '#e74c3c' : 'var(--tx)';
+        totalEl.style.color = pointColor;
+        totalEl.textContent = (totalPoints > 0 ? '+' : '') + totalPoints + ' puan';
+        
+        // Detayları göster
+        detailsEl.innerHTML = `
+            <div style="text-align:center;padding:12px;background:rgba(39,174,96,.1);border-radius:10px">
+                <div style="font-size:1.2rem;font-weight:700;color:#27ae60">${onTimeCount}</div>
+                <div style="font-size:.7rem;color:var(--tx3)">Vaktinde</div>
+            </div>
+            <div style="text-align:center;padding:12px;background:rgba(243,156,18,.1);border-radius:10px">
+                <div style="font-size:1.2rem;font-weight:700;color:#f39c12">${lateCount}</div>
+                <div style="font-size:.7rem;color:var(--tx3)">Geç</div>
+            </div>
+            <div style="text-align:center;padding:12px;background:${missedCount > 0 ? 'rgba(231,76,60,.1)' : 'var(--bg3)'};border-radius:10px">
+                <div style="font-size:1.2rem;font-weight:700;color:${missedCount > 0 ? '#e74c3c' : 'var(--tx)'}">${missedCount > 0 ? missedCount : totalCompleted}</div>
+                <div style="font-size:.7rem;color:var(--tx3)">${missedCount > 0 ? 'Kaçırılan' : 'Toplam'}</div>
+            </div>
+        `;
+        
+    } catch (e) {
+        console.error('Aylık puan yükleme hatası:', e);
+        totalEl.textContent = '-';
+        detailsEl.innerHTML = '<div style="grid-column:span 3;text-align:center;color:var(--tx3);font-size:.8rem">Yüklenemedi</div>';
+    }
+}
+
+// ==================== LEADERBOARD (Puan Sıralaması) ====================
+async function loadLeaderboard() {
+    const section = document.getElementById('leaderboardSection');
+    const container = document.getElementById('leaderboardContainer');
+    
+    if (!section || !container) return;
+    
+    const isAdmin = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
+    
+    if (!isAdmin) {
+        section.style.display = 'none';
+        return;
+    }
+    
+    section.style.display = 'block';
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tx3)">Yükleniyor...</div>';
+    
+    try {
+        // Bu ayın başlangıcı
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const monthStartStr = formatDateLocal(monthStart);
+        const monthEndStr = formatDateLocal(monthEnd);
+        const monthName = now.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+        
+        // puantajNotes koleksiyonundan çek (daha güvenilir)
+        const notesSnapshot = await db.collection('puantajNotes')
+            .where('date', '>=', monthStartStr)
+            .where('date', '<=', monthEndStr)
+            .get();
+        
+        // Personel bazında puanları topla
+        const personelPoints = {};
+        
+        notesSnapshot.forEach(doc => {
+            const data = doc.data();
+            const personName = data.personelName || 'Bilinmiyor';
+            const displayName = formatDisplayName(personName);
+            const points = data.points || 0;
+            const status = data.status || 'completed';
+            
+            if (!personelPoints[displayName]) {
+                personelPoints[displayName] = { 
+                    fullName: personName,
+                    total: 0, 
+                    onTime: 0, 
+                    late: 0, 
+                    missed: 0,
+                    completed: 0 
+                };
+            }
+            
+            personelPoints[displayName].total += points;
+            personelPoints[displayName].completed++;
+            if (status === 'onTime') personelPoints[displayName].onTime++;
+            else if (status === 'late') personelPoints[displayName].late++;
+            else if (status === 'missed') personelPoints[displayName].missed++;
+        });
+        
+        // Puanlara göre sırala
+        const sorted = Object.entries(personelPoints)
+            .map(([name, data]) => ({ name, ...data }))
+            .sort((a, b) => b.total - a.total);
+        
+        if (sorted.length === 0) {
+            container.innerHTML = '<div style="padding:30px;text-align:center;color:var(--tx3)">Bu ay henüz veri yok</div>';
+            return;
+        }
+        
+        // Sıralama HTML
+        const rankColors = ['#ffd700', '#c0c0c0', '#cd7f32']; // Altın, Gümüş, Bronz
+        const rankIcons = ['🥇', '🥈', '🥉'];
+        
+        let html = `
+            <div style="padding:16px 20px;background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(0,140,149,.05));border-bottom:1px solid var(--cardBorder)">
+                <div style="font-size:.85rem;font-weight:600;color:var(--tx)">${monthName} Sıralaması</div>
+                <div style="font-size:.7rem;color:var(--tx3)">${sorted.length} personel</div>
+            </div>
+        `;
+        
+        sorted.slice(0, 10).forEach((person, index) => {
+            const rank = index + 1;
+            const isTop3 = rank <= 3;
+            const pointColor = person.total > 0 ? '#27ae60' : person.total < 0 ? '#e74c3c' : 'var(--tx2)';
+            const successRate = person.completed > 0 ? Math.round((person.onTime / person.completed) * 100) : 0;
+            
+            html += `
+                <div style="display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--cardBorder);${isTop3 ? 'background:rgba(255,215,0,.03)' : ''}">
+                    <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:${isTop3 ? '1.2rem' : '.9rem'};font-weight:700;color:${isTop3 ? rankColors[index] : 'var(--tx3)'}">${isTop3 ? rankIcons[index] : rank}</div>
+                    <div style="flex:1">
+                        <div style="font-weight:600;color:var(--tx);font-size:.9rem">${person.name}</div>
+                        <div style="font-size:.7rem;color:var(--tx3)">${person.completed} check • %${successRate} başarı</div>
+                    </div>
+                    <div style="text-align:right">
+                        <div style="font-size:1.1rem;font-weight:700;color:${pointColor}">${person.total > 0 ? '+' : ''}${person.total}</div>
+                        <div style="font-size:.65rem;color:var(--tx3)">puan</div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+        
+    } catch (e) {
+        console.error('Leaderboard yükleme hatası:', e);
+        container.innerHTML = '<div style="padding:30px;text-align:center;color:#e74c3c">Yüklenirken hata oluştu</div>';
     }
 }
 
