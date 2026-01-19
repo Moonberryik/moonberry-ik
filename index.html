@@ -13625,14 +13625,15 @@ async function loadTodayChecks() {
                 const targetShift = allShifts.find(s => s.weekStart === weekKey);
                 if (targetShift) {
                     const personelShifts = targetShift.personelShifts || {};
-                    const personelFullNames = targetShift.personelFullNames || {};
+                    const personelNames = targetShift.personelNames || {};       // codeName (görüntü adı)
+                    const personelFullNames = targetShift.personelFullNames || {}; // tam isim
                     const acilisPersonel = [], kapanisPersonel = [], araPersonel = [];
                     
                     for (const [uniqueIdOrName, days] of Object.entries(personelShifts)) {
                         const todayShift = days[dayIndex] || '';
                         const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
-                        const fullName = personelFullNames[uniqueIdOrName] || uniqueIdOrName.replace(/_/g, ' ');
-                        const displayName = formatDisplayName(fullName);
+                        // personelNames (codeName) KULLAN - en doğru format
+                        const displayName = personelNames[uniqueIdOrName] || formatDisplayName(personelFullNames[uniqueIdOrName] || uniqueIdOrName.replace(/_/g, ' '));
                         
                         if (cleanShift === 'A' || cleanShift.includes('AÇILI')) {
                             acilisPersonel.push(displayName);
@@ -16228,6 +16229,7 @@ async function loadChecklistTodayPanel() {
                 
                 if (targetShift) {
                     const personelShifts = targetShift.personelShifts || {};
+                    const personelNames = targetShift.personelNames || {};       // codeName (DOĞRU FORMAT)
                     const personelFullNames = targetShift.personelFullNames || {};
                     const acilisPersonel = [], kapanisPersonel = [], araPersonel = [];
                     
@@ -16235,15 +16237,13 @@ async function loadChecklistTodayPanel() {
                         const todayShift = days[dayIndex] || '';
                         const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
                         
-                        // Tam ismi al: personelFullNames → personelMap → key (eski veriler için)
-                        const fullName = personelFullNames[uniqueIdOrName] 
-                            || personelMap[uniqueIdOrName] 
-                            || personelMap[uniqueIdOrName?.toLowerCase()]
-                            || uniqueIdOrName;
+                        // ÖNCE personelNames (codeName) KULLAN - en doğru format
+                        const displayName = personelNames[uniqueIdOrName] 
+                            || formatDisplayName(personelFullNames[uniqueIdOrName] || uniqueIdOrName.replace(/_/g, ' '));
                         
-                        if (cleanShift === 'A' || cleanShift === 'AÇILIŞ' || cleanShift.includes('AÇILI')) acilisPersonel.push(fullName);
-                        else if (cleanShift === 'K' || cleanShift === 'KAPANIŞ' || cleanShift.includes('KAPANI')) kapanisPersonel.push(fullName);
-                        else if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-' && cleanShift !== 'X') araPersonel.push(fullName);
+                        if (cleanShift === 'A' || cleanShift === 'AÇILIŞ' || cleanShift.includes('AÇILI')) acilisPersonel.push(displayName);
+                        else if (cleanShift === 'K' || cleanShift === 'KAPANIŞ' || cleanShift.includes('KAPANI')) kapanisPersonel.push(displayName);
+                        else if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-' && cleanShift !== 'X') araPersonel.push(displayName);
                     }
                     
                     shiftData[branch] = { acilis: acilisPersonel, kapanis: kapanisPersonel, ara: araPersonel };
@@ -16835,14 +16835,17 @@ async function loadChecklist() {
                                     if (checkHour >= 16 || checkHour < 2) rawPersonnel.push(displayName);
                                 } else if (cleanShift.includes('ARACI') || cleanShift === 'ORTA') {
                                     if (checkHour >= 12 && checkHour < 21) rawPersonnel.push(displayName);
-                                } else {
+                                } else if (!cleanShift.includes('BÖLGE') && !cleanShift.includes('MÜDÜR')) {
+                                    // BÖLGE MÜDÜRÜ hariç diğer aktif personeli ekle
                                     rawPersonnel.push(displayName);
                                 }
                             }
                         }
-                        // Diğer tüm checkler için tüm aktif personel
+                        // Diğer tüm checkler için tüm aktif personel (BÖLGE MÜDÜRÜ HARİÇ)
                         else if (!['acilis', 'kapanis', 'mudur', 'gunluk', 'guncel'].includes(type)) {
-                            rawPersonnel.push(displayName);
+                            if (!cleanShift.includes('BÖLGE') && !cleanShift.includes('MÜDÜR')) {
+                                rawPersonnel.push(displayName);
+                            }
                         }
                     }
                 }
@@ -16895,18 +16898,24 @@ async function loadChecklist() {
                 
                 personelSnapshot.forEach(doc => {
                     const data = doc.data();
-                    const displayName = formatDisplayName(data.name);
-                    bolgeMudurleri.push(displayName);
-                    bolgeMudurleri.push(data.name); // Tam ismi de ekle
+                    // Tüm isim varyasyonlarını ekle
+                    bolgeMudurleri.push(data.name);                        // Tam isim
+                    bolgeMudurleri.push(formatDisplayName(data.name));     // Ad S.
+                    if (data.codeName) bolgeMudurleri.push(data.codeName); // Shift Kod Adı
+                    bolgeMudurleri.push(data.name?.split(' ')[0]);         // Sadece ad
                 });
                 
                 if (bolgeMudurleri.length > 0) {
                     const filteredPersonnel = shiftPersonnel.filter(p => {
+                        if (!p) return false;
                         const pLower = p.toLowerCase();
-                        return !bolgeMudurleri.some(bm => 
-                            bm.toLowerCase() === pLower || 
-                            bm.split(' ')[0]?.toLowerCase() === p.split(' ')[0]?.toLowerCase()
-                        );
+                        const pNorm = normalizeTurkishChars(p);
+                        return !bolgeMudurleri.some(bm => {
+                            if (!bm) return false;
+                            const bmLower = bm.toLowerCase();
+                            const bmNorm = normalizeTurkishChars(bm);
+                            return bmLower === pLower || bmNorm === pNorm;
+                        });
                     });
                     
                     if (filteredPersonnel.length !== shiftPersonnel.length) {
