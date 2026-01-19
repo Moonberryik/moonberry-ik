@@ -666,10 +666,23 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                             Bu Ay Puan Sıralaması
                         </div>
-                        <button onclick="loadLeaderboard()" class="btn btn-sm btn-ghost" style="font-size:.7rem">🔄 Yenile</button>
+                        <div style="display:flex;gap:4px">
+                            <button onclick="loadLeaderboard()" class="btn btn-sm btn-ghost" style="font-size:.7rem">🔄 Yenile</button>
+                            <button onclick="showWeeklyReportModal()" class="btn btn-sm btn-ghost" style="font-size:.7rem">📊 Haftalık Rapor</button>
+                        </div>
                     </div>
                     <div id="leaderboardContainer" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:16px;overflow:hidden">
                         <div style="padding:20px;text-align:center;color:var(--tx3)">Yükleniyor...</div>
+                    </div>
+                </div>
+                
+                <!-- KPI Dashboard - Şube Performans -->
+                <div id="kpiDashboardSection" class="dashboard-section" style="margin-bottom:28px;display:none">
+                    <div style="font-size:.8rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;padding-left:4px;display:flex;align-items:center;gap:8px">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                        Şube Performans
+                    </div>
+                    <div id="kpiDashboardContainer" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
                     </div>
                 </div>
                 
@@ -13559,9 +13572,10 @@ async function loadTodayChecks() {
         monthlyCard.style.display = 'none';
     }
     
-    // Leaderboard (sadece yöneticiler için)
+    // Leaderboard ve KPI Dashboard (sadece yöneticiler için)
     if (isAdmin) {
         loadLeaderboard();
+        loadKPIDashboard();
     }
     
     // Shift verilerini yükle
@@ -17588,6 +17602,223 @@ async function saveAllChecklistItemEdits(branch, type) {
     }
 }
 
+// ==================== KPI DASHBOARD ====================
+async function loadKPIDashboard() {
+    const section = document.getElementById('kpiDashboardSection');
+    const container = document.getElementById('kpiDashboardContainer');
+    if (!section || !container) return;
+    
+    const isAdmin = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
+    if (!isAdmin) return;
+    
+    section.style.display = 'block';
+    
+    const branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+    const today = new Date();
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const monthStartStr = formatDateLocal(monthStart);
+    const todayStr = formatDateLocal(today);
+    
+    let html = '';
+    
+    for (const branch of branches) {
+        const branchKey = branch.replace(/[^a-zA-Z0-9]/g, '_');
+        let totalChecks = 0, completedChecks = 0, onTimeChecks = 0;
+        
+        try {
+            const snapshot = await db.collection('checklistSubmissions')
+                .where('branch', '==', branch)
+                .where('date', '>=', monthStartStr)
+                .get();
+            
+            snapshot.forEach(doc => {
+                totalChecks++;
+                const data = doc.data();
+                if (data.completionRate >= 80) completedChecks++;
+                if (data.pointStatus === 'onTime') onTimeChecks++;
+            });
+        } catch (e) {}
+        
+        const completionRate = totalChecks > 0 ? Math.round((completedChecks / totalChecks) * 100) : 0;
+        const onTimeRate = totalChecks > 0 ? Math.round((onTimeChecks / totalChecks) * 100) : 0;
+        const isMoonberry = branch.toLowerCase().includes('şişli') || branch.toLowerCase().includes('sisli');
+        const brandColor = isMoonberry ? '#008c95' : '#ff8674';
+        
+        html += `
+            <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:14px;padding:16px;border-left:4px solid ${brandColor}">
+                <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem">${branch}</div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center">
+                    <div>
+                        <div style="font-size:1.3rem;font-weight:700;color:${brandColor}">${totalChecks}</div>
+                        <div style="font-size:.65rem;color:var(--tx3)">Check</div>
+                    </div>
+                    <div>
+                        <div style="font-size:1.3rem;font-weight:700;color:${completionRate >= 80 ? '#27ae60' : '#e74c3c'}">%${completionRate}</div>
+                        <div style="font-size:.65rem;color:var(--tx3)">Tamamlama</div>
+                    </div>
+                    <div>
+                        <div style="font-size:1.3rem;font-weight:700;color:${onTimeRate >= 70 ? '#27ae60' : '#f39c12'}">%${onTimeRate}</div>
+                        <div style="font-size:.65rem;color:var(--tx3)">Vaktinde</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html || '<div style="text-align:center;color:var(--tx3);padding:20px">Veri yok</div>';
+}
+
+// ==================== HAFTALIK RAPOR ====================
+async function generateWeeklyReport(branch) {
+    const weekStart = getWeekStart(new Date());
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    
+    const report = {
+        branch,
+        period: `${formatDateLocal(weekStart)} - ${formatDateLocal(weekEnd)}`,
+        totalChecks: 0,
+        completedChecks: 0,
+        onTimeRate: 0,
+        topPerformer: null,
+        missedChecks: []
+    };
+    
+    try {
+        // Bu haftanın check kayıtlarını çek
+        const snapshot = await db.collection('checklistSubmissions')
+            .where('branch', '==', branch)
+            .where('date', '>=', formatDateLocal(weekStart))
+            .where('date', '<=', formatDateLocal(weekEnd))
+            .get();
+        
+        const personelStats = {};
+        
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            report.totalChecks++;
+            if (data.completionRate >= 80) report.completedChecks++;
+            
+            const person = data.personName || 'Bilinmiyor';
+            if (!personelStats[person]) personelStats[person] = { onTime: 0, late: 0, total: 0 };
+            personelStats[person].total++;
+            if (data.pointStatus === 'onTime') personelStats[person].onTime++;
+            else personelStats[person].late++;
+        });
+        
+        // En iyi performansı bul
+        let maxOnTime = 0;
+        for (const [name, stats] of Object.entries(personelStats)) {
+            if (stats.onTime > maxOnTime) {
+                maxOnTime = stats.onTime;
+                report.topPerformer = { name, stats };
+            }
+        }
+        
+        report.onTimeRate = report.totalChecks > 0 ? Math.round((report.completedChecks / report.totalChecks) * 100) : 0;
+        
+    } catch (e) {
+        console.error('Haftalık rapor hatası:', e);
+    }
+    
+    return report;
+}
+
+async function showWeeklyReportModal(branch) {
+    const report = await generateWeeklyReport(branch || currentUser?.branch || 'Tuzla Port');
+    
+    showModal('📊 Haftalık Rapor', `
+        <div style="padding:10px 0">
+            <div style="margin-bottom:16px;padding:12px;background:var(--bg3);border-radius:10px">
+                <div style="font-size:.8rem;color:var(--tx3)">Dönem</div>
+                <div style="font-weight:600">${report.period}</div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+                <div style="text-align:center;padding:16px;background:var(--bg3);border-radius:10px">
+                    <div style="font-size:1.5rem;font-weight:700;color:#008c95">${report.totalChecks}</div>
+                    <div style="font-size:.75rem;color:var(--tx3)">Toplam Check</div>
+                </div>
+                <div style="text-align:center;padding:16px;background:var(--bg3);border-radius:10px">
+                    <div style="font-size:1.5rem;font-weight:700;color:#27ae60">${report.completedChecks}</div>
+                    <div style="font-size:.75rem;color:var(--tx3)">Tamamlanan</div>
+                </div>
+                <div style="text-align:center;padding:16px;background:var(--bg3);border-radius:10px">
+                    <div style="font-size:1.5rem;font-weight:700;color:${report.onTimeRate >= 80 ? '#27ae60' : '#e74c3c'}">%${report.onTimeRate}</div>
+                    <div style="font-size:.75rem;color:var(--tx3)">Başarı Oranı</div>
+                </div>
+            </div>
+            ${report.topPerformer ? `
+            <div style="padding:12px;background:linear-gradient(135deg,rgba(255,215,0,.1),rgba(255,215,0,.05));border:1px solid rgba(255,215,0,.3);border-radius:10px">
+                <div style="font-size:.8rem;color:var(--tx3)">🏆 Haftanın Yıldızı</div>
+                <div style="font-weight:600;color:var(--tx)">${report.topPerformer.name}</div>
+                <div style="font-size:.75rem;color:var(--tx3)">${report.topPerformer.stats.onTime} vaktinde check</div>
+            </div>
+            ` : ''}
+        </div>
+    `, '<button class="btn btn-primary" onclick="closeModal()">Kapat</button>');
+}
+
+// ==================== ROZET SİSTEMİ ====================
+const BADGE_DEFINITIONS = {
+    ilk_check: { id: 'ilk_check', name: 'İlk Adım', icon: '🌟', desc: 'İlk check tamamlandı', color: '#ffd700' },
+    streak_3: { id: 'streak_3', name: '3 Gün Serisi', icon: '🔥', desc: '3 gün üst üste vaktinde', color: '#ff6b35' },
+    streak_7: { id: 'streak_7', name: 'Haftalık Şampiyon', icon: '🏆', desc: '7 gün üst üste vaktinde', color: '#27ae60' },
+    hizli: { id: 'hizli', name: 'Hız Ustası', icon: '⚡', desc: 'Beklenen sürenin %50 altında', color: '#3498db' },
+    kusursuz: { id: 'kusursuz', name: 'Kusursuz Hafta', icon: '💎', desc: 'Bir hafta sıfır geç check', color: '#9b59b6' },
+    lider: { id: 'lider', name: 'Ay Lideri', icon: '👑', desc: 'Ayın en yüksek puanı', color: '#e74c3c' }
+};
+
+async function checkAndAwardBadges(personelId, personelName, checkData) {
+    try {
+        const badgeDocId = `${personelId}_badges`;
+        const badgeRef = db.collection('badges').doc(badgeDocId);
+        const badgeDoc = await badgeRef.get();
+        const existingBadges = badgeDoc.exists ? (badgeDoc.data().badges || []) : [];
+        const newBadges = [];
+        
+        // İlk Check rozeti
+        if (!existingBadges.includes('ilk_check')) {
+            newBadges.push('ilk_check');
+        }
+        
+        // Hız rozeti (beklenen sürenin %50 altında)
+        if (checkData.actualMinutes && checkData.expectedMinutes) {
+            if (checkData.actualMinutes < checkData.expectedMinutes * 0.5 && !existingBadges.includes('hizli')) {
+                newBadges.push('hizli');
+            }
+        }
+        
+        // Yeni rozet varsa kaydet
+        if (newBadges.length > 0) {
+            const allBadges = [...existingBadges, ...newBadges];
+            await badgeRef.set({
+                personelId,
+                personelName,
+                badges: allBadges,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            
+            // Bildirim göster
+            newBadges.forEach(badgeId => {
+                const badge = BADGE_DEFINITIONS[badgeId];
+                if (badge) {
+                    toast(`${badge.icon} Yeni Rozet: ${badge.name}!`, 'success');
+                }
+            });
+        }
+    } catch (e) {
+        console.warn('Rozet kontrolü hatası:', e);
+    }
+}
+
+function renderBadges(badges) {
+    if (!badges || badges.length === 0) return '';
+    return badges.map(id => {
+        const b = BADGE_DEFINITIONS[id];
+        return b ? `<span title="${b.desc}" style="font-size:1.2rem;cursor:help">${b.icon}</span>` : '';
+    }).join(' ');
+}
+
 // ==================== GÖREV ATAMALARINI TEMİZLE (Shift değişiminde) ====================
 async function clearTaskAssignmentsForBranch(branch, weekStart) {
     try {
@@ -18729,6 +18960,11 @@ async function saveChecklistAndShare(branch, type, date, timeSlot, personName, r
         };
         
         await db.collection('checklistSubmissions').doc(submissionId).set(submissionData);
+        
+        // Rozet kontrolü
+        checkAndAwardBadges(normalizePersonelId(personName), personName, {
+            actualMinutes, expectedMinutes, pointStatus, type
+        }).catch(() => {});
         
         // Başarı modal'ı göster
         showChecklistCompleteModal(branch, type, date, timeSlot, personName, actualMinutes, expectedMinutes, doneCount, totalCount, points, pointStatus);
