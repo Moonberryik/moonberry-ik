@@ -11717,6 +11717,14 @@ async function updateShiftCell(docId, name, dayIdx, value, keepStar = false) {
         const finalValue = keepStar && value ? '*' + value : value;
         data.personelShifts[name][dayIdx] = finalValue;
         await db.collection('shifts').doc(docId).update({ personelShifts: data.personelShifts });
+        
+        // Görev atamalarını temizle (yeni shift'e göre yeniden oluşturulacak)
+        const branch = data.branch || docId.split('_').slice(0, -1).join(' ');
+        const weekStart = data.weekStart || '';
+        if (weekStart) {
+            clearTaskAssignmentsForBranch(branch, weekStart).catch(() => {});
+        }
+        
         toast('✓ Kaydedildi', 'success');
         loadShiftWeek();
     } catch (e) { 
@@ -13564,7 +13572,8 @@ async function loadTodayChecks() {
         let dayIndex = today.getDay() - 1;
         if (dayIndex < 0) dayIndex = 6;
         
-        for (const branch of branches) {
+        // PARALEL SORGULAR - tüm şubeleri aynı anda çek
+        const shiftPromises = branches.map(async (branch) => {
             try {
                 const shiftsSnapshot = await db.collection('shifts').where('branch', '==', branch).get();
                 const allShifts = [];
@@ -13580,8 +13589,7 @@ async function loadTodayChecks() {
                     for (const [uniqueIdOrName, days] of Object.entries(personelShifts)) {
                         const todayShift = days[dayIndex] || '';
                         const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
-                        const fullName = personelFullNames[uniqueIdOrName] || uniqueIdOrName;
-                        // fullName'i displayName formatına çevir (Baran Akdemir → Baran A.)
+                        const fullName = personelFullNames[uniqueIdOrName] || uniqueIdOrName.replace(/_/g, ' ');
                         const displayName = formatDisplayName(fullName);
                         
                         if (cleanShift === 'A' || cleanShift.includes('AÇILI')) {
@@ -13592,14 +13600,16 @@ async function loadTodayChecks() {
                             araPersonel.push(displayName);
                         }
                     }
-                    shiftData[branch] = { acilis: acilisPersonel, kapanis: kapanisPersonel, ara: araPersonel };
-                } else {
-                    shiftData[branch] = { acilis: [], kapanis: [], ara: [] };
+                    return { branch, data: { acilis: acilisPersonel, kapanis: kapanisPersonel, ara: araPersonel } };
                 }
+                return { branch, data: { acilis: [], kapanis: [], ara: [] } };
             } catch (e) {
-                shiftData[branch] = { acilis: [], kapanis: [], ara: [] };
+                return { branch, data: { acilis: [], kapanis: [], ara: [] } };
             }
-        }
+        });
+        
+        const shiftResults = await Promise.all(shiftPromises);
+        shiftResults.forEach(r => { shiftData[r.branch] = r.data; });
     } catch (e) {
         console.warn('Shift yükleme hatası:', e);
     }
@@ -13669,7 +13679,17 @@ async function loadTodayChecks() {
                 }
             } catch (e) {}
             
-            const platformPersonnel = [...getShiftPersonnel(branch, 'acilis'), ...getShiftPersonnel(branch, 'ara'), ...getShiftPersonnel(branch, 'kapanis')].filter((v, i, a) => a.indexOf(v) === i);
+            // SAAT BAZLI PERSONEL: 10:00→açılışçı, 12-18→herkes, 21-00→kapanışçı
+            const platformHour = parseInt((activePlatformTime || nextPlatformTime || '10:00').split(':')[0]);
+            let platformPersonnel = [];
+            if (platformHour === 10) {
+                platformPersonnel = getShiftPersonnel(branch, 'acilis');
+            } else if (platformHour >= 21 || platformHour === 0) {
+                platformPersonnel = [...getShiftPersonnel(branch, 'ara'), ...getShiftPersonnel(branch, 'kapanis')];
+            } else {
+                platformPersonnel = [...getShiftPersonnel(branch, 'acilis'), ...getShiftPersonnel(branch, 'ara'), ...getShiftPersonnel(branch, 'kapanis')];
+            }
+            platformPersonnel = platformPersonnel.filter((v, i, a) => a.indexOf(v) === i);
             
             branchChecks.push({
                 id: 'platform',
