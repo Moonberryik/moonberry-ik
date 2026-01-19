@@ -16703,6 +16703,11 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
     const expectedMinutes = Math.round(checklistExpectedDuration / 60);
     const iconSvg = getIcon(typeInfo?.icon || 'clipboard-check');
     
+    // Check kurallarını al
+    const checkRules = CHECK_RULES[type] || {};
+    const hasDeadline = checkRules.deadline || checkRules.timeSlots;
+    const hasPoints = checkRules.points;
+    
     let html = `
         <div class="form-section">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
@@ -16730,6 +16735,69 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                     ` : ''}
                 </div>
             </div>
+            
+            ${!isSubmitted && (hasDeadline || hasPoints || checkRules.note) ? `
+            <!-- CHECK KURALLARI PANELİ -->
+            <div style="margin-bottom:20px;padding:14px 18px;background:var(--bg3);border-radius:12px;border-left:4px solid #008c95">
+                <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center">
+                    ${checkRules.deadline ? `
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <div style="width:32px;height:32px;background:rgba(0,140,149,.15);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                            <svg width="16" height="16" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                        </div>
+                        <div>
+                            <div style="font-size:.7rem;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px">Son Saat</div>
+                            <div style="font-size:.95rem;font-weight:600;color:var(--tx)">${checkRules.deadline}</div>
+                        </div>
+                    </div>
+                    ` : ''}
+                    ${type === 'platform' && timeSlot ? `
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <div style="width:32px;height:32px;background:rgba(0,140,149,.15);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                            <svg width="16" height="16" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                        </div>
+                        <div>
+                            <div style="font-size:.7rem;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px">Zaman Dilimi</div>
+                            <div style="font-size:.95rem;font-weight:600;color:var(--tx)">${timeSlot} ±30dk</div>
+                        </div>
+                    </div>
+                    ` : ''}
+                    ${hasPoints ? `
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <div style="width:32px;height:32px;background:rgba(39,174,96,.15);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                            <svg width="16" height="16" fill="none" stroke="#27ae60" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/></svg>
+                        </div>
+                        <div>
+                            <div style="font-size:.7rem;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px">Puanlar</div>
+                            <div style="font-size:.85rem;display:flex;gap:8px;flex-wrap:wrap">
+                                ${checkRules.points.onTime !== undefined ? `<span style="color:#27ae60;font-weight:600">✓ ${checkRules.points.onTime >= 0 ? '+' : ''}${checkRules.points.onTime}</span>` : ''}
+                                ${checkRules.points.done !== undefined ? `<span style="color:#27ae60;font-weight:600">✓ ${checkRules.points.done >= 0 ? '+' : ''}${checkRules.points.done}</span>` : ''}
+                                ${checkRules.points.late !== undefined ? `<span style="color:#f39c12;font-weight:600">⏱ ${checkRules.points.late}</span>` : ''}
+                                ${checkRules.points.missed !== undefined ? `<span style="color:#e74c3c;font-weight:600">✗ ${checkRules.points.missed}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+                    ${shiftPersonnel && shiftPersonnel.length > 0 ? `
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <div style="width:32px;height:32px;background:rgba(155,89,182,.15);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                            <svg width="16" height="16" fill="none" stroke="#9b59b6" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                        </div>
+                        <div>
+                            <div style="font-size:.7rem;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px">Sorumlu</div>
+                            <div style="font-size:.85rem;font-weight:500;color:var(--tx)">${shiftPersonnel.length > 2 ? shiftPersonnel.slice(0, 2).join(', ') + ' +' + (shiftPersonnel.length - 2) : shiftPersonnel.join(', ')}</div>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+                ${checkRules.note ? `
+                <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--cardBorder);font-size:.8rem;color:var(--tx2)">
+                    <strong>Not:</strong> ${checkRules.note}
+                </div>
+                ` : ''}
+            </div>
+            ` : ''}
+            
             ${isSubmitted ? `
                 <div style="font-size:.75rem;color:var(--tx3);margin-bottom:16px">${submittedData.submittedByName} • ${submittedData.submittedAt?.toDate ? new Date(submittedData.submittedAt.toDate()).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'}) : ''}</div>
             ` : ''}
@@ -16973,6 +17041,23 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
             `;
         }
         
+        // Haftalık görevler için gün badge'i
+        let dayOfWeekBadgeHtml = '';
+        const DAY_NAMES_SHORT = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+        const DAY_COLORS = ['#3498db', '#9b59b6', '#e74c3c', '#f39c12', '#27ae60', '#1abc9c', '#e91e63'];
+        
+        if (isHaftalik && item.dayOfWeek && item.dayOfWeek.length > 0) {
+            const dayBadges = item.dayOfWeek.map(d => {
+                const dayName = DAY_NAMES_SHORT[d] || '?';
+                const dayColor = DAY_COLORS[d] || '#6b7280';
+                return `<span style="font-size:.7rem;padding:3px 8px;border-radius:4px;background:${dayColor};color:#fff;font-weight:600">${dayName}</span>`;
+            }).join('');
+            
+            dayOfWeekBadgeHtml = `<div style="display:flex;gap:4px;flex-wrap:wrap">${dayBadges}</div>`;
+        } else if (isHaftalik) {
+            // Gün belirtilmemişse "Her gün" badge'i gösterme (opsiyonel)
+        }
+        
         if (checklistEditMode) {
             // Düzenleme modu - INLINE TEXT EDITING + SÜRÜKLE BIRAK
             html += `
@@ -17047,6 +17132,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
                             ${hasColor ? `<span style="font-size:.85rem;padding:5px 14px;border-radius:6px;background:rgba(255,255,255,.95);color:${itemColor};font-weight:700">${responsibleLabel}</span>` : ''}
                             ${assignedBadgeHtml}
+                            ${dayOfWeekBadgeHtml}
                             ${datesHtml}
                         </div>
                         <div style="font-size:1rem;color:${hasColor ? '#fff' : 'var(--tx)'};line-height:1.6;font-weight:500">${item.text}</div>
@@ -18924,6 +19010,24 @@ async function showEditChecklistItemModal(itemId) {
                 <input type="text" id="editChecklistItemPenalty" class="form-input" value="${item.penalty || ''}" placeholder="örn: -100 puan">
             </div>
             `}
+            ${type === 'haftalik' ? `
+            <div class="form-group">
+                <label class="form-label">Hangi Günlerde Yapılsın?</label>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
+                    ${['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'].map((day, i) => {
+                        const checked = item.dayOfWeek && item.dayOfWeek.includes(i) ? 'checked' : '';
+                        const colors = ['#3498db', '#9b59b6', '#e74c3c', '#f39c12', '#27ae60', '#1abc9c', '#e91e63'];
+                        return `<label style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--bg3);border-radius:8px;cursor:pointer;transition:all .2s">
+                            <input type="checkbox" class="editItemDayOfWeek" value="${i}" ${checked} style="accent-color:${colors[i]}">
+                            <span style="font-weight:500">${day}</span>
+                        </label>`;
+                    }).join('')}
+                </div>
+                <div style="margin-top:12px;font-size:.8rem;color:var(--tx3)">
+                    <strong>İpucu:</strong> Hiçbir gün seçilmezse her gün yapılabilir. Belirli günler seçerseniz sadece o günlerde gösterilir.
+                </div>
+            </div>
+            ` : ''}
         `, `
             <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
             <button class="btn btn-primary" onclick="editChecklistItem('${itemId}', '${branch}', '${type}')">Kaydet</button>
@@ -19001,6 +19105,13 @@ async function editChecklistItem(itemId, branch, type) {
                             updated.dates.push(parseInt(cb.value));
                         });
                     }
+                } else if (type === 'haftalik') {
+                    // Haftalık görevler için gün seçimi
+                    updated.dayOfWeek = [];
+                    document.querySelectorAll('.editItemDayOfWeek:checked').forEach(cb => {
+                        updated.dayOfWeek.push(parseInt(cb.value));
+                    });
+                    updated.penalty = document.getElementById('editChecklistItemPenalty')?.value?.trim() || null;
                 } else {
                     updated.penalty = document.getElementById('editChecklistItemPenalty')?.value?.trim() || null;
                 }
@@ -19261,6 +19372,138 @@ function getDefaultChecklistItems(branch, type) {
     console.warn(`Varsayılan maddeler bulunamadı: ${type} (baseType: ${checkType})`);
     return [];
 }
+
+// ==================== DEBUG / TEST PANELİ ====================
+let debugPanelOpen = false;
+let debugLogs = [];
+const MAX_DEBUG_LOGS = 50;
+
+// Console.error'ı yakala
+const originalConsoleError = console.error;
+console.error = function(...args) {
+    debugLogs.unshift({
+        type: 'error',
+        message: args.map(a => typeof a === 'object' ? JSON.stringify(a).substring(0, 200) : String(a)).join(' '),
+        time: new Date().toLocaleTimeString('tr-TR')
+    });
+    if (debugLogs.length > MAX_DEBUG_LOGS) debugLogs.pop();
+    originalConsoleError.apply(console, args);
+};
+
+// Console.warn'ı yakala
+const originalConsoleWarn = console.warn;
+console.warn = function(...args) {
+    debugLogs.unshift({
+        type: 'warn',
+        message: args.map(a => typeof a === 'object' ? JSON.stringify(a).substring(0, 200) : String(a)).join(' '),
+        time: new Date().toLocaleTimeString('tr-TR')
+    });
+    if (debugLogs.length > MAX_DEBUG_LOGS) debugLogs.pop();
+    originalConsoleWarn.apply(console, args);
+};
+
+function toggleDebugPanel() {
+    debugPanelOpen = !debugPanelOpen;
+    const panel = document.getElementById('debugPanel');
+    if (panel) {
+        panel.style.display = debugPanelOpen ? 'block' : 'none';
+        if (debugPanelOpen) refreshDebugPanel();
+    }
+}
+
+function refreshDebugPanel() {
+    const content = document.getElementById('debugContent');
+    if (!content) return;
+    
+    const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
+    
+    content.innerHTML = `
+        <div style="margin-bottom:16px">
+            <div style="font-weight:600;color:var(--tx);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                <span style="width:8px;height:8px;background:${db ? '#27ae60' : '#e74c3c'};border-radius:50%"></span>
+                Firebase Durumu
+            </div>
+            <div style="font-size:.8rem;color:var(--tx2);padding:8px;background:var(--bg3);border-radius:6px">
+                Bağlantı: ${db ? '✅ Aktif' : '❌ Bağlantı Yok'}<br>
+                Auth: ${currentUser ? '✅ Giriş Yapıldı' : '❌ Giriş Yok'}
+            </div>
+        </div>
+        
+        <div style="margin-bottom:16px">
+            <div style="font-weight:600;color:var(--tx);margin-bottom:8px">👤 Kullanıcı</div>
+            <div style="font-size:.8rem;color:var(--tx2);padding:8px;background:var(--bg3);border-radius:6px">
+                İsim: ${currentUser?.name || '-'}<br>
+                Kod: ${currentUser?.codeName || '-'}<br>
+                Rol: ${currentUser?.role || '-'}<br>
+                Şube: ${currentUser?.branch || '-'}
+            </div>
+        </div>
+        
+        <div style="margin-bottom:16px">
+            <div style="font-weight:600;color:var(--tx);margin-bottom:8px">📊 Global Değişkenler</div>
+            <div style="font-size:.75rem;color:var(--tx2);padding:8px;background:var(--bg3);border-radius:6px;max-height:100px;overflow-y:auto">
+                _weeklyTaskAssignments: ${window._weeklyTaskAssignments ? '✅' : '❌'}<br>
+                _dailyTaskAssignments: ${window._dailyTaskAssignments ? '✅' : '❌'}<br>
+                _currentChecklistItems: ${window._currentChecklistItems?.length || 0} madde<br>
+                _currentShiftPersonnel: ${window._currentShiftPersonnel?.join(', ') || '-'}
+            </div>
+        </div>
+        
+        <div style="margin-bottom:16px">
+            <div style="font-weight:600;color:var(--tx);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+                📋 Son Loglar (${debugLogs.length})
+                <button onclick="debugLogs=[];refreshDebugPanel()" style="font-size:.7rem;padding:2px 8px;background:var(--bg3);border:none;border-radius:4px;cursor:pointer">Temizle</button>
+            </div>
+            <div style="font-size:.7rem;max-height:150px;overflow-y:auto;background:var(--bg3);border-radius:6px;padding:8px">
+                ${debugLogs.length === 0 ? '<div style="color:var(--tx3)">Log yok</div>' : 
+                    debugLogs.slice(0, 20).map(log => `
+                        <div style="padding:4px 0;border-bottom:1px solid var(--cardBorder);color:${log.type === 'error' ? '#e74c3c' : '#f39c12'}">
+                            <span style="opacity:.6">[${log.time}]</span> ${log.message.substring(0, 100)}
+                        </div>
+                    `).join('')
+                }
+            </div>
+        </div>
+        
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button onclick="location.reload()" class="btn btn-sm btn-ghost">🔄 Yenile</button>
+            <button onclick="localStorage.clear();toast('LocalStorage temizlendi','success')" class="btn btn-sm btn-ghost">🗑️ Cache Temizle</button>
+            <button onclick="navigator.clipboard.writeText(JSON.stringify({user:currentUser,logs:debugLogs},null,2));toast('Kopyalandı','success')" class="btn btn-sm btn-ghost">📋 Kopyala</button>
+        </div>
+    `;
+}
+
+// Debug paneli HTML'i sayfa yüklenince ekle
+document.addEventListener('DOMContentLoaded', function() {
+    // Sadece müdür/yönetici için debug butonu göster
+    setTimeout(() => {
+        const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
+        if (!isManager) return;
+        
+        // Floating buton
+        const btn = document.createElement('div');
+        btn.id = 'debugBtn';
+        btn.innerHTML = '🐛';
+        btn.style.cssText = 'position:fixed;bottom:20px;right:20px;width:44px;height:44px;background:#1e293b;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;box-shadow:0 4px 12px rgba(0,0,0,.3);z-index:9999;transition:transform .2s';
+        btn.onclick = toggleDebugPanel;
+        btn.onmouseover = () => btn.style.transform = 'scale(1.1)';
+        btn.onmouseout = () => btn.style.transform = 'scale(1)';
+        document.body.appendChild(btn);
+        
+        // Panel
+        const panel = document.createElement('div');
+        panel.id = 'debugPanel';
+        panel.style.cssText = 'display:none;position:fixed;bottom:80px;right:20px;width:320px;max-height:70vh;background:var(--bg);border:1px solid var(--cardBorder);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.2);z-index:9998;overflow:hidden';
+        panel.innerHTML = `
+            <div style="padding:14px 16px;background:linear-gradient(135deg,#1e293b,#334155);color:#fff;display:flex;justify-content:space-between;align-items:center">
+                <span style="font-weight:600">🐛 Debug Panel</span>
+                <button onclick="toggleDebugPanel()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.2rem;opacity:.7">✕</button>
+            </div>
+            <div id="debugContent" style="padding:16px;overflow-y:auto;max-height:calc(70vh - 60px)"></div>
+        `;
+        document.body.appendChild(panel);
+    }, 2000);
+});
     </script>
 </body>
 </html>
