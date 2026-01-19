@@ -2568,6 +2568,14 @@ async function getPersonelDisplayNameFromList(searchKey, branch) {
                     // İlk isim underscore (örn: "tuana" veya "busra")
                     underscoreName?.split('_')[0],
                     underscoreCodeName?.split('_')[0],
+                    // EK: Normalize edilmiş tüm varyasyonlar (Türkçe İ sorunu için)
+                    normalizeTurkishChars(data.name?.toLowerCase()),
+                    normalizeTurkishChars(underscoreName),
+                    normalizeTurkishChars(underscoreName?.replace(/_/g, ' ')),
+                    // displayName formatı (Ad S.)
+                    formatDisplayName(data.name),
+                    formatDisplayName(data.name)?.toLowerCase(),
+                    normalizeTurkishChars(formatDisplayName(data.name)),
                 ].filter(k => k);
                 
                 // Tüm keyleri kaydet
@@ -2594,19 +2602,25 @@ async function getPersonelDisplayNameFromList(searchKey, branch) {
     const underscoreSearch = searchKey?.toLowerCase().replace(/\s+/g, '_').replace(/[ğ]/g, 'g').replace(/[ü]/g, 'u').replace(/[ş]/g, 's').replace(/[ı]/g, 'i').replace(/[ö]/g, 'o').replace(/[ç]/g, 'c');
     const spaceSearch = searchKey?.replace(/_/g, ' ');
     const firstWord = searchKey?.split(/[_\s]/)[0];
+    const normalizedSearch = normalizeTurkishChars(searchKey);
+    const displayFormatSearch = formatDisplayName(searchKey?.replace(/_/g, ' '));
     
-    // Cache'ten ara - çoklu deneme
+    // Cache'ten ara - çoklu deneme (GÜÇLENDIRILDI)
     const result = _personelDisplayCache.get(searchKey) || 
                    _personelDisplayCache.get(searchKey?.toLowerCase()) ||
                    _personelDisplayCache.get(searchKey?.toUpperCase()) ||
-                   _personelDisplayCache.get(normalizeTurkishChars(searchKey)) ||
+                   _personelDisplayCache.get(normalizedSearch) ||
                    _personelDisplayCache.get(normalizePersonelId(searchKey)) ||
                    _personelDisplayCache.get(underscoreSearch) ||
                    _personelDisplayCache.get(spaceSearch) ||
                    _personelDisplayCache.get(spaceSearch?.toLowerCase()) ||
+                   _personelDisplayCache.get(normalizeTurkishChars(spaceSearch)) ||
                    _personelDisplayCache.get(firstWord) ||
                    _personelDisplayCache.get(firstWord?.toLowerCase()) ||
-                   _personelDisplayCache.get(normalizeTurkishChars(firstWord));
+                   _personelDisplayCache.get(normalizeTurkishChars(firstWord)) ||
+                   _personelDisplayCache.get(displayFormatSearch) ||
+                   _personelDisplayCache.get(displayFormatSearch?.toLowerCase()) ||
+                   _personelDisplayCache.get(normalizeTurkishChars(displayFormatSearch));
     
     if (result) {
         // Branch kontrolü - branch null/"all" ise veya eşleşiyorsa döndür
