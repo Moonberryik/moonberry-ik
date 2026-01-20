@@ -4352,7 +4352,17 @@ function goTo(page) {
     if (page === 'zimmet') populateSubeSelect('zimmet_sube');
     // Checklist sayfası
     if (page === 'checklist') {
-        initChecklistPage();
+        initChecklistPage().catch(err => {
+            console.error('[Checklist Init] Hata:', err);
+            // Fallback: Manuel dropdown doldur
+            const subeSelect = document.getElementById('checklistSube');
+            if (subeSelect && subeSelect.options.length === 0) {
+                const branches = STATE.branches || DEFAULT_STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+                subeSelect.innerHTML = branches.map(b => `<option value="${b}">${b}</option>`).join('');
+                console.warn('[Checklist Init] Fallback ile dropdown dolduruldu');
+                loadChecklistTypes();
+            }
+        });
     }
     // Dashboard için bugünkü checkler
     if (page === 'dashboard') {
@@ -16607,6 +16617,12 @@ async function initChecklistPage() {
     const isAdmin = currentUser?.role === 'yonetici' || currentUser?.role === 'bolge_muduru';
     
     let branches = STATE.branches || [];
+    
+    // Güvence: branches hala boşsa DEFAULT_STATE'den al
+    if (branches.length === 0) {
+        branches = DEFAULT_STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+        console.warn('[Checklist Init] STATE.branches boş, DEFAULT_STATE kullanıldı');
+    }
     
     // Mağaza müdürü/barista sadece kendi şubesini görsün ve değiştiremesin
     if (!isAdmin && userBranch && userBranch !== 'all') {
