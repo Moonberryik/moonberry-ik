@@ -16703,6 +16703,7 @@ async function initChecklistPage() {
     if (_pendingChecklistParams) {
         const { branch, type, timeSlot } = _pendingChecklistParams;
         _pendingChecklistParams = null; // Temizle
+        console.log('[Checklist Init] Dashboard parametreleri:', { branch, type, timeSlot });
         
         // Şubeyi seç
         if (branch && subeSelect) {
@@ -16716,9 +16717,21 @@ async function initChecklistPage() {
         // Kısa bir gecikme ile checklist türünü seç
         setTimeout(() => {
             if (type) {
-                selectChecklistType(subeSelect.value, type, timeSlot || null);
+                // selectChecklistType sadece typeId alıyor!
+                selectChecklistType(type);
+                console.log('[Checklist Init] Tür seçildi:', type);
+                
+                // timeSlot varsa onu da seç
+                if (timeSlot) {
+                    const timeSlotSelect = document.getElementById('checklistTimeSlot');
+                    if (timeSlotSelect) {
+                        timeSlotSelect.value = timeSlot;
+                        // loadChecklist'i yeniden tetikle
+                        loadChecklist();
+                    }
+                }
             }
-        }, 100);
+        }, 150);
         
         return; // Early return
     }
