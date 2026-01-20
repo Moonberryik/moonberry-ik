@@ -16889,6 +16889,15 @@ async function initChecklistPage() {
         // Checklist türlerini yükle ve doğru tipi seç
         await loadChecklistTypes();
         
+        // timeSlot'u ÖNCE ayarla (loadChecklist'in autoTimeSlot hesaplamasını override etmek için)
+        if (timeSlot) {
+            const timeSlotSelect = document.getElementById('checklistTimeSlot');
+            if (timeSlotSelect) {
+                timeSlotSelect.value = timeSlot;
+                console.log('[Checklist Init] TimeSlot ayarlandı:', timeSlot);
+            }
+        }
+        
         // Kısa bir gecikme ile checklist türünü seç
         setTimeout(() => {
             if (type) {
@@ -16896,12 +16905,12 @@ async function initChecklistPage() {
                 selectChecklistType(type);
                 console.log('[Checklist Init] Tür seçildi:', type);
                 
-                // timeSlot varsa onu da seç
+                // loadChecklist yeniden çağırılıyor ama autoTimeSlot override edilmeli
+                // Bu yüzden timeSlot'u tekrar set et
                 if (timeSlot) {
                     const timeSlotSelect = document.getElementById('checklistTimeSlot');
-                    if (timeSlotSelect) {
+                    if (timeSlotSelect && timeSlotSelect.value !== timeSlot) {
                         timeSlotSelect.value = timeSlot;
-                        // loadChecklist'i yeniden tetikle
                         loadChecklist();
                     }
                 }
@@ -17404,21 +17413,36 @@ async function loadChecklist() {
     
     // Eğer timeSlots varsa, en yakın slot'u otomatik seç
     if (timeSlots.length > 0) {
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
-        let closestSlot = timeSlots[0];
-        let minDiff = Infinity;
+        const currentHour = now.getHours();
+        const currentMinutes = currentHour * 60 + now.getMinutes();
+        const isLateNight = currentHour >= 0 && currentHour < 2;
         
-        timeSlots.forEach(slot => {
-            const [h, m] = slot.split(':').map(Number);
-            const slotMinutes = h * 60 + m;
-            const diff = Math.abs(currentMinutes - slotMinutes);
-            if (diff < minDiff) {
-                minDiff = diff;
-                closestSlot = slot;
-            }
-        });
-        autoTimeSlot = closestSlot;
-        timeSlotSelect.value = autoTimeSlot;
+        // Gece 00:00-02:00 arası için 22:00 slot'unu zorla seç
+        if (isLateNight && timeSlots.includes('22:00')) {
+            autoTimeSlot = '22:00';
+            console.log('[Checklist] Gece saati - 22:00 slotu seçildi');
+        } else {
+            let closestSlot = timeSlots[0];
+            let minDiff = Infinity;
+            
+            timeSlots.forEach(slot => {
+                const [h, m] = slot.split(':').map(Number);
+                const slotMinutes = h * 60 + m;
+                const diff = Math.abs(currentMinutes - slotMinutes);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestSlot = slot;
+                }
+            });
+            autoTimeSlot = closestSlot;
+        }
+        
+        // Eğer timeSlotSelect zaten geçerli bir değere sahipse (Dashboard'dan gelen), override etme
+        if (!timeSlotSelect.value || !timeSlots.includes(timeSlotSelect.value)) {
+            timeSlotSelect.value = autoTimeSlot;
+        } else {
+            autoTimeSlot = timeSlotSelect.value; // Mevcut değeri kullan
+        }
     }
     
     // Zaman bilgisi (otomatik - Türkiye saati)
