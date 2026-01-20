@@ -11112,18 +11112,46 @@ async function updateAdminCredentials() {
     
     if (!newUsername && !newPassword) { toast('En az bir alan doldurun', 'error'); return; }
     if (newPassword && newPassword !== confirmPassword) { toast('Şifreler eşleşmiyor', 'error'); return; }
-    if (newPassword && newPassword.length < 4) { toast('Şifre en az 4 karakter olmalı', 'error'); return; }
+    if (newPassword && newPassword.length < 6) { toast('Şifre en az 6 karakter olmalı', 'error'); return; }
     
     try {
-        const updateData = {};
-        if (newUsername) updateData.username = newUsername;
-        if (newPassword) updateData.password = newPassword;
-        await db.collection('users').doc('admin').update(updateData);
+        const user = firebase.auth().currentUser;
+        if (!user) { toast('Oturum bulunamadı, tekrar giriş yapın', 'error'); return; }
+        
+        // Firebase Auth şifresini güncelle
+        if (newPassword) {
+            await user.updatePassword(newPassword);
+            console.log('Firebase Auth şifresi güncellendi');
+        }
+        
+        // Firestore'daki kullanıcı bilgilerini güncelle
+        const updateData = { updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+        if (newUsername) updateData.name = newUsername;
+        
+        // users koleksiyonunda güncelle (email ile bul)
+        const userDoc = await db.collection('users').where('email', '==', user.email).get();
+        if (!userDoc.empty) {
+            await db.collection('users').doc(userDoc.docs[0].id).update(updateData);
+        }
+        
+        // personel koleksiyonunda da güncelle
+        const personelDoc = await db.collection('personel').where('email', '==', user.email).get();
+        if (!personelDoc.empty && newPassword) {
+            await db.collection('personel').doc(personelDoc.docs[0].id).update({ password: newPassword });
+        }
+        
         toast('Giriş bilgileri güncellendi', 'success');
         document.getElementById('admin_new_username').value = '';
         document.getElementById('admin_new_password').value = '';
         document.getElementById('admin_confirm_password').value = '';
-    } catch (e) { console.error(e); toast('Güncelleme hatası!', 'error'); }
+    } catch (e) { 
+        console.error('Şifre güncelleme hatası:', e); 
+        if (e.code === 'auth/requires-recent-login') {
+            toast('Güvenlik için tekrar giriş yapmanız gerekiyor', 'error');
+        } else {
+            toast('Güncelleme hatası: ' + e.message, 'error'); 
+        }
+    }
 }
 
 // ==================== SHIFT SİSTEMİ ====================
@@ -12964,6 +12992,237 @@ function getWeekOptions() {
 }
 
 // ==================== CHECKLIST MODULE ====================
+// ==================== ADALETLİ CHECK ATAMA SİSTEMİ ====================
+
+/**
+ * Günlük check sayılarını hesapla
+ * @param {string} branch - Şube adı
+ * @param {string} dateStr - Tarih (YYYY-MM-DD)
+ * @returns {Object} - { personelId: count }
+ */
+async function getDailyCheckCounts(branch, dateStr) {
+    const counts = {};
+    try {
+        const submissions = await db.collection('checklistSubmissions')
+            .where('branch', '==', branch)
+            .where('date', '==', dateStr)
+            .get();
+        
+        submissions.forEach(doc => {
+            const d = doc.data();
+            const personId = d.personelId || d.personName;
+            if (personId) {
+                counts[personId] = (counts[personId] || 0) + 1;
+            }
+        });
+    } catch (e) {
+        console.warn('Check sayıları alınamadı:', e);
+    }
+    return counts;
+}
+
+/**
+ * Adaletli dağılım - en az check doldurana öncelik, eşitlik varsa round-robin
+ * @param {Array} personnel - Uygun personel listesi [{id, name, checkCount}]
+ * @param {number} rrIndex - Round-robin index (eşitlik durumunda)
+ * @returns {Object} - Seçilen personel {id, name}
+ */
+function selectFairPerson(personnel, rrIndex = 0) {
+    if (!personnel || personnel.length === 0) return null;
+    if (personnel.length === 1) return personnel[0];
+    
+    // En az check dolduranı bul
+    const minCount = Math.min(...personnel.map(p => p.checkCount || 0));
+    const candidates = personnel.filter(p => (p.checkCount || 0) === minCount);
+    
+    // Tek aday varsa onu seç
+    if (candidates.length === 1) return candidates[0];
+    
+    // Birden fazla aday varsa round-robin
+    return candidates[rrIndex % candidates.length];
+}
+
+/**
+ * Shift saatini parse et
+ * @param {string} shiftStr - Shift string (örn: "10:00-19:00", "AÇILIŞ", "K")
+ * @returns {Object} - {startHour, endHour} veya null
+ */
+function parseShiftTime(shiftStr) {
+    if (!shiftStr) return null;
+    
+    // Saat formatını bul: "10:00-19:00", "10:00/19:00", "10:00 - 19:00"
+    const timeMatch = shiftStr.match(/(\d{1,2}):?(\d{2})?\s*[-–\/]\s*(\d{1,2}):?(\d{2})?/);
+    if (timeMatch) {
+        return {
+            startHour: parseInt(timeMatch[1]),
+            startMin: parseInt(timeMatch[2] || 0),
+            endHour: parseInt(timeMatch[3]),
+            endMin: parseInt(timeMatch[4] || 0)
+        };
+    }
+    
+    // Standart vardiya tipleri için varsayılan saatler
+    const clean = shiftStr.replace(/\*/g, '').trim().toUpperCase();
+    if (clean === 'A' || clean === 'AÇILIŞ' || clean.includes('AÇILI')) {
+        return { startHour: 10, startMin: 0, endHour: 19, endMin: 0 };
+    }
+    if (clean === 'K' || clean === 'KAPANIŞ' || clean.includes('KAPANI')) {
+        return { startHour: 16, startMin: 0, endHour: 1, endMin: 0 }; // Gece 01:00
+    }
+    
+    return null;
+}
+
+/**
+ * Belirli bir saat için uygun personeli bul
+ * @param {Object} shiftData - Shift verisi {personelShifts, personelNames, personelFullNames}
+ * @param {number} targetHour - Hedef saat
+ * @param {number} dayIndex - Gün indexi (0=Pzt, 6=Paz)
+ * @returns {Array} - Uygun personel listesi
+ */
+function getPersonnelAtHour(shiftData, targetHour, dayIndex) {
+    const result = [];
+    const { personelShifts = {}, personelNames = {}, personelFullNames = {} } = shiftData;
+    
+    for (const [uniqueId, days] of Object.entries(personelShifts)) {
+        const todayShift = days[dayIndex] || '';
+        const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
+        
+        // OFF, İzin, Boş kontrol
+        if (!cleanShift || cleanShift === 'İ' || cleanShift === 'OFF' || cleanShift === '-' || cleanShift === 'X') continue;
+        // Bölge müdürü hariç
+        if (cleanShift.includes('BÖLGE') || cleanShift.includes('MÜDÜR')) continue;
+        
+        const shiftTime = parseShiftTime(todayShift);
+        if (shiftTime) {
+            // Gece geçişi kontrolü (kapanış 01:00 gibi)
+            let isInShift = false;
+            if (shiftTime.endHour < shiftTime.startHour) {
+                // Gece vardiyası
+                isInShift = targetHour >= shiftTime.startHour || targetHour < shiftTime.endHour;
+            } else {
+                isInShift = targetHour >= shiftTime.startHour && targetHour < shiftTime.endHour;
+            }
+            
+            if (isInShift) {
+                const displayName = personelNames[uniqueId] || formatDisplayName(personelFullNames[uniqueId] || uniqueId.replace(/_/g, ' '));
+                result.push({
+                    id: uniqueId,
+                    name: displayName,
+                    shiftStart: shiftTime.startHour,
+                    shiftEnd: shiftTime.endHour
+                });
+            }
+        }
+    }
+    
+    return result;
+}
+
+/**
+ * Açılışçıları bul
+ */
+function getOpeningStaff(shiftData, dayIndex) {
+    const result = [];
+    const { personelShifts = {}, personelNames = {}, personelFullNames = {} } = shiftData;
+    
+    for (const [uniqueId, days] of Object.entries(personelShifts)) {
+        const todayShift = days[dayIndex] || '';
+        const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
+        
+        if (cleanShift === 'A' || cleanShift === 'AÇILIŞ' || cleanShift.includes('AÇILI')) {
+            const displayName = personelNames[uniqueId] || formatDisplayName(personelFullNames[uniqueId] || uniqueId.replace(/_/g, ' '));
+            result.push({ id: uniqueId, name: displayName, shiftStart: 10 });
+        } else {
+            const shiftTime = parseShiftTime(todayShift);
+            if (shiftTime && shiftTime.startHour >= 9 && shiftTime.startHour <= 11) {
+                const displayName = personelNames[uniqueId] || formatDisplayName(personelFullNames[uniqueId] || uniqueId.replace(/_/g, ' '));
+                result.push({ id: uniqueId, name: displayName, shiftStart: shiftTime.startHour });
+            }
+        }
+    }
+    
+    return result;
+}
+
+/**
+ * Kapanışçıları bul
+ */
+function getClosingStaff(shiftData, dayIndex) {
+    const result = [];
+    const { personelShifts = {}, personelNames = {}, personelFullNames = {} } = shiftData;
+    
+    for (const [uniqueId, days] of Object.entries(personelShifts)) {
+        const todayShift = days[dayIndex] || '';
+        const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
+        
+        if (cleanShift === 'K' || cleanShift === 'KAPANIŞ' || cleanShift.includes('KAPANI')) {
+            const displayName = personelNames[uniqueId] || formatDisplayName(personelFullNames[uniqueId] || uniqueId.replace(/_/g, ' '));
+            result.push({ id: uniqueId, name: displayName, shiftEnd: 1 });
+        } else {
+            const shiftTime = parseShiftTime(todayShift);
+            // 23:00 veya sonrası bitiş = kapanışçı
+            if (shiftTime && (shiftTime.endHour >= 23 || shiftTime.endHour <= 2)) {
+                const displayName = personelNames[uniqueId] || formatDisplayName(personelFullNames[uniqueId] || uniqueId.replace(/_/g, ' '));
+                result.push({ id: uniqueId, name: displayName, shiftEnd: shiftTime.endHour });
+            }
+        }
+    }
+    
+    return result;
+}
+
+/**
+ * İlk shift gireni bul (açılıştan sonra)
+ * @param {Object} shiftData - Shift verisi
+ * @param {number} dayIndex - Gün indexi
+ * @param {number} afterHour - Bu saatten sonra giren (default: 10)
+ * @returns {Object|null} - İlk giren personel
+ */
+function getFirstShiftEntry(shiftData, dayIndex, afterHour = 10) {
+    const { personelShifts = {}, personelNames = {}, personelFullNames = {} } = shiftData;
+    let firstPerson = null;
+    let earliestStart = 24;
+    
+    for (const [uniqueId, days] of Object.entries(personelShifts)) {
+        const todayShift = days[dayIndex] || '';
+        const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
+        
+        if (!cleanShift || cleanShift === 'İ' || cleanShift === 'OFF' || cleanShift === '-') continue;
+        if (cleanShift.includes('BÖLGE') || cleanShift.includes('MÜDÜR')) continue;
+        
+        const shiftTime = parseShiftTime(todayShift);
+        if (shiftTime && shiftTime.startHour > afterHour && shiftTime.startHour < earliestStart) {
+            earliestStart = shiftTime.startHour;
+            const displayName = personelNames[uniqueId] || formatDisplayName(personelFullNames[uniqueId] || uniqueId.replace(/_/g, ' '));
+            firstPerson = { id: uniqueId, name: displayName, shiftStart: shiftTime.startHour };
+        }
+    }
+    
+    return firstPerson;
+}
+
+/**
+ * CHECK ATAMA KURALLARI
+ */
+const CHECK_ASSIGNMENT_RULES = {
+    // Platform Check saatleri ve kuralları
+    platform: {
+        '10:00': { type: 'acilis', desc: 'Açılışçıya' },
+        '12:00': { type: 'first_entry_or_acilis', desc: 'Shift girişi varsa giren, yoksa açılışçı' },
+        '15:00': { type: 'fair_all', desc: 'Adaletli dağılım (müdür hariç)' },
+        '18:00': { type: 'fair_never_filled', desc: 'Hiç doldurmamışa öncelik' },
+        '21:00': { type: 'fair_never_filled', desc: 'Hiç doldurmamışa öncelik' },
+        '00:00': { type: 'kapanis', desc: 'Kapanışçılara' }
+    },
+    // Günlük Check saatleri ve kuralları
+    gunluk: {
+        '14:00': { type: 'first_after_acilis', desc: 'Açılıştan sonra ilk shift giren', muafRule: 'day' },
+        '18:00': { type: 'fair_all', desc: 'Adaletli dağılım' },
+        '22:00': { type: 'fair_all', desc: 'Adaletli dağılım' }
+    }
+};
+
 // Checklist türleri - şubeye göre
 // Checklist türleri - Firebase'den yüklenecek
 let CHECKLIST_TYPES = {};
@@ -13574,6 +13833,36 @@ async function loadTodayChecks() {
     
     const primaryBranch = branches[0];
     
+    // GÜNLÜK CHECK SAYILARINI ÇEK (Adaletli dağılım için)
+    const dailyCheckCounts = {};
+    const who14Filled = {}; // 14:00 dolduran kişiler (gün boyunca muaf)
+    try {
+        for (const branch of branches) {
+            dailyCheckCounts[branch] = {};
+            who14Filled[branch] = null;
+            
+            // Bugünkü tüm submission'ları çek
+            const submissions = await db.collection('checklistSubmissions')
+                .where('branch', '==', branch)
+                .where('date', '==', todayStr)
+                .get();
+            
+            submissions.forEach(doc => {
+                const d = doc.data();
+                const personName = d.personName || d.personelId || '';
+                if (personName) {
+                    dailyCheckCounts[branch][personName] = (dailyCheckCounts[branch][personName] || 0) + 1;
+                }
+                // 14:00 günlük check'i dolduran
+                if (doc.id.includes('_guncel_') && doc.id.includes('_1400')) {
+                    who14Filled[branch] = personName;
+                }
+            });
+        }
+    } catch (e) {
+        console.warn('Check sayıları alınamadı:', e);
+    }
+    
     // Şube müdürlerini çek
     const branchManagers = {};
     try {
@@ -13625,6 +13914,7 @@ async function loadTodayChecks() {
     
     // Shift verilerini yükle
     const shiftData = {};
+    const rawShiftData = {}; // Ham shift verisi (adaletli atama için)
     try {
         const weekStart = getWeekStart(today);
         const weekKey = formatDateLocal(weekStart);
@@ -13645,6 +13935,7 @@ async function loadTodayChecks() {
                     const personelNames = targetShift.personelNames || {};       // codeName (görüntü adı)
                     const personelFullNames = targetShift.personelFullNames || {}; // tam isim
                     const acilisPersonel = [], kapanisPersonel = [], araPersonel = [];
+                    const allActive = []; // Tüm aktif personel (adaletli atama için)
                     
                     for (const [uniqueIdOrName, days] of Object.entries(personelShifts)) {
                         const todayShift = days[dayIndex] || '';
@@ -13656,24 +13947,44 @@ async function loadTodayChecks() {
                         // personelNames (codeName) KULLAN - en doğru format
                         const displayName = personelNames[uniqueIdOrName] || formatDisplayName(personelFullNames[uniqueIdOrName] || uniqueIdOrName.replace(/_/g, ' '));
                         
+                        // Shift saatini parse et
+                        const shiftTime = parseShiftTime(todayShift);
+                        const personInfo = { 
+                            id: uniqueIdOrName, 
+                            name: displayName, 
+                            shift: todayShift,
+                            shiftStart: shiftTime?.startHour || 10,
+                            shiftEnd: shiftTime?.endHour || 19
+                        };
+                        
                         if (cleanShift === 'A' || cleanShift.includes('AÇILI')) {
                             acilisPersonel.push(displayName);
+                            allActive.push({ ...personInfo, type: 'acilis' });
                         } else if (cleanShift === 'K' || cleanShift.includes('KAPANI')) {
                             kapanisPersonel.push(displayName);
+                            allActive.push({ ...personInfo, type: 'kapanis' });
                         } else if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-') {
                             araPersonel.push(displayName);
+                            allActive.push({ ...personInfo, type: 'ara' });
                         }
                     }
-                    return { branch, data: { acilis: acilisPersonel, kapanis: kapanisPersonel, ara: araPersonel } };
+                    return { 
+                        branch, 
+                        data: { acilis: acilisPersonel, kapanis: kapanisPersonel, ara: araPersonel },
+                        raw: { personelShifts, personelNames, personelFullNames, allActive, dayIndex }
+                    };
                 }
-                return { branch, data: { acilis: [], kapanis: [], ara: [] } };
+                return { branch, data: { acilis: [], kapanis: [], ara: [] }, raw: null };
             } catch (e) {
-                return { branch, data: { acilis: [], kapanis: [], ara: [] } };
+                return { branch, data: { acilis: [], kapanis: [], ara: [] }, raw: null };
             }
         });
         
         const shiftResults = await Promise.all(shiftPromises);
-        shiftResults.forEach(r => { shiftData[r.branch] = r.data; });
+        shiftResults.forEach(r => { 
+            shiftData[r.branch] = r.data; 
+            rawShiftData[r.branch] = r.raw;
+        });
     } catch (e) {
         console.warn('Shift yükleme hatası:', e);
     }
@@ -13743,15 +14054,89 @@ async function loadTodayChecks() {
                 }
             } catch (e) {}
             
-            // SAAT BAZLI PERSONEL: 10:00→açılışçı, 12-18→herkes, 21-00→kapanışçı
+            // SAAT BAZLI PLATFORM CHECK ATAMA
             const platformHour = parseInt((activePlatformTime || nextPlatformTime || '10:00').split(':')[0]);
             let platformPersonnel = [];
-            if (platformHour === 10) {
-                platformPersonnel = getShiftPersonnel(branch, 'acilis');
-            } else if (platformHour >= 21 || platformHour === 0) {
-                platformPersonnel = [...getShiftPersonnel(branch, 'ara'), ...getShiftPersonnel(branch, 'kapanis')];
-            } else {
-                platformPersonnel = [...getShiftPersonnel(branch, 'acilis'), ...getShiftPersonnel(branch, 'ara'), ...getShiftPersonnel(branch, 'kapanis')];
+            let platformSubLabel = '';
+            const rawData = rawShiftData[branch];
+            const branchCheckCounts = dailyCheckCounts[branch] || {};
+            
+            // Adaletli dağılım helper - en az check doldurana öncelik
+            function selectFairFromCandidates(candidates) {
+                if (candidates.length === 0) return [];
+                // Check sayılarına göre sırala
+                candidates.sort((a, b) => {
+                    const countA = branchCheckCounts[a.name] || 0;
+                    const countB = branchCheckCounts[b.name] || 0;
+                    return countA - countB;
+                });
+                // En az check dolduran(lar)ı döndür
+                const minCount = branchCheckCounts[candidates[0].name] || 0;
+                return candidates.filter(p => (branchCheckCounts[p.name] || 0) === minCount).map(p => p.name);
+            }
+            
+            if (rawData?.allActive) {
+                switch (platformHour) {
+                    case 10:
+                        // 10:00 → Açılışçıya
+                        platformPersonnel = rawData.allActive.filter(p => p.type === 'acilis').map(p => p.name);
+                        platformSubLabel = 'Açılışçı';
+                        break;
+                    case 12:
+                        // 12:00 → Shift girişi varsa giren, yoksa açılışçı
+                        const entryAt12 = rawData.allActive.find(p => p.shiftStart >= 11 && p.shiftStart <= 12);
+                        if (entryAt12) {
+                            platformPersonnel = [entryAt12.name];
+                            platformSubLabel = 'Shift giren';
+                        } else {
+                            platformPersonnel = rawData.allActive.filter(p => p.type === 'acilis').map(p => p.name);
+                            platformSubLabel = 'Açılışçı';
+                        }
+                        break;
+                    case 15:
+                        // 15:00 → Adaletli dağılım (en az check doldurana öncelik)
+                        {
+                            const candidates15 = rawData.allActive.filter(p => p.shiftStart <= 15 && (p.shiftEnd > 15 || p.shiftEnd <= 2));
+                            platformPersonnel = selectFairFromCandidates(candidates15);
+                        }
+                        platformSubLabel = 'Adaletli';
+                        break;
+                    case 18:
+                        // 18:00 → Hiç doldurmamışa öncelik (en az check doldurana)
+                        {
+                            const candidates18 = rawData.allActive.filter(p => p.shiftStart <= 18 && (p.shiftEnd > 18 || p.shiftEnd <= 2));
+                            platformPersonnel = selectFairFromCandidates(candidates18);
+                        }
+                        platformSubLabel = 'Adaletli';
+                        break;
+                    case 21:
+                        // 21:00 → Hiç doldurmamışa öncelik
+                        {
+                            const candidates21 = rawData.allActive.filter(p => p.shiftStart <= 21 && (p.shiftEnd > 21 || p.shiftEnd <= 2));
+                            platformPersonnel = selectFairFromCandidates(candidates21);
+                        }
+                        platformSubLabel = 'Adaletli';
+                        break;
+                    case 0:
+                    case 24:
+                        // 00:00 → Kapanışçılara
+                        platformPersonnel = rawData.allActive.filter(p => p.type === 'kapanis').map(p => p.name);
+                        platformSubLabel = 'Kapanışçı';
+                        break;
+                    default:
+                        platformPersonnel = rawData.allActive.map(p => p.name);
+                }
+            }
+            
+            // Fallback
+            if (platformPersonnel.length === 0) {
+                if (platformHour === 10) {
+                    platformPersonnel = getShiftPersonnel(branch, 'acilis');
+                } else if (platformHour >= 21 || platformHour === 0) {
+                    platformPersonnel = [...getShiftPersonnel(branch, 'ara'), ...getShiftPersonnel(branch, 'kapanis')];
+                } else {
+                    platformPersonnel = [...getShiftPersonnel(branch, 'acilis'), ...getShiftPersonnel(branch, 'ara'), ...getShiftPersonnel(branch, 'kapanis')];
+                }
             }
             platformPersonnel = platformPersonnel.filter((v, i, a) => a.indexOf(v) === i);
             
@@ -13760,6 +14145,7 @@ async function loadTodayChecks() {
                 name: 'Platform Kontrolü',
                 icon: 'smartphone',
                 deadline: activePlatformTime || nextPlatformTime,
+                subLabel: platformSubLabel,
                 isCompleted: platformCompleted,
                 isActive: !!activePlatformTime && !platformCompleted,
                 isMissed: false,
@@ -13861,8 +14247,8 @@ async function loadTodayChecks() {
             if (kapanisCompleted) completedChecks++;
         }
         
-        // 5. Günlük Genel Check (10:00, 14:00, 18:00, 22:00)
-        const gunlukTimes = ['10:00', '14:00', '18:00', '22:00'];
+        // 5. Günlük Genel Check (14:00, 18:00, 22:00 - saat otomatik atanır)
+        const gunlukTimes = ['14:00', '18:00', '22:00'];
         let activeGunlukTime = null;
         let gunlukRemainingMinutes = 0;
         
@@ -13888,19 +14274,81 @@ async function loadTodayChecks() {
                 gunlukCompleted = doc.exists;
             } catch (e) {}
             
-            // Günlük check için o saatte çalışan personel
-            const allPersonnel = [...getShiftPersonnel(branch, 'acilis'), ...getShiftPersonnel(branch, 'ara'), ...getShiftPersonnel(branch, 'kapanis')].filter((v, i, a) => a.indexOf(v) === i);
+            // Günlük check için SAAT BAZLI ADALETLİ ATAMA
+            let gunlukPersonnel = [];
+            let gunlukSubLabel = '';
+            const rawData = rawShiftData[branch];
+            const gunlukHour = parseInt(activeGunlukTime.split(':')[0]);
+            const branchCheckCounts = dailyCheckCounts[branch] || {};
+            const filled14 = who14Filled[branch]; // 14:00 dolduran kişi (gün boyunca muaf)
+            
+            if (rawData?.allActive) {
+                if (gunlukHour === 14) {
+                    // 14:00 → Açılıştan sonra ilk shift giren (11:00-13:00 arası başlayan)
+                    const firstEntry = rawData.allActive
+                        .filter(p => p.shiftStart >= 11 && p.shiftStart <= 13)
+                        .sort((a, b) => a.shiftStart - b.shiftStart)[0];
+                    if (firstEntry) {
+                        gunlukPersonnel = [firstEntry.name];
+                        gunlukSubLabel = 'İlk giren';
+                    } else {
+                        // İlk giren yoksa açılışçı
+                        gunlukPersonnel = rawData.allActive
+                            .filter(p => p.type === 'acilis')
+                            .map(p => p.name);
+                        gunlukSubLabel = 'Açılışçı';
+                    }
+                } else {
+                    // 18:00, 22:00 → Adaletli dağılım (14:00 dolduran muaf, en az check doldurana öncelik)
+                    let candidates = rawData.allActive.filter(p => {
+                        // Gece geçişi kontrolü
+                        if (p.shiftEnd < p.shiftStart) {
+                            return gunlukHour >= p.shiftStart || gunlukHour < p.shiftEnd;
+                        }
+                        return gunlukHour >= p.shiftStart && gunlukHour < p.shiftEnd;
+                    });
+                    
+                    // 14:00 dolduranı muaf tut (eğer birden fazla kişi varsa)
+                    if (filled14 && candidates.length > 1) {
+                        candidates = candidates.filter(p => p.name !== filled14);
+                    }
+                    
+                    // Check sayılarına göre sırala (en az dolduran önce)
+                    candidates.sort((a, b) => {
+                        const countA = branchCheckCounts[a.name] || 0;
+                        const countB = branchCheckCounts[b.name] || 0;
+                        return countA - countB;
+                    });
+                    
+                    // En az check dolduran(lar)ı göster
+                    if (candidates.length > 0) {
+                        const minCount = branchCheckCounts[candidates[0].name] || 0;
+                        gunlukPersonnel = candidates
+                            .filter(p => (branchCheckCounts[p.name] || 0) === minCount)
+                            .map(p => p.name);
+                    }
+                    
+                    gunlukSubLabel = 'Adaletli';
+                }
+            }
+            
+            // Fallback
+            if (gunlukPersonnel.length === 0) {
+                gunlukPersonnel = [...getShiftPersonnel(branch, 'acilis'), ...getShiftPersonnel(branch, 'ara'), ...getShiftPersonnel(branch, 'kapanis')].filter((v, i, a) => a.indexOf(v) === i);
+                gunlukSubLabel = '';
+            }
             
             branchChecks.push({
                 id: 'gunluk',
                 name: 'Günlük Genel Check',
                 icon: 'clipboard',
                 deadline: activeGunlukTime,
+                subLabel: gunlukSubLabel,
                 isCompleted: gunlukCompleted,
                 isActive: !gunlukCompleted,
                 isMissed: false,
                 remainingText: !gunlukCompleted ? `${gunlukRemainingMinutes}dk` : '',
-                personnel: allPersonnel,
+                personnel: gunlukPersonnel,
                 points: { onTime: 2, missed: -2 },
                 priority: gunlukCompleted ? 92 : 15,
                 onClick: `goToChecklist('${branch}', 'guncel', '${activeGunlukTime}')`
@@ -13918,16 +14366,58 @@ async function loadTodayChecks() {
                 mudurCompleted = doc.exists;
             } catch (e) {}
             
+            // Müdür OFF kontrolü - shift verisinden kontrol et
+            let mudurPersonnel = branchManagers[branch] || 'Mağaza Müdürü';
+            let mudurSubLabel = '';
+            
+            // Firebase'den müdür ve yardımcı bilgisi al
+            try {
+                const managersSnap = await db.collection('personel')
+                    .where('branch', '==', branch)
+                    .where('role', 'in', ['magaza_muduru', 'magaza_mudur_yardimcisi'])
+                    .get();
+                
+                let mudur = null, yardimci = null;
+                managersSnap.forEach(doc => {
+                    const d = doc.data();
+                    if (d.role === 'magaza_muduru') mudur = { ...d, id: doc.id };
+                    if (d.role === 'magaza_mudur_yardimcisi') yardimci = { ...d, id: doc.id };
+                });
+                
+                // Shift verisinden müdürün bugünkü durumunu kontrol et
+                const rawData = rawShiftData[branch];
+                if (rawData && mudur) {
+                    const mudurId = mudur.uniqueId || normalizePersonelId(mudur.name);
+                    const mudurShift = rawData.personelShifts?.[mudurId];
+                    const dayIndex = rawData.dayIndex;
+                    const todayMudurShift = mudurShift?.[dayIndex] || '';
+                    const cleanMudurShift = todayMudurShift.replace(/\*/g, '').trim().toUpperCase();
+                    
+                    // Müdür OFF veya İzinli ise
+                    if (cleanMudurShift === 'OFF' || cleanMudurShift === 'İ' || cleanMudurShift === 'Y.İ' || cleanMudurShift === '-') {
+                        if (yardimci) {
+                            mudurPersonnel = yardimci.codeName || formatDisplayName(yardimci.name);
+                            mudurSubLabel = 'Müdür izinli';
+                        }
+                    } else {
+                        mudurPersonnel = mudur.codeName || formatDisplayName(mudur.name);
+                    }
+                }
+            } catch (e) {
+                console.warn('Müdür OFF kontrolü hatası:', e);
+            }
+            
             branchChecks.push({
                 id: 'mudur',
                 name: 'Müdür Kontrol',
                 icon: 'usercheck',
                 deadline: '23:00',
+                subLabel: mudurSubLabel,
                 isCompleted: mudurCompleted,
                 isActive: !mudurCompleted,
                 isMissed: false,
                 remainingText: '',
-                personnel: [branchManagers[branch] || 'Mağaza Müdürü'],
+                personnel: [mudurPersonnel],
                 points: { onTime: 10, missed: -10 },
                 priority: mudurCompleted ? 93 : 25,
                 onClick: `goToChecklist('${branch}', 'mudur', null)`
@@ -14001,7 +14491,7 @@ async function loadTodayChecks() {
             
             // Personel gösterimi (özelleştirilebilir boyut)
             const personnelSize = dashboardConfig.personnelFontSize || '0.8rem';
-            const personnelText = check.personnel?.slice(0, 2).map(p => lookupPersonelDisplay(p)).join(', ') || '';
+            const personnelText = check.personnel?.map(p => lookupPersonelDisplay(p)).join(', ') || '';
             
             html += `
                 <div class="check-card-premium ${cardClass} ${pulseClass} ${isMoonberry ? '' : 'coral'}" onclick="${check.onClick}">
@@ -14427,7 +14917,7 @@ function renderSimpleCheckCard(name, deadline, branch, isCompleted, isMissed, is
     let personnelHtml = '';
     if (responsiblePersonnel && responsiblePersonnel.length > 0 && !isCompleted) {
         // lookupPersonelDisplay: codeName varsa onu, yoksa formatDisplayName kullanır
-        const names = responsiblePersonnel.slice(0, 2).map(p => lookupPersonelDisplay(p)).join(', ');
+        const names = responsiblePersonnel.map(p => lookupPersonelDisplay(p)).join(', ');
         personnelHtml = `<span style="font-size:.7rem;color:var(--tx3);margin-left:auto">${names}</span>`;
     }
     
@@ -16995,7 +17485,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
     const isSubmitted = !!submittedData;
     const isAylik = type === 'aylik';
     const isHaftalik = type === 'haftalik';
-    const isDailyShareable = ['acilis', 'kapanis', 'gunluk', 'guncel'].includes(type);
+    const isDailyShareable = type === 'haftalik'; // SADECE haftalık checklist'te görev paylaşımı var
     const hasMultiplePersonnel = shiftPersonnel && shiftPersonnel.length > 1;
     const hasDailySharing = isDailyShareable && dailyAssignments?.assignments;
     
@@ -17161,7 +17651,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                         </div>
                         <div>
                             <div style="font-size:.7rem;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px">Sorumlu</div>
-                            <div style="font-size:.85rem;font-weight:500;color:var(--tx)">${shiftPersonnel.length > 2 ? shiftPersonnel.slice(0, 2).join(', ') + ' +' + (shiftPersonnel.length - 2) : shiftPersonnel.join(', ')}</div>
+                            <div style="font-size:.85rem;font-weight:500;color:var(--tx)">${shiftPersonnel.join(', ')}</div>
                         </div>
                     </div>
                     ` : ''}
