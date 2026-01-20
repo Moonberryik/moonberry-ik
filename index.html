@@ -17469,29 +17469,40 @@ async function loadChecklist() {
                         else if (type === 'mudur') {
                             // Bu blok boş - müdürler aşağıda Firebase'den çekilecek
                         }
-                        // Günlük/Güncel check için SAAT BAZLI FİLTRELEME
+                        // Günlük/Güncel check için SAAT BAZLI ADALETLİ ATAMA
                         else if (['gunluk', 'guncel'].includes(type)) {
-                            // Shift saatini parse et (örn: "10:00-19:00", "09:30-18:30")
+                            // Shift saatini parse et
                             const shiftTimeMatch = todayShift.match(/(\d{1,2}):?(\d{2})?\s*[-–]\s*(\d{1,2}):?(\d{2})?/);
+                            let shiftStart = 10, shiftEnd = 19;
+                            
                             if (shiftTimeMatch) {
-                                const shiftStart = parseInt(shiftTimeMatch[1]);
-                                const shiftEnd = parseInt(shiftTimeMatch[3]);
-                                // Check saati shift saatleri arasında mı?
-                                if (checkHour >= shiftStart && checkHour < shiftEnd) {
-                                    rawPersonnel.push(displayName);
-                                }
+                                shiftStart = parseInt(shiftTimeMatch[1]);
+                                shiftEnd = parseInt(shiftTimeMatch[3]);
                             } else {
-                                // Saat formatı bulunamazsa vardiya tipine göre karar ver
-                                if (cleanShift === 'A' || cleanShift === 'AÇILIŞ') {
-                                    if (checkHour >= 10 && checkHour < 19) rawPersonnel.push(displayName);
-                                } else if (cleanShift === 'K' || cleanShift === 'KAPANIŞ') {
-                                    if (checkHour >= 16 || checkHour < 2) rawPersonnel.push(displayName);
-                                } else if (cleanShift.includes('ARACI') || cleanShift === 'ORTA') {
-                                    if (checkHour >= 12 && checkHour < 21) rawPersonnel.push(displayName);
-                                } else if (!cleanShift.includes('BÖLGE') && !cleanShift.includes('MÜDÜR')) {
-                                    // BÖLGE MÜDÜRÜ hariç diğer aktif personeli ekle
-                                    rawPersonnel.push(displayName);
+                                // Saat formatı yoksa vardiya tipine göre
+                                if (cleanShift === 'A' || cleanShift === 'AÇILIŞ' || cleanShift.includes('AÇILI')) {
+                                    shiftStart = 10; shiftEnd = 19;
+                                } else if (cleanShift === 'K' || cleanShift === 'KAPANIŞ' || cleanShift.includes('KAPANI')) {
+                                    shiftStart = 16; shiftEnd = 26; // 02:00 = 26
+                                } else if (cleanShift.includes('ARA') || cleanShift === 'ORTA') {
+                                    shiftStart = 12; shiftEnd = 21;
                                 }
+                            }
+                            
+                            // Gece geçişi kontrolü
+                            const isInShift = shiftEnd > shiftStart 
+                                ? (checkHour >= shiftStart && checkHour < shiftEnd)
+                                : (checkHour >= shiftStart || checkHour < (shiftEnd % 24));
+                            
+                            // BÖLGE MÜDÜRÜ hariç ve shift içindeyse ekle
+                            if (isInShift && !cleanShift.includes('BÖLGE') && !cleanShift.includes('MÜDÜR')) {
+                                rawPersonnel.push({
+                                    name: displayName,
+                                    shiftStart,
+                                    shiftEnd,
+                                    type: cleanShift === 'A' || cleanShift.includes('AÇILI') ? 'acilis' : 
+                                          cleanShift === 'K' || cleanShift.includes('KAPANI') ? 'kapanis' : 'ara'
+                                });
                             }
                         }
                         // Diğer tüm checkler için tüm aktif personel (BÖLGE MÜDÜRÜ HARİÇ)
@@ -17526,10 +17537,95 @@ async function loadChecklist() {
                         console.warn('Müdür listesi alınamadı:', e);
                     }
                 } else {
-                    // rawPersonnel zaten displayName formatında, direkt kullan
-                    for (const displayName of rawPersonnel) {
-                        if (displayName && !shiftPersonnel.includes(displayName)) {
-                            shiftPersonnel.push(displayName);
+                    // Günlük check için ADALETLİ TEK KİŞİ SEÇİMİ
+                    if (['gunluk', 'guncel'].includes(type) && rawPersonnel.length > 0 && typeof rawPersonnel[0] === 'object') {
+                        // rawPersonnel object array: {name, shiftStart, shiftEnd, type}
+                        let selectedPersonnel = [];
+                        
+                        if (checkHour === 14) {
+                            // 14:00 → İlk shift giren (11:00-13:00 arası başlayan)
+                            const firstEntry = rawPersonnel
+                                .filter(p => p.shiftStart >= 11 && p.shiftStart <= 13)
+                                .sort((a, b) => a.shiftStart - b.shiftStart)[0];
+                            if (firstEntry) {
+                                selectedPersonnel = [firstEntry.name];
+                                console.log('[Adaletli Atama] 14:00 - İlk giren:', firstEntry.name);
+                            } else {
+                                // İlk giren yoksa açılışçı
+                                selectedPersonnel = rawPersonnel
+                                    .filter(p => p.type === 'acilis')
+                                    .map(p => p.name);
+                                console.log('[Adaletli Atama] 14:00 - Açılışçılar:', selectedPersonnel);
+                            }
+                        } else {
+                            // 18:00, 22:00 → Bugünkü check sayısına göre adaletli dağılım
+                            try {
+                                const todayStr = date;
+                                const checkCounts = {};
+                                
+                                // Bugünkü tüm submission'ları çek
+                                const submissions = await db.collection('checklistSubmissions')
+                                    .where('branch', '==', branch)
+                                    .where('date', '==', todayStr)
+                                    .get();
+                                
+                                submissions.forEach(doc => {
+                                    const d = doc.data();
+                                    const personName = d.personName || d.personelId || '';
+                                    if (personName) {
+                                        checkCounts[personName] = (checkCounts[personName] || 0) + 1;
+                                    }
+                                });
+                                
+                                // 14:00 dolduranı bul (gün boyu muaf)
+                                let filled14 = null;
+                                submissions.forEach(doc => {
+                                    if (doc.id.includes('_guncel_') && doc.id.includes('_1400')) {
+                                        const d = doc.data();
+                                        filled14 = d.personName || d.personelId;
+                                    }
+                                });
+                                
+                                // Adayları filtrele
+                                let candidates = rawPersonnel.map(p => p.name);
+                                
+                                // 14:00 dolduranı muaf tut (birden fazla kişi varsa)
+                                if (filled14 && candidates.length > 1) {
+                                    candidates = candidates.filter(p => p !== filled14);
+                                    console.log('[Adaletli Atama] 14:00 dolduran muaf:', filled14);
+                                }
+                                
+                                // Check sayılarına göre sırala (en az dolduran önce)
+                                candidates.sort((a, b) => (checkCounts[a] || 0) - (checkCounts[b] || 0));
+                                
+                                // En az check dolduran(lar)ı seç
+                                if (candidates.length > 0) {
+                                    const minCount = checkCounts[candidates[0]] || 0;
+                                    selectedPersonnel = candidates.filter(p => (checkCounts[p] || 0) === minCount);
+                                }
+                                
+                                console.log('[Adaletli Atama] ' + checkHour + ':00 - Check sayıları:', checkCounts);
+                                console.log('[Adaletli Atama] ' + checkHour + ':00 - Seçilen:', selectedPersonnel);
+                            } catch (e) {
+                                // Hata durumunda tüm adayları göster
+                                selectedPersonnel = rawPersonnel.map(p => p.name);
+                                console.warn('[Adaletli Atama] Hata, tüm adaylar gösteriliyor:', e);
+                            }
+                        }
+                        
+                        // Seçilen personeli shiftPersonnel'e ekle
+                        for (const name of selectedPersonnel) {
+                            if (name && !shiftPersonnel.includes(name)) {
+                                shiftPersonnel.push(name);
+                            }
+                        }
+                    } else {
+                        // Diğer checkler için rawPersonnel string array
+                        for (const item of rawPersonnel) {
+                            const displayName = typeof item === 'object' ? item.name : item;
+                            if (displayName && !shiftPersonnel.includes(displayName)) {
+                                shiftPersonnel.push(displayName);
+                            }
                         }
                     }
                 }
