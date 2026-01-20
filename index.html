@@ -4352,17 +4352,31 @@ function goTo(page) {
     if (page === 'zimmet') populateSubeSelect('zimmet_sube');
     // Checklist sayfası
     if (page === 'checklist') {
+        // Immediate pre-fill (loadSystemConfig beklemeden)
+        const subeSelectPre = document.getElementById('checklistSube');
+        if (subeSelectPre && subeSelectPre.options.length === 0) {
+            const branchesPre = STATE.branches || DEFAULT_STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+            if (branchesPre.length > 0) {
+                subeSelectPre.innerHTML = branchesPre.map(b => `<option value="${b}">${b}</option>`).join('');
+                console.log('[Checklist] Pre-fill dropdown:', branchesPre.length, 'şube');
+            }
+        }
+        
+        // Init başlat
         initChecklistPage().catch(err => {
             console.error('[Checklist Init] Hata:', err);
-            // Fallback: Manuel dropdown doldur
+        });
+        
+        // 3 saniye güvence - dropdown hala boşsa zorla doldur
+        setTimeout(() => {
             const subeSelect = document.getElementById('checklistSube');
             if (subeSelect && subeSelect.options.length === 0) {
                 const branches = STATE.branches || DEFAULT_STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
                 subeSelect.innerHTML = branches.map(b => `<option value="${b}">${b}</option>`).join('');
-                console.warn('[Checklist Init] Fallback ile dropdown dolduruldu');
-                loadChecklistTypes();
+                console.warn('[Checklist Init] 3s güvence fallback tetiklendi');
+                if (typeof loadChecklistTypes === 'function') loadChecklistTypes();
             }
-        });
+        }, 3000);
     }
     // Dashboard için bugünkü checkler
     if (page === 'dashboard') {
@@ -16605,11 +16619,41 @@ function getUserNameFromEmail(email) {
 
 // Checklist sayfası başlat
 async function initChecklistPage() {
-    // Önce config'i yükle
-    await loadSystemConfig();
-    // Şube dropdown'ı doldur
+    console.log('[Checklist Init] Başlatılıyor...');
+    
+    // Element kontrolü (erken)
     const subeSelect = document.getElementById('checklistSube');
-    if (!subeSelect) return;
+    if (!subeSelect) {
+        console.error('[Checklist Init] subeSelect element bulunamadı!');
+        return;
+    }
+    
+    // IMMEDIATE FILL - loadSystemConfig beklemeden dropdown'u doldur
+    // STATE.branches DOMContentLoaded'da loadState() ile zaten dolu olmalı
+    let immediateBranches = STATE.branches || DEFAULT_STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+    if (immediateBranches.length === 0) {
+        immediateBranches = DEFAULT_STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+    }
+    
+    if (subeSelect.options.length === 0 && immediateBranches.length > 0) {
+        subeSelect.innerHTML = immediateBranches.map(b => `<option value="${b}">${b}</option>`).join('');
+        // Default Tuzla Port seç
+        const tuzlaOpt = Array.from(subeSelect.options).find(o => o.value.toLowerCase().includes('tuzla'));
+        if (tuzlaOpt) subeSelect.value = tuzlaOpt.value;
+        console.log('[Checklist Init] Immediate fill OK:', immediateBranches.length, 'şube');
+    }
+    
+    // Config'i timeout ile yükle (5 saniye max)
+    try {
+        await Promise.race([
+            loadSystemConfig(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Config timeout 5s')), 5000))
+        ]);
+    } catch (e) {
+        console.warn('[Checklist Init] Config timeout/hata:', e.message);
+    }
+    
+    // Config sonrası - Şube dropdown'ı güncelle
     
     const userEmail = currentUser?.email;
     const emailBranch = getUserBranchFromEmail(userEmail);
@@ -16621,7 +16665,7 @@ async function initChecklistPage() {
     // Güvence: branches hala boşsa DEFAULT_STATE'den al
     if (branches.length === 0) {
         branches = DEFAULT_STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
-        console.warn('[Checklist Init] STATE.branches boş, DEFAULT_STATE kullanıldı');
+        console.warn('[Checklist Init] STATE.branches boş, fallback kullanıldı');
     }
     
     // Mağaza müdürü/barista sadece kendi şubesini görsün ve değiştiremesin
