@@ -1299,17 +1299,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <div class="page-subtitle">Günlük kontrol listeleri</div>
                 </div>
                 
-                <!-- Bugünkü Aktif Checkler Paneli -->
-                <div id="checklistTodayPanel" style="margin-bottom:20px;display:none">
-                    <div style="font-size:.8rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;display:flex;align-items:center;gap:6px">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>
-                        Bugünkü Checkler
-                    </div>
-                    <div id="checklistTodayContainer" style="display:grid;gap:8px;max-height:280px;overflow-y:auto">
-                        <!-- Dinamik içerik -->
-                    </div>
-                </div>
-                
                 <!-- Şube ve Tür Seçimi -->
                 <div class="form-section" style="margin-bottom:20px">
                     <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
@@ -14222,8 +14211,8 @@ async function loadTodayChecks() {
         totalChecks++;
         if (temizlikCompleted) completedChecks++;
         
-        // 3. Açılış Hazırlıkları (sadece sabah 06:00-12:00 arası göster)
-        if (currentHour >= 6 && currentHour < 12) {
+        // 3. Açılış Hazırlıkları (her zaman göster)
+        {
             const acilisSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_acilis_${todayStr}`;
             let acilisCompleted = false;
             try {
@@ -14232,26 +14221,27 @@ async function loadTodayChecks() {
             } catch (e) {}
             
             const acilisPersonnel = getShiftPersonnel(branch, 'acilis');
+            const isAcilisActive = currentHour >= 6 && currentHour < 12; // Aktiflik için saat kontrolü
             branchChecks.push({
                 id: 'acilis',
                 name: 'Açılış Hazırlıkları',
                 icon: 'sunrise',
                 deadline: '10:30',
                 isCompleted: acilisCompleted,
-                isActive: !acilisCompleted,
-                isMissed: false,
+                isActive: isAcilisActive && !acilisCompleted,
+                isMissed: !isAcilisActive && !acilisCompleted && currentHour >= 12,
                 remainingText: '',
                 personnel: acilisPersonnel,
                 points: { onTime: 5, missed: -5 },
-                priority: acilisCompleted ? 95 : 5,
+                priority: acilisCompleted ? 95 : (isAcilisActive ? 5 : 80),
                 onClick: `goToChecklist('${branch}', 'acilis', null)`
             });
             totalChecks++;
             if (acilisCompleted) completedChecks++;
         }
         
-        // 4. Kapanış Hazırlıkları (sadece akşam 20:00-02:00 arası göster)
-        if (currentHour >= 20 || currentHour < 2) {
+        // 4. Kapanış Hazırlıkları (her zaman göster)
+        {
             const kapanisSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_kapanis_${todayStr}`;
             let kapanisCompleted = false;
             try {
@@ -14260,28 +14250,31 @@ async function loadTodayChecks() {
             } catch (e) {}
             
             const kapanisPersonnel = getShiftPersonnel(branch, 'kapanis');
+            const isKapanisActive = currentHour >= 20 || currentHour < 2; // Aktiflik için saat kontrolü
             branchChecks.push({
                 id: 'kapanis',
                 name: 'Kapanış Hazırlıkları',
                 icon: 'sunset',
                 deadline: '01:30',
                 isCompleted: kapanisCompleted,
-                isActive: !kapanisCompleted,
+                isActive: isKapanisActive && !kapanisCompleted,
                 isMissed: false,
                 remainingText: '',
                 personnel: kapanisPersonnel,
                 points: { onTime: 5, missed: -5 },
-                priority: kapanisCompleted ? 95 : 5,
+                priority: kapanisCompleted ? 95 : (isKapanisActive ? 5 : 80),
                 onClick: `goToChecklist('${branch}', 'kapanis', null)`
             });
             totalChecks++;
             if (kapanisCompleted) completedChecks++;
         }
         
-        // 5. Günlük Genel Check (14:00, 18:00, 22:00 - saat otomatik atanır)
+        // 5. Günlük Genel Check (14:00, 18:00, 22:00 - her zaman göster)
         const gunlukTimes = ['14:00', '18:00', '22:00'];
         let activeGunlukTime = null;
+        let nextGunlukTime = gunlukTimes[0]; // Default ilk slot
         let gunlukRemainingMinutes = 0;
+        let isGunlukActive = false;
         
         for (const timeStr of gunlukTimes) {
             const [h, m] = timeStr.split(':').map(Number);
@@ -14293,12 +14286,21 @@ async function loadTodayChecks() {
             if (diff >= -30 && diff <= 90) {
                 activeGunlukTime = timeStr;
                 gunlukRemainingMinutes = Math.max(0, 90 - Math.abs(diff - 30));
+                isGunlukActive = true;
                 break;
+            }
+            
+            // Gelecek en yakın slot
+            if (diff > 0 && !activeGunlukTime) {
+                nextGunlukTime = timeStr;
             }
         }
         
-        if (activeGunlukTime) {
-            const gunlukSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_guncel_${todayStr}_${activeGunlukTime.replace(':', '')}`;
+        // Aktif veya bir sonraki slot'u kullan
+        const displayGunlukTime = activeGunlukTime || nextGunlukTime;
+        
+        {
+            const gunlukSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_guncel_${todayStr}_${displayGunlukTime.replace(':', '')}`;
             let gunlukCompleted = false;
             try {
                 const doc = await db.collection('checklistSubmissions').doc(gunlukSubmissionId).get();
@@ -14309,7 +14311,7 @@ async function loadTodayChecks() {
             let gunlukPersonnel = [];
             let gunlukSubLabel = '';
             const rawData = rawShiftData[branch];
-            const gunlukHour = parseInt(activeGunlukTime.split(':')[0]);
+            const gunlukHour = parseInt(displayGunlukTime.split(':')[0]);
             const branchCheckCounts = dailyCheckCounts[branch] || {};
             const filled14 = who14Filled[branch]; // 14:00 dolduran kişi (gün boyunca muaf)
             
@@ -14373,16 +14375,16 @@ async function loadTodayChecks() {
                 id: 'gunluk',
                 name: 'Günlük Genel Check',
                 icon: 'clipboard',
-                deadline: activeGunlukTime,
-                subLabel: gunlukSubLabel,
+                deadline: displayGunlukTime,
+                subLabel: gunlukSubLabel + (isGunlukActive ? '' : ' (Bekliyor)'),
                 isCompleted: gunlukCompleted,
-                isActive: !gunlukCompleted,
+                isActive: isGunlukActive && !gunlukCompleted,
                 isMissed: false,
-                remainingText: !gunlukCompleted ? `${gunlukRemainingMinutes}dk` : '',
+                remainingText: isGunlukActive && !gunlukCompleted ? `${gunlukRemainingMinutes}dk` : '',
                 personnel: gunlukPersonnel,
                 points: { onTime: 2, missed: -2 },
-                priority: gunlukCompleted ? 92 : 15,
-                onClick: `goToChecklist('${branch}', 'guncel', '${activeGunlukTime}')`
+                priority: gunlukCompleted ? 92 : (isGunlukActive ? 15 : 70),
+                onClick: `goToChecklist('${branch}', 'guncel', '${displayGunlukTime}')`
             });
             totalChecks++;
             if (gunlukCompleted) completedChecks++;
@@ -14457,9 +14459,10 @@ async function loadTodayChecks() {
             if (mudurCompleted) completedChecks++;
         }
         
-        // 7. Haftalık Görevler (Pazartesi göster)
+        // 7. Haftalık Görevler (her zaman göster)
         const dayOfWeek = today.getDay();
-        if (dayOfWeek === 1) { // Pazartesi
+        const isPazartesi = dayOfWeek === 1;
+        {
             const haftalikSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_haftalik_${todayStr}`;
             let haftalikCompleted = false;
             try {
@@ -14472,14 +14475,14 @@ async function loadTodayChecks() {
                 name: 'Haftalık Görevler',
                 icon: 'calendar',
                 deadline: '23:00',
-                subLabel: 'Bu hafta',
+                subLabel: isPazartesi ? 'Bugün atanır' : 'Bu hafta',
                 isCompleted: haftalikCompleted,
-                isActive: !haftalikCompleted,
+                isActive: isPazartesi && !haftalikCompleted,
                 isMissed: false,
                 remainingText: '',
                 personnel: [],
                 points: { onTime: 3, missed: -3 },
-                priority: haftalikCompleted ? 91 : 30,
+                priority: haftalikCompleted ? 91 : (isPazartesi ? 30 : 85),
                 onClick: `goToChecklist('${branch}', 'haftalik', null)`
             });
             totalChecks++;
@@ -16735,9 +16738,6 @@ async function initChecklistPage() {
         
         return; // Early return
     }
-    
-    // Bugünkü checkler panelini yükle
-    loadChecklistTodayPanel();
     
     // Checklist türlerini yükle
     loadChecklistTypes();
