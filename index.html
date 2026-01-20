@@ -4379,7 +4379,9 @@ function goBack() { goTo(previousPage); }
 let _pendingChecklistParams = null;
 
 function goToChecklist(branch, type, timeSlot) {
-    _pendingChecklistParams = { branch, type, timeSlot };
+    // Canonical type id kullan
+    const canonType = canonicalChecklistTypeId(type);
+    _pendingChecklistParams = { branch, type: canonType, timeSlot };
     goTo('checklist');
 }
 
@@ -13241,9 +13243,38 @@ const CHECK_ASSIGNMENT_RULES = {
 // Checklist türleri - Firebase'den yüklenecek
 let CHECKLIST_TYPES = {};
 
+// === CANONICAL TYPE ID SİSTEMİ ===
+// Legacy id'leri canonical id'ye dönüştürür
+const CHECKLIST_TYPE_ALIAS = {
+    guncel: "gunluk",          // legacy -> canonical
+    gunluk: "gunluk",
+    gunluk_genel: "gunluk",
+    guncel_genel: "gunluk",
+    gunluk_check: "gunluk"
+};
+
+function canonicalChecklistTypeId(typeId) {
+    const t = (typeId || "").toString().trim().toLowerCase();
+    return CHECKLIST_TYPE_ALIAS[t] || typeId;
+}
+
+function sanitize(str) {
+    return (str || '').replace(/[^a-zA-Z0-9]/g, '_');
+}
+
+function dailyDocIdCandidates(branch, typeId) {
+    const b = sanitize(branch);
+    const canon = canonicalChecklistTypeId(typeId);
+    // Günlük için legacy doc'lar olabilir: _guncel
+    if (canon === "gunluk") return [`${b}_gunluk`, `${b}_guncel`];
+    return [`${b}_${canon}`];
+}
+// === /CANONICAL TYPE ID SİSTEMİ ===
+
 // Helper: Checklist türü adını dinamik olarak al
 function getChecklistTypeName(branch, typeId, defaultName) {
-    const typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === typeId);
+    const canonId = canonicalChecklistTypeId(typeId);
+    const typeInfo = CHECKLIST_TYPES[branch]?.find(t => canonicalChecklistTypeId(t.id) === canonId);
     return typeInfo?.name || defaultName;
 }
 
@@ -14396,7 +14427,7 @@ async function loadTodayChecks() {
                 personnel: gunlukPersonnel,
                 points: { onTime: 2, missed: -2 },
                 priority: gunlukCompleted ? 92 : (isGunlukActive ? 15 : 70),
-                onClick: `goToChecklist('${branch}', 'guncel', '${displayGunlukTime}')`
+                onClick: `goToChecklist('${branch}', 'gunluk', '${displayGunlukTime}')`
             });
             totalChecks++;
             if (gunlukCompleted) completedChecks++;
@@ -17094,22 +17125,34 @@ async function loadChecklistTypes() {
     // Debug log
     console.log('Checklist türleri:', branch, types.length, 'adet');
     
+    // Duplicate önleme için seen set
+    const seenIds = new Set();
+    
     // Hidden select güncelle
     let selectHtml = '<option value="">-- Checklist Seçin --</option>';
     types.forEach(t => {
         if (t.managerOnly && !isManager) return;
-        selectHtml += `<option value="${t.id}" data-timeslots="${t.timeSlots ? t.timeSlots.join(',') : ''}">${t.name}</option>`;
+        const canonId = canonicalChecklistTypeId(t.id);
+        if (seenIds.has(canonId)) return; // Duplicate atla
+        seenIds.add(canonId);
+        selectHtml += `<option value="${canonId}" data-timeslots="${t.timeSlots ? t.timeSlots.join(',') : ''}">${t.name}</option>`;
     });
     typeSelect.innerHTML = selectHtml;
+    
+    // Butonlar için tekrar reset
+    seenIds.clear();
     
     // Butonları oluştur - Modern SVG ikonlar
     let buttonsHtml = '';
     types.forEach(t => {
         if (t.managerOnly && !isManager) return;
+        const canonId = canonicalChecklistTypeId(t.id);
+        if (seenIds.has(canonId)) return; // Duplicate atla
+        seenIds.add(canonId);
         const iconSvg = getIcon(t.icon || 'clipboard-check');
         buttonsHtml += `
-            <button type="button" class="checklist-type-btn" data-type="${t.id}" data-timeslots="${t.timeSlots ? t.timeSlots.join(',') : ''}"
-                onclick="selectChecklistType('${t.id}')"
+            <button type="button" class="checklist-type-btn" data-type="${canonId}" data-timeslots="${t.timeSlots ? t.timeSlots.join(',') : ''}"
+                onclick="selectChecklistType('${canonId}')"
                 style="padding:12px 18px;border:1px solid var(--cardBorder);background:var(--bg2);color:var(--tx);border-radius:10px;cursor:pointer;font-size:.9rem;font-weight:500;transition:all .2s;display:flex;align-items:center;gap:10px">
                 <span style="opacity:.7">${iconSvg}</span>
                 ${t.name}
@@ -17138,12 +17181,16 @@ async function loadChecklistTypes() {
 
 // Checklist türü seç (buton)
 function selectChecklistType(typeId) {
+    // Canonical type id kullan
+    typeId = canonicalChecklistTypeId(typeId);
+    
     const typeSelect = document.getElementById('checklistType');
     typeSelect.value = typeId;
     
-    // Buton stillerini güncelle
+    // Buton stillerini güncelle - canonical id ile karşılaştır
     document.querySelectorAll('.checklist-type-btn').forEach(btn => {
-        if (btn.dataset.type === typeId) {
+        const btnType = canonicalChecklistTypeId(btn.dataset.type);
+        if (btnType === typeId) {
             btn.style.background = 'linear-gradient(135deg, var(--accent), #ff6b5b)';
             btn.style.color = '#fff';
             btn.style.borderColor = 'var(--accent)';
@@ -17296,16 +17343,16 @@ async function loadChecklist() {
             'haftalik_gorev': 'haftalik'
         };
         
-        // Doğru Firebase belge ID'sini bul
-        const mappedType = TYPE_ID_MAP[type] || type;
-        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${mappedType}`;
+        // Canonical type id kullan
+        const canonType = canonicalChecklistTypeId(type);
+        const mappedType = TYPE_ID_MAP[canonType] || canonType;
+        const checklistId = `${sanitize(branch)}_${mappedType}`;
         
-        // Alternatif ID'ler - farklı kombinasyonları dene
+        // Alternatif ID'ler - dailyDocIdCandidates helper'ı ile
         const alternativeIds = [
             checklistId,
-            `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`,
-            `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_guncel`, // gunluk→guncel
-            `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_gunluk`  // guncel→gunluk
+            ...dailyDocIdCandidates(branch, canonType),
+            `${sanitize(branch)}_${type}` // orijinal type ile de dene
         ].filter((v, i, a) => a.indexOf(v) === i); // unique
         
         let items = [];
