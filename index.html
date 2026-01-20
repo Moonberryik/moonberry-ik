@@ -18397,6 +18397,17 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                 isMyTask = assignedPersonel.toLowerCase() === currentUserDisplayName.toLowerCase() ||
                            assignedPersonel.split(' ')[0]?.toLowerCase() === currentUserDisplayName.split(' ')[0]?.toLowerCase();
             }
+        } else if (isAylik && shiftPersonnel && shiftPersonnel.length > 0) {
+            // Temizlik ve Bakım için - shift personeline round-robin ile dağıt
+            const personIndex = index % shiftPersonnel.length;
+            assignedPersonel = shiftPersonnel[personIndex];
+            
+            // isMyTask kontrolü
+            if (assignedPersonel && !isManager) {
+                const currentUserDisplayName = getPersonelDisplayName(currentUser) || currentUser?.name || '';
+                isMyTask = assignedPersonel.toLowerCase() === currentUserDisplayName.toLowerCase() ||
+                           assignedPersonel.split(' ')[0]?.toLowerCase() === currentUserDisplayName.split(' ')[0]?.toLowerCase();
+            }
         }
         
         // Tarih bilgisi
