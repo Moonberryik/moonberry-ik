@@ -13240,6 +13240,13 @@ const CHECK_ASSIGNMENT_RULES = {
 // Checklist türleri - şubeye göre
 // Checklist türleri - Firebase'den yüklenecek
 let CHECKLIST_TYPES = {};
+
+// Helper: Checklist türü adını dinamik olarak al
+function getChecklistTypeName(branch, typeId, defaultName) {
+    const typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === typeId);
+    return typeInfo?.name || defaultName;
+}
+
 let SYSTEM_CONFIG = {};
 let BRANCH_HOURS = {
     'Tuzla Port': { opening: '10:00', closing: { default: '01:00', friday: '01:30', saturday: '01:30' } },
@@ -13825,6 +13832,11 @@ async function loadTodayChecks() {
     
     if (!section || !container) return;
     
+    // CHECKLIST_TYPES yüklü değilse yükle (dinamik isimler için gerekli)
+    if (Object.keys(CHECKLIST_TYPES).length === 0) {
+        await loadSystemConfig();
+    }
+    
     // HIZLI LOADING - önce UI göster
     container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--tx3)"><div style="width:24px;height:24px;border:3px solid var(--bg4);border-top-color:#008c95;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px"></div>Görevler yükleniyor...</div>';
     
@@ -14162,7 +14174,7 @@ async function loadTodayChecks() {
             
             branchChecks.push({
                 id: 'platform',
-                name: 'Platform Kontrolü',
+                name: getChecklistTypeName(branch, 'platform', 'Platform Kontrolü'),
                 icon: 'smartphone',
                 deadline: activePlatformTime || nextPlatformTime,
                 subLabel: platformSubLabel,
@@ -14195,7 +14207,7 @@ async function loadTodayChecks() {
         
         branchChecks.push({
             id: 'temizlik',
-            name: 'Temizlik Çizelgesi',
+            name: getChecklistTypeName(branch, 'aylik', 'Temizlik Çizelgesi'),
             icon: 'sparkle',
             deadline: temizlikDeadline,
             subLabel: isSabahTemizlik ? 'Açılış' : 'Kapanış',
@@ -14224,7 +14236,7 @@ async function loadTodayChecks() {
             const isAcilisActive = currentHour >= 6 && currentHour < 12; // Aktiflik için saat kontrolü
             branchChecks.push({
                 id: 'acilis',
-                name: 'Açılış Hazırlıkları',
+                name: getChecklistTypeName(branch, 'acilis', 'Açılış Hazırlıkları'),
                 icon: 'sunrise',
                 deadline: '10:30',
                 isCompleted: acilisCompleted,
@@ -14253,7 +14265,7 @@ async function loadTodayChecks() {
             const isKapanisActive = currentHour >= 20 || currentHour < 2; // Aktiflik için saat kontrolü
             branchChecks.push({
                 id: 'kapanis',
-                name: 'Kapanış Hazırlıkları',
+                name: getChecklistTypeName(branch, 'kapanis', 'Kapanış Hazırlıkları'),
                 icon: 'sunset',
                 deadline: '01:30',
                 isCompleted: kapanisCompleted,
@@ -14373,7 +14385,7 @@ async function loadTodayChecks() {
             
             branchChecks.push({
                 id: 'gunluk',
-                name: 'Günlük Genel Check',
+                name: getChecklistTypeName(branch, 'gunluk', 'Günlük Genel Check'),
                 icon: 'clipboard',
                 deadline: displayGunlukTime,
                 subLabel: gunlukSubLabel + (isGunlukActive ? '' : ' (Bekliyor)'),
@@ -14442,7 +14454,7 @@ async function loadTodayChecks() {
             
             branchChecks.push({
                 id: 'mudur',
-                name: 'Müdür Kontrol',
+                name: getChecklistTypeName(branch, 'mudur', 'Müdür Kontrol'),
                 icon: 'usercheck',
                 deadline: '23:00',
                 subLabel: mudurSubLabel,
@@ -14472,7 +14484,7 @@ async function loadTodayChecks() {
             
             branchChecks.push({
                 id: 'haftalik',
-                name: 'Haftalık Görevler',
+                name: getChecklistTypeName(branch, 'haftalik', 'Haftalık Görevler'),
                 icon: 'calendar',
                 deadline: '23:00',
                 subLabel: isPazartesi ? 'Bugün atanır' : 'Bu hafta',
