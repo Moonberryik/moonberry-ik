@@ -1638,7 +1638,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <p style="color:var(--tx2);font-size:.8rem;margin-bottom:12px">Shift ve personel verilerini standartlaştır. Tüm key'ler uniqueId formatına çevrilir.</p>
                             <div style="display:flex;gap:12px;flex-wrap:wrap">
                                 <button class="btn btn-warning btn-sm" onclick="runDataMigration()" style="background:#f39c12;border-color:#f39c12">⚡ Veri Migrasyonu Çalıştır</button>
-                                <button class="btn btn-ghost btn-sm" onclick="debugPersonelShiftData()">🔍 Debug: Veri Durumu</button>
+                                <button class="btn btn-ghost btn-sm" onclick="debugPersonelShiftData()">🔍 Debug: Tam Rapor</button>
+                                <button class="btn btn-ghost btn-sm" onclick="debugPuanSistemi()">💯 Debug: Puan Sistemi</button>
                             </div>
                             <div style="margin-top:10px;padding:10px;background:rgba(243,156,18,.1);border:1px solid rgba(243,156,18,.3);border-radius:8px">
                                 <div style="font-size:.75rem;color:#f39c12">⚠️ <strong>Dikkat:</strong> Migrasyon tüm shift'leri günceller. Çalıştırmadan önce Firebase konsolundan yedek alın.</div>
@@ -13262,31 +13263,37 @@ let CHECK_RULES = {
         name: 'Günlük Check',
         window: { before: 60, after: 60 },
         lateWindow: 60,
-        points: { onTime: 1, late: -2, missed: -2 }
+        points: { onTime: 2, late: -2, missed: -2 }
+    },
+    guncel: {  // gunluk alias - dashboard'da guncel kullanılıyor
+        name: 'Günlük Genel Check',
+        window: { before: 60, after: 60 },
+        lateWindow: 60,
+        points: { onTime: 2, late: -2, missed: -2 }
     },
     platform: {
         name: 'Platform Check',
         timeSlots: PLATFORM_CHECK_TIMES, // 10:00, 12:00, 15:00, 18:00, 21:00, 00:00
         window: { before: 30, after: 30 }, // Her saat için ±30 dakika
         lateWindow: 30,
-        points: { onTime: 0, late: -1, missed: -1 }
+        points: { onTime: 1, late: -1, missed: -1 }
     },
     acilis: {
         name: 'Açılış',
         deadline: '11:00',
         window: { before: 0, after: 120 },
-        points: { onTime: 1, late: -1, missed: -2 }
+        points: { onTime: 5, late: -3, missed: -5 }
     },
     kapanis: {
         name: 'Kapanış',
         deadline: '23:59',
         window: { before: 120, after: 0 },
-        points: { onTime: 1, late: -1, missed: -2 }
+        points: { onTime: 5, late: -3, missed: -5 }
     },
     mudur: {
         name: 'Müdür Kontrol',
         deadline: '21:00',
-        points: { onTime: 1, late: -1, missed: -2 }
+        points: { onTime: 10, late: -5, missed: -10 }
     },
     aylik: {
         name: 'Temizlik ve Bakım',
@@ -13297,12 +13304,12 @@ let CHECK_RULES = {
             araci: { deadline: '19:00', window: { start: '11:00', end: '19:00' } },
             kapanisci: { deadline: '02:00', window: { start: '16:00', end: '02:00' } }
         },
-        points: { onTime: 0, late: -1, missed: -1 },
+        points: { onTime: 1, late: -1, missed: -1 },
         note: 'Her personel kendi shift türüne göre 1 kere yapmalı'
     },
     haftalik: {
         name: 'Haftalık Görevler',
-        points: { done: 0, missed: -1 }
+        points: { done: 3, missed: -3 }
     }
 };
 let SHIFT_DURATION = 9; // saat
@@ -14099,7 +14106,7 @@ async function loadTodayChecks() {
                             const candidates15 = rawData.allActive.filter(p => p.shiftStart <= 15 && (p.shiftEnd > 15 || p.shiftEnd <= 2));
                             platformPersonnel = selectFairFromCandidates(candidates15);
                         }
-                        platformSubLabel = 'Adaletli';
+                        platformSubLabel = 'Eşit dağılım';
                         break;
                     case 18:
                         // 18:00 → Hiç doldurmamışa öncelik (en az check doldurana)
@@ -14107,7 +14114,7 @@ async function loadTodayChecks() {
                             const candidates18 = rawData.allActive.filter(p => p.shiftStart <= 18 && (p.shiftEnd > 18 || p.shiftEnd <= 2));
                             platformPersonnel = selectFairFromCandidates(candidates18);
                         }
-                        platformSubLabel = 'Adaletli';
+                        platformSubLabel = 'Eşit dağılım';
                         break;
                     case 21:
                         // 21:00 → Hiç doldurmamışa öncelik
@@ -14115,7 +14122,7 @@ async function loadTodayChecks() {
                             const candidates21 = rawData.allActive.filter(p => p.shiftStart <= 21 && (p.shiftEnd > 21 || p.shiftEnd <= 2));
                             platformPersonnel = selectFairFromCandidates(candidates21);
                         }
-                        platformSubLabel = 'Adaletli';
+                        platformSubLabel = 'Eşit dağılım';
                         break;
                     case 0:
                     case 24:
@@ -14328,7 +14335,7 @@ async function loadTodayChecks() {
                             .map(p => p.name);
                     }
                     
-                    gunlukSubLabel = 'Adaletli';
+                    gunlukSubLabel = 'Eşit dağılım';
                 }
             }
             
@@ -14715,7 +14722,7 @@ async function loadLeaderboard() {
             </div>
         `;
         
-        sorted.slice(0, 10).forEach((person, index) => {
+        sorted.forEach((person, index) => {
             const rank = index + 1;
             const isTop3 = rank <= 3;
             const pointColor = person.total > 0 ? '#27ae60' : person.total < 0 ? '#e74c3c' : 'var(--tx2)';
@@ -18298,22 +18305,222 @@ async function runDataMigration() {
  * Debug: Personel ve Shift verilerini konsola yazdır
  */
 async function debugPersonelShiftData() {
-    console.log('=== PERSONEL VERİLERİ ===');
-    const personelSnap = await db.collection('personel').get();
-    personelSnap.forEach(doc => {
-        const d = doc.data();
-        console.log(`${d.name} | uniqueId: ${d.uniqueId || 'YOK'} | codeName: ${d.codeName || 'YOK'} | branch: ${d.branch}`);
+    console.log('╔════════════════════════════════════════════════════════════════╗');
+    console.log('║              MOONBERRY İK - DEBUG RAPORU v2.0                  ║');
+    console.log('╚════════════════════════════════════════════════════════════════╝');
+    
+    // 1. CHECK RULES
+    console.log('\n📋 CHECK_RULES DURUMU:');
+    console.log('--------------------------------------------------');
+    Object.entries(CHECK_RULES).forEach(([type, rules]) => {
+        const pts = rules.points || {};
+        console.log(`${type}: onTime=${pts.onTime || pts.done || 0}, late=${pts.late || 0}, missed=${pts.missed || 0}`);
     });
     
-    console.log('\n=== SHIFT KEY\'LERİ ===');
+    // 2. PERSONEL VERİLERİ
+    console.log('\n👥 PERSONEL VERİLERİ:');
+    console.log('--------------------------------------------------');
+    const personelSnap = await db.collection('personel').get();
+    const personelList = [];
+    personelSnap.forEach(doc => {
+        const d = doc.data();
+        personelList.push({ name: d.name, uniqueId: d.uniqueId, codeName: d.codeName, role: d.role, branch: d.branch });
+        console.log(`${d.name} | ID: ${d.uniqueId || 'YOK'} | Code: ${d.codeName || 'YOK'} | Rol: ${d.role} | Şube: ${d.branch}`);
+    });
+    
+    // 3. SHIFT VERİLERİ
+    console.log('\n📅 SHIFT VERİLERİ:');
+    console.log('--------------------------------------------------');
     const shiftsSnap = await db.collection('shifts').get();
     shiftsSnap.forEach(doc => {
         const s = doc.data();
         console.log(`\n${s.branch} - ${s.weekStart}:`);
-        console.log('Keys:', Object.keys(s.personelShifts || {}));
-        console.log('Names:', s.personelNames);
-        console.log('FullNames:', s.personelFullNames);
+        console.log('  personelShifts keys:', Object.keys(s.personelShifts || {}).join(', '));
+        console.log('  personelNames:', JSON.stringify(s.personelNames || {}));
     });
+    
+    // 4. PUANTAJ NOTLARI (Bu ay)
+    console.log('\n💯 PUANTAJ NOTLARI (Bu Ay):');
+    console.log('--------------------------------------------------');
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthStartStr = formatDateLocal(monthStart);
+    
+    try {
+        const notesSnap = await db.collection('puantajNotes')
+            .where('date', '>=', monthStartStr)
+            .get();
+        
+        const notesByPerson = {};
+        notesSnap.forEach(doc => {
+            const d = doc.data();
+            const name = d.personelName || 'Bilinmiyor';
+            if (!notesByPerson[name]) notesByPerson[name] = { total: 0, count: 0 };
+            notesByPerson[name].total += (d.points || 0);
+            notesByPerson[name].count++;
+        });
+        
+        console.log(`Toplam ${notesSnap.size} kayıt bulundu:`);
+        Object.entries(notesByPerson)
+            .sort((a,b) => b[1].total - a[1].total)
+            .forEach(([name, data]) => {
+                console.log(`  ${name}: ${data.count} check, ${data.total} puan`);
+            });
+        
+        if (notesSnap.size === 0) {
+            console.log('⚠️ Bu ay hiç puantaj notu yok!');
+        }
+    } catch (e) {
+        console.error('❌ puantajNotes erişim hatası:', e.message);
+    }
+    
+    // 5. BUGÜNKÜ CHECKLER
+    console.log('\n📊 BUGÜNKÜ CHECKLER:');
+    console.log('--------------------------------------------------');
+    const todayStr = formatDateLocal(new Date());
+    try {
+        const todayChecks = await db.collection('checklistSubmissions')
+            .where('date', '==', todayStr)
+            .get();
+        
+        console.log(`Bugün ${todayChecks.size} check dolduruldu:`);
+        todayChecks.forEach(doc => {
+            const d = doc.data();
+            console.log(`  [${d.type}] ${d.personName} - ${d.branch} - Puan: ${d.points || 'YOK'}`);
+        });
+    } catch (e) {
+        console.error('❌ Bugünkü checkler alınamadı:', e.message);
+    }
+    
+    // 6. SİSTEM DURUMU
+    console.log('\n⚙️ SİSTEM DURUMU:');
+    console.log('--------------------------------------------------');
+    console.log(`Şubeler: ${(STATE.branches || []).join(', ')}`);
+    console.log(`Giriş yapan: ${currentUser?.name || 'YOK'} (${currentUser?.role || 'rol yok'})`);
+    console.log(`SYSTEM_CONFIG loaded: ${Object.keys(SYSTEM_CONFIG || {}).length > 0 ? 'EVET' : 'HAYIR'}`);
+    console.log(`CHECKLIST_TYPES loaded: ${Object.keys(CHECKLIST_TYPES || {}).length > 0 ? 'EVET' : 'HAYIR'}`);
+    
+    console.log('\n╔════════════════════════════════════════════════════════════════╗');
+    console.log('║                    DEBUG RAPORU TAMAMLANDI                     ║');
+    console.log('╚════════════════════════════════════════════════════════════════╝');
+    
+    // Toast ile bildir
+    toast('Debug raporu konsola yazıldı (F12)', 'info');
+    
+    return { personelList, notesByPerson: notesByPerson || {} };
+}
+
+/**
+ * PUAN SİSTEMİ DEBUG - Özel Puan Kontrolü
+ */
+async function debugPuanSistemi() {
+    console.log('╔════════════════════════════════════════════════════════════════╗');
+    console.log('║              PUAN SİSTEMİ DEBUG RAPORU                         ║');
+    console.log('╚════════════════════════════════════════════════════════════════╝');
+    
+    // 1. CHECK_RULES KONTROL
+    console.log('\n1️⃣ CHECK_RULES DURUMU:');
+    console.log('--------------------------------------------------');
+    const checkTypes = ['guncel', 'gunluk', 'platform', 'acilis', 'kapanis', 'mudur', 'aylik', 'haftalik'];
+    checkTypes.forEach(type => {
+        const rule = CHECK_RULES[type];
+        if (rule) {
+            const pts = rule.points || {};
+            console.log(`✅ ${type}: onTime=${pts.onTime || pts.done || 0}, late=${pts.late || 0}, missed=${pts.missed || 0}`);
+        } else {
+            console.log(`❌ ${type}: TANIMLI DEĞİL!`);
+        }
+    });
+    
+    // 2. BUGÜNKÜ CHECKLER VE PUANLARI
+    console.log('\n2️⃣ BUGÜNKÜ CHECKLER:');
+    console.log('--------------------------------------------------');
+    const todayStr = formatDateLocal(new Date());
+    
+    try {
+        const checksSnap = await db.collection('checklistSubmissions')
+            .where('date', '==', todayStr)
+            .get();
+        
+        checksSnap.forEach(doc => {
+            const d = doc.data();
+            const hasPoints = d.points !== undefined && d.points !== null;
+            const status = hasPoints ? '✅' : '⚠️';
+            console.log(`${status} [${d.type}/${d.timeSlot || '-'}] ${d.personName} @ ${d.branch}`);
+            console.log(`   Puan: ${d.points || 'YOK'} | Status: ${d.pointStatus || 'YOK'} | docId: ${doc.id}`);
+        });
+        
+        if (checksSnap.size === 0) {
+            console.log('Bugün hiç check doldurulmamış.');
+        }
+    } catch (e) {
+        console.error('❌ checklistSubmissions erişim hatası:', e.message);
+    }
+    
+    // 3. PUANTAJ NOTLARI KONTROL
+    console.log('\n3️⃣ BUGÜNKÜ PUANTAJ NOTLARI:');
+    console.log('--------------------------------------------------');
+    
+    try {
+        const notesSnap = await db.collection('puantajNotes')
+            .where('date', '==', todayStr)
+            .get();
+        
+        notesSnap.forEach(doc => {
+            const d = doc.data();
+            console.log(`${d.autoGenerated ? '🤖' : '✍️'} [${d.checkType}/${d.checkTime}] ${d.personelName}: ${d.points} puan (${d.status})`);
+        });
+        
+        if (notesSnap.size === 0) {
+            console.log('⚠️ Bugün hiç puantaj notu oluşturulmamış!');
+            console.log('   OLASI SEBEPLER:');
+            console.log('   - CHECK_RULES\'da ilgili type tanımlı değil');
+            console.log('   - points === 0 ise puantaj notu oluşturulmuyor');
+            console.log('   - Dolduran kişi müdür ise puan yazılmıyor');
+        }
+    } catch (e) {
+        console.error('❌ puantajNotes erişim hatası:', e.message);
+    }
+    
+    // 4. LEADERBOARD HESAPLAMA
+    console.log('\n4️⃣ LEADERBOARD HESAPLAMA:');
+    console.log('--------------------------------------------------');
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthStartStr = formatDateLocal(monthStart);
+    
+    try {
+        const notesSnap = await db.collection('puantajNotes')
+            .where('date', '>=', monthStartStr)
+            .get();
+        
+        const scores = {};
+        notesSnap.forEach(doc => {
+            const d = doc.data();
+            const name = d.personelName || 'Bilinmiyor';
+            if (!scores[name]) scores[name] = 0;
+            scores[name] += (d.points || 0);
+        });
+        
+        console.log(`Bu ay toplam ${notesSnap.size} puantaj notu var.`);
+        Object.entries(scores)
+            .sort((a,b) => b[1] - a[1])
+            .forEach(([name, pts], i) => {
+                console.log(`${i+1}. ${name}: ${pts} puan`);
+            });
+        
+        if (Object.keys(scores).length === 0) {
+            console.log('⚠️ Bu ay hiç puan kaydı yok - Leaderboard boş görünecek!');
+        }
+    } catch (e) {
+        console.error('❌ Leaderboard hesaplama hatası:', e.message);
+    }
+    
+    console.log('\n╔════════════════════════════════════════════════════════════════╗');
+    console.log('║                 PUAN DEBUG TAMAMLANDI                          ║');
+    console.log('╚════════════════════════════════════════════════════════════════╝');
+    
+    toast('Puan debug raporu konsola yazıldı (F12)', 'info');
 }
 
 // ==================== KPI DASHBOARD ====================
