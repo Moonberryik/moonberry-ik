@@ -13285,6 +13285,7 @@ function dailyDocIdCandidates(branch, typeId) {
 // === REAL-TIME LISTENERS ===
 let _shiftListenerUnsubscribe = null;
 let _shiftListenerInitialized = false;
+let _lastShiftUpdateTime = 0;
 
 function setupShiftListener(branch) {
     // Önceki listener'ı temizle
@@ -13294,29 +13295,33 @@ function setupShiftListener(branch) {
     }
     
     _shiftListenerInitialized = false;
+    _lastShiftUpdateTime = Date.now();
     
     // Yeni listener kur
     _shiftListenerUnsubscribe = db.collection('shifts')
         .where('branch', '==', branch)
-        .onSnapshot(snapshot => {
-            // İlk yüklemeyi atla (sadece gerçek değişikliklerde tetikle)
+        .onSnapshot({ includeMetadataChanges: false }, snapshot => {
+            const now = Date.now();
+            
+            // İlk yüklemeyi atla
             if (!_shiftListenerInitialized) {
                 _shiftListenerInitialized = true;
                 console.log('[Real-time] Shift listener hazır:', branch);
                 return;
             }
             
-            // Gerçek değişiklik var mı kontrol et
-            const hasChanges = snapshot.docChanges().some(change => 
-                change.type === 'modified' || change.type === 'added'
-            );
+            // Çok sık tetiklenmeyi önle (debounce 2 saniye)
+            if (now - _lastShiftUpdateTime < 2000) {
+                console.log('[Real-time] Debounce - atlandı');
+                return;
+            }
+            _lastShiftUpdateTime = now;
             
-            if (!hasChanges) return;
-            
-            console.log('[Real-time] Shift değişikliği algılandı:', branch);
+            console.log('[Real-time] ✅ Shift değişikliği algılandı:', branch, 'docs:', snapshot.size);
             
             // Checklist sayfasındaysak yeniden yükle
-            if (document.getElementById('checklistFormContainer')) {
+            const checklistContainer = document.getElementById('checklistFormContainer');
+            if (checklistContainer && checklistContainer.innerHTML.length > 100) {
                 const currentBranch = document.getElementById('checklistSube')?.value;
                 if (currentBranch === branch) {
                     console.log('[Real-time] Checklist yeniden yükleniyor...');
@@ -13325,7 +13330,8 @@ function setupShiftListener(branch) {
             }
             
             // Dashboard görünüyorsa yeniden yükle
-            if (document.getElementById('todayChecksContainer')?.children.length > 0) {
+            const dashboardContainer = document.getElementById('todayChecksContainer');
+            if (dashboardContainer && dashboardContainer.innerHTML.length > 100) {
                 console.log('[Real-time] Dashboard yeniden yükleniyor...');
                 loadTodayChecks();
             }
@@ -14403,23 +14409,34 @@ async function loadTodayChecks() {
         let gunlukRemainingMinutes = 0;
         let isGunlukActive = false;
         
-        for (const timeStr of gunlukTimes) {
-            const [h, m] = timeStr.split(':').map(Number);
-            const slotMinutes = h * 60 + m;
-            const nowMinutes = currentHour * 60 + currentMinutes;
-            const diff = slotMinutes - nowMinutes;
-            
-            // Her slot için 2 saat pencere
-            if (diff >= -30 && diff <= 90) {
-                activeGunlukTime = timeStr;
-                gunlukRemainingMinutes = Math.max(0, 90 - Math.abs(diff - 30));
-                isGunlukActive = true;
-                break;
-            }
-            
-            // Gelecek en yakın slot
-            if (diff > 0 && !activeGunlukTime) {
-                nextGunlukTime = timeStr;
+        // Gece 00:00-02:00 arası için özel mantık
+        // Bu saatler hala "bugün"ün kapanışı sayılır
+        const isLateNight = currentHour >= 0 && currentHour < 2;
+        
+        if (isLateNight) {
+            // Gece saatlerinde 22:00 slotu aktif (kapanışa kadar)
+            activeGunlukTime = '22:00';
+            isGunlukActive = true;
+            gunlukRemainingMinutes = (2 - currentHour) * 60 - currentMinutes; // 02:00'a kalan
+        } else {
+            for (const timeStr of gunlukTimes) {
+                const [h, m] = timeStr.split(':').map(Number);
+                const slotMinutes = h * 60 + m;
+                const nowMinutes = currentHour * 60 + currentMinutes;
+                const diff = slotMinutes - nowMinutes;
+                
+                // Her slot için 2 saat pencere
+                if (diff >= -30 && diff <= 90) {
+                    activeGunlukTime = timeStr;
+                    gunlukRemainingMinutes = Math.max(0, 90 - Math.abs(diff - 30));
+                    isGunlukActive = true;
+                    break;
+                }
+                
+                // Gelecek en yakın slot
+                if (diff > 0 && !activeGunlukTime) {
+                    nextGunlukTime = timeStr;
+                }
             }
         }
         
@@ -14442,7 +14459,12 @@ async function loadTodayChecks() {
             const branchCheckCounts = dailyCheckCounts[branch] || {};
             const filled14 = who14Filled[branch]; // 14:00 dolduran kişi (gün boyunca muaf)
             
-            if (rawData?.allActive) {
+            // Gece saatlerinde (00:00-02:00) kapanışçılara ata
+            if (isLateNight) {
+                gunlukPersonnel = getShiftPersonnel(branch, 'kapanis');
+                gunlukSubLabel = 'Kapanışçı';
+                console.log('[Günlük] Gece saati - kapanışçılara atandı:', gunlukPersonnel);
+            } else if (rawData?.allActive) {
                 if (gunlukHour === 14) {
                     // 14:00 → Açılıştan sonra ilk shift giren (11:00-13:00 arası başlayan)
                     const firstEntry = rawData.allActive
@@ -17545,7 +17567,15 @@ async function loadChecklist() {
         try {
             const weekStart = getWeekStart(new Date(date));
             const weekKey = formatDateLocal(weekStart);
-            const checkHour = timeSlot ? parseInt(timeSlot.split(':')[0]) : new Date().getHours();
+            const currentHour = new Date().getHours();
+            const isLateNight = currentHour >= 0 && currentHour < 2;
+            
+            // Gece saatlerinde 22:00 slotunu kullan
+            let checkHour = timeSlot ? parseInt(timeSlot.split(':')[0]) : currentHour;
+            if (isLateNight && !timeSlot && ['gunluk', 'guncel'].includes(type)) {
+                checkHour = 22; // Gece saatlerinde 22:00 slotu aktif
+            }
+            
             const dayIndex = new Date(date).getDay() - 1 < 0 ? 6 : new Date(date).getDay() - 1;
             
             const shiftsSnapshot = await db.collection('shifts')
@@ -17762,8 +17792,16 @@ async function loadChecklist() {
                                 // Adayları filtrele (o saatte shift'te olanlar)
                                 let candidates = rawPersonnel.map(p => p.name);
                                 
-                                // Eğer 22:00 ve aday yoksa veya çok azsa → kapanışçılara aktar
-                                if (checkHour >= 21 && candidates.length === 0) {
+                                // Gece saatleri kontrolü (00:00-02:00) - kapanışçılara ata
+                                if (isLateNight && checkHour === 22) {
+                                    const kapaniscilar = rawPersonnel.filter(p => p.type === 'kapanis').map(p => p.name);
+                                    if (kapaniscilar.length > 0) {
+                                        candidates = kapaniscilar;
+                                        console.log('[Adaletli Atama] Gece saati - kapanışçılara atandı:', kapaniscilar);
+                                    }
+                                }
+                                // Eğer 22:00 ve aday yoksa → kapanışçılara aktar
+                                else if (checkHour >= 21 && candidates.length === 0) {
                                     const kapaniscilar = rawPersonnel.filter(p => p.type === 'kapanis').map(p => p.name);
                                     if (kapaniscilar.length > 0) {
                                         candidates = kapaniscilar;
