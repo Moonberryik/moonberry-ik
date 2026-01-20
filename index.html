@@ -13574,6 +13574,23 @@ async function loadTodayChecks() {
     
     const primaryBranch = branches[0];
     
+    // Şube müdürlerini çek
+    const branchManagers = {};
+    try {
+        const managersSnap = await db.collection('personel')
+            .where('role', 'in', ['magaza_muduru', 'magaza_mudur_yardimcisi'])
+            .get();
+        managersSnap.forEach(doc => {
+            const d = doc.data();
+            const displayName = d.codeName || formatDisplayName(d.name);
+            if (d.branch && !branchManagers[d.branch]) {
+                branchManagers[d.branch] = displayName;
+            }
+        });
+    } catch (e) {
+        console.warn('Müdür bilgisi alınamadı:', e);
+    }
+    
     // Karşılama kartını doldur
     if (welcomeCard) {
         const dateOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
@@ -13632,6 +13649,10 @@ async function loadTodayChecks() {
                     for (const [uniqueIdOrName, days] of Object.entries(personelShifts)) {
                         const todayShift = days[dayIndex] || '';
                         const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
+                        
+                        // BÖLGE MÜDÜRÜ HARİÇ
+                        if (cleanShift.includes('BÖLGE') || cleanShift.includes('MÜDÜR')) continue;
+                        
                         // personelNames (codeName) KULLAN - en doğru format
                         const displayName = personelNames[uniqueIdOrName] || formatDisplayName(personelFullNames[uniqueIdOrName] || uniqueIdOrName.replace(/_/g, ' '));
                         
@@ -13906,7 +13927,7 @@ async function loadTodayChecks() {
                 isActive: !mudurCompleted,
                 isMissed: false,
                 remainingText: '',
-                personnel: [userName],
+                personnel: [branchManagers[branch] || 'Mağaza Müdürü'],
                 points: { onTime: 10, missed: -10 },
                 priority: mudurCompleted ? 93 : 25,
                 onClick: `goToChecklist('${branch}', 'mudur', null)`
@@ -16237,6 +16258,9 @@ async function loadChecklistTodayPanel() {
                         const todayShift = days[dayIndex] || '';
                         const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
                         
+                        // BÖLGE MÜDÜRÜ HARİÇ
+                        if (cleanShift.includes('BÖLGE') || cleanShift.includes('MÜDÜR')) continue;
+                        
                         // ÖNCE personelNames (codeName) KULLAN - en doğru format
                         const displayName = personelNames[uniqueIdOrName] 
                             || formatDisplayName(personelFullNames[uniqueIdOrName] || uniqueIdOrName.replace(/_/g, ' '));
@@ -17797,6 +17821,7 @@ async function debugPersonelShiftData() {
         const s = doc.data();
         console.log(`\n${s.branch} - ${s.weekStart}:`);
         console.log('Keys:', Object.keys(s.personelShifts || {}));
+        console.log('Names:', s.personelNames);
         console.log('FullNames:', s.personelFullNames);
     });
 }
@@ -18741,11 +18766,18 @@ async function renderPlatformChecklist(container, branch, date, timeSlot, submit
         const targetShift = allShifts.find(s => s.weekStart === weekKey) || allShifts[0];
         
         if (targetShift && targetShift.personelShifts) {
-            for (const [name, days] of Object.entries(targetShift.personelShifts)) {
+            const personelNames = targetShift.personelNames || {};
+            const personelFullNames = targetShift.personelFullNames || {};
+            
+            for (const [uniqueId, days] of Object.entries(targetShift.personelShifts)) {
                 const todayShift = days[dayIndex] || '';
                 const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
-                if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-' && cleanShift !== 'X') {
-                    shiftPersonnel.push(name);
+                
+                // BÖLGE MÜDÜRÜ HARİÇ
+                if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-' && cleanShift !== 'X' && !cleanShift.includes('BÖLGE') && !cleanShift.includes('MÜDÜR')) {
+                    // personelNames (codeName) KULLAN
+                    const displayName = personelNames[uniqueId] || formatDisplayName(personelFullNames[uniqueId] || uniqueId.replace(/_/g, ' '));
+                    shiftPersonnel.push(displayName);
                 }
             }
         }
