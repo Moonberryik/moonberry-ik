@@ -4267,6 +4267,11 @@ function goTo(page) {
         page = page.replace('page-', '');
     }
     
+    // Checklist sayfasından çıkıyorsan listener'ı temizle
+    if (currentPage === 'checklist' && page !== 'checklist') {
+        cleanupShiftListener();
+    }
+    
     // Aktivite logla
     logActivity('page_view', { page: page, from: currentPage });
     
@@ -13066,8 +13071,11 @@ function selectFairPerson(personnel, rrIndex = 0) {
 function parseShiftTime(shiftStr) {
     if (!shiftStr) return null;
     
+    // Yıldız (*) ve diğer işaretleri temizle
+    const cleanedStr = shiftStr.replace(/\*/g, '').trim();
+    
     // Saat formatını bul: "10:00-19:00", "10:00/19:00", "10:00 - 19:00"
-    const timeMatch = shiftStr.match(/(\d{1,2}):?(\d{2})?\s*[-–\/]\s*(\d{1,2}):?(\d{2})?/);
+    const timeMatch = cleanedStr.match(/(\d{1,2}):?(\d{2})?\s*[-–\/]\s*(\d{1,2}):?(\d{2})?/);
     if (timeMatch) {
         return {
             startHour: parseInt(timeMatch[1]),
@@ -13078,12 +13086,15 @@ function parseShiftTime(shiftStr) {
     }
     
     // Standart vardiya tipleri için varsayılan saatler
-    const clean = shiftStr.replace(/\*/g, '').trim().toUpperCase();
+    const clean = cleanedStr.toUpperCase();
     if (clean === 'A' || clean === 'AÇILIŞ' || clean.includes('AÇILI')) {
         return { startHour: 10, startMin: 0, endHour: 19, endMin: 0 };
     }
     if (clean === 'K' || clean === 'KAPANIŞ' || clean.includes('KAPANI')) {
-        return { startHour: 16, startMin: 0, endHour: 1, endMin: 0 }; // Gece 01:00
+        return { startHour: 16, startMin: 0, endHour: 2, endMin: 0 }; // Gece 02:00
+    }
+    if (clean === 'ARA' || clean === 'ARACI' || clean.includes('ARA') || clean === 'ORTA') {
+        return { startHour: 12, startMin: 0, endHour: 21, endMin: 0 };
     }
     
     return null;
@@ -13270,6 +13281,52 @@ function dailyDocIdCandidates(branch, typeId) {
     return [`${b}_${canon}`];
 }
 // === /CANONICAL TYPE ID SİSTEMİ ===
+
+// === REAL-TIME LISTENERS ===
+let _shiftListenerUnsubscribe = null;
+
+function setupShiftListener(branch) {
+    // Önceki listener'ı temizle
+    if (_shiftListenerUnsubscribe) {
+        _shiftListenerUnsubscribe();
+        _shiftListenerUnsubscribe = null;
+    }
+    
+    // Yeni listener kur
+    _shiftListenerUnsubscribe = db.collection('shifts')
+        .where('branch', '==', branch)
+        .onSnapshot(snapshot => {
+            console.log('[Real-time] Shift değişikliği algılandı:', branch);
+            
+            // Checklist sayfasındaysak yeniden yükle
+            if (document.getElementById('checklistFormContainer')) {
+                const currentBranch = document.getElementById('checklistSube')?.value;
+                if (currentBranch === branch) {
+                    console.log('[Real-time] Checklist yeniden yükleniyor...');
+                    loadChecklist();
+                }
+            }
+            
+            // Dashboard görünüyorsa yeniden yükle
+            if (document.getElementById('todayChecksContainer')) {
+                console.log('[Real-time] Dashboard yeniden yükleniyor...');
+                loadTodayChecks();
+            }
+        }, error => {
+            console.warn('[Real-time] Shift listener hatası:', error);
+        });
+    
+    console.log('[Real-time] Shift listener kuruldu:', branch);
+}
+
+function cleanupShiftListener() {
+    if (_shiftListenerUnsubscribe) {
+        _shiftListenerUnsubscribe();
+        _shiftListenerUnsubscribe = null;
+        console.log('[Real-time] Shift listener temizlendi');
+    }
+}
+// === /REAL-TIME LISTENERS ===
 
 // Helper: Checklist türü adını dinamik olarak al
 function getChecklistTypeName(branch, typeId, defaultName) {
@@ -16779,11 +16836,20 @@ async function initChecklistPage() {
             }
         }, 150);
         
+        // Real-time listener başlat
+        setupShiftListener(branch);
+        
         return; // Early return
     }
     
     // Checklist türlerini yükle
     loadChecklistTypes();
+    
+    // Real-time listener başlat (seçili şube için)
+    const selectedBranch = document.getElementById('checklistSube')?.value;
+    if (selectedBranch) {
+        setupShiftListener(selectedBranch);
+    }
 }
 
 // Checklist sayfası - Bugünkü checkler paneli
@@ -17113,6 +17179,9 @@ async function loadChecklistTypes() {
     const typeSelect = document.getElementById('checklistType');
     const buttonsContainer = document.getElementById('checklistTypeButtons');
     if (!typeSelect || !branch) return;
+    
+    // Şube değişti - real-time listener'ı güncelle
+    setupShiftListener(branch);
     
     // Config yüklenmemişse yükle
     if (Object.keys(CHECKLIST_TYPES).length === 0) {
@@ -17586,8 +17655,17 @@ async function loadChecklist() {
                                     }
                                 });
                                 
-                                // Adayları filtrele
+                                // Adayları filtrele (o saatte shift'te olanlar)
                                 let candidates = rawPersonnel.map(p => p.name);
+                                
+                                // Eğer 22:00 ve aday yoksa veya çok azsa → kapanışçılara aktar
+                                if (checkHour >= 21 && candidates.length === 0) {
+                                    const kapaniscilar = rawPersonnel.filter(p => p.type === 'kapanis').map(p => p.name);
+                                    if (kapaniscilar.length > 0) {
+                                        candidates = kapaniscilar;
+                                        console.log('[Adaletli Atama] ' + checkHour + ':00 - Shift bitti, kapanışçılara aktarıldı:', kapaniscilar);
+                                    }
+                                }
                                 
                                 // 14:00 dolduranı muaf tut (birden fazla kişi varsa)
                                 if (filled14 && candidates.length > 1) {
