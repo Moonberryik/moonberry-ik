@@ -13284,6 +13284,7 @@ function dailyDocIdCandidates(branch, typeId) {
 
 // === REAL-TIME LISTENERS ===
 let _shiftListenerUnsubscribe = null;
+let _shiftListenerInitialized = false;
 
 function setupShiftListener(branch) {
     // Önceki listener'ı temizle
@@ -13292,10 +13293,26 @@ function setupShiftListener(branch) {
         _shiftListenerUnsubscribe = null;
     }
     
+    _shiftListenerInitialized = false;
+    
     // Yeni listener kur
     _shiftListenerUnsubscribe = db.collection('shifts')
         .where('branch', '==', branch)
         .onSnapshot(snapshot => {
+            // İlk yüklemeyi atla (sadece gerçek değişikliklerde tetikle)
+            if (!_shiftListenerInitialized) {
+                _shiftListenerInitialized = true;
+                console.log('[Real-time] Shift listener hazır:', branch);
+                return;
+            }
+            
+            // Gerçek değişiklik var mı kontrol et
+            const hasChanges = snapshot.docChanges().some(change => 
+                change.type === 'modified' || change.type === 'added'
+            );
+            
+            if (!hasChanges) return;
+            
             console.log('[Real-time] Shift değişikliği algılandı:', branch);
             
             // Checklist sayfasındaysak yeniden yükle
@@ -13308,7 +13325,7 @@ function setupShiftListener(branch) {
             }
             
             // Dashboard görünüyorsa yeniden yükle
-            if (document.getElementById('todayChecksContainer')) {
+            if (document.getElementById('todayChecksContainer')?.children.length > 0) {
                 console.log('[Real-time] Dashboard yeniden yükleniyor...');
                 loadTodayChecks();
             }
@@ -13920,6 +13937,16 @@ async function loadTodayChecks() {
     
     if (!section || !container) return;
     
+    // Dashboard için shift listener kur (ilk şube)
+    const userBranch = currentUser?.branch || 'Tuzla Port';
+    if (userBranch && userBranch !== 'all') {
+        setupShiftListener(userBranch);
+    } else {
+        // Admin için ilk şubeyi dinle
+        const firstBranch = STATE.branches?.[0] || 'Tuzla Port';
+        setupShiftListener(firstBranch);
+    }
+    
     // CHECKLIST_TYPES yüklü değilse yükle (dinamik isimler için gerekli)
     if (Object.keys(CHECKLIST_TYPES).length === 0) {
         await loadSystemConfig();
@@ -14500,44 +14527,67 @@ async function loadTodayChecks() {
             } catch (e) {}
             
             // Müdür OFF kontrolü - shift verisinden kontrol et
-            let mudurPersonnel = branchManagers[branch] || 'Mağaza Müdürü';
+            let mudurPersonnel = null;
             let mudurSubLabel = '';
+            let canFillMudurCheck = true;
             
-            // Firebase'den müdür ve yardımcı bilgisi al
+            // Firebase'den müdür, yardımcı ve bölge müdürü bilgisi al
             try {
                 const managersSnap = await db.collection('personel')
-                    .where('branch', '==', branch)
-                    .where('role', 'in', ['magaza_muduru', 'magaza_mudur_yardimcisi'])
+                    .where('branch', 'in', [branch, 'all'])
                     .get();
                 
-                let mudur = null, yardimci = null;
+                let mudur = null, yardimci = null, bolgeMuduru = null;
                 managersSnap.forEach(doc => {
                     const d = doc.data();
-                    if (d.role === 'magaza_muduru') mudur = { ...d, id: doc.id };
-                    if (d.role === 'magaza_mudur_yardimcisi') yardimci = { ...d, id: doc.id };
+                    if (d.role === 'magaza_muduru' && d.branch === branch) mudur = { ...d, id: doc.id };
+                    if (d.role === 'magaza_mudur_yardimcisi' && d.branch === branch) yardimci = { ...d, id: doc.id };
+                    if (d.role === 'bolge_muduru') bolgeMuduru = { ...d, id: doc.id };
                 });
                 
-                // Shift verisinden müdürün bugünkü durumunu kontrol et
+                // Shift verisinden OFF durumlarını kontrol et
                 const rawData = rawShiftData[branch];
-                if (rawData && mudur) {
-                    const mudurId = mudur.uniqueId || normalizePersonelId(mudur.name);
-                    const mudurShift = rawData.personelShifts?.[mudurId];
-                    const dayIndex = rawData.dayIndex;
-                    const todayMudurShift = mudurShift?.[dayIndex] || '';
-                    const cleanMudurShift = todayMudurShift.replace(/\*/g, '').trim().toUpperCase();
-                    
-                    // Müdür OFF veya İzinli ise
-                    if (cleanMudurShift === 'OFF' || cleanMudurShift === 'İ' || cleanMudurShift === 'Y.İ' || cleanMudurShift === '-') {
-                        if (yardimci) {
-                            mudurPersonnel = yardimci.codeName || formatDisplayName(yardimci.name);
-                            mudurSubLabel = 'Müdür izinli';
+                
+                // Helper: personelin bugün OFF olup olmadığını kontrol et
+                const isPersonOff = (person) => {
+                    if (!person || !rawData) return false;
+                    const personId = person.uniqueId || normalizePersonelId(person.name);
+                    // Farklı key formatlarını dene
+                    const possibleKeys = [personId, person.codeName, person.name?.toLowerCase().replace(/\s+/g, '_')];
+                    let shift = null;
+                    for (const key of possibleKeys) {
+                        if (rawData.personelShifts?.[key]) {
+                            shift = rawData.personelShifts[key];
+                            break;
                         }
-                    } else {
-                        mudurPersonnel = mudur.codeName || formatDisplayName(mudur.name);
                     }
+                    if (!shift) return false; // Shift'te yoksa OFF değil demektir
+                    const todayShift = shift[rawData.dayIndex] || '';
+                    const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
+                    return cleanShift === 'OFF' || cleanShift === 'İ' || cleanShift === 'Y.İ' || cleanShift === '-' || cleanShift === 'X';
+                };
+                
+                // Sırayla kontrol et: Müdür → Yardımcı → Bölge Müdürü
+                const mudurOff = isPersonOff(mudur);
+                const yardimciOff = isPersonOff(yardimci);
+                
+                if (mudur && !mudurOff) {
+                    mudurPersonnel = mudur.codeName || formatDisplayName(mudur.name);
+                } else if (yardimci && !yardimciOff) {
+                    mudurPersonnel = yardimci.codeName || formatDisplayName(yardimci.name);
+                    mudurSubLabel = 'Müdür izinli';
+                } else if (bolgeMuduru) {
+                    mudurPersonnel = bolgeMuduru.codeName || formatDisplayName(bolgeMuduru.name);
+                    mudurSubLabel = 'Bölge müdürüne devredildi';
+                } else {
+                    // Hiç müdür yok veya hepsi OFF
+                    canFillMudurCheck = false;
+                    mudurPersonnel = 'Doldurulamaz';
+                    mudurSubLabel = 'Müdür/yardımcı izinli';
                 }
             } catch (e) {
                 console.warn('Müdür OFF kontrolü hatası:', e);
+                mudurPersonnel = branchManagers[branch] || 'Mağaza Müdürü';
             }
             
             branchChecks.push({
@@ -14547,13 +14597,13 @@ async function loadTodayChecks() {
                 deadline: '23:00',
                 subLabel: mudurSubLabel,
                 isCompleted: mudurCompleted,
-                isActive: !mudurCompleted,
+                isActive: canFillMudurCheck && !mudurCompleted,
                 isMissed: false,
-                remainingText: '',
+                remainingText: canFillMudurCheck ? '' : '⚠️',
                 personnel: [mudurPersonnel],
                 points: { onTime: 10, missed: -10 },
-                priority: mudurCompleted ? 93 : 25,
-                onClick: `goToChecklist('${branch}', 'mudur', null)`
+                priority: mudurCompleted ? 93 : (canFillMudurCheck ? 25 : 99),
+                onClick: canFillMudurCheck ? `goToChecklist('${branch}', 'mudur', null)` : ''
             });
             totalChecks++;
             if (mudurCompleted) completedChecks++;
@@ -17583,25 +17633,79 @@ async function loadChecklist() {
                     }
                 }
                 
-                // Müdür Kontrol için Firebase'den müdür rolündeki personeli çek
+                // Müdür Kontrol için Firebase'den müdür rolündeki personeli çek (OFF kontrolü ile)
                 if (type === 'mudur') {
                     try {
                         const personelSnapshot = await db.collection('personel')
                             .where('branch', 'in', [branch, 'all'])
                             .get();
                         
-                        personelSnapshot.forEach(doc => {
-                            const data = doc.data();
-                            const role = data.role || data.pozisyon || '';
-                            // Müdür rolleri: yonetici, magaza_muduru, bolge_muduru
-                            if (['yonetici', 'magaza_muduru', 'bolge_muduru', 'mudur'].includes(role.toLowerCase())) {
-                                const displayName = getPersonelDisplayName(data);
-                                if (displayName && !shiftPersonnel.includes(displayName)) {
-                                    shiftPersonnel.push(displayName);
+                        // Shift verisini çek (OFF kontrolü için)
+                        const weekStart = getWeekStart(new Date(date));
+                        const weekKey = formatDateLocal(weekStart);
+                        const shiftsSnapshot = await db.collection('shifts')
+                            .where('branch', '==', branch)
+                            .get();
+                        
+                        let shiftData = null;
+                        shiftsSnapshot.forEach(doc => {
+                            const d = doc.data();
+                            if (d.weekStart === weekKey) shiftData = d;
+                        });
+                        
+                        // Helper: personelin bugün OFF olup olmadığını kontrol et
+                        const isPersonOff = (person) => {
+                            if (!person || !shiftData) return false;
+                            const personId = person.uniqueId || normalizePersonelId(person.name);
+                            const possibleKeys = [personId, person.codeName, person.name?.toLowerCase().replace(/\s+/g, '_')];
+                            let shift = null;
+                            for (const key of possibleKeys) {
+                                if (shiftData.personelShifts?.[key]) {
+                                    shift = shiftData.personelShifts[key];
+                                    break;
                                 }
                             }
+                            if (!shift) return false;
+                            const dayIdx = new Date(date).getDay() - 1 < 0 ? 6 : new Date(date).getDay() - 1;
+                            const todayShift = shift[dayIdx] || '';
+                            const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
+                            return cleanShift === 'OFF' || cleanShift === 'İ' || cleanShift === 'Y.İ' || cleanShift === '-' || cleanShift === 'X';
+                        };
+                        
+                        // Müdürleri öncelik sırasına göre ekle (OFF olmayanlar)
+                        let mudur = null, yardimci = null, bolgeMuduru = null;
+                        personelSnapshot.forEach(doc => {
+                            const data = doc.data();
+                            const role = (data.role || data.pozisyon || '').toLowerCase();
+                            if (role === 'magaza_muduru' && data.branch === branch) mudur = data;
+                            if (role === 'magaza_mudur_yardimcisi' && data.branch === branch) yardimci = data;
+                            if (role === 'bolge_muduru') bolgeMuduru = data;
                         });
-                        console.log('Müdür listesi:', shiftPersonnel);
+                        
+                        // Sırayla ekle: Müdür → Yardımcı → Bölge Müdürü
+                        if (mudur && !isPersonOff(mudur)) {
+                            const displayName = getPersonelDisplayName(mudur);
+                            if (displayName && !shiftPersonnel.includes(displayName)) {
+                                shiftPersonnel.push(displayName);
+                            }
+                        }
+                        if (yardimci && !isPersonOff(yardimci)) {
+                            const displayName = getPersonelDisplayName(yardimci);
+                            if (displayName && !shiftPersonnel.includes(displayName)) {
+                                shiftPersonnel.push(displayName);
+                            }
+                        }
+                        if (bolgeMuduru) {
+                            const displayName = getPersonelDisplayName(bolgeMuduru);
+                            if (displayName && !shiftPersonnel.includes(displayName)) {
+                                shiftPersonnel.push(displayName);
+                            }
+                        }
+                        
+                        if (shiftPersonnel.length === 0) {
+                            console.warn('Müdür check: Tüm müdürler OFF veya müdür yok');
+                        }
+                        console.log('Müdür listesi (OFF hariç):', shiftPersonnel);
                     } catch (e) {
                         console.warn('Müdür listesi alınamadı:', e);
                     }
