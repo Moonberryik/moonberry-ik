@@ -14183,17 +14183,27 @@ async function loadTodayChecks() {
         let nextPlatformTime = null;
         let platformRemainingMinutes = 0;
         
-        for (const timeStr of platformTimes) {
-            const [h, m] = timeStr.split(':').map(Number);
-            const slotMinutes = h * 60 + m;
-            const nowMinutes = currentHour * 60 + currentMinutes;
-            const diff = slotMinutes - nowMinutes;
-            
-            if (Math.abs(diff) <= 30) {
-                activePlatformTime = timeStr;
-                platformRemainingMinutes = 30 - Math.abs(diff);
-            } else if (diff > 0 && !nextPlatformTime) {
-                nextPlatformTime = timeStr;
+        // Gece 00:00-02:00 arası için özel mantık
+        const isLateNightPlatform = currentHour >= 0 && currentHour < 2;
+        
+        if (isLateNightPlatform) {
+            // Gece saatlerinde 00:00 slotu aktif
+            activePlatformTime = '00:00';
+            platformRemainingMinutes = (2 - currentHour) * 60 - currentMinutes;
+        } else {
+            for (const timeStr of platformTimes) {
+                const [h, m] = timeStr.split(':').map(Number);
+                const slotMinutes = h * 60 + m;
+                const nowMinutes = currentHour * 60 + currentMinutes;
+                const diff = slotMinutes - nowMinutes;
+                
+                // Her slot için 1 saat pencere (-15dk ile +45dk arası)
+                if (diff >= -15 && diff <= 45) {
+                    activePlatformTime = timeStr;
+                    platformRemainingMinutes = Math.max(0, 45 + diff);
+                } else if (diff > 0 && !nextPlatformTime) {
+                    nextPlatformTime = timeStr;
+                }
             }
         }
         
@@ -14552,6 +14562,9 @@ async function loadTodayChecks() {
             let mudurPersonnel = null;
             let mudurSubLabel = '';
             let canFillMudurCheck = true;
+            let mudurDeadline = '23:30'; // Default: 23:00 + 30dk grace
+            let mudurShiftEndHour = 23;
+            let isMudurCheckMissed = false;
             
             // Firebase'den müdür, yardımcı ve bölge müdürü bilgisi al
             try {
@@ -14570,11 +14583,10 @@ async function loadTodayChecks() {
                 // Shift verisinden OFF durumlarını kontrol et
                 const rawData = rawShiftData[branch];
                 
-                // Helper: personelin bugün OFF olup olmadığını kontrol et
-                const isPersonOff = (person) => {
-                    if (!person || !rawData) return false;
+                // Helper: personelin bugün OFF olup olmadığını ve shift saatini al
+                const getPersonShiftInfo = (person) => {
+                    if (!person || !rawData) return { isOff: false, shiftEnd: null };
                     const personId = person.uniqueId || normalizePersonelId(person.name);
-                    // Farklı key formatlarını dene
                     const possibleKeys = [personId, person.codeName, person.name?.toLowerCase().replace(/\s+/g, '_')];
                     let shift = null;
                     for (const key of possibleKeys) {
@@ -14583,30 +14595,74 @@ async function loadTodayChecks() {
                             break;
                         }
                     }
-                    if (!shift) return false; // Shift'te yoksa OFF değil demektir
+                    if (!shift) return { isOff: false, shiftEnd: null };
                     const todayShift = shift[rawData.dayIndex] || '';
                     const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
-                    return cleanShift === 'OFF' || cleanShift === 'İ' || cleanShift === 'Y.İ' || cleanShift === '-' || cleanShift === 'X';
+                    const isOff = cleanShift === 'OFF' || cleanShift === 'İ' || cleanShift === 'Y.İ' || cleanShift === '-' || cleanShift === 'X';
+                    
+                    // Shift bitiş saatini parse et
+                    let shiftEnd = null;
+                    const shiftTime = parseShiftTime(todayShift);
+                    if (shiftTime) {
+                        shiftEnd = shiftTime.endHour;
+                    }
+                    
+                    return { isOff, shiftEnd };
                 };
                 
                 // Sırayla kontrol et: Müdür → Yardımcı → Bölge Müdürü
-                const mudurOff = isPersonOff(mudur);
-                const yardimciOff = isPersonOff(yardimci);
+                const mudurInfo = getPersonShiftInfo(mudur);
+                const yardimciInfo = getPersonShiftInfo(yardimci);
                 
-                if (mudur && !mudurOff) {
+                let activeMudurShiftEnd = null;
+                
+                if (mudur && !mudurInfo.isOff) {
                     mudurPersonnel = mudur.codeName || formatDisplayName(mudur.name);
-                } else if (yardimci && !yardimciOff) {
+                    activeMudurShiftEnd = mudurInfo.shiftEnd;
+                } else if (yardimci && !yardimciInfo.isOff) {
                     mudurPersonnel = yardimci.codeName || formatDisplayName(yardimci.name);
                     mudurSubLabel = 'Müdür izinli';
+                    activeMudurShiftEnd = yardimciInfo.shiftEnd;
                 } else if (bolgeMuduru) {
                     mudurPersonnel = bolgeMuduru.codeName || formatDisplayName(bolgeMuduru.name);
                     mudurSubLabel = 'Bölge müdürüne devredildi';
+                    // Bölge müdürü için shift yok, default deadline
                 } else {
-                    // Hiç müdür yok veya hepsi OFF
                     canFillMudurCheck = false;
                     mudurPersonnel = 'Doldurulamaz';
                     mudurSubLabel = 'Müdür/yardımcı izinli';
                 }
+                
+                // Shift bitiş saati + 30dk grace period hesapla
+                if (activeMudurShiftEnd !== null) {
+                    mudurShiftEndHour = activeMudurShiftEnd;
+                    // Gece geçişi (örn: bitiş 01:00 = 25 olarak hesapla)
+                    let deadlineMinutes = (activeMudurShiftEnd * 60) + 30;
+                    if (activeMudurShiftEnd < 6) deadlineMinutes = ((24 + activeMudurShiftEnd) * 60) + 30;
+                    const deadlineHour = Math.floor(deadlineMinutes / 60) % 24;
+                    const deadlineMin = deadlineMinutes % 60;
+                    mudurDeadline = `${deadlineHour.toString().padStart(2, '0')}:${deadlineMin.toString().padStart(2, '0')}`;
+                }
+                
+                // Şu anki saat deadline'ı geçti mi kontrol et
+                const nowMinutes = currentHour * 60 + currentMinutes;
+                const [dh, dm] = mudurDeadline.split(':').map(Number);
+                let deadlineMinutes = dh * 60 + dm;
+                // Gece geçişi kontrolü
+                if (dh < 6) deadlineMinutes += 24 * 60;
+                if (currentHour < 6) {
+                    const adjustedNow = nowMinutes + 24 * 60;
+                    if (adjustedNow > deadlineMinutes && !mudurCompleted) {
+                        isMudurCheckMissed = true;
+                        canFillMudurCheck = false;
+                        mudurSubLabel = 'Süre doldu (-10 puan)';
+                    }
+                } else if (nowMinutes > deadlineMinutes && !mudurCompleted) {
+                    isMudurCheckMissed = true;
+                    canFillMudurCheck = false;
+                    mudurSubLabel = 'Süre doldu (-10 puan)';
+                }
+                
             } catch (e) {
                 console.warn('Müdür OFF kontrolü hatası:', e);
                 mudurPersonnel = branchManagers[branch] || 'Mağaza Müdürü';
@@ -14616,15 +14672,15 @@ async function loadTodayChecks() {
                 id: 'mudur',
                 name: getChecklistTypeName(branch, 'mudur', 'Müdür Kontrol'),
                 icon: 'usercheck',
-                deadline: '23:00',
+                deadline: mudurDeadline,
                 subLabel: mudurSubLabel,
                 isCompleted: mudurCompleted,
                 isActive: canFillMudurCheck && !mudurCompleted,
-                isMissed: false,
-                remainingText: canFillMudurCheck ? '' : '⚠️',
+                isMissed: isMudurCheckMissed,
+                remainingText: isMudurCheckMissed ? '⚠️ GEÇTİ' : (canFillMudurCheck ? '' : '⚠️'),
                 personnel: [mudurPersonnel],
                 points: { onTime: 10, missed: -10 },
-                priority: mudurCompleted ? 93 : (canFillMudurCheck ? 25 : 99),
+                priority: mudurCompleted ? 93 : (isMudurCheckMissed ? 99 : (canFillMudurCheck ? 25 : 99)),
                 onClick: canFillMudurCheck ? `goToChecklist('${branch}', 'mudur', null)` : ''
             });
             totalChecks++;
@@ -15825,7 +15881,7 @@ async function loadChecklistTypesConfig() {
                     {id: 'kapanis', name: 'Kapanış', icon: 'sunset'},
                     {id: 'gunluk', name: 'Günlük Check', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
                     {id: 'mudur', name: 'Müdür Kontrol', icon: 'user-check', managerOnly: true},
-                    {id: 'platform', name: 'Platform Check', icon: 'smartphone'},
+                    {id: 'platform', name: 'Platform Check', icon: 'smartphone', timeSlots: ['10:00','12:00','15:00','18:00','21:00','00:00']},
                     {id: 'haftalik', name: 'Haftalık Görevler', icon: 'calendar-week'},
                     {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
                 ],
@@ -15834,7 +15890,7 @@ async function loadChecklistTypesConfig() {
                     {id: 'kapanis', name: 'Kapanış', icon: 'sunset'},
                     {id: 'gunluk', name: 'Günlük Check', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
                     {id: 'mudur', name: 'Müdür Kontrol', icon: 'user-check', managerOnly: true},
-                    {id: 'platform', name: 'Platform Check', icon: 'smartphone'},
+                    {id: 'platform', name: 'Platform Check', icon: 'smartphone', timeSlots: ['10:00','12:00','15:00','18:00','21:00','00:00']},
                     {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
                 ]
             };
@@ -16088,7 +16144,7 @@ async function syncChecklistTypesWithSeed() {
             {id: 'kapanis', name: 'Kapanış Hazırlıkları', icon: 'sunset'},
             {id: 'gunluk', name: 'Günlük Genel Check', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
             {id: 'mudur', name: 'Müdür Kontrol', icon: 'user-check', managerOnly: true},
-            {id: 'platform', name: 'Platform Check', icon: 'smartphone'},
+            {id: 'platform', name: 'Platform Check', icon: 'smartphone', timeSlots: ['10:00','12:00','15:00','18:00','21:00','00:00']},
             {id: 'haftalik', name: 'Haftalık Görevler', icon: 'calendar-week'},
             {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
         ],
@@ -16097,7 +16153,7 @@ async function syncChecklistTypesWithSeed() {
             {id: 'kapanis', name: 'Kapanış Hazırlıkları', icon: 'sunset'},
             {id: 'gunluk', name: 'Günlük Genel Check', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
             {id: 'mudur', name: 'Müdür Kontrol', icon: 'user-check', managerOnly: true},
-            {id: 'platform', name: 'Platform Check', icon: 'smartphone'},
+            {id: 'platform', name: 'Platform Check', icon: 'smartphone', timeSlots: ['10:00','12:00','15:00','18:00','21:00','00:00']},
             {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
         ]
     };
@@ -17401,7 +17457,9 @@ async function loadChecklist() {
     
     // Platform check için özel işlem
     if (type === 'platform') {
-        await renderPlatformChecklistWithStatus(container, branch, date);
+        // Dashboard'dan gelen timeSlot'u kullan veya otomatik belirle
+        const platformTimeSlot = timeSlotSelect?.value || null;
+        await renderPlatformChecklistWithStatus(container, branch, date, platformTimeSlot);
         checklistLoadingLock = false;
         return;
     }
@@ -19897,11 +19955,41 @@ function checkAllItemsMarked() {
 }
 
 // Platform checklist render with status (zaman durumlu)
-async function renderPlatformChecklistWithStatus(container, branch, date) {
+async function renderPlatformChecklistWithStatus(container, branch, date, activeTimeSlot = null) {
+    // Aktif saat belirle
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinutes = currentHour * 60 + now.getMinutes();
+    const TIME_SLOTS = ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'];
+    
+    // Dashboard'dan gelen timeSlot kullan veya otomatik belirle
+    let selectedTimeSlot = activeTimeSlot;
+    if (!selectedTimeSlot) {
+        // Gece 00:00-02:00 arası
+        const isLateNight = currentHour >= 0 && currentHour < 2;
+        if (isLateNight) {
+            selectedTimeSlot = '00:00';
+        } else {
+            // En yakın slotu bul
+            for (const timeStr of TIME_SLOTS) {
+                const [h, m] = timeStr.split(':').map(Number);
+                const slotMinutes = h * 60 + m;
+                const diff = slotMinutes - currentMinutes;
+                if (diff >= -15 && diff <= 75) {
+                    selectedTimeSlot = timeStr;
+                    break;
+                }
+            }
+            if (!selectedTimeSlot) selectedTimeSlot = TIME_SLOTS[0];
+        }
+    }
+    
+    // Saat bazlı submission ID
+    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_platform_${date}_${selectedTimeSlot.replace(':', '')}`;
+    
     // Önce mevcut submission'ı kontrol et
     let submittedData = null;
     try {
-        const submissionId = `platform_${date}`;
         const submissionDoc = await db.collection('checklistSubmissions').doc(submissionId).get();
         if (submissionDoc.exists) {
             submittedData = submissionDoc.data();
@@ -19911,7 +19999,7 @@ async function renderPlatformChecklistWithStatus(container, branch, date) {
     }
     
     // Ana render fonksiyonunu çağır
-    renderPlatformChecklist(container, branch, date, null, submittedData);
+    renderPlatformChecklist(container, branch, date, selectedTimeSlot, submittedData);
 }
 
 // Platform checklist render
