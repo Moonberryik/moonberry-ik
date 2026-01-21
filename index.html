@@ -10965,6 +10965,7 @@ async function deletePuantajRule(id) {
             await db.collection('puantajRules').doc(id).delete();
             toast('Kural silindi', 'success');
             loadPuantajRules();
+            loadPuantajRulesAdmin(); // Admin listesini de güncelle
         } catch (error) {
             console.error('Silme hatası:', error);
             toast('Silme hatası!', 'error');
@@ -11685,6 +11686,7 @@ function renderShiftTable(shift, docId) {
         const dragAttrs = isBarista ? '' : `draggable="true" 
             ondragstart="handleShiftDragStart(event, '${docId}', ${idx})" 
             ondragover="handleShiftDragOver(event)" 
+            ondragleave="handleShiftDragLeave(event)"
             ondrop="handleShiftDrop(event, '${docId}', ${idx})"
             ondragend="handleShiftDragEnd(event)"
             style="cursor:grab"`;
@@ -11849,6 +11851,11 @@ function handleShiftDragOver(e) {
     if (tr && tr.dataset.idx !== undefined) {
         tr.style.borderTop = '3px solid #008c95';
     }
+}
+
+function handleShiftDragLeave(e) {
+    const tr = e.target.closest('tr');
+    if (tr) tr.style.borderTop = '';
 }
 
 function handleShiftDrop(e, docId, targetIdx) {
@@ -14162,7 +14169,7 @@ async function loadTodayChecks() {
     
     const todayStr = formatDateLocal(today);
     const isAdmin = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
-    const userName = currentUser?.name || 'Personel';
+    const userName = currentUser?.codeName || currentUser?.displayName || currentUser?.name || 'Personel';
     const currentHour = now.getHours();
     const currentMinutes = now.getMinutes();
     
@@ -14496,7 +14503,7 @@ async function loadTodayChecks() {
             // K1: Platform check saat bazlı görünürlük kontrolü
             // 10:00 slotu sadece açılışçıya, diğer slotlar atanan kişiye görünsün
             // Yöneticiler her zaman tüm check'leri görebilir
-            const currentUserName = currentUser?.displayName || currentUser?.codeName || currentUser?.name || '';
+            const currentUserName = getPersonelDisplayName(currentUser) || currentUser?.codeName || currentUser?.name || '';
             const isUserInPersonnel = platformPersonnel.some(p => 
                 p.toLowerCase() === currentUserName.toLowerCase() ||
                 p.toLowerCase().includes(currentUserName.split(' ')[0]?.toLowerCase() || '---')
@@ -18618,6 +18625,17 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
         const isNotDone = submittedData?.items?.find(i => i.id === item.id)?.notDone;
         const itemNum = index + 1;
         
+        // G7: Yeni madde kontrolü (son 7 gün içinde eklenen)
+        let newBadgeHtml = '';
+        if (item.createdAt) {
+            const createdDate = new Date(item.createdAt);
+            const now = new Date();
+            const daysDiff = (now - createdDate) / (1000 * 60 * 60 * 24);
+            if (daysDiff <= 7) {
+                newBadgeHtml = '<span style="background:linear-gradient(135deg,#f39c12,#e74c3c);color:#fff;font-size:.65rem;padding:2px 6px;border-radius:4px;margin-left:8px;font-weight:700;animation:pulse 2s infinite">🆕 YENİ</span>';
+            }
+        }
+        
         // Renk bilgisi
         const responsibleLabel = item.responsible || '';
         const itemColor = item.color || '#6b7280';
@@ -18804,7 +18822,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                             ${dayOfWeekBadgeHtml}
                             ${datesHtml}
                         </div>
-                        <div style="font-size:1rem;color:${hasColor ? '#fff' : 'var(--tx)'};line-height:1.6;font-weight:500">${item.text}</div>
+                        <div style="font-size:1rem;color:${hasColor ? '#fff' : 'var(--tx)'};line-height:1.6;font-weight:500">${item.text}${newBadgeHtml}</div>
                         ${otherPersonWarning}
                     </div>
                     ${canEdit && !isSubmitted ? `
@@ -20497,14 +20515,16 @@ async function submitChecklist(branch, type, date, timeSlot) {
     const isManager = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
     
     if (!isManager) {
-        // Giriş yapan kullanıcının adı
-        const currentUserName = currentUser?.name?.toLowerCase() || '';
+        // Giriş yapan kullanıcının adı (codeName öncelikli)
+        const currentUserDisplayName = getPersonelDisplayName(currentUser) || currentUser?.codeName || currentUser?.name || '';
+        const currentUserName = currentUserDisplayName.toLowerCase();
         const enteredName = personName.toLowerCase();
         
         // Kullanıcı kendi adını mı girdi?
         const isSelf = currentUserName && (
-            enteredName.includes(currentUserName.split(' ')[0].toLowerCase()) ||
-            currentUserName.toLowerCase().includes(enteredName.split(' ')[0])
+            enteredName === currentUserName ||
+            enteredName.includes(currentUserName.split(' ')[0]?.toLowerCase() || '---') ||
+            currentUserName.includes(enteredName.split(' ')[0]?.toLowerCase() || '---')
         );
         
         if (!isSelf) {
@@ -21060,6 +21080,19 @@ async function addChecklistType(branch) {
         toast('Checklist türü eklendi', 'success');
         loadChecklistTypes();
         
+        // Yeni eklenen türü seç ve madde ekleme modalını aç
+        setTimeout(() => {
+            const typeSelect = document.getElementById('checklistType');
+            if (typeSelect) {
+                typeSelect.value = typeId;
+                loadChecklist();
+                setTimeout(() => {
+                    showAddChecklistItemModal();
+                    toast('Şimdi maddeler ekleyebilirsiniz', 'info');
+                }, 500);
+            }
+        }, 300);
+        
     } catch (error) {
         console.error('Tür ekleme hatası:', error);
         toast('Ekleme hatası!', 'error');
@@ -21212,7 +21245,8 @@ async function addChecklistItem(branch, type) {
             id: 'item_' + Date.now(),
             text,
             penalty: penalty || null,
-            order: (doc.exists ? doc.data().items?.length : 0) + 1
+            order: (doc.exists ? doc.data().items?.length : 0) + 1,
+            createdAt: new Date().toISOString() // G7: Yeni madde tarih damgası
         };
         
         // Aylik için ek alanlar
