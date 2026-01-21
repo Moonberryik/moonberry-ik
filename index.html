@@ -3876,6 +3876,288 @@ window.personelDedupeExecute = async function(forceWithoutDryRun = false) {
     }
 };
 
+// ==================== SHIFTS PURGE FONKSİYONLARI ====================
+// Son X gün hariç tüm shift dokümanlarını güvenli şekilde siler
+
+// Son dry-run ve export timestamp'leri
+let _lastShiftsPurgeDryRun = null;
+let _lastShiftsExportTimestamp = null;
+
+// DRY-RUN: Silinecek shiftleri tespit et (silme YOK)
+window.shiftsPurgeDryRun = async function(daysToKeep = 14, branch = null) {
+    if (!db) {
+        console.error('[ShiftsPurge] Firestore bağlantısı yok!');
+        return null;
+    }
+    
+    console.log('\n========== SHIFTS PURGE DRY-RUN ==========');
+    console.log(`Mod: 🔍 SADECE RAPOR (silme YOK)`);
+    console.log(`Korunacak: Son ${daysToKeep} gün`);
+    console.log(`Şube filtresi: ${branch || 'Tümü'}`);
+    console.log('==========================================\n');
+    
+    try {
+        // Cutoff tarihi hesapla
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+        const cutoffStr = cutoffDate.toISOString().split('T')[0];
+        console.log(`[ShiftsPurge] Cutoff tarihi: ${cutoffStr}`);
+        console.log(`[ShiftsPurge] Bu tarihten ESKİ shiftler silinecek\n`);
+        
+        // Tüm shiftleri çek
+        let query = db.collection('shifts');
+        if (branch) {
+            query = query.where('branch', '==', branch);
+        }
+        const shiftsSnap = await query.get();
+        
+        const toDelete = [];
+        const toKeep = [];
+        const branchStats = {};
+        
+        shiftsSnap.forEach(doc => {
+            const shift = doc.data();
+            const shiftBranch = shift.branch || 'Bilinmiyor';
+            const weekStart = shift.weekStart || shift.date || '';
+            
+            // Branch istatistikleri
+            if (!branchStats[shiftBranch]) {
+                branchStats[shiftBranch] = { toDelete: 0, toKeep: 0 };
+            }
+            
+            // Tarih kontrolü
+            if (weekStart && weekStart < cutoffStr) {
+                toDelete.push({
+                    docId: doc.id,
+                    branch: shiftBranch,
+                    weekStart: weekStart,
+                    personelCount: Object.keys(shift.personelShifts || {}).length
+                });
+                branchStats[shiftBranch].toDelete++;
+            } else {
+                toKeep.push({
+                    docId: doc.id,
+                    branch: shiftBranch,
+                    weekStart: weekStart
+                });
+                branchStats[shiftBranch].toKeep++;
+            }
+        });
+        
+        // Rapor
+        console.log('========== BRANCH BAZLI DAĞILIM ==========');
+        Object.entries(branchStats).forEach(([b, stats]) => {
+            console.log(`  ${b}: ${stats.toDelete} silinecek, ${stats.toKeep} korunacak`);
+        });
+        
+        console.log('\n========== SİLİNECEK DÖKÜMANLAR ==========');
+        console.log(`Toplam: ${toDelete.length} shift silinecek`);
+        
+        if (toDelete.length > 0) {
+            console.log('\nÖrnek 10 doküman:');
+            toDelete.slice(0, 10).forEach(d => {
+                console.log(`  - ${d.docId} | ${d.branch} | ${d.weekStart} | ${d.personelCount} kişi`);
+            });
+            if (toDelete.length > 10) {
+                console.log(`  ... ve ${toDelete.length - 10} doküman daha`);
+            }
+        }
+        
+        console.log('\n========== KORUNACAK DÖKÜMANLAR ==========');
+        console.log(`Toplam: ${toKeep.length} shift korunacak (son ${daysToKeep} gün)`);
+        
+        console.log('\n========== ÖZET ==========');
+        console.log(`Silinecek: ${toDelete.length}`);
+        console.log(`Korunacak: ${toKeep.length}`);
+        console.log(`Cutoff: ${cutoffStr}`);
+        console.log('==========================\n');
+        
+        // Dry-run timestamp kaydet
+        _lastShiftsPurgeDryRun = {
+            timestamp: Date.now(),
+            daysToKeep: daysToKeep,
+            branch: branch,
+            toDeleteCount: toDelete.length,
+            toKeepCount: toKeep.length,
+            toDeleteDocs: toDelete
+        };
+        
+        if (toDelete.length > 0) {
+            console.log('⚠️ Silme işlemi için:');
+            console.log('1. Önce seed_safe.html → "Sadece Shifts" export al');
+            console.log('2. Sonra: shiftsPurgeExecute(' + daysToKeep + ')');
+        }
+        
+        return {
+            toDelete: toDelete.length,
+            toKeep: toKeep.length,
+            cutoffDate: cutoffStr,
+            branchStats,
+            toDeleteDocs: toDelete
+        };
+        
+    } catch (e) {
+        console.error('[ShiftsPurge] Hata:', e);
+        throw e;
+    }
+};
+
+// EXECUTE: Eski shiftleri sil (DRY-RUN + EXPORT ZORUNLU)
+window.shiftsPurgeExecute = async function(daysToKeep = 14, branch = null, forceWithoutDryRun = false) {
+    if (!db) {
+        console.error('[ShiftsPurge] Firestore bağlantısı yok!');
+        return null;
+    }
+    
+    // 1. DRY-RUN KONTROLÜ (5 dakika içinde çalışmış olmalı)
+    const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+    if (!forceWithoutDryRun && (!_lastShiftsPurgeDryRun || _lastShiftsPurgeDryRun.timestamp < fiveMinutesAgo)) {
+        console.error('[ShiftsPurge] ❌ Önce shiftsPurgeDryRun() çalıştırmalısınız!');
+        console.log('Son 5 dakika içinde dry-run çalıştırılmamış.');
+        return null;
+    }
+    
+    // 2. Parametre uyumu kontrolü
+    if (!forceWithoutDryRun && (_lastShiftsPurgeDryRun.daysToKeep !== daysToKeep || _lastShiftsPurgeDryRun.branch !== branch)) {
+        console.error('[ShiftsPurge] ❌ Dry-run parametreleri uyuşmuyor!');
+        console.log(`Dry-run: daysToKeep=${_lastShiftsPurgeDryRun.daysToKeep}, branch=${_lastShiftsPurgeDryRun.branch}`);
+        console.log(`Execute: daysToKeep=${daysToKeep}, branch=${branch}`);
+        console.log('Aynı parametrelerle tekrar dry-run çalıştırın.');
+        return null;
+    }
+    
+    // 3. EXPORT KONTROLÜ
+    const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
+    if (!_lastShiftsExportTimestamp || _lastShiftsExportTimestamp < tenMinutesAgo) {
+        console.error('[ShiftsPurge] ❌ Son 10 dakika içinde Shifts export alınmamış!');
+        console.log('seed_safe.html → "Sadece Shifts" butonuyla export alın.');
+        console.log('Veya Console\'da: await exportShiftsForPurge()');
+        return null;
+    }
+    
+    // 4. ONAY İSTE
+    const confirmPhrase = prompt('⚠️ DİKKAT: Bu işlem geri alınamaz!\n\nSilme işlemini onaylamak için "PURGE SHIFTS" yazın:');
+    if (confirmPhrase !== 'PURGE SHIFTS') {
+        console.log('[ShiftsPurge] İptal edildi - onay metni yanlış.');
+        return null;
+    }
+    
+    // 5. Son confirm
+    const toDeleteCount = _lastShiftsPurgeDryRun?.toDeleteCount || 0;
+    if (!confirm(`⚠️ SON UYARI!\n\n${toDeleteCount} shift dokümanı SİLİNECEK.\n\nBu işlem GERİ ALINAMAZ!\n\nDevam etmek istiyor musunuz?`)) {
+        console.log('[ShiftsPurge] İptal edildi.');
+        return null;
+    }
+    
+    console.log('\n========== SHIFTS PURGE EXECUTE ==========');
+    console.log(`Mod: ⚠️ GERÇEK SİLME`);
+    console.log(`Silinecek: ${toDeleteCount} doküman`);
+    console.log('==========================================\n');
+    
+    try {
+        // Cutoff tarihi
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+        const cutoffStr = cutoffDate.toISOString().split('T')[0];
+        
+        // Shiftleri çek
+        let query = db.collection('shifts');
+        if (branch) {
+            query = query.where('branch', '==', branch);
+        }
+        const shiftsSnap = await query.get();
+        
+        let deletedCount = 0;
+        let keptCount = 0;
+        const batch = db.batch();
+        let batchCount = 0;
+        
+        for (const doc of shiftsSnap.docs) {
+            const shift = doc.data();
+            const weekStart = shift.weekStart || shift.date || '';
+            
+            if (weekStart && weekStart < cutoffStr) {
+                batch.delete(doc.ref);
+                batchCount++;
+                deletedCount++;
+                
+                // Firestore batch limiti 500
+                if (batchCount >= 450) {
+                    console.log(`  🗑️ Batch commit: ${batchCount} doküman...`);
+                    await batch.commit();
+                    batchCount = 0;
+                }
+            } else {
+                keptCount++;
+            }
+        }
+        
+        // Kalan batch'i commit et
+        if (batchCount > 0) {
+            console.log(`  🗑️ Son batch commit: ${batchCount} doküman...`);
+            await batch.commit();
+        }
+        
+        console.log('\n========== PURGE SONUÇ ==========');
+        console.log(`✅ Silinen: ${deletedCount} shift`);
+        console.log(`✅ Korunan: ${keptCount} shift (son ${daysToKeep} gün)`);
+        console.log('==================================\n');
+        
+        // Cache temizle
+        _lastShiftsPurgeDryRun = null;
+        
+        return { deleted: deletedCount, kept: keptCount };
+        
+    } catch (e) {
+        console.error('[ShiftsPurge] Silme hatası:', e);
+        throw e;
+    }
+};
+
+// Export helper - Console'dan çağrılabilir
+window.exportShiftsForPurge = async function() {
+    if (!db) {
+        console.error('[Export] Firestore bağlantısı yok!');
+        return;
+    }
+    
+    console.log('[Export] Shifts export ediliyor...');
+    
+    try {
+        const data = { 
+            shifts: [], 
+            exportDate: new Date().toISOString(),
+            exportType: 'shifts_purge_backup'
+        };
+        
+        const docs = await db.collection('shifts').get();
+        docs.forEach(doc => { 
+            data.shifts.push({ id: doc.id, ...doc.data() }); 
+        });
+        
+        // JSON indir
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'shifts_backup_' + new Date().toISOString().split('T')[0] + '_' + Date.now() + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        // Timestamp kaydet
+        _lastShiftsExportTimestamp = Date.now();
+        
+        console.log(`✅ ${docs.size} shift dokümanı export edildi.`);
+        console.log('Şimdi shiftsPurgeExecute() çalıştırabilirsiniz.');
+        
+        return { exported: docs.size };
+        
+    } catch (e) {
+        console.error('[Export] Hata:', e);
+        throw e;
+    }
+};
+
 // Varsayılan puantaj kuralları
 const DEFAULT_PUANTAJ_RULES = [
     { id: 'R01', title: '5x "1 Yıldız"', effect: 'prim_yok', desc: 'Aynı ay içinde 5 kez 1 yıldız alan personel prim hakkını kaybeder' },
