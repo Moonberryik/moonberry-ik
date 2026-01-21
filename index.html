@@ -3564,6 +3564,318 @@ window.repairShiftPersonelNames = async function(monthsBack = 12, dryRun = true,
     }
 };
 
+// ==================== PERSONEL DEDUPE FONKSİYONLARI ====================
+// Bu fonksiyonlar duplike personel kayıtlarını tespit eder ve temizler
+
+// Son dry-run timestamp'i - execute çalışmadan önce dry-run çalışmış olmalı
+let _lastDedupeDryRun = null;
+
+// Türkçe karakterleri normalize et (email/name karşılaştırması için)
+function normalizeForCompare(str) {
+    if (!str) return '';
+    return str.toLowerCase()
+        .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
+        .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
+        .replace(/Ğ/g, 'g').replace(/Ü/g, 'u').replace(/Ş/g, 's')
+        .replace(/İ/g, 'i').replace(/Ö/g, 'o').replace(/Ç/g, 'c')
+        .trim();
+}
+
+// DRY-RUN: Duplikeleri tespit et ve raporla (yazma/silme YOK)
+window.personelDedupeDryRun = async function() {
+    if (!db) {
+        console.error('[Dedupe] Firestore bağlantısı yok!');
+        return null;
+    }
+    
+    console.log('\n========== PERSONEL DEDUPE DRY-RUN ==========');
+    console.log('Mod: 🔍 SADECE RAPOR (yazma/silme YOK)');
+    console.log('=============================================\n');
+    
+    try {
+        // 1. Tüm personeli çek
+        const personelSnap = await db.collection('personel').get();
+        const allPersonel = [];
+        
+        personelSnap.forEach(doc => {
+            allPersonel.push({
+                docId: doc.id,
+                ...doc.data()
+            });
+        });
+        
+        console.log(`[Dedupe] Toplam ${allPersonel.length} personel kaydı bulundu`);
+        
+        // 2. Tüm shift'lerdeki personelShifts key'lerini topla (referans kontrolü için)
+        const shiftsSnap = await db.collection('shifts').get();
+        const referencedKeys = new Set();
+        
+        shiftsSnap.forEach(doc => {
+            const shift = doc.data();
+            const personelShifts = shift.personelShifts || {};
+            Object.keys(personelShifts).forEach(key => {
+                referencedKeys.add(key);
+                referencedKeys.add(key.toLowerCase());
+                referencedKeys.add(normalizeForCompare(key));
+            });
+            
+            // personelNames ve personelFullNames'deki değerleri de kontrol et
+            const personelNames = shift.personelNames || {};
+            const personelFullNames = shift.personelFullNames || {};
+            Object.values(personelNames).forEach(name => {
+                if (name) {
+                    referencedKeys.add(name);
+                    referencedKeys.add(normalizeForCompare(name));
+                }
+            });
+            Object.values(personelFullNames).forEach(name => {
+                if (name) {
+                    referencedKeys.add(name);
+                    referencedKeys.add(normalizeForCompare(name));
+                }
+            });
+        });
+        
+        console.log(`[Dedupe] Shift'lerde ${referencedKeys.size} benzersiz referans key bulundu`);
+        
+        // 3. Email bazlı gruplama (ÖNCELİK 1)
+        const emailGroups = new Map();
+        const noEmailPersonel = [];
+        
+        allPersonel.forEach(p => {
+            const email = p.email?.toLowerCase()?.trim();
+            if (email && email.length > 0) {
+                if (!emailGroups.has(email)) {
+                    emailGroups.set(email, []);
+                }
+                emailGroups.get(email).push(p);
+            } else {
+                noEmailPersonel.push(p);
+            }
+        });
+        
+        // 4. FullName bazlı gruplama (email olmayanlar için, ÖNCELİK 2)
+        const nameGroups = new Map();
+        noEmailPersonel.forEach(p => {
+            const nameNorm = normalizeForCompare(p.name);
+            if (nameNorm) {
+                if (!nameGroups.has(nameNorm)) {
+                    nameGroups.set(nameNorm, []);
+                }
+                nameGroups.get(nameNorm).push(p);
+            }
+        });
+        
+        // 5. Duplike gruplarını bul ve analiz et
+        const duplicateGroups = [];
+        
+        // Email duplikeleri
+        emailGroups.forEach((members, email) => {
+            if (members.length > 1) {
+                duplicateGroups.push({
+                    type: 'email',
+                    key: email,
+                    members: members
+                });
+            }
+        });
+        
+        // Name duplikeleri (email olmayanlar arasında)
+        nameGroups.forEach((members, nameNorm) => {
+            if (members.length > 1) {
+                duplicateGroups.push({
+                    type: 'fullName',
+                    key: nameNorm,
+                    members: members
+                });
+            }
+        });
+        
+        console.log(`\n[Dedupe] ${duplicateGroups.length} duplike grup bulundu\n`);
+        
+        // 6. Her grup için kanonik ve silinebilir adayları belirle
+        const dedupeReport = {
+            timestamp: new Date().toISOString(),
+            totalPersonel: allPersonel.length,
+            duplicateGroups: [],
+            safeToDelete: [],
+            needsReview: [],
+            referencedAndDuplicate: []
+        };
+        
+        duplicateGroups.forEach((group, idx) => {
+            console.log(`\n--- Grup ${idx + 1}: ${group.type} = "${group.key}" (${group.members.length} kayıt) ---`);
+            
+            // Kanonik kayıt seçimi:
+            // 1. createdAt en eski olan (ilk oluşturulan)
+            // 2. En fazla alan doldurulan
+            // 3. Shift'lerde referanslanan
+            const scored = group.members.map(p => {
+                let score = 0;
+                
+                // Referans kontrolü
+                const isReferenced = referencedKeys.has(p.docId) || 
+                                    referencedKeys.has(p.uniqueId) ||
+                                    referencedKeys.has(normalizeForCompare(p.uniqueId)) ||
+                                    referencedKeys.has(p.name) ||
+                                    referencedKeys.has(normalizeForCompare(p.name)) ||
+                                    referencedKeys.has(p.codeName);
+                
+                if (isReferenced) score += 1000; // Referanslı kayıt yüksek öncelik
+                
+                // Alan doluluk skoru
+                if (p.email) score += 10;
+                if (p.tc) score += 10;
+                if (p.phone) score += 5;
+                if (p.address) score += 5;
+                if (p.iban) score += 5;
+                if (p.startDate) score += 5;
+                if (p.createdAt) score += 2;
+                
+                return { ...p, score, isReferenced };
+            });
+            
+            // En yüksek skorlu = kanonik
+            scored.sort((a, b) => b.score - a.score);
+            const canonical = scored[0];
+            const duplicates = scored.slice(1);
+            
+            console.log(`  KANONİK: docId="${canonical.docId}" | name="${canonical.name}" | score=${canonical.score} | ref=${canonical.isReferenced}`);
+            
+            const groupReport = {
+                type: group.type,
+                key: group.key,
+                canonical: {
+                    docId: canonical.docId,
+                    name: canonical.name,
+                    email: canonical.email,
+                    uniqueId: canonical.uniqueId,
+                    isReferenced: canonical.isReferenced,
+                    score: canonical.score
+                },
+                duplicates: []
+            };
+            
+            duplicates.forEach(dup => {
+                const status = dup.isReferenced ? '⚠️ REFERANSLI' : '✅ SİLİNEBİLİR';
+                console.log(`  DUPLİKE: docId="${dup.docId}" | name="${dup.name}" | score=${dup.score} | ${status}`);
+                
+                const dupInfo = {
+                    docId: dup.docId,
+                    name: dup.name,
+                    email: dup.email,
+                    uniqueId: dup.uniqueId,
+                    isReferenced: dup.isReferenced,
+                    score: dup.score
+                };
+                
+                groupReport.duplicates.push(dupInfo);
+                
+                if (dup.isReferenced) {
+                    dedupeReport.referencedAndDuplicate.push(dupInfo);
+                    dedupeReport.needsReview.push(dupInfo);
+                } else {
+                    dedupeReport.safeToDelete.push(dupInfo);
+                }
+            });
+            
+            dedupeReport.duplicateGroups.push(groupReport);
+        });
+        
+        // 7. Özet rapor
+        console.log('\n========== DEDUPE ÖZET ==========');
+        console.log(`Toplam personel: ${dedupeReport.totalPersonel}`);
+        console.log(`Duplike grup sayısı: ${dedupeReport.duplicateGroups.length}`);
+        console.log(`Güvenle silinebilir: ${dedupeReport.safeToDelete.length}`);
+        console.log(`İnceleme gerektiren (referanslı): ${dedupeReport.needsReview.length}`);
+        console.log('=================================\n');
+        
+        if (dedupeReport.safeToDelete.length > 0) {
+            console.log('✅ Güvenle silinebilir kayıtlar:');
+            dedupeReport.safeToDelete.forEach(d => {
+                console.log(`   - docId: ${d.docId} | name: ${d.name}`);
+            });
+        }
+        
+        if (dedupeReport.needsReview.length > 0) {
+            console.log('\n⚠️ İnceleme gerektiren kayıtlar (shift referansı var):');
+            dedupeReport.needsReview.forEach(d => {
+                console.log(`   - docId: ${d.docId} | name: ${d.name}`);
+            });
+        }
+        
+        // Dry-run timestamp'i kaydet
+        _lastDedupeDryRun = {
+            timestamp: Date.now(),
+            report: dedupeReport
+        };
+        
+        if (dedupeReport.safeToDelete.length > 0) {
+            console.log('\n💡 Güvenli silme için: personelDedupeExecute()');
+        }
+        
+        return dedupeReport;
+        
+    } catch (e) {
+        console.error('[Dedupe] Hata:', e);
+        throw e;
+    }
+};
+
+// EXECUTE: Referanssız duplikeleri sil (DRY-RUN zorunlu)
+window.personelDedupeExecute = async function(forceWithoutDryRun = false) {
+    if (!db) {
+        console.error('[Dedupe] Firestore bağlantısı yok!');
+        return null;
+    }
+    
+    // DRY-RUN kontrolü (5 dakika içinde çalışmış olmalı)
+    const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+    if (!forceWithoutDryRun && (!_lastDedupeDryRun || _lastDedupeDryRun.timestamp < fiveMinutesAgo)) {
+        console.error('[Dedupe] ❌ Önce personelDedupeDryRun() çalıştırmalısınız!');
+        console.log('Son 5 dakika içinde dry-run çalıştırılmamış.');
+        console.log('Dry-run sonucunu görmeden silme yapılamaz.');
+        return null;
+    }
+    
+    const report = _lastDedupeDryRun?.report;
+    if (!report || report.safeToDelete.length === 0) {
+        console.log('[Dedupe] Silinecek güvenli kayıt yok.');
+        return { deleted: 0 };
+    }
+    
+    console.log('\n========== PERSONEL DEDUPE EXECUTE ==========');
+    console.log(`Mod: ⚠️ GERÇEK SİLME`);
+    console.log(`Silinecek kayıt: ${report.safeToDelete.length}`);
+    console.log('==============================================\n');
+    
+    // Son onay
+    const confirmList = report.safeToDelete.map(d => `  - ${d.docId}: ${d.name}`).join('\n');
+    console.log('Silinecek kayıtlar:');
+    console.log(confirmList);
+    
+    try {
+        let deletedCount = 0;
+        
+        for (const dup of report.safeToDelete) {
+            console.log(`  🗑️ Siliniyor: ${dup.docId} (${dup.name})`);
+            await db.collection('personel').doc(dup.docId).delete();
+            deletedCount++;
+        }
+        
+        console.log(`\n✅ ${deletedCount} duplike kayıt silindi.`);
+        
+        // Dry-run cache'ini temizle
+        _lastDedupeDryRun = null;
+        
+        return { deleted: deletedCount };
+        
+    } catch (e) {
+        console.error('[Dedupe] Silme hatası:', e);
+        throw e;
+    }
+};
+
 // Varsayılan puantaj kuralları
 const DEFAULT_PUANTAJ_RULES = [
     { id: 'R01', title: '5x "1 Yıldız"', effect: 'prim_yok', desc: 'Aynı ay içinde 5 kez 1 yıldız alan personel prim hakkını kaybeder' },
