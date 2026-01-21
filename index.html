@@ -3285,9 +3285,15 @@ async function syncAllShiftPersonelNames() {
             });
         });
         
-        // 2. Tüm shift'leri çek
+        // 2. Tüm shift'leri çek - SADECE SON 2 HAFTA (tarihsel stabilite için)
         const shiftsSnap = await db.collection('shifts').get();
         let totalUpdated = 0;
+        let skippedOld = 0;
+        
+        // Son 2 haftanın başlangıç tarihi
+        const twoWeeksAgo = new Date();
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+        const twoWeeksAgoStr = twoWeeksAgo.toISOString().split('T')[0];
         
         for (const shiftDoc of shiftsSnap.docs) {
             const shift = shiftDoc.data();
@@ -3295,6 +3301,14 @@ async function syncAllShiftPersonelNames() {
             const personelShifts = shift.personelShifts || {};
             const currentNames = shift.personelNames || {};
             const currentFullNames = shift.personelFullNames || {};
+            
+            // TARİHSEL STABİLİTE: 2 haftadan eski shiftleri ATLÁ
+            const weekStart = shift.weekStart || '';
+            if (weekStart && weekStart < twoWeeksAgoStr) {
+                skippedOld++;
+                continue; // Eski shift - dokunma
+            }
+            
             let newNames = { ...currentNames };
             let newFullNames = { ...currentFullNames };
             let needsUpdate = false;
@@ -3303,12 +3317,11 @@ async function syncAllShiftPersonelNames() {
             for (const key of Object.keys(personelShifts)) {
                 const keyLower = key.toLowerCase();
                 const keyNorm = normalizeTurkishChars(key);
-                const keyFirst = keyNorm.split(/[_\s\.]/)[0];
                 
                 // Önce aynı şubeden ara, sonra bölge müdürlerinden
                 let matchedPersonel = null;
                 
-                // Öncelik 1: Aynı şubeden + tam eşleşme
+                // Öncelik 1: Aynı şubeden + tam eşleşme (SADECE TAM EŞLEŞME)
                 matchedPersonel = personelList.find(p => {
                     if (p.branch !== shiftBranch && p.role !== 'bolge_muduru') return false;
                     
@@ -3329,31 +3342,20 @@ async function syncAllShiftPersonelNames() {
                     return false;
                 });
                 
-                // Öncelik 2: fullName eşleşmesi (mevcut kayıtlı isimle)
+                // Öncelik 2: fullName eşleşmesi (TAM EŞLEŞme - ilk isim eşleşmesi KALDIRILDI)
                 if (!matchedPersonel && currentFullNames[key]) {
                     const currentFullNorm = normalizeTurkishChars(currentFullNames[key]);
                     matchedPersonel = personelList.find(p => {
                         if (p.branch !== shiftBranch && p.role !== 'bolge_muduru') return false;
                         const pNameNorm = normalizeTurkishChars(p.name);
-                        // İlk isim de kontrol et
-                        const currentFirst = currentFullNorm.split(/[_\s]/)[0];
-                        const pNameFirst = pNameNorm.split(/[_\s]/)[0];
-                        return pNameNorm === currentFullNorm || (currentFirst.length > 2 && currentFirst === pNameFirst);
+                        // SADECE TAM EŞLEŞME - ilk isim eşleşmesi KALDIRILDI (çakışma riski)
+                        return pNameNorm === currentFullNorm;
                     });
                 }
                 
-                // Öncelik 3: İlk isim eşleşmesi (aynı şube) - EN GENİŞ
-                if (!matchedPersonel && keyFirst && keyFirst.length > 2) {
-                    matchedPersonel = personelList.find(p => {
-                        if (p.branch !== shiftBranch && p.role !== 'bolge_muduru') return false;
-                        
-                        const pNameFirst = normalizeTurkishChars(p.name).split(/[_\s]/)[0];
-                        const pCodeFirst = normalizeTurkishChars(p.codeName || '').split(/[_\s\.]/)[0];
-                        const pDisplayFirst = normalizeTurkishChars(p.displayName).split(/[_\s\.]/)[0];
-                        
-                        return keyFirst === pNameFirst || keyFirst === pCodeFirst || keyFirst === pDisplayFirst;
-                    });
-                }
+                // ÖNCELİK 3 KALDIRILDI: İlk isim eşleşmesi artık yapılmıyor
+                // Bu, aynı isimli farklı kişilerin çakışmasını önler
+                // Eğer tam eşleşme bulunamazsa, mevcut değerler korunur
                 
                 if (matchedPersonel) {
                     // Güncelleme gerekli mi kontrol et
@@ -3363,12 +3365,8 @@ async function syncAllShiftPersonelNames() {
                         newFullNames[key] = matchedPersonel.name;
                         needsUpdate = true;
                     }
-                } else {
-                    // Eşleşme bulunamadı - debug için log
-                    if (!newNames[key] || newNames[key] === key) {
-                        console.warn(`[Senkron] ⚠️ Eşleşme bulunamadı: "${key}" (${shiftBranch}) - keyNorm: "${keyNorm}", keyFirst: "${keyFirst}"`);
-                    }
                 }
+                // else: Eşleşme bulunamadı - mevcut değerler korunur (log yok, sessiz)
             }
             
             // 4. Güncelleme gerekiyorsa kaydet
@@ -3381,8 +3379,8 @@ async function syncAllShiftPersonelNames() {
             }
         }
         
-        if (totalUpdated > 0) {
-            console.log(`[Senkron] ✓ Toplam ${totalUpdated} shift güncellendi`);
+        if (totalUpdated > 0 || skippedOld > 0) {
+            console.log(`[Senkron] ✓ ${totalUpdated} shift güncellendi, ${skippedOld} eski shift atlandı (tarihsel stabilite)`);
         } else {
             console.log(`[Senkron] ✓ Tüm shift'ler güncel`);
         }
@@ -3390,6 +3388,181 @@ async function syncAllShiftPersonelNames() {
         console.warn('[Senkron] Hata:', e.message);
     }
 }
+
+// ==================== ONE-SHOT SHIFT REPAIR ====================
+// Bu fonksiyon geçmişte yanlış eşleşmiş shift verilerini tamir eder
+// SADECE exact uniqueId match kullanır - fuzzy match YOK
+// Parametreler:
+//   - monthsBack: kaç ay geriye git (varsayılan 12)
+//   - dryRun: true ise sadece log üret, yazma yapma (varsayılan true)
+//   - branch: belirli şube (null ise tümü)
+window.repairShiftPersonelNames = async function(monthsBack = 12, dryRun = true, branch = null) {
+    if (!db) {
+        console.error('[Repair] Firestore bağlantısı yok!');
+        return;
+    }
+    
+    console.log(`\n========== SHIFT PERSONEL REPAIR ==========`);
+    console.log(`Mod: ${dryRun ? '🔍 DRY-RUN (yazma yok)' : '⚠️ GERÇEK YAZMA'}`);
+    console.log(`Kapsam: Son ${monthsBack} ay`);
+    console.log(`Şube: ${branch || 'Tümü'}`);
+    console.log(`==========================================\n`);
+    
+    try {
+        // 1. Personel listesini çek ve uniqueId bazlı map oluştur
+        const personelSnap = await db.collection('personel').get();
+        const personelByUniqueId = new Map();
+        const personelByFullName = new Map();
+        
+        personelSnap.forEach(doc => {
+            const p = doc.data();
+            const uniqueId = p.uniqueId || normalizePersonelId(p.name);
+            const displayName = getPersonelDisplayName(p);
+            const fullName = p.name;
+            
+            const info = { uniqueId, displayName, fullName, branch: p.branch, role: p.role };
+            
+            // uniqueId ile index
+            personelByUniqueId.set(uniqueId, info);
+            personelByUniqueId.set(uniqueId.toLowerCase(), info);
+            personelByUniqueId.set(normalizeTurkishChars(uniqueId), info);
+            
+            // fullName ile index (exact match için)
+            personelByFullName.set(fullName, info);
+            personelByFullName.set(fullName?.toLowerCase(), info);
+            personelByFullName.set(normalizeTurkishChars(fullName), info);
+        });
+        
+        console.log(`[Repair] ${personelByUniqueId.size / 3} personel yüklendi`);
+        
+        // 2. Tarih filtresi hesapla
+        const cutoffDate = new Date();
+        cutoffDate.setMonth(cutoffDate.getMonth() - monthsBack);
+        const cutoffStr = cutoffDate.toISOString().split('T')[0];
+        console.log(`[Repair] Cutoff tarihi: ${cutoffStr}`);
+        
+        // 3. Shift'leri çek
+        let query = db.collection('shifts');
+        if (branch) {
+            query = query.where('branch', '==', branch);
+        }
+        const shiftsSnap = await query.get();
+        
+        let totalShifts = 0;
+        let repairedShifts = 0;
+        let skippedOld = 0;
+        let totalKeysFixed = 0;
+        let totalKeysNotFound = 0;
+        const notFoundKeys = [];
+        
+        for (const shiftDoc of shiftsSnap.docs) {
+            const shift = shiftDoc.data();
+            const shiftBranch = shift.branch;
+            const weekStart = shift.weekStart || '';
+            
+            // Tarih filtresi
+            if (weekStart && weekStart < cutoffStr) {
+                skippedOld++;
+                continue;
+            }
+            
+            totalShifts++;
+            const personelShifts = shift.personelShifts || {};
+            const currentNames = shift.personelNames || {};
+            const currentFullNames = shift.personelFullNames || {};
+            
+            let newNames = {};
+            let newFullNames = {};
+            let hasChanges = false;
+            let keysFixed = 0;
+            let keysNotFound = 0;
+            
+            // Her key için SADECE exact uniqueId match
+            for (const key of Object.keys(personelShifts)) {
+                const keyLower = key.toLowerCase();
+                const keyNorm = normalizeTurkishChars(key);
+                
+                // Exact uniqueId match
+                let matched = personelByUniqueId.get(key) || 
+                              personelByUniqueId.get(keyLower) ||
+                              personelByUniqueId.get(keyNorm);
+                
+                // Şube kontrolü
+                if (matched && matched.branch !== shiftBranch && matched.role !== 'bolge_muduru') {
+                    matched = null; // Şube uyuşmuyor
+                }
+                
+                if (matched) {
+                    newNames[key] = matched.displayName;
+                    newFullNames[key] = matched.fullName;
+                    
+                    // Değişiklik var mı?
+                    if (currentNames[key] !== matched.displayName || currentFullNames[key] !== matched.fullName) {
+                        hasChanges = true;
+                        keysFixed++;
+                        console.log(`  [FIX] ${shiftBranch} ${weekStart}: "${key}" → "${matched.displayName}" (${matched.fullName})`);
+                    }
+                } else {
+                    // Bulunamadı - mevcut değerleri koru
+                    newNames[key] = currentNames[key] || key;
+                    newFullNames[key] = currentFullNames[key] || key;
+                    keysNotFound++;
+                    
+                    if (!currentNames[key] || currentNames[key] === key) {
+                        notFoundKeys.push({ branch: shiftBranch, week: weekStart, key });
+                        console.warn(`  [NOT FOUND] ${shiftBranch} ${weekStart}: "${key}" - mevcut değer korunuyor`);
+                    }
+                }
+            }
+            
+            totalKeysFixed += keysFixed;
+            totalKeysNotFound += keysNotFound;
+            
+            // Güncelleme
+            if (hasChanges) {
+                repairedShifts++;
+                if (!dryRun) {
+                    await db.collection('shifts').doc(shiftDoc.id).update({
+                        personelNames: newNames,
+                        personelFullNames: newFullNames
+                    });
+                    console.log(`  ✓ ${shiftBranch} ${weekStart} güncellendi (${keysFixed} key)`);
+                } else {
+                    console.log(`  [DRY-RUN] ${shiftBranch} ${weekStart} güncellenecek (${keysFixed} key)`);
+                }
+            }
+        }
+        
+        // Özet rapor
+        console.log(`\n========== REPAIR SONUÇ ==========`);
+        console.log(`Taranan shift: ${totalShifts}`);
+        console.log(`Atlanan (eski): ${skippedOld}`);
+        console.log(`Tamir edilen shift: ${repairedShifts}`);
+        console.log(`Düzeltilen key: ${totalKeysFixed}`);
+        console.log(`Bulunamayan key: ${totalKeysNotFound}`);
+        console.log(`Mod: ${dryRun ? 'DRY-RUN (değişiklik yapılmadı)' : 'GERÇEK YAZMA'}`);
+        
+        if (notFoundKeys.length > 0 && notFoundKeys.length <= 20) {
+            console.log(`\nBulunamayan key'ler:`);
+            notFoundKeys.forEach(nf => console.log(`  - ${nf.branch} ${nf.week}: "${nf.key}"`));
+        } else if (notFoundKeys.length > 20) {
+            console.log(`\nBulunamayan key sayısı çok fazla (${notFoundKeys.length}), ilk 20:`);
+            notFoundKeys.slice(0, 20).forEach(nf => console.log(`  - ${nf.branch} ${nf.week}: "${nf.key}"`));
+        }
+        
+        console.log(`==================================\n`);
+        
+        if (dryRun && repairedShifts > 0) {
+            console.log(`💡 Değişiklikleri uygulamak için: repairShiftPersonelNames(${monthsBack}, false${branch ? `, '${branch}'` : ''})`);
+        }
+        
+        return { totalShifts, repairedShifts, totalKeysFixed, totalKeysNotFound, notFoundKeys };
+        
+    } catch (e) {
+        console.error('[Repair] Hata:', e);
+        throw e;
+    }
+};
 
 // Varsayılan puantaj kuralları
 const DEFAULT_PUANTAJ_RULES = [
@@ -12142,10 +12315,19 @@ async function removePersonelFromShift(docId) {
     try {
         const doc = await db.collection('shifts').doc(docId).get();
         const data = doc.data();
-        const names = Object.keys(data.personelShifts || {});
-        if (names.length === 0) { toast('Silinecek personel yok', 'error'); return; }
+        const uniqueIds = Object.keys(data.personelShifts || {});
+        if (uniqueIds.length === 0) { toast('Silinecek personel yok', 'error'); return; }
         
-        const opts = names.map(n => `<option value="${n}">${n}</option>`).join('');
+        // uniqueId -> görüntü adı eşlemesi
+        const personelNames = data.personelNames || {};
+        const personelFullNames = data.personelFullNames || {};
+        
+        const opts = uniqueIds.map(uid => {
+            // Önce personelNames (codeName), sonra fullName, en son uniqueId
+            const displayName = personelNames[uid] || formatDisplayName(personelFullNames[uid] || uid.replace(/_/g, ' '));
+            return `<option value="${uid}">${displayName}</option>`;
+        }).join('');
+        
         showModal('Personel Çıkar', `
             <div style="padding:8px 0">
                 <div class="form-group">
@@ -17979,6 +18161,50 @@ async function loadChecklist() {
             }
         }
         
+        // Temizlik ve Bakım için mağaza müdürlerini hariç tut (tek kişi değilse)
+        if (type === 'aylik' && shiftPersonnel.length > 1) {
+            try {
+                const magazaMudurleri = [];
+                const mudurSnapshot = await db.collection('personel')
+                    .where('branch', '==', branch)
+                    .get();
+                
+                mudurSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    const role = (data.role || '').toLowerCase();
+                    // Mağaza müdürü ve yardımcısı
+                    if (role === 'magaza_muduru' || role === 'magaza_mudur_yardimcisi') {
+                        magazaMudurleri.push(data.name);
+                        magazaMudurleri.push(formatDisplayName(data.name));
+                        if (data.codeName) magazaMudurleri.push(data.codeName);
+                        magazaMudurleri.push(data.name?.split(' ')[0]);
+                    }
+                });
+                
+                if (magazaMudurleri.length > 0) {
+                    const filteredPersonnel = shiftPersonnel.filter(p => {
+                        if (!p) return false;
+                        const pLower = p.toLowerCase();
+                        const pNorm = normalizeTurkishChars(p);
+                        return !magazaMudurleri.some(mm => {
+                            if (!mm) return false;
+                            const mmLower = mm.toLowerCase();
+                            const mmNorm = normalizeTurkishChars(mm);
+                            return mmLower === pLower || mmNorm === pNorm;
+                        });
+                    });
+                    
+                    // Sadece en az 1 kişi kalırsa filtrele
+                    if (filteredPersonnel.length > 0 && filteredPersonnel.length !== shiftPersonnel.length) {
+                        console.log('Temizlik: Müdürler hariç tutuldu:', shiftPersonnel.length - filteredPersonnel.length);
+                        shiftPersonnel = filteredPersonnel;
+                    }
+                }
+            } catch (e) {
+                console.warn('Temizlik müdür filtreleme hatası:', e);
+            }
+        }
+        
         // Haftalık görevler için atama bilgisini çek
         let weeklyAssignments = null;
         let dailyAssignments = null;
@@ -18432,8 +18658,9 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
         // Görev atama badge (haftalık veya günlük paylaşım)
         let assignedBadgeHtml = '';
         if (assignedPersonel) {
-            const badgeColor = isMyTask ? '#008c95' : '#6b7280';
-            const badgeBg = isMyTask ? 'rgba(0,140,149,.15)' : 'rgba(107,114,128,.15)';
+            // Marka renkli dolgulu badge - okunabilir
+            const badgeBg = isMyTask ? '#008c95' : '#6b7280';
+            const badgeColor = '#fff';
             
             // Atama değiştirme butonu için doğru fonksiyon
             let editOnClick = '';
@@ -18515,7 +18742,15 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
             const canEdit = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
             // Erişim kontrolü - isSubmitted veya atanmamışsa disable
             // Haftalık görevlerde: isMyTask kontrolü, diğerlerinde: isAssignedToMe kontrolü
-            const canInteract = (isHaftalik ? isMyTask : isAssignedToMe) && !isSubmitted;
+            const canInteract = ((isHaftalik || isAylik) ? isMyTask : isAssignedToMe) && !isSubmitted;
+            
+            // Başkasının görevi ise uyarı mesajı
+            const otherPersonWarning = (!isMyTask && assignedPersonel && (isAylik || isHaftalik) && !isManager && !isSubmitted) 
+                ? `<div style="font-size:.75rem;color:#f59e0b;margin-top:6px;display:flex;align-items:center;gap:4px">
+                    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                    Bu maddeyi <strong style="margin:0 3px">${assignedPersonel}</strong> dolduracak
+                   </div>` 
+                : '';
             
             html += `
                 <div class="checklist-item" data-item-id="${item.id}" style="display:flex;align-items:flex-start;gap:14px;padding:18px 20px;border-radius:14px;margin-bottom:14px;background:${hasColor ? itemColor : 'var(--bg2)'};box-shadow:0 3px 12px rgba(0,0,0,.1);${!canInteract ? 'opacity:0.7;' : ''}">
@@ -18550,6 +18785,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                             ${datesHtml}
                         </div>
                         <div style="font-size:1rem;color:${hasColor ? '#fff' : 'var(--tx)'};line-height:1.6;font-weight:500">${item.text}</div>
+                        ${otherPersonWarning}
                     </div>
                     ${canEdit && !isSubmitted ? `
                     <button onclick="showEditChecklistItemModal('${item.id}')" style="background:rgba(0,140,149,.15);border:none;color:#008c95;cursor:pointer;padding:10px;border-radius:10px;flex-shrink:0;transition:all .2s" title="Düzenle" onmouseover="this.style.background='rgba(0,140,149,.25)'" onmouseout="this.style.background='rgba(0,140,149,.15)'">
