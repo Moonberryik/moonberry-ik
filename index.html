@@ -4608,27 +4608,6 @@ async function executeConfirmCallback() {
     }
 }
 
-
-// G12.2: Önemli madde uyarı modalı
-function showImportantWarningModal(itemId, callback) {
-    const modal = document.createElement("div");
-    modal.id = "importantWarningModal";
-    modal.innerHTML = `
-        <div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px">
-            <div style="background:var(--bg2);border-radius:20px;max-width:400px;width:100%;padding:32px;text-align:center;border:2px solid #e74c3c">
-                <div style="font-size:4rem;margin-bottom:16px">⚠️</div>
-                <h3 style="font-size:1.3rem;font-weight:700;color:#e74c3c;margin-bottom:12px">DİKKAT!</h3>
-                <p style="color:var(--tx2);margin-bottom:24px;line-height:1.6">Bu önemli bir kontrol maddesidir. Lütfen dikkatli şekilde kontrol ettiğinizden emin olun.</p>
-                <div style="display:flex;gap:12px;justify-content:center">
-                    <button onclick="document.getElementById('importantWarningModal').remove()" class="btn btn-ghost">İptal</button>
-                    <button onclick="document.getElementById('importantWarningModal').remove();window._importantCallback && window._importantCallback()" class="btn" style="background:#e74c3c;color:#fff">Kontrol Ettim ✓</button>
-                </div>
-            </div>
-        </div>
-    `;
-    window._importantCallback = callback;
-    document.body.appendChild(modal);
-}
 function successModal(message) {
     showModal('Başarılı', `
         <div class="modal-icon success" style="display:flex;justify-content:center">
@@ -11705,7 +11684,8 @@ function renderShiftTable(shift, docId) {
         // Sürükle-bırak için TR özellikleri (Barista için devre dışı)
         const dragAttrs = isBarista ? '' : `draggable="true" 
             ondragstart="handleShiftDragStart(event, '${docId}', ${idx})" 
-            ondragover="handleShiftDragOver(event)" 
+            ondragover="handleShiftDragOver(event)"
+            ondragleave="handleShiftDragLeave(event)" 
             ondrop="handleShiftDrop(event, '${docId}', ${idx})"
             ondragend="handleShiftDragEnd(event)"
             style="cursor:grab"`;
@@ -11870,6 +11850,11 @@ function handleShiftDragOver(e) {
     if (tr && tr.dataset.idx !== undefined) {
         tr.style.borderTop = '3px solid #008c95';
     }
+}
+
+function handleShiftDragLeave(e) {
+    const tr = e.target.closest('tr');
+    if (tr) tr.style.borderTop = '';
 }
 
 function handleShiftDrop(e, docId, targetIdx) {
@@ -13568,7 +13553,7 @@ let BRANCH_HOURS = {
 };
 
 // TEMİZLİK ÇİZELGESİ SHIFT TANIMLARI
-const TEMIZLIK_SHIFT_RULES = {
+let TEMIZLIK_SHIFT_RULES = {
     acilisci: {
         name: 'Açılışçı',
         shiftStartMin: '10:00',  // 10:00'dan başlayan
@@ -18723,7 +18708,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
         if (checklistEditMode) {
             // Düzenleme modu - INLINE TEXT EDITING + SÜRÜKLE BIRAK
             html += `
-                <div class="checklist-item" data-item-id="${item.id}" data-order="${index}" data-important="${item.isImportant || false}" draggable="true"
+                <div class="checklist-item" data-item-id="${item.id}" data-order="${index}" draggable="true"
                     ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropItem(event)" ondragend="dragEnd(event)"
                     style="display:flex;align-items:flex-start;gap:12px;padding:16px;border-radius:14px;margin-bottom:12px;background:${hasColor ? itemColor : 'var(--bg2)'};box-shadow:0 2px 8px rgba(0,0,0,.1);cursor:grab;transition:transform .2s, opacity .2s">
                     
@@ -20109,22 +20094,6 @@ async function deleteSelectedChecklistItems(branch, type) {
 // Check seçeneği seç
 function selectCheckOption(btn, itemId, value) {
     const parent = btn.closest('.checklist-item');
-    
-    // G12.2: Önemli madde kontrolü
-    const isImportant = parent.dataset.important === 'true';
-    if (isImportant && value === 'done' && !parent.dataset.warned) {
-        parent.dataset.warned = 'true';
-        showImportantWarningModal(itemId, () => {
-            actuallySelectCheck(btn, itemId, value);
-        });
-        return;
-    }
-    
-    actuallySelectCheck(btn, itemId, value);
-}
-
-function actuallySelectCheck(btn, itemId, value) {
-    const parent = btn.closest('.checklist-item');
     const doneBtn = parent.querySelector('.check-btn.done');
     const notdoneBtn = parent.querySelector('.check-btn.notdone');
     const doneInput = parent.querySelector('input[value="done"]');
@@ -21229,8 +21198,7 @@ async function addChecklistItem(branch, type) {
             id: 'item_' + Date.now(),
             text,
             penalty: penalty || null,
-            order: (doc.exists ? doc.data().items?.length : 0) + 1,
-            isImportant: false
+            order: (doc.exists ? doc.data().items?.length : 0) + 1
         };
         
         // Aylik için ek alanlar
