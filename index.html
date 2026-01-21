@@ -11447,19 +11447,6 @@ async function runAutoBackup() {
         console.error('[Backup] Hata:', e);
     }
 }
-        }
-        
-        // Kaydet
-        await db.collection('backups').doc(backupId).set(backupData);
-        console.log('[Backup] ✓ Yedekleme tamamlandı');
-        
-        // Eski yedekleri temizle
-        await cleanOldBackups();
-        
-    } catch (e) {
-        console.error('[Backup] Hata:', e);
-    }
-}
 
 async function cleanOldBackups() {
     try {
@@ -13948,7 +13935,7 @@ let BRANCH_HOURS = {
 };
 
 // TEMİZLİK ÇİZELGESİ SHIFT TANIMLARI
-const TEMIZLIK_SHIFT_RULES = {
+let TEMIZLIK_SHIFT_RULES = {
     acilisci: {
         name: 'Açılışçı',
         shiftStartMin: '10:00',  // 10:00'dan başlayan
@@ -13970,7 +13957,7 @@ const TEMIZLIK_SHIFT_RULES = {
 };
 
 // PLATFORM CHECK SAATLERİ
-const PLATFORM_CHECK_TIMES = ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'];
+let PLATFORM_CHECK_TIMES = ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'];
 
 let CHECK_RULES = {
     gunluk: {
