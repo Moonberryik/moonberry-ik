@@ -1244,15 +1244,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                     <!-- Aksiyon Butonları - Modern Minimalist -->
                     <div id="shiftActionButtons" style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
-                        <button id="btnCreateShiftWeek" class="btn" onclick="showNewShiftModal()" style="padding:10px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:500;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+                        <button id="btnCreateShiftWeek" class="btn" onclick="showNewShiftModal()" style="padding:10px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:500;cursor:pointer">
                             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
                             Yeni Hafta
                         </button>
-                        <button class="btn" onclick="printShift()" style="padding:10px 16px;background:var(--bg3);color:var(--tx);border:1px solid var(--bg4);border-radius:8px;display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:500;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+                        <button class="btn" onclick="printShift()" style="padding:10px 16px;background:var(--bg3);color:var(--tx);border:1px solid var(--bg4);border-radius:8px;display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:500;cursor:pointer">
                             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
                             Yazdır
                         </button>
-                        <button class="btn" onclick="downloadShiftPDF()" style="padding:10px 16px;background:#ff8674;color:#fff;border:none;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:500;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+                        <button class="btn" onclick="downloadShiftPDF()" style="padding:10px 16px;background:#ff8674;color:#fff;border:none;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:500;cursor:pointer">
                             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                             PDF İndir
                         </button>
@@ -2030,11 +2030,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                         
                         <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px">
-                            <label style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--bg3);border-radius:10px;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+                            <label style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--bg3);border-radius:10px;cursor:pointer">
                                 <input type="checkbox" id="sessionLogoutOnClose" style="width:18px;height:18px;accent-color:#ff8674">
                                 <span style="font-size:.9rem;color:var(--tx)">Tarayıcı kapatılınca çıkış yap</span>
                             </label>
-                            <label style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--bg3);border-radius:10px;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+                            <label style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--bg3);border-radius:10px;cursor:pointer">
                                 <input type="checkbox" id="sessionSingleDevice" style="width:18px;height:18px;accent-color:#ff8674">
                                 <span style="font-size:.9rem;color:var(--tx)">Tek cihaz politikası</span>
                             </label>
@@ -2200,7 +2200,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                                     </select>
                                 </div>
                                 <div class="form-group" style="margin-bottom:0">
-                                    <label style="display:flex;align-items:center;gap:8px;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+                                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
                                         <input type="checkbox" id="checkNotifyManager" checked style="width:16px;height:16px">
                                         <span style="font-size:.8rem;color:var(--tx2)">Eksik check'lerde yöneticiyi bilgilendir</span>
                                     </label>
@@ -4608,6 +4608,27 @@ async function executeConfirmCallback() {
     }
 }
 
+
+// G12.2: Önemli madde uyarı modalı
+function showImportantWarningModal(itemId, callback) {
+    const modal = document.createElement("div");
+    modal.id = "importantWarningModal";
+    modal.innerHTML = `
+        <div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px">
+            <div style="background:var(--bg2);border-radius:20px;max-width:400px;width:100%;padding:32px;text-align:center;border:2px solid #e74c3c">
+                <div style="font-size:4rem;margin-bottom:16px">⚠️</div>
+                <h3 style="font-size:1.3rem;font-weight:700;color:#e74c3c;margin-bottom:12px">DİKKAT!</h3>
+                <p style="color:var(--tx2);margin-bottom:24px;line-height:1.6">Bu önemli bir kontrol maddesidir. Lütfen dikkatli şekilde kontrol ettiğinizden emin olun.</p>
+                <div style="display:flex;gap:12px;justify-content:center">
+                    <button onclick="document.getElementById('importantWarningModal').remove()" class="btn btn-ghost">İptal</button>
+                    <button onclick="document.getElementById('importantWarningModal').remove();window._importantCallback && window._importantCallback()" class="btn" style="background:#e74c3c;color:#fff">Kontrol Ettim ✓</button>
+                </div>
+            </div>
+        </div>
+    `;
+    window._importantCallback = callback;
+    document.body.appendChild(modal);
+}
 function successModal(message) {
     showModal('Başarılı', `
         <div class="modal-icon success" style="display:flex;justify-content:center">
@@ -9761,11 +9782,11 @@ function renderPagePermissions(perms) {
             <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg2);border-radius:8px;border:1px solid var(--cardBorder)">
                 <span style="font-weight:500;color:var(--tx);font-size:.85rem">${p.label}</span>
                 <div style="display:flex;gap:12px">
-                    <label style="display:flex;align-items:center;gap:4px;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
                         <input type="checkbox" class="perm-cb" data-cat="pages" data-id="${p.id}" data-type="view" ${perm.view ? 'checked' : ''} style="width:16px;height:16px;accent-color:#27ae60">
                         <span style="font-size:.75rem;color:var(--tx2)">Gör</span>
                     </label>
-                    <label style="display:flex;align-items:center;gap:4px;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
                         <input type="checkbox" class="perm-cb" data-cat="pages" data-id="${p.id}" data-type="edit" ${perm.edit ? 'checked' : ''} style="width:16px;height:16px;accent-color:#3498db">
                         <span style="font-size:.75rem;color:var(--tx2)">Düzenle</span>
                     </label>
@@ -9788,11 +9809,11 @@ function renderDocPermissions(perms) {
             <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg2);border-radius:8px;border:1px solid var(--cardBorder)">
                 <span style="font-weight:500;color:var(--tx);font-size:.85rem">${d.label}</span>
                 <div style="display:flex;gap:12px">
-                    <label style="display:flex;align-items:center;gap:4px;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
                         <input type="checkbox" class="perm-cb" data-cat="documents" data-id="${d.id}" data-type="view" ${perm.view ? 'checked' : ''} style="width:16px;height:16px;accent-color:#27ae60">
                         <span style="font-size:.75rem;color:var(--tx2)">Gör</span>
                     </label>
-                    <label style="display:flex;align-items:center;gap:4px;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
                         <input type="checkbox" class="perm-cb" data-cat="documents" data-id="${d.id}" data-type="edit" ${perm.edit ? 'checked' : ''} style="width:16px;height:16px;accent-color:#3498db">
                         <span style="font-size:.75rem;color:var(--tx2)">Düzenle</span>
                     </label>
@@ -9815,11 +9836,11 @@ function renderFormPermissions(perms) {
             <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg2);border-radius:8px;border:1px solid var(--cardBorder)">
                 <span style="font-weight:500;color:var(--tx);font-size:.85rem">${f.label}</span>
                 <div style="display:flex;gap:12px">
-                    <label style="display:flex;align-items:center;gap:4px;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
                         <input type="checkbox" class="perm-cb" data-cat="forms" data-id="${f.id}" data-type="view" ${perm.view ? 'checked' : ''} style="width:16px;height:16px;accent-color:#27ae60">
                         <span style="font-size:.75rem;color:var(--tx2)">Gör</span>
                     </label>
-                    <label style="display:flex;align-items:center;gap:4px;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
                         <input type="checkbox" class="perm-cb" data-cat="forms" data-id="${f.id}" data-type="edit" ${perm.edit ? 'checked' : ''} style="width:16px;height:16px;accent-color:#3498db">
                         <span style="font-size:.75rem;color:var(--tx2)">Düzenle</span>
                     </label>
@@ -9840,7 +9861,7 @@ function renderAdminPermissions(perms) {
         html += `
             <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg2);border-radius:8px;border:1px solid var(--cardBorder)">
                 <span style="font-weight:500;color:var(--tx);font-size:.85rem">${a.label}</span>
-                <label style="display:flex;align-items:center;gap:4px;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
                     <input type="checkbox" class="perm-cb" data-cat="admin" data-id="${a.id}" data-type="access" ${hasAccess ? 'checked' : ''} style="width:16px;height:16px;accent-color:#ff8674">
                     <span style="font-size:.75rem;color:var(--tx2)">Erişim</span>
                 </label>
@@ -9861,7 +9882,7 @@ function renderSpecialPermissions(perms) {
         html += `
             <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg2);border-radius:8px;border:1px solid var(--cardBorder)">
                 <span style="font-weight:500;color:var(--tx);font-size:.85rem">${s.label}</span>
-                <label style="display:flex;align-items:center;gap:4px;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
                     <input type="checkbox" class="perm-cb" data-cat="special" data-id="${s.id}" data-type="enabled" ${hasPermission ? 'checked' : ''} style="width:16px;height:16px;accent-color:#ff8674">
                     <span style="font-size:.75rem;color:var(--tx2)">İzin</span>
                 </label>
@@ -11960,7 +11981,7 @@ async function updateShiftCell(docId, name, dayIdx, value, keepStar = false) {
                     </div>
                 </div>
                 <div style="margin-top:12px">
-                    <label style="display:flex;align-items:center;gap:8px;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
                         <input type="checkbox" id="parttimeStar" ${keepStar ? 'checked' : ''} style="width:18px;height:18px">
                         <span>⭐ Özel istek olarak işaretle</span>
                     </label>
@@ -12104,7 +12125,7 @@ async function addSpecialRequest(docId) {
     // Çoklu gün seçimi için checkbox'lar
     const dayCheckboxes = days.map((d, i) => `
         <label style="display:inline-flex;align-items:center;gap:4px;padding:6px 10px;background:var(--bg3);border-radius:6px;cursor:pointer;font-size:.85rem">
-            <input type="checkbox" class="reqDayCheck" value="${i}" style="width:16px;height:16px;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+            <input type="checkbox" class="reqDayCheck" value="${i}" style="width:16px;height:16px;cursor:pointer">
             ${d}
         </label>
     `).join('');
@@ -12410,7 +12431,7 @@ function showNewShiftModal() {
                 <select id="newShiftWeekSelect" class="form-select">${weekOpts.join('')}</select>
             </div>
             <div class="form-group">
-                <label style="display:flex;align-items:center;gap:8px;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
                     <input type="checkbox" id="newShiftCopy" checked>
                     <span>Önceki haftadan personel listesini kopyala</span>
                 </label>
@@ -15960,7 +15981,7 @@ function renderBranchHoursSettings() {
                 </div>
                 
                 <div style="margin-bottom:12px">
-                    <label style="display:flex;align-items:center;gap:8px;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
                         <input type="checkbox" id="hours_${branch.replace(/\s/g, '_')}_sameClosing" 
                             ${!hours.closing.monday ? 'checked' : ''} 
                             onchange="toggleDailyClosing('${branch.replace(/\s/g, '_')}', this.checked)">
@@ -16456,7 +16477,7 @@ function renderCheckRuleDetails(type) {
                 <h3 style="color:var(--tx);font-size:1.2rem;font-weight:600;margin:0 0 4px 0">${rule.name}</h3>
                 <p style="color:var(--tx2);font-size:.85rem;margin:0">${rule.description || ''}</p>
             </div>
-            <label style="display:flex;align-items:center;gap:8px;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
                 <input type="checkbox" id="checkRule_${type}_enabled" ${rule.enabled !== false ? 'checked' : ''} style="width:18px;height:18px;accent-color:#008c95">
                 <span style="font-size:.85rem;color:var(--tx2)">Aktif</span>
             </label>
@@ -16602,7 +16623,7 @@ function renderCheckRuleDetails(type) {
         <div>
             <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:12px">Geçerli Şubeler</div>
             <div style="display:flex;gap:10px;flex-wrap:wrap">
-                <label style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--bg3);border:1px solid ${(rule.branches || []).includes('all') ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+                <label style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--bg3);border:1px solid ${(rule.branches || []).includes('all') ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer">
                     <input type="checkbox" id="checkRule_${type}_branch_all" ${(rule.branches || ['all']).includes('all') ? 'checked' : ''} onchange="toggleAllBranches('${type}')" style="accent-color:#008c95">
                     <span style="font-size:.85rem;color:var(--tx)">Tüm Şubeler</span>
                 </label>
@@ -18702,7 +18723,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
         if (checklistEditMode) {
             // Düzenleme modu - INLINE TEXT EDITING + SÜRÜKLE BIRAK
             html += `
-                <div class="checklist-item" data-item-id="${item.id}" data-order="${index}" draggable="true"
+                <div class="checklist-item" data-item-id="${item.id}" data-order="${index}" data-important="${item.isImportant || false}" draggable="true"
                     ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropItem(event)" ondragend="dragEnd(event)"
                     style="display:flex;align-items:flex-start;gap:12px;padding:16px;border-radius:14px;margin-bottom:12px;background:${hasColor ? itemColor : 'var(--bg2)'};box-shadow:0 2px 8px rgba(0,0,0,.1);cursor:grab;transition:transform .2s, opacity .2s">
                     
@@ -20088,6 +20109,22 @@ async function deleteSelectedChecklistItems(branch, type) {
 // Check seçeneği seç
 function selectCheckOption(btn, itemId, value) {
     const parent = btn.closest('.checklist-item');
+    
+    // G12.2: Önemli madde kontrolü
+    const isImportant = parent.dataset.important === 'true';
+    if (isImportant && value === 'done' && !parent.dataset.warned) {
+        parent.dataset.warned = 'true';
+        showImportantWarningModal(itemId, () => {
+            actuallySelectCheck(btn, itemId, value);
+        });
+        return;
+    }
+    
+    actuallySelectCheck(btn, itemId, value);
+}
+
+function actuallySelectCheck(btn, itemId, value) {
+    const parent = btn.closest('.checklist-item');
     const doneBtn = parent.querySelector('.check-btn.done');
     const notdoneBtn = parent.querySelector('.check-btn.notdone');
     const doneInput = parent.querySelector('input[value="done"]');
@@ -20345,10 +20382,7 @@ async function renderPlatformChecklist(container, branch, date, timeSlot, submit
     
     // Moonberry satırları
     TIME_SLOTS.forEach(time => {
-        // G9.1: Satır aktif mi kontrolü
-        const isRowActive = time === timeSlot;
-        const rowOpacity = isRowActive ? '1' : '0.4';
-        html += `<tr style="opacity:${rowOpacity}"><td style="padding:8px;text-align:center;font-weight:700;background:#008c95;color:#fff;border:1px solid rgba(255,255,255,.2);font-size:.8rem">${time}${isRowActive ? ' ⬅️' : ''}</td>`;
+        html += `<tr><td style="padding:8px;text-align:center;font-weight:700;background:#008c95;color:#fff;border:1px solid rgba(255,255,255,.2);font-size:.8rem">${time}</td>`;
         platforms.forEach(platform => {
             const key = `moonberry_${time}_${platform.replace(/\s/g, '_')}`;
             const savedValue = submittedData?.checks?.[key];
@@ -20357,12 +20391,12 @@ async function renderPlatformChecklist(container, branch, date, timeSlot, submit
             html += `
                 <td style="padding:4px;text-align:center;border:1px solid var(--cardBorder);background:var(--bg2)">
                     <div style="display:flex;gap:2px;justify-content:center">
-                        <span class="platform-btn" onclick="${isSubmitted || !isRowActive ? '' : `selectPlatformCell(this, '${key}', 'open')`}"
+                        <span class="platform-btn" onclick="${isSubmitted ? '' : `selectPlatformCell(this, '${key}', 'open')`}"
                             style="display:inline-flex;width:24px;height:24px;border-radius:6px;align-items:center;justify-content:center;font-size:.85rem;
-                            background:${isOpen ? '#008c95' : 'var(--bg3)'};border:1px solid ${isOpen ? '#008c95' : 'var(--cardBorder)'};color:${isOpen ? '#fff' : 'var(--tx3)'};cursor:${isRowActive ? 'pointer' : 'not-allowed'}">✓</span>
-                        <span class="platform-btn" onclick="${isSubmitted || !isRowActive ? '' : `selectPlatformCell(this, '${key}', 'closed')`}"
+                            background:${isOpen ? '#008c95' : 'var(--bg3)'};border:1px solid ${isOpen ? '#008c95' : 'var(--cardBorder)'};color:${isOpen ? '#fff' : 'var(--tx3)'};cursor:pointer">✓</span>
+                        <span class="platform-btn" onclick="${isSubmitted ? '' : `selectPlatformCell(this, '${key}', 'closed')`}"
                             style="display:inline-flex;width:24px;height:24px;border-radius:6px;align-items:center;justify-content:center;font-size:.85rem;
-                            background:${isClosed ? '#e74c3c' : 'var(--bg3)'};border:1px solid ${isClosed ? '#e74c3c' : 'var(--cardBorder)'};color:${isClosed ? '#fff' : 'var(--tx3)'};cursor:${isRowActive ? 'pointer' : 'not-allowed'}">✗</span>
+                            background:${isClosed ? '#e74c3c' : 'var(--bg3)'};border:1px solid ${isClosed ? '#e74c3c' : 'var(--cardBorder)'};color:${isClosed ? '#fff' : 'var(--tx3)'};cursor:pointer">✗</span>
                     </div>
                     <input type="hidden" name="platform_${key}" value="${savedValue || ''}">
                 </td>`;
@@ -20394,10 +20428,7 @@ async function renderPlatformChecklist(container, branch, date, timeSlot, submit
     
     // Sunberry satırları
     TIME_SLOTS.forEach(time => {
-        // G9.1: Satır aktif mi kontrolü (Sunberry)
-        const isRowActive = time === timeSlot;
-        const rowOpacity = isRowActive ? '1' : '0.4';
-        html += `<tr style="opacity:${rowOpacity}"><td style="padding:8px;text-align:center;font-weight:700;background:#ff8674;color:#fff;border:1px solid rgba(255,255,255,.2);font-size:.8rem">${time}${isRowActive ? ' ⬅️' : ''}</td>`;
+        html += `<tr><td style="padding:8px;text-align:center;font-weight:700;background:#ff8674;color:#fff;border:1px solid rgba(255,255,255,.2);font-size:.8rem">${time}</td>`;
         platforms.forEach(platform => {
             const key = `sunberry_${time}_${platform.replace(/\s/g, '_')}`;
             const savedValue = submittedData?.checks?.[key];
@@ -20406,12 +20437,12 @@ async function renderPlatformChecklist(container, branch, date, timeSlot, submit
             html += `
                 <td style="padding:4px;text-align:center;border:1px solid var(--cardBorder);background:var(--bg2)">
                     <div style="display:flex;gap:2px;justify-content:center">
-                        <span class="platform-btn" onclick="${isSubmitted || !isRowActive ? '' : `selectPlatformCell(this, '${key}', 'open')`}"
+                        <span class="platform-btn" onclick="${isSubmitted ? '' : `selectPlatformCell(this, '${key}', 'open')`}"
                             style="display:inline-flex;width:24px;height:24px;border-radius:6px;align-items:center;justify-content:center;font-size:.85rem;
-                            background:${isOpen ? '#ff8674' : 'var(--bg3)'};border:1px solid ${isOpen ? '#ff8674' : 'var(--cardBorder)'};color:${isOpen ? '#fff' : 'var(--tx3)'};cursor:${isRowActive ? 'pointer' : 'not-allowed'}">✓</span>
-                        <span class="platform-btn" onclick="${isSubmitted || !isRowActive ? '' : `selectPlatformCell(this, '${key}', 'closed')`}"
+                            background:${isOpen ? '#ff8674' : 'var(--bg3)'};border:1px solid ${isOpen ? '#ff8674' : 'var(--cardBorder)'};color:${isOpen ? '#fff' : 'var(--tx3)'};cursor:pointer">✓</span>
+                        <span class="platform-btn" onclick="${isSubmitted ? '' : `selectPlatformCell(this, '${key}', 'closed')`}"
                             style="display:inline-flex;width:24px;height:24px;border-radius:6px;align-items:center;justify-content:center;font-size:.85rem;
-                            background:${isClosed ? '#e74c3c' : 'var(--bg3)'};border:1px solid ${isClosed ? '#e74c3c' : 'var(--cardBorder)'};color:${isClosed ? '#fff' : 'var(--tx3)'};cursor:${isRowActive ? 'pointer' : 'not-allowed'}">✗</span>
+                            background:${isClosed ? '#e74c3c' : 'var(--bg3)'};border:1px solid ${isClosed ? '#e74c3c' : 'var(--cardBorder)'};color:${isClosed ? '#fff' : 'var(--tx3)'};cursor:pointer">✗</span>
                     </div>
                     <input type="hidden" name="platform_${key}" value="${savedValue || ''}">
                 </td>`;
@@ -20427,8 +20458,8 @@ async function renderPlatformChecklist(container, branch, date, timeSlot, submit
             
             ${!isSubmitted ? `
                 <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
-                    <button class="btn btn-primary" onclick="submitPlatformChecklist('${branch}', '${date}', '${timeSlot || ''}')">
-                        ✅ Platform Check'i Tamamla (${timeSlot || ''})
+                    <button class="btn btn-primary" onclick="submitPlatformChecklist('${branch}', '${date}', '')">
+                        ✅ Platform Check'i Tamamla
                     </button>
                 </div>
             ` : ''}
@@ -20879,9 +20910,7 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
     }
     
     try {
-        // G8.2: Saat bazlı submission ID
-        const effectiveTimeSlot = timeSlot || '10:00';
-        const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_platform_${date}_${effectiveTimeSlot.replace(':', '')}`;
+        const submissionId = `platform_${date}`;
         const now = new Date();
         
         // Puan hesaplama - Platform check vaktinde = 0, dolduruldu = 0
@@ -20890,9 +20919,7 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
         
         await db.collection('checklistSubmissions').doc(submissionId).set({
             type: 'platform',
-            branch, // G8.2: branch ekle
             date,
-            timeSlot: effectiveTimeSlot, // G8.2: timeSlot ekle
             personName,
             submittedBy: currentUser?.id,
             submittedByName: currentUser?.name || personName,
@@ -21103,7 +21130,7 @@ function showAddChecklistItemModal() {
                 ${dateOptions}
             </div>
             <div style="margin-top:8px">
-                <label style="display:flex;align-items:center;gap:8px;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
                     <input type="checkbox" id="newItemEveryDay" onchange="toggleEveryDay()" style="accent-color:#008c95">
                     <span style="font-weight:600">Her gün (tarih seçmeden)</span>
                 </label>
@@ -21202,7 +21229,8 @@ async function addChecklistItem(branch, type) {
             id: 'item_' + Date.now(),
             text,
             penalty: penalty || null,
-            order: (doc.exists ? doc.data().items?.length : 0) + 1
+            order: (doc.exists ? doc.data().items?.length : 0) + 1,
+            isImportant: false
         };
         
         // Aylik için ek alanlar
@@ -21334,7 +21362,7 @@ async function showEditChecklistItemModal(itemId) {
                     ${dateOptions}
                 </div>
                 <div style="margin-top:8px">
-                    <label style="display:flex;align-items:center;gap:8px;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
                         <input type="checkbox" id="editItemEveryDay" ${everyDay ? 'checked' : ''} onchange="editToggleEveryDay()" style="accent-color:#008c95">
                         <span style="font-weight:600">Her gün (tarih seçmeden)</span>
                     </label>
@@ -21788,7 +21816,7 @@ function refreshDebugPanel() {
         <div style="margin-bottom:16px">
             <div style="font-weight:600;color:var(--tx);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
                 📋 Son Loglar (${debugLogs.length})
-                <button onclick="debugLogs=[];refreshDebugPanel()" style="font-size:.7rem;padding:2px 8px;background:var(--bg3);border:none;border-radius:4px;cursor:${isRowActive ? 'pointer' : 'not-allowed'}">Temizle</button>
+                <button onclick="debugLogs=[];refreshDebugPanel()" style="font-size:.7rem;padding:2px 8px;background:var(--bg3);border:none;border-radius:4px;cursor:pointer">Temizle</button>
             </div>
             <div style="font-size:.7rem;max-height:150px;overflow-y:auto;background:var(--bg3);border-radius:6px;padding:8px">
                 ${debugLogs.length === 0 ? '<div style="color:var(--tx3)">Log yok</div>' : 
