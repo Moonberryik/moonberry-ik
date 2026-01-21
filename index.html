@@ -1594,6 +1594,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <button class="admin-tab" onclick="showAdminTab('sablonlar',this)">Sözleşme Şablonları</button>
                     <button class="admin-tab" onclick="showAdminTab('belgeler',this)">Belge Şablonları</button>
                     <button class="admin-tab" id="tab-aktiviteler" onclick="showAdminTab('aktiviteler',this)">Aktiviteler</button>
+                    <button class="admin-tab" onclick="showAdminTab('yedekler',this)">Yedekler</button>
                 </div>
                 
                 <!-- Tüm Checkler Özet -->
@@ -2486,6 +2487,23 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                         <div class="admin-list" id="activityLogList" style="max-height:500px;overflow-y:auto">
                             <p style="color:var(--tx2);text-align:center;padding:20px">Aktiviteler yükleniyor...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- G15: Yedekler -->
+                <div class="admin-section" id="admin-yedekler">
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                Otomatik Yedekler
+                            </div>
+                            <button class="btn btn-sm" style="background:#008c95;color:#fff" onclick="manualBackup()">+ Manuel Yedek Al</button>
+                        </div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Her gün otomatik yedek alınır • 30 günden eski yedekler silinir • İstediğin tarihi seç ve indir</p>
+                        <div id="backupsListContainer">
+                            <p style="color:var(--tx2);text-align:center;padding:40px">Yedekler yükleniyor...</p>
                         </div>
                     </div>
                 </div>
@@ -4028,6 +4046,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     // Giriş aktivitesini logla
                     logActivity('login', { device: navigator.userAgent });
+                    
+                    // G15: Admin için otomatik günlük yedekleme
+                    if (['yonetici', 'bolge_muduru'].includes(currentUser?.role)) {
+                        setTimeout(() => runAutoBackup(), 5000); // 5sn sonra başlat
+                    }
                 } catch (error) {
                     console.error('Error loading user data:', error);
                 }
@@ -5664,6 +5687,7 @@ function switchAdminTab(tab, btn) {
         loadSessionHistory();
     }
     if (tab === 'aktiviteler') loadActivityLogs();
+    if (tab === 'yedekler') loadBackupsList();
     if (tab === 'magazaSaatleri') renderBranchHoursSettings();
     if (tab === 'checkKurallari') renderCheckRulesSettings();
     if (tab === 'checklistTurleri') loadChecklistTypesConfig();
@@ -11336,6 +11360,219 @@ function updateLogos(theme) {
     document.documentElement.setAttribute('data-theme', saved);
     setTimeout(() => updateDarkModeIcon(saved), 100);
 })();
+
+// ==================== G15: OTOMATİK YEDEKLEME ====================
+const BACKUP_CONFIG = {
+    collections: ['personel', 'shifts', 'checklists', 'managerNotes', 'config'],
+    submissionsLimitDays: 7, // checklistSubmissions son 7 gün
+    retentionDays: 30 // 30 günden eski yedekler silinir
+};
+
+async function runAutoBackup() {
+    const today = formatDateLocal(new Date());
+    const backupId = 'backup_' + today;
+    
+    // Bugün zaten yedek alınmış mı?
+    try {
+        const existing = await db.collection('backups').doc(backupId).get();
+        if (existing.exists) {
+            console.log('[Backup] Bugün zaten yedeklendi:', today);
+            return;
+        }
+    } catch (e) {}
+    
+    console.log('[Backup] Otomatik yedekleme başlıyor:', today);
+    
+    try {
+        const backupData = {
+            date: today,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdBy: currentUser?.name || 'Sistem',
+            collections: {}
+        };
+        
+        // Ana koleksiyonları yedekle
+        for (const col of BACKUP_CONFIG.collections) {
+            try {
+                const snapshot = await db.collection(col).get();
+                const docs = [];
+                snapshot.forEach(doc => docs.push({ id: doc.id, ...doc.data() }));
+                backupData.collections[col] = docs;
+            } catch (e) {
+                backupData.collections[col] = [];
+            }
+        }
+        
+        // checklistSubmissions - son 7 gün
+        try {
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - BACKUP_CONFIG.submissionsLimitDays);
+            const cutoffStr = formatDateLocal(cutoff);
+            
+            const snapshot = await db.collection('checklistSubmissions')
+                .where('date', '>=', cutoffStr)
+                .get();
+            const docs = [];
+            snapshot.forEach(doc => docs.push({ id: doc.id, ...doc.data() }));
+            backupData.collections['checklistSubmissions'] = docs;
+        } catch (e) {
+            backupData.collections['checklistSubmissions'] = [];
+        }
+        
+        // puantajNotes - son 7 gün
+        try {
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - BACKUP_CONFIG.submissionsLimitDays);
+            const cutoffStr = formatDateLocal(cutoff);
+            
+            const snapshot = await db.collection('puantajNotes')
+                .where('date', '>=', cutoffStr)
+                .get();
+            const docs = [];
+            snapshot.forEach(doc => docs.push({ id: doc.id, ...doc.data() }));
+            backupData.collections['puantajNotes'] = docs;
+        } catch (e) {
+            backupData.collections['puantajNotes'] = [];
+        }
+        
+        // Kaydet
+        await db.collection('backups').doc(backupId).set(backupData);
+        console.log('[Backup] ✓ Yedekleme tamamlandı');
+        
+        // Eski yedekleri temizle
+        await cleanOldBackups();
+        
+    } catch (e) {
+        console.error('[Backup] Hata:', e);
+    }
+}
+
+async function cleanOldBackups() {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - BACKUP_CONFIG.retentionDays);
+    const cutoffStr = formatDateLocal(cutoff);
+    
+    try {
+        const snapshot = await db.collection('backups')
+            .where('date', '<', cutoffStr)
+            .get();
+        
+        const batch = db.batch();
+        snapshot.forEach(doc => batch.delete(doc.ref));
+        
+        if (snapshot.size > 0) {
+            await batch.commit();
+            console.log('[Backup] 🗑️ ' + snapshot.size + ' eski yedek silindi');
+        }
+    } catch (e) {
+        console.warn('[Backup] Temizlik hatası:', e);
+    }
+}
+
+async function loadBackupsList() {
+    const container = document.getElementById('backupsListContainer');
+    if (!container) return;
+    
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tx3)">Yükleniyor...</div>';
+    
+    try {
+        const snapshot = await db.collection('backups')
+            .orderBy('date', 'desc')
+            .limit(30)
+            .get();
+        
+        if (snapshot.empty) {
+            container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx3)">Henüz yedek yok</div>';
+            return;
+        }
+        
+        let html = '<div style="display:flex;flex-direction:column;gap:8px">';
+        snapshot.forEach(doc => {
+            const d = doc.data();
+            const date = d.date || doc.id.replace('backup_', '');
+            const colCount = Object.keys(d.collections || {}).length;
+            let totalDocs = 0;
+            Object.values(d.collections || {}).forEach(arr => totalDocs += (arr?.length || 0));
+            
+            html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg2);border-radius:10px;border:1px solid var(--bg4)">
+                <div>
+                    <div style="font-weight:600;color:var(--tx)">${date}</div>
+                    <div style="font-size:.75rem;color:var(--tx3)">${colCount} koleksiyon • ${totalDocs} kayıt</div>
+                </div>
+                <button class="btn btn-sm" style="background:#008c95;color:#fff" onclick="downloadBackup('${doc.id}')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    İndir
+                </button>
+            </div>`;
+        });
+        html += '</div>';
+        
+        container.innerHTML = html;
+    } catch (e) {
+        container.innerHTML = '<div style="color:#e74c3c;padding:20px">Hata: ' + e.message + '</div>';
+    }
+}
+
+async function downloadBackup(backupId) {
+    try {
+        toast('Yedek hazırlanıyor...', 'info');
+        
+        const doc = await db.collection('backups').doc(backupId).get();
+        if (!doc.exists) {
+            toast('Yedek bulunamadı', 'error');
+            return;
+        }
+        
+        const data = doc.data();
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'moonberry_backup_' + data.date + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        toast('İndirildi ✓', 'success');
+    } catch (e) {
+        toast('Hata: ' + e.message, 'error');
+    }
+}
+
+async function manualBackup() {
+    const today = formatDateLocal(new Date());
+    const backupId = 'backup_' + today + '_' + Date.now();
+    
+    toast('Manuel yedekleme başladı...', 'info');
+    
+    try {
+        const backupData = {
+            date: today,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdBy: currentUser?.name || 'Sistem',
+            isManual: true,
+            collections: {}
+        };
+        
+        for (const col of [...BACKUP_CONFIG.collections, 'checklistSubmissions', 'puantajNotes']) {
+            try {
+                const snapshot = await db.collection(col).get();
+                const docs = [];
+                snapshot.forEach(doc => docs.push({ id: doc.id, ...doc.data() }));
+                backupData.collections[col] = docs;
+            } catch (e) {}
+        }
+        
+        await db.collection('backups').doc(backupId).set(backupData);
+        toast('Yedekleme tamamlandı ✓', 'success');
+        loadBackupsList();
+    } catch (e) {
+        toast('Hata: ' + e.message, 'error');
+    }
+}
 
 // ==================== G13: MÜDÜR NOTLARI ====================
 async function loadManagerNotes() {
