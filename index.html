@@ -498,6 +498,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <span class="icon"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span> Checklist
                 </div>
                 
+                <!-- G13: Müdür Notları -->
+                <div class="nav-item" data-page="notlar" onclick="goTo('notlar')">
+                    <span class="icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> Notlar
+                </div>
+                
                 <!-- Personel -->
                 <div class="nav-item" data-page="personel" onclick="goTo('personel')">
                     <span class="icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Personel
@@ -1169,6 +1174,38 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
             </div>
 
+            <!-- G13: Müdür Notları Sayfası -->
+            <div class="page" id="page-notlar">
+                <div class="back-link" onclick="goTo('dashboard')">← Ana Sayfa</div>
+                <div class="page-header">
+                    <div class="page-title">📝 Müdür Notları</div>
+                    <div class="page-subtitle">Şube notları ve hatırlatmalar</div>
+                </div>
+                
+                <!-- Not Ekleme Formu -->
+                <div class="admin-card" style="margin-bottom:20px">
+                    <div class="admin-card-header">
+                        <div class="admin-card-title">+ Yeni Not Ekle</div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:200px 1fr auto;gap:12px;align-items:end">
+                        <div class="form-group" style="margin:0">
+                            <label class="form-label">Şube</label>
+                            <select id="notlarSube" class="form-select"></select>
+                        </div>
+                        <div class="form-group" style="margin:0">
+                            <label class="form-label">Not</label>
+                            <input type="text" id="notlarText" class="form-input" placeholder="Not içeriği...">
+                        </div>
+                        <button class="btn btn-primary" onclick="addManagerNote()">Ekle</button>
+                    </div>
+                </div>
+                
+                <!-- Notlar Listesi -->
+                <div id="notlarContainer">
+                    <p style="text-align:center;color:var(--tx2);padding:40px">Notlar yükleniyor...</p>
+                </div>
+            </div>
+
             <!-- Katalog -->
             <div class="page" id="page-katalog">
                 <div class="back-link" onclick="goTo('dashboard')">← Ana Sayfa</div>
@@ -1627,6 +1664,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <p style="color:var(--tx2);font-size:.8rem;margin-bottom:12px">Shift ve personel verilerini standartlaştır. Tüm key'ler uniqueId formatına çevrilir.</p>
                             <div style="display:flex;gap:12px;flex-wrap:wrap">
                                 <button class="btn btn-warning btn-sm" onclick="runDataMigration()" style="background:#f39c12;border-color:#f39c12">⚡ Veri Migrasyonu Çalıştır</button>
+                                <button class="btn btn-ghost btn-sm" onclick="debugPersonelShiftData()">🔍 Debug: Tam Rapor</button>
+                                <button class="btn btn-ghost btn-sm" onclick="debugPuanSistemi()">💯 Debug: Puan Sistemi</button>
                             </div>
                             <div style="margin-top:10px;padding:10px;background:rgba(243,156,18,.1);border:1px solid rgba(243,156,18,.3);border-radius:8px">
                                 <div style="font-size:.75rem;color:#f39c12">⚠️ <strong>Dikkat:</strong> Migrasyon tüm shift'leri günceller. Çalıştırmadan önce Firebase konsolundan yedek alın.</div>
@@ -4515,6 +4554,8 @@ function goTo(page) {
     if (page === 'borc') populateSubeSelect('borc_sube');
     if (page === 'avans') populateSubeSelect('avans_sube');
     if (page === 'zimmet') populateSubeSelect('zimmet_sube');
+    // G13: Müdür Notları
+    if (page === 'notlar') loadManagerNotes();
     // Checklist sayfası
     if (page === 'checklist') {
         // Immediate pre-fill (loadSystemConfig beklemeden)
@@ -11296,6 +11337,88 @@ function updateLogos(theme) {
     setTimeout(() => updateDarkModeIcon(saved), 100);
 })();
 
+// ==================== G13: MÜDÜR NOTLARI ====================
+async function loadManagerNotes() {
+    const container = document.getElementById('notlarContainer');
+    const subeSelect = document.getElementById('notlarSube');
+    if (!container) return;
+    
+    // Şube select doldur
+    if (subeSelect && subeSelect.options.length <= 1) {
+        const branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+        subeSelect.innerHTML = branches.map(b => `<option value="${b}">${b}</option>`).join('');
+    }
+    
+    try {
+        const snapshot = await db.collection('managerNotes').orderBy('createdAt', 'desc').limit(50).get();
+        
+        if (snapshot.empty) {
+            container.innerHTML = '<p style="text-align:center;color:var(--tx2);padding:40px">Henüz not eklenmemiş</p>';
+            return;
+        }
+        
+        const pending = [], completed = [];
+        snapshot.forEach(doc => {
+            const n = { id: doc.id, ...doc.data() };
+            (n.completed ? completed : pending).push(n);
+        });
+        
+        let html = '';
+        if (pending.length) {
+            html += '<div style="margin-bottom:20px"><div style="font-weight:600;color:#f59e0b;margin-bottom:12px">⏳ Bekleyen (' + pending.length + ')</div>';
+            pending.forEach(n => { html += renderNoteCard(n, false); });
+            html += '</div>';
+        }
+        if (completed.length) {
+            html += '<div><div style="font-weight:600;color:#22c55e;margin-bottom:12px">✓ Tamamlanan (' + completed.length + ')</div>';
+            completed.forEach(n => { html += renderNoteCard(n, true); });
+            html += '</div>';
+        }
+        container.innerHTML = html;
+    } catch (e) {
+        container.innerHTML = '<p style="color:#e74c3c">Hata: ' + e.message + '</p>';
+    }
+}
+
+function renderNoteCard(n, done) {
+    const bg = done ? 'rgba(34,197,94,.1)' : 'rgba(245,158,11,.1)';
+    const border = done ? 'rgba(34,197,94,.3)' : 'rgba(245,158,11,.3)';
+    const date = n.createdAt?.toDate ? n.createdAt.toDate().toLocaleDateString('tr-TR') : '';
+    return `<div style="background:${bg};border:1px solid ${border};border-radius:12px;padding:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-weight:600;color:var(--tx)">${n.note}</div>
+        <div style="font-size:.75rem;color:var(--tx3)">${n.branch} • ${n.createdBy} • ${date}</div></div>
+        ${done ? '' : `<button class="btn btn-sm" style="background:#22c55e;color:#fff" onclick="completeNote('${n.id}')">✓</button>`}
+    </div>`;
+}
+
+async function addManagerNote() {
+    const branch = document.getElementById('notlarSube')?.value;
+    const note = document.getElementById('notlarText')?.value?.trim();
+    if (!note) { toast('Not boş olamaz', 'error'); return; }
+    
+    try {
+        await db.collection('managerNotes').add({
+            branch, note, createdBy: currentUser?.name || 'Bilinmiyor',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            completed: false
+        });
+        document.getElementById('notlarText').value = '';
+        toast('Not eklendi', 'success');
+        loadManagerNotes();
+    } catch (e) { toast('Hata: ' + e.message, 'error'); }
+}
+
+async function completeNote(id) {
+    try {
+        await db.collection('managerNotes').doc(id).update({
+            completed: true, completedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            completedBy: currentUser?.name || 'Bilinmiyor'
+        });
+        toast('Not tamamlandı', 'success');
+        loadManagerNotes();
+    } catch (e) { toast('Hata: ' + e.message, 'error'); }
+}
+
 // ==================== ADMIN ŞİFRE DEĞİŞTİRME ====================
 async function updateAdminCredentials() {
     const newUsername = document.getElementById('admin_new_username').value.trim();
@@ -11682,8 +11805,7 @@ function renderShiftTable(shift, docId) {
         // Sürükle-bırak için TR özellikleri (Barista için devre dışı)
         const dragAttrs = isBarista ? '' : `draggable="true" 
             ondragstart="handleShiftDragStart(event, '${docId}', ${idx})" 
-            ondragover="handleShiftDragOver(event)"
-            ondragleave="handleShiftDragLeave(event)" 
+            ondragover="handleShiftDragOver(event)" 
             ondrop="handleShiftDrop(event, '${docId}', ${idx})"
             ondragend="handleShiftDragEnd(event)"
             style="cursor:grab"`;
@@ -11848,11 +11970,6 @@ function handleShiftDragOver(e) {
     if (tr && tr.dataset.idx !== undefined) {
         tr.style.borderTop = '3px solid #008c95';
     }
-}
-
-function handleShiftDragLeave(e) {
-    const tr = e.target.closest('tr');
-    if (tr) tr.style.borderTop = '';
 }
 
 function handleShiftDrop(e, docId, targetIdx) {
@@ -13551,7 +13668,7 @@ let BRANCH_HOURS = {
 };
 
 // TEMİZLİK ÇİZELGESİ SHIFT TANIMLARI
-let TEMIZLIK_SHIFT_RULES = {
+const TEMIZLIK_SHIFT_RULES = {
     acilisci: {
         name: 'Açılışçı',
         shiftStartMin: '10:00',  // 10:00'dan başlayan
@@ -14175,39 +14292,41 @@ async function loadTodayChecks() {
     // GÜNLÜK CHECK SAYILARINI ÇEK (Adaletli dağılım için)
     const dailyCheckCounts = {};
     const who14Filled = {}; // 14:00 dolduran kişiler (gün boyunca muaf)
+    const branchManagers = {}; // Şube müdürleri
+    // G14: PARALEL SORGU - dailyCheckCounts ve branchManagers aynı anda
     try {
-        for (const branch of branches) {
+        const [checkCountResults, managersSnap] = await Promise.all([
+            // 1. Tüm şubelerin submission'larını paralel çek
+            Promise.all(branches.map(async (branch) => {
+                const submissions = await db.collection('checklistSubmissions')
+                    .where('branch', '==', branch)
+                    .where('date', '==', todayStr)
+                    .get();
+                return { branch, submissions };
+            })),
+            // 2. Müdürleri çek
+            db.collection('personel')
+                .where('role', 'in', ['magaza_muduru', 'magaza_mudur_yardimcisi'])
+                .get()
+        ]);
+        
+        // Check sayılarını işle
+        checkCountResults.forEach(({ branch, submissions }) => {
             dailyCheckCounts[branch] = {};
             who14Filled[branch] = null;
-            
-            // Bugünkü tüm submission'ları çek
-            const submissions = await db.collection('checklistSubmissions')
-                .where('branch', '==', branch)
-                .where('date', '==', todayStr)
-                .get();
-            
             submissions.forEach(doc => {
                 const d = doc.data();
                 const personName = d.personName || d.personelId || '';
                 if (personName) {
                     dailyCheckCounts[branch][personName] = (dailyCheckCounts[branch][personName] || 0) + 1;
                 }
-                // 14:00 günlük check'i dolduran
                 if (doc.id.includes('_guncel_') && doc.id.includes('_1400')) {
                     who14Filled[branch] = personName;
                 }
             });
-        }
-    } catch (e) {
-        console.warn('Check sayıları alınamadı:', e);
-    }
-    
-    // Şube müdürlerini çek
-    const branchManagers = {};
-    try {
-        const managersSnap = await db.collection('personel')
-            .where('role', 'in', ['magaza_muduru', 'magaza_mudur_yardimcisi'])
-            .get();
+        });
+        
+        // Müdürleri işle
         managersSnap.forEach(doc => {
             const d = doc.data();
             const displayName = d.codeName || formatDisplayName(d.name);
@@ -14216,9 +14335,9 @@ async function loadTodayChecks() {
             }
         });
     } catch (e) {
-        console.warn('Müdür bilgisi alınamadı:', e);
+        console.warn('Check sayıları/müdür alınamadı:', e);
     }
-    
+
     // Karşılama kartını doldur
     if (welcomeCard) {
         const dateOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
@@ -21803,7 +21922,36 @@ function refreshDebugPanel() {
     `;
 }
 
-// G24: Debug paneli kaldırıldı - artık gerekli değil
+// Debug paneli HTML'i sayfa yüklenince ekle
+document.addEventListener('DOMContentLoaded', function() {
+    // Sadece müdür/yönetici için debug butonu göster
+    setTimeout(() => {
+        const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
+        if (!isManager) return;
+        
+        // Floating buton
+        const btn = document.createElement('div');
+        btn.id = 'debugBtn';
+        btn.innerHTML = '🐛';
+        btn.style.cssText = 'position:fixed;bottom:20px;right:20px;width:44px;height:44px;background:#1e293b;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;box-shadow:0 4px 12px rgba(0,0,0,.3);z-index:9999;transition:transform .2s';
+        btn.onclick = toggleDebugPanel;
+        btn.onmouseover = () => btn.style.transform = 'scale(1.1)';
+        btn.onmouseout = () => btn.style.transform = 'scale(1)';
+        document.body.appendChild(btn);
+        
+        // Panel
+        const panel = document.createElement('div');
+        panel.id = 'debugPanel';
+        panel.style.cssText = 'display:none;position:fixed;bottom:80px;right:20px;width:320px;max-height:70vh;background:var(--bg);border:1px solid var(--cardBorder);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.2);z-index:9998;overflow:hidden';
+        panel.innerHTML = `
+            <div style="padding:14px 16px;background:linear-gradient(135deg,#1e293b,#334155);color:#fff;display:flex;justify-content:space-between;align-items:center">
+                <span style="font-weight:600">🐛 Debug Panel</span>
+                <button onclick="toggleDebugPanel()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.2rem;opacity:.7">✕</button>
+            </div>
+            <div id="debugContent" style="padding:16px;overflow-y:auto;max-height:calc(70vh - 60px)"></div>
+        `;
+        document.body.appendChild(panel);
+    }, 2000);
 });
     </script>
 </body>
