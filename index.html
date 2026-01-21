@@ -1299,6 +1299,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <div class="page-subtitle">Günlük kontrol listeleri</div>
                 </div>
                 
+                <!-- G19: Tab Sistemi -->
+                <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--cardBorder);padding-bottom:12px">
+                    <button id="checklistTabDaily" onclick="switchChecklistTab('daily')" class="btn btn-sm" style="background:#008c95;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:600">
+                        📋 Günlük Check
+                    </button>
+                    <button id="checklistTabHistory" onclick="switchChecklistTab('history')" class="btn btn-sm" style="background:var(--bg3);color:var(--tx2);border:1px solid var(--cardBorder);padding:10px 20px;border-radius:8px;font-weight:500">
+                        📊 Geçmiş Kayıtlar
+                    </button>
+                </div>
+                
+                <!-- Tab 1: Günlük Check (Mevcut) -->
+                <div id="checklistTabDailyContent">
+                
                 <!-- Şube ve Tür Seçimi -->
                 <div class="form-section" style="margin-bottom:20px">
                     <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
@@ -1343,6 +1356,51 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         <div style="font-size:4rem;margin-bottom:16px">📋</div>
                         <div style="font-size:1.1rem;margin-bottom:8px">Checklist Seçin</div>
                         <div style="font-size:.9rem">Yukarıdan şube ve checklist türü seçerek başlayın</div>
+                    </div>
+                </div>
+                </div><!-- /checklistTabDailyContent -->
+                
+                <!-- Tab 2: Geçmiş Kayıtlar (Yeni) -->
+                <div id="checklistTabHistoryContent" style="display:none">
+                    <!-- Filtreler -->
+                    <div class="form-section" style="margin-bottom:20px;background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:16px">
+                        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+                            <div class="form-group" style="margin-bottom:0;min-width:140px">
+                                <label class="form-label" style="font-size:.75rem">Şube</label>
+                                <select id="historyBranch" class="form-select" onchange="loadChecklistHistory()">
+                                    <option value="">Tüm Şubeler</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;min-width:130px">
+                                <label class="form-label" style="font-size:.75rem">Başlangıç</label>
+                                <input type="date" id="historyStartDate" class="form-input" onchange="loadChecklistHistory()">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;min-width:130px">
+                                <label class="form-label" style="font-size:.75rem">Bitiş</label>
+                                <input type="date" id="historyEndDate" class="form-input" onchange="loadChecklistHistory()">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;min-width:120px">
+                                <label class="form-label" style="font-size:.75rem">Personel</label>
+                                <select id="historyPersonnel" class="form-select" onchange="loadChecklistHistory()">
+                                    <option value="">Tümü</option>
+                                </select>
+                            </div>
+                            <button onclick="loadChecklistHistory()" class="btn btn-sm" style="background:#008c95;color:#fff;border:none;padding:8px 16px;border-radius:8px">
+                                🔄 Yenile
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Performans Özet Kartları -->
+                    <div id="historyPerformanceCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px">
+                    </div>
+                    
+                    <!-- Geçmiş Liste -->
+                    <div id="historyListContainer" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;overflow:hidden">
+                        <div style="padding:40px;text-align:center;color:var(--tx3)">
+                            <div style="font-size:2rem;margin-bottom:8px">📊</div>
+                            Filtreleri seçin ve yükleyin
+                        </div>
                     </div>
                 </div>
             </div>
@@ -8468,7 +8526,10 @@ async function resetPersonelPrim(personelId, name) {
         </div>`,
         async () => {
             try {
-                // Telafi puanı ekle (mevcut negatifi sıfırla)
+                const resetDate = new Date().toISOString().split('T')[0];
+                
+                // G18: Her iki koleksiyona da kaydet
+                // 1. puantaj koleksiyonuna (mevcut)
                 await db.collection('puantaj').add({
                     personelId,
                     personelName: name,
@@ -8478,13 +8539,29 @@ async function resetPersonelPrim(personelId, name) {
                     type: 'prim_reset',
                     resetBonus: telafiPuani,
                     note: `Prim sıfırlama (${mevcutPuan} → 0) - ${currentUser?.name || 'Yönetici'}`,
-                    eventDate: new Date().toISOString().split('T')[0],
+                    eventDate: resetDate,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                     createdBy: currentUser?.email || currentUser?.username || 'admin'
                 });
                 
+                // 2. puantajNotes koleksiyonuna (leaderboard için)
+                if (mevcutPuan !== 0) {
+                    await db.collection('puantajNotes').add({
+                        personelId,
+                        personelName: name,
+                        branch: sube,
+                        date: resetDate,
+                        points: -mevcutPuan, // Mevcut puanın tersini ekle (sıfırlamak için)
+                        status: 'reset',
+                        checkType: 'prim_reset',
+                        note: `Prim sıfırlama - ${currentUser?.name || 'Yönetici'}`,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+                
                 toast(`${name} puanı sıfırlandı`, 'success');
                 loadPuantaj();
+                loadLeaderboard(); // Leaderboard'u da güncelle
             } catch (error) {
                 console.error('Prim sıfırlama hatası:', error);
                 toast('Sıfırlama hatası: ' + error.message, 'error');
@@ -20677,11 +20754,20 @@ async function saveChecklistAndShare(branch, type, date, timeSlot, personName, r
         let pointStatus = 'completed';
         const rules = CHECK_RULES[type];
         
-        if (rules && timeSlot) {
+        // G17: timeSlot olmasa bile puan hesapla (açılış/kapanış için)
+        if (rules) {
             const now = new Date();
-            const status = getCheckStatus(type, timeSlot, branch, true, now);
-            points = status.points;
-            pointStatus = status.status;
+            const effectiveTimeSlot = timeSlot || (type === 'acilis' ? '10:30' : type === 'kapanis' ? '01:30' : '');
+            
+            if (effectiveTimeSlot) {
+                const status = getCheckStatus(type, effectiveTimeSlot, branch, true, now);
+                points = status.points;
+                pointStatus = status.status;
+            } else {
+                // Varsayılan puan (zamanında tamamlandı)
+                points = rules.points?.onTime || 5;
+                pointStatus = 'onTime';
+            }
             
             // Müdür hariç puan uygula - DOLDURAN KİŞİNİN rolüne bak, giriş yapanın değil
             // personName'in müdür olup olmadığını kontrol et
@@ -21518,80 +21604,211 @@ async function editChecklistItem(itemId, branch, type) {
 
 // Checklist geçmişi göster
 async function showChecklistHistory() {
-    const branch = document.getElementById('checklistSube')?.value;
-    const type = document.getElementById('checklistType')?.value;
+    // G19: Artık tab'a yönlendir
+    switchChecklistTab('history');
+}
+
+// G19: Tab Değiştirme
+function switchChecklistTab(tab) {
+    const dailyTab = document.getElementById('checklistTabDaily');
+    const historyTab = document.getElementById('checklistTabHistory');
+    const dailyContent = document.getElementById('checklistTabDailyContent');
+    const historyContent = document.getElementById('checklistTabHistoryContent');
     
-    if (!branch) {
-        toast('Önce şube seçin', 'error');
-        return;
+    if (tab === 'daily') {
+        dailyTab.style.background = '#008c95';
+        dailyTab.style.color = '#fff';
+        dailyTab.style.border = 'none';
+        historyTab.style.background = 'var(--bg3)';
+        historyTab.style.color = 'var(--tx2)';
+        historyTab.style.border = '1px solid var(--cardBorder)';
+        dailyContent.style.display = 'block';
+        historyContent.style.display = 'none';
+    } else {
+        historyTab.style.background = '#008c95';
+        historyTab.style.color = '#fff';
+        historyTab.style.border = 'none';
+        dailyTab.style.background = 'var(--bg3)';
+        dailyTab.style.color = 'var(--tx2)';
+        dailyTab.style.border = '1px solid var(--cardBorder)';
+        dailyContent.style.display = 'none';
+        historyContent.style.display = 'block';
+        initChecklistHistoryTab();
+    }
+}
+
+// G19: Geçmiş tab'ı başlat
+async function initChecklistHistoryTab() {
+    // Şube dropdown'ını doldur
+    const branchSelect = document.getElementById('historyBranch');
+    if (branchSelect && branchSelect.options.length <= 1) {
+        (STATE.branches || ['Tuzla Port', 'Şişli (Merkez)']).forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b;
+            opt.textContent = b;
+            branchSelect.appendChild(opt);
+        });
     }
     
+    // Varsayılan tarihler (son 7 gün)
+    const endDate = document.getElementById('historyEndDate');
+    const startDate = document.getElementById('historyStartDate');
+    if (endDate && !endDate.value) {
+        const today = new Date();
+        const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+        endDate.value = today.toISOString().split('T')[0];
+        startDate.value = weekAgo.toISOString().split('T')[0];
+    }
+    
+    loadChecklistHistory();
+}
+
+// G19: Geçmiş Kayıtları Yükle
+async function loadChecklistHistory() {
+    const container = document.getElementById('historyListContainer');
+    const perfCards = document.getElementById('historyPerformanceCards');
+    const branch = document.getElementById('historyBranch')?.value || '';
+    const startDate = document.getElementById('historyStartDate')?.value || '';
+    const endDate = document.getElementById('historyEndDate')?.value || '';
+    const personnel = document.getElementById('historyPersonnel')?.value || '';
+    
+    if (!container) return;
+    
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--tx3)"><div class="loading-spinner" style="margin:0 auto 12px"></div>Yükleniyor...</div>';
+    
     try {
-        // INDEX OLMADAN - sadece branch ile sorgula
-        const snapshot = await db.collection('checklistSubmissions')
-            .where('branch', '==', branch)
-            .get();
+        // Tüm submission'ları çek
+        let query = db.collection('checklistSubmissions');
         
-        // JavaScript'te filtrele ve sırala
+        const snapshot = await query.get();
+        
         let submissions = [];
         snapshot.forEach(doc => {
             const data = doc.data();
-            // Type filtresi
-            if (type && data.type !== type) return;
+            // Filtreleme
+            if (branch && data.branch !== branch) return;
+            if (startDate && data.date < startDate) return;
+            if (endDate && data.date > endDate) return;
+            if (personnel && data.personName !== personnel) return;
             submissions.push({ id: doc.id, ...data });
         });
         
         // Tarihe göre sırala (en yeni önce)
         submissions.sort((a, b) => {
-            const dateA = a.submittedAt?.toDate?.() || new Date(0);
-            const dateB = b.submittedAt?.toDate?.() || new Date(0);
+            const dateA = a.submittedAt?.toDate?.() || new Date(a.date || 0);
+            const dateB = b.submittedAt?.toDate?.() || new Date(b.date || 0);
             return dateB - dateA;
         });
         
-        // İlk 50'yi al
-        submissions = submissions.slice(0, 50);
-        
-        let html = '<div style="max-height:400px;overflow-y:auto">';
-        
-        if (submissions.length === 0) {
-            html += '<p style="color:var(--tx2);text-align:center;padding:20px">Henüz checklist kaydı yok</p>';
-        } else {
-            submissions.forEach(data => {
-                const typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === data.type);
-                const date = data.submittedAt?.toDate ? new Date(data.submittedAt.toDate()) : new Date();
-                
-                // Tamamlanma oranı
-                let completionRate = 100;
-                if (data.items) {
-                    const done = data.items.filter(i => i.checked).length;
-                    completionRate = Math.round((done / data.items.length) * 100);
-                }
-                
-                html += `
-                    <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg2);border-radius:10px;margin-bottom:8px">
-                        <div style="width:44px;height:44px;background:${completionRate === 100 ? 'rgba(39,174,96,.15)' : 'rgba(243,156,18,.15)'};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem">
-                            ${typeInfo?.icon || '📋'}
-                        </div>
-                        <div style="flex:1">
-                            <div style="font-weight:600;color:var(--tx)">${typeInfo?.name || data.type}</div>
-                            <div style="font-size:.8rem;color:var(--tx2)">${data.personName} • ${date.toLocaleDateString('tr-TR')} ${date.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'})}</div>
-                        </div>
-                        <div style="text-align:right">
-                            <div style="font-weight:600;color:${completionRate === 100 ? '#27ae60' : '#f39c12'}">${completionRate}%</div>
-                            <div style="font-size:.75rem;color:var(--tx3)">${data.timeSlot || ''}</div>
-                        </div>
-                    </div>
-                `;
+        // Personel dropdown güncelle
+        const personnelSet = new Set();
+        submissions.forEach(s => s.personName && personnelSet.add(s.personName));
+        const personnelSelect = document.getElementById('historyPersonnel');
+        if (personnelSelect) {
+            const currentVal = personnelSelect.value;
+            personnelSelect.innerHTML = '<option value="">Tümü</option>';
+            [...personnelSet].sort().forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p;
+                opt.textContent = p;
+                if (p === currentVal) opt.selected = true;
+                personnelSelect.appendChild(opt);
             });
         }
         
-        html += '</div>';
+        // Performans kartları hesapla
+        const personnelStats = {};
+        submissions.forEach(s => {
+            const name = s.personName || 'Bilinmiyor';
+            if (!personnelStats[name]) {
+                personnelStats[name] = { count: 0, totalMinutes: 0, points: 0 };
+            }
+            personnelStats[name].count++;
+            personnelStats[name].totalMinutes += s.actualDurationMinutes || 0;
+            personnelStats[name].points += s.points || 0;
+        });
         
-        showModal('📊 Checklist Geçmişi', html, '<button class="btn btn-ghost" onclick="closeModal()">Kapat</button>');
+        // Performans kartları render
+        const sortedStats = Object.entries(personnelStats)
+            .map(([name, stats]) => ({
+                name,
+                ...stats,
+                avgMinutes: stats.count > 0 ? Math.round(stats.totalMinutes / stats.count) : 0
+            }))
+            .sort((a, b) => b.totalMinutes - a.totalMinutes);
+        
+        let perfHtml = '';
+        sortedStats.slice(0, 4).forEach((s, i) => {
+            const hours = Math.floor(s.totalMinutes / 60);
+            const mins = s.totalMinutes % 60;
+            const colors = ['#008c95', '#ff8674', '#f39c12', '#9b59b6'];
+            perfHtml += `
+                <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:16px;border-left:4px solid ${colors[i % 4]}">
+                    <div style="font-size:.8rem;color:var(--tx3);margin-bottom:4px">${i + 1}. En Aktif</div>
+                    <div style="font-weight:700;color:var(--tx);margin-bottom:8px">${s.name}</div>
+                    <div style="display:flex;justify-content:space-between;font-size:.85rem">
+                        <span style="color:var(--tx2)">${s.count} check</span>
+                        <span style="color:${colors[i % 4]};font-weight:600">${hours}s ${mins}dk</span>
+                    </div>
+                    <div style="font-size:.75rem;color:var(--tx3);margin-top:4px">Ort: ${s.avgMinutes}dk/check • ${s.points > 0 ? '+' : ''}${s.points} puan</div>
+                </div>
+            `;
+        });
+        perfCards.innerHTML = perfHtml;
+        
+        // Liste render
+        if (submissions.length === 0) {
+            container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--tx3)"><div style="font-size:2rem;margin-bottom:8px">📭</div>Bu kriterlere uygun kayıt bulunamadı</div>';
+            return;
+        }
+        
+        let html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.85rem">';
+        html += `<thead><tr style="background:var(--bg3);border-bottom:2px solid var(--cardBorder)">
+            <th style="padding:12px;text-align:left;font-weight:600;color:var(--tx2)">Tarih</th>
+            <th style="padding:12px;text-align:left;font-weight:600;color:var(--tx2)">Tür</th>
+            <th style="padding:12px;text-align:left;font-weight:600;color:var(--tx2)">Personel</th>
+            <th style="padding:12px;text-align:center;font-weight:600;color:var(--tx2)">Süre</th>
+            <th style="padding:12px;text-align:center;font-weight:600;color:var(--tx2)">Puan</th>
+            <th style="padding:12px;text-align:center;font-weight:600;color:var(--tx2)">Durum</th>
+        </tr></thead><tbody>`;
+        
+        submissions.slice(0, 100).forEach(s => {
+            const date = s.submittedAt?.toDate ? new Date(s.submittedAt.toDate()) : new Date(s.date);
+            const dateStr = date.toLocaleDateString('tr-TR', {day: '2-digit', month: '2-digit'});
+            const timeStr = date.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'});
+            const typeInfo = CHECKLIST_TYPES[s.branch]?.find(t => t.id === s.type);
+            const typeName = typeInfo?.name || s.type || '-';
+            
+            const statusColors = {
+                onTime: { bg: 'rgba(39,174,96,.1)', color: '#27ae60', text: '✓ Zamanında' },
+                late: { bg: 'rgba(243,156,18,.1)', color: '#f39c12', text: '⏰ Geç' },
+                missed: { bg: 'rgba(231,76,60,.1)', color: '#e74c3c', text: '✗ Kaçırıldı' },
+                completed: { bg: 'rgba(0,140,149,.1)', color: '#008c95', text: '✓ Tamamlandı' }
+            };
+            const status = statusColors[s.pointStatus] || statusColors.completed;
+            const pointColor = (s.points || 0) >= 0 ? '#27ae60' : '#e74c3c';
+            
+            html += `<tr style="border-bottom:1px solid var(--bg4)">
+                <td style="padding:12px"><div style="font-weight:500">${dateStr}</div><div style="font-size:.75rem;color:var(--tx3)">${timeStr}</div></td>
+                <td style="padding:12px">${typeName}${s.timeSlot ? '<br><span style="font-size:.75rem;color:var(--tx3)">' + s.timeSlot + '</span>' : ''}</td>
+                <td style="padding:12px"><div style="font-weight:500">${s.personName || '-'}</div><div style="font-size:.75rem;color:var(--tx3)">${s.branch || ''}</div></td>
+                <td style="padding:12px;text-align:center"><span style="font-weight:600;color:var(--tx)">${s.actualDurationMinutes || '-'}</span><span style="font-size:.75rem;color:var(--tx3)">dk</span></td>
+                <td style="padding:12px;text-align:center"><span style="font-weight:700;color:${pointColor}">${(s.points || 0) > 0 ? '+' : ''}${s.points || 0}</span></td>
+                <td style="padding:12px;text-align:center"><span style="padding:4px 10px;border-radius:20px;font-size:.75rem;font-weight:600;background:${status.bg};color:${status.color}">${status.text}</span></td>
+            </tr>`;
+        });
+        
+        html += '</tbody></table></div>';
+        
+        if (submissions.length > 100) {
+            html += `<div style="padding:12px;text-align:center;color:var(--tx3);font-size:.8rem;border-top:1px solid var(--cardBorder)">İlk 100 kayıt gösteriliyor (toplam ${submissions.length})</div>`;
+        }
+        
+        container.innerHTML = html;
         
     } catch (error) {
         console.error('Geçmiş yükleme hatası:', error);
-        toast('Geçmiş yüklenemedi', 'error');
+        container.innerHTML = '<div style="padding:40px;text-align:center;color:#e74c3c">Yükleme hatası: ' + error.message + '</div>';
     }
 }
 
