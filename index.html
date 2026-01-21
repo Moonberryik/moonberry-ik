@@ -1627,8 +1627,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <p style="color:var(--tx2);font-size:.8rem;margin-bottom:12px">Shift ve personel verilerini standartlaştır. Tüm key'ler uniqueId formatına çevrilir.</p>
                             <div style="display:flex;gap:12px;flex-wrap:wrap">
                                 <button class="btn btn-warning btn-sm" onclick="runDataMigration()" style="background:#f39c12;border-color:#f39c12">⚡ Veri Migrasyonu Çalıştır</button>
-                                <button class="btn btn-ghost btn-sm" onclick="debugPersonelShiftData()">🔍 Debug: Tam Rapor</button>
-                                <button class="btn btn-ghost btn-sm" onclick="debugPuanSistemi()">💯 Debug: Puan Sistemi</button>
                             </div>
                             <div style="margin-top:10px;padding:10px;background:rgba(243,156,18,.1);border:1px solid rgba(243,156,18,.3);border-radius:8px">
                                 <div style="font-size:.75rem;color:#f39c12">⚠️ <strong>Dikkat:</strong> Migrasyon tüm shift'leri günceller. Çalıştırmadan önce Firebase konsolundan yedek alın.</div>
@@ -21805,36 +21803,7 @@ function refreshDebugPanel() {
     `;
 }
 
-// Debug paneli HTML'i sayfa yüklenince ekle
-document.addEventListener('DOMContentLoaded', function() {
-    // Sadece müdür/yönetici için debug butonu göster
-    setTimeout(() => {
-        const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
-        if (!isManager) return;
-        
-        // Floating buton
-        const btn = document.createElement('div');
-        btn.id = 'debugBtn';
-        btn.innerHTML = '🐛';
-        btn.style.cssText = 'position:fixed;bottom:20px;right:20px;width:44px;height:44px;background:#1e293b;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;box-shadow:0 4px 12px rgba(0,0,0,.3);z-index:9999;transition:transform .2s';
-        btn.onclick = toggleDebugPanel;
-        btn.onmouseover = () => btn.style.transform = 'scale(1.1)';
-        btn.onmouseout = () => btn.style.transform = 'scale(1)';
-        document.body.appendChild(btn);
-        
-        // Panel
-        const panel = document.createElement('div');
-        panel.id = 'debugPanel';
-        panel.style.cssText = 'display:none;position:fixed;bottom:80px;right:20px;width:320px;max-height:70vh;background:var(--bg);border:1px solid var(--cardBorder);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.2);z-index:9998;overflow:hidden';
-        panel.innerHTML = `
-            <div style="padding:14px 16px;background:linear-gradient(135deg,#1e293b,#334155);color:#fff;display:flex;justify-content:space-between;align-items:center">
-                <span style="font-weight:600">🐛 Debug Panel</span>
-                <button onclick="toggleDebugPanel()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.2rem;opacity:.7">✕</button>
-            </div>
-            <div id="debugContent" style="padding:16px;overflow-y:auto;max-height:calc(70vh - 60px)"></div>
-        `;
-        document.body.appendChild(panel);
-    }, 2000);
+// G24: Debug paneli kaldırıldı - artık gerekli değil
 });
     </script>
 </body>
