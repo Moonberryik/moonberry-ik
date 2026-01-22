@@ -15518,6 +15518,8 @@ async function loadTodayChecks() {
             const minutesPastMidnight = nowMinutesTotal; // 38
             const minutesSinceDeadline = minutesBeforeMidnight + minutesPastMidnight; // 90 + 38 = 128
             
+            console.log(`[Günlük-${branch}] Gece hesaplama: minutesSinceDeadline=${minutesSinceDeadline}, lateWindow=${gunlukLateWindow}, MISSED=${minutesSinceDeadline > gunlukLateWindow}`);
+            
             // Late window henüz geçmedi mi?
             if (minutesSinceDeadline <= 0) {
                 // Henüz deadline'a ulaşılmadı (şu an deadline'dan önce - olası değil gece için)
@@ -15537,6 +15539,7 @@ async function loadTodayChecks() {
                 isGunlukMissed = true;
                 isGunlukActive = false;
                 gunlukRemainingMinutes = 0;
+                console.log(`[Günlük-${branch}] ✅ MISSED olarak işaretlendi`);
             }
         } else {
             for (const timeStr of gunlukTimes) {
@@ -15654,6 +15657,8 @@ async function loadTodayChecks() {
                 gunlukPersonnel = [...getShiftPersonnel(branch, 'acilis'), ...getShiftPersonnel(branch, 'ara'), ...getShiftPersonnel(branch, 'kapanis')].filter((v, i, a) => a.indexOf(v) === i);
                 gunlukSubLabel = '';
             }
+            
+            console.log(`[Günlük-${branch}] Push öncesi: isGunlukMissed=${isGunlukMissed}, gunlukCompleted=${gunlukCompleted}, isMissed=${isGunlukMissed && !gunlukCompleted}`);
             
             branchChecks.push({
                 id: 'gunluk',
@@ -15927,18 +15932,27 @@ async function loadTodayChecks() {
             const isMissedRecent = check.isMissed && !check.isCompleted && check.canStillFill;
             const isDisabled = check.isMissed && !check.isCompleted && !check.canStillFill;
             
-            // Kart sınıfları - missed durumunu da kontrol et
-            let cardClass = '';
+            // Kart sınıfları - birden fazla class olabilir
+            let cardClasses = [];
             if (check.isCompleted) {
-                cardClass = 'completed';
+                cardClasses.push('completed');
             } else if (check.isMissed) {
-                cardClass = 'missed';
+                cardClasses.push('missed');
+                if (!check.canStillFill) {
+                    cardClasses.push('disabled');
+                }
             } else if (check.isActive) {
-                cardClass = 'active';
+                cardClasses.push('active');
             }
-            if (isExpired) cardClass = 'expired'; // Süresi doldu ama kaçırılmış değil
-            if (isMissedRecent) cardClass = 'missed-recent';
-            if (isDisabled) cardClass = 'disabled';
+            if (isExpired && !check.isMissed) cardClasses.push('expired');
+            if (isMissedRecent) cardClasses = ['missed-recent']; // Override
+            
+            const cardClass = cardClasses.join(' ');
+            
+            // Debug log
+            if (check.id === 'gunluk' || check.id === 'platform') {
+                console.log(`[Card-${check.id}] isMissed=${check.isMissed}, isActive=${check.isActive}, cardClasses=${cardClasses.join(',')}`);
+            }
             
             // Yanıp sönme - süresi dolmuşsa ASLA yanıp sönme
             let pulseClass = '';
