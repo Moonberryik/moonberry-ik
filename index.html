@@ -17908,6 +17908,57 @@ function selectChecklistType(typeId) {
 
 // Checklist yükle
 let checklistLoadingLock = false;
+// ==================== G16: SHIFT KONTROLÜ ====================
+// Kullanıcının belirtilen tarih ve şubede shift'i var mı kontrol eder
+async function checkCurrentUserShift(branch, date) {
+    if (!currentUser?.name) return { hasShift: false, shiftType: null };
+    
+    const isManager = ['yonetici', 'bolge_muduru', 'magaza_muduru', 'magaza_mudur_yardimcisi'].includes(currentUser?.role);
+    
+    // Yöneticiler her zaman erişebilir
+    if (isManager) {
+        return { hasShift: true, shiftType: 'manager', isManager: true };
+    }
+    
+    try {
+        const weekKey = getWeekKey(new Date(date));
+        const shiftDoc = await db.collection('shifts').doc(`${branch}_${weekKey}`).get();
+        
+        if (!shiftDoc.exists) {
+            return { hasShift: false, shiftType: null, reason: 'no_shift_doc' };
+        }
+        
+        const shiftData = shiftDoc.data();
+        const dayOfWeek = new Date(date).getDay(); // 0=Pazar, 1=Pazartesi...
+        const dayNames = ['pazar', 'pazartesi', 'sali', 'carsamba', 'persembe', 'cuma', 'cumartesi'];
+        const dayKey = dayNames[dayOfWeek];
+        
+        const userName = currentUser.name.toLowerCase().trim();
+        
+        // Tüm personel verilerini kontrol et
+        const personnel = shiftData.personnel || [];
+        for (const person of personnel) {
+            const personName = (person.name || '').toLowerCase().trim();
+            if (personName === userName || personName.includes(userName) || userName.includes(personName)) {
+                const dayShift = person[dayKey];
+                if (dayShift && dayShift !== 'off' && dayShift !== 'OFF' && dayShift !== '-') {
+                    return { 
+                        hasShift: true, 
+                        shiftType: dayShift,
+                        shiftTime: dayShift,
+                        personName: person.name
+                    };
+                }
+            }
+        }
+        
+        return { hasShift: false, shiftType: null, reason: 'no_shift_today' };
+    } catch (e) {
+        console.warn('[ShiftCheck] Hata:', e);
+        return { hasShift: false, shiftType: null, reason: 'error' };
+    }
+}
+
 async function loadChecklist() {
     // Eşzamanlı yüklemeleri engelle (flickering fix)
     if (checklistLoadingLock) return;
@@ -17919,6 +17970,39 @@ async function loadChecklist() {
     const container = document.getElementById('checklistFormContainer');
     
     if (!branch || !type || !date || !container) {
+        checklistLoadingLock = false;
+        return;
+    }
+    
+    // G16: Kullanıcının shift durumunu kontrol et
+    const userShiftStatus = await checkCurrentUserShift(branch, date);
+    const isManager = userShiftStatus.isManager;
+    const hasShift = userShiftStatus.hasShift;
+    
+    // Shift yoksa uyarı göster ve formu disable et (yöneticiler hariç)
+    if (!hasShift && !isManager) {
+        container.innerHTML = `
+            <div style="text-align:center;padding:60px 20px">
+                <div style="width:80px;height:80px;margin:0 auto 20px;background:linear-gradient(135deg,#fee2e2,#fecaca);border-radius:50%;display:flex;align-items:center;justify-content:center">
+                    <svg width="40" height="40" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 8v4M12 16h.01"/>
+                    </svg>
+                </div>
+                <div style="font-size:1.2rem;font-weight:600;color:var(--tx);margin-bottom:8px">Şu An Shift'iniz Yok</div>
+                <div style="color:var(--tx2);margin-bottom:20px">Bu şubede bugün için aktif bir shift kaydınız bulunmuyor.</div>
+                <div style="padding:16px;background:var(--bg3);border-radius:12px;text-align:left;max-width:400px;margin:0 auto">
+                    <div style="font-size:.85rem;color:var(--tx2)">
+                        <div style="margin-bottom:8px"><strong>Şube:</strong> ${branch}</div>
+                        <div style="margin-bottom:8px"><strong>Tarih:</strong> ${date}</div>
+                        <div><strong>Kullanıcı:</strong> ${currentUser?.name || '-'}</div>
+                    </div>
+                </div>
+                <div style="margin-top:20px;font-size:.8rem;color:var(--tx3)">
+                    Shift'iniz olduğunu düşünüyorsanız yöneticinize başvurun.
+                </div>
+            </div>
+        `;
         checklistLoadingLock = false;
         return;
     }
@@ -18910,22 +18994,13 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                             Sorumlu Personel
                         </label>
-                        ${shiftPersonnel && shiftPersonnel.length > 0 && !isSubmitted ? `
-                            ${shiftPersonnel.length > 1 ? `
-                                <select id="checklistPersonName" class="form-select" style="background:var(--bg2);border-color:var(--cardBorder)" autocomplete="off">
-                                    ${shiftPersonnel.map(p => `<option value="${p}">${p}</option>`).join('')}
-                                </select>
-                            ` : `
-                                <div style="font-size:1.1rem;font-weight:600;color:var(--tx);padding:8px 0">${shiftPersonnel[0]}</div>
-                                <input type="hidden" id="checklistPersonName" value="${shiftPersonnel[0]}">
-                            `}
-                            <div style="font-size:.75rem;color:#008c95;margin-top:4px">✓ Shift'ten otomatik atandı</div>
-                        ` : isSubmitted ? `
+                        ${isSubmitted ? `
                             <div style="font-size:1.1rem;font-weight:600;color:var(--tx);padding:8px 0">${submittedData?.personName || '-'}</div>
                             <input type="hidden" id="checklistPersonName" value="${submittedData?.personName || ''}">
                         ` : `
-                            <div style="font-size:.9rem;color:var(--tx2);padding:8px 0">Shift bilgisi yok</div>
+                            <div style="font-size:1.1rem;font-weight:600;color:var(--tx);padding:8px 0">${currentUser?.name || 'Bilinmiyor'}</div>
                             <input type="hidden" id="checklistPersonName" value="${currentUser?.name || 'Bilinmiyor'}">
+                            <div style="font-size:.75rem;color:#008c95;margin-top:4px">✓ Giriş yapan kullanıcı</div>
                         `}
                     </div>
                     <div style="padding:16px;background:var(--bg3);border-radius:12px">
@@ -20623,6 +20698,38 @@ async function renderPlatformChecklistWithStatus(container, branch, date, active
 async function renderPlatformChecklist(container, branch, date, timeSlot, submittedData) {
     const isSubmitted = !!submittedData;
     
+    // G16: Kullanıcının shift durumunu kontrol et
+    const userShiftStatus = await checkCurrentUserShift(branch, date);
+    const isManager = userShiftStatus.isManager;
+    const hasShift = userShiftStatus.hasShift;
+    
+    // Shift yoksa uyarı göster (yöneticiler hariç)
+    if (!hasShift && !isManager && !isSubmitted) {
+        container.innerHTML = `
+            <div style="text-align:center;padding:60px 20px">
+                <div style="width:80px;height:80px;margin:0 auto 20px;background:linear-gradient(135deg,#fee2e2,#fecaca);border-radius:50%;display:flex;align-items:center;justify-content:center">
+                    <svg width="40" height="40" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 8v4M12 16h.01"/>
+                    </svg>
+                </div>
+                <div style="font-size:1.2rem;font-weight:600;color:var(--tx);margin-bottom:8px">Şu An Shift'iniz Yok</div>
+                <div style="color:var(--tx2);margin-bottom:20px">Bu şubede bugün için aktif bir shift kaydınız bulunmuyor.</div>
+                <div style="padding:16px;background:var(--bg3);border-radius:12px;text-align:left;max-width:400px;margin:0 auto">
+                    <div style="font-size:.85rem;color:var(--tx2)">
+                        <div style="margin-bottom:8px"><strong>Şube:</strong> ${branch}</div>
+                        <div style="margin-bottom:8px"><strong>Tarih:</strong> ${date}</div>
+                        <div><strong>Kullanıcı:</strong> ${currentUser?.name || '-'}</div>
+                    </div>
+                </div>
+                <div style="margin-top:20px;font-size:.8rem;color:var(--tx3)">
+                    Checklist'i doldurmak için shift'inizin olduğu bir gün gelin.
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
     // Shift'ten personel al
     let shiftPersonnel = [];
     try {
@@ -20681,15 +20788,13 @@ async function renderPlatformChecklist(container, branch, date, timeSlot, submit
             
             <div style="margin-bottom:20px;padding:16px;background:var(--bg3);border-radius:12px">
                 <label class="form-label" style="margin-bottom:8px">👤 Sorumlu Personel</label>
-                ${shiftPersonnel.length > 1 && !isSubmitted ? `
-                    <select id="checklistPersonName" class="form-select" style="background:var(--bg2);border-color:var(--cardBorder)" autocomplete="off">
-                        ${shiftPersonnel.map(p => `<option value="${p}">${p}</option>`).join('')}
-                    </select>
-                    <div style="font-size:.75rem;color:#008c95;margin-top:4px">✓ Shift'ten ${shiftPersonnel.length} personel</div>
+                ${isSubmitted ? `
+                    <div style="font-size:1.1rem;font-weight:600;color:var(--tx);padding:8px 0">${submittedData?.personName || '-'}</div>
+                    <input type="hidden" id="checklistPersonName" value="${submittedData?.personName || ''}" autocomplete="off">
                 ` : `
-                    <div style="font-size:1.1rem;font-weight:600;color:var(--tx);padding:8px 0">${submittedData?.personName || autoPersonName}</div>
-                    <input type="hidden" id="checklistPersonName" value="${submittedData?.personName || autoPersonName}" autocomplete="off">
-                    ${!isSubmitted && shiftPersonnel.length > 0 ? '<div style="font-size:.75rem;color:#008c95;margin-top:4px">✓ Shift\'ten otomatik atandı</div>' : ''}
+                    <div style="font-size:1.1rem;font-weight:600;color:var(--tx);padding:8px 0">${currentUser?.name || 'Bilinmiyor'}</div>
+                    <input type="hidden" id="checklistPersonName" value="${currentUser?.name || 'Bilinmiyor'}" autocomplete="off">
+                    <div style="font-size:.75rem;color:#008c95;margin-top:4px">✓ Giriş yapan kullanıcı</div>
                 `}
             </div>
             
