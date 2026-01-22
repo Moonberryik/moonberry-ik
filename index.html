@@ -15729,9 +15729,28 @@ async function loadTodayChecks() {
             const personnelSize = dashboardConfig.personnelFontSize || '0.8rem';
             const personnelText = check.personnel?.map(p => lookupPersonelDisplay(p)).join(', ') || '';
             
-            // Puan gösterimi
-            const pointsHtml = !check.isCompleted && check.points?.missed ? 
-                `<span class="check-points-badge negative" title="Kaçırılırsa ${check.points.missed} puan">${check.points.missed}</span>` : '';
+            // Puan gösterimi - tüm seçenekler
+            let pointsHtml = '';
+            if (!check.isCompleted && check.points) {
+                pointsHtml = `
+                    <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end;font-size:.65rem;font-weight:600">
+                        <span style="display:flex;align-items:center;gap:3px;padding:2px 6px;background:rgba(39,174,96,.1);color:#27ae60;border-radius:3px" title="Vaktinde doldurulursa">
+                            <svg width="9" height="9" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                            ${check.points.onTime > 0 ? '+' : ''}${check.points.onTime}
+                        </span>
+                        ${check.points.late !== undefined ? `
+                            <span style="display:flex;align-items:center;gap:3px;padding:2px 6px;background:rgba(243,156,18,.1);color:#f39c12;border-radius:3px" title="Geç doldurulursa">
+                                <svg width="9" height="9" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                ${check.points.late > 0 ? '+' : ''}${check.points.late}
+                            </span>
+                        ` : ''}
+                        <span style="display:flex;align-items:center;gap:3px;padding:2px 6px;background:rgba(231,76,60,.1);color:#e74c3c;border-radius:3px" title="Kaçırılırsa">
+                            <svg width="9" height="9" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            ${check.points.missed}
+                        </span>
+                    </div>
+                `;
+            }
             
             html += `
                 <div class="check-card-premium ${cardClass} ${pulseClass} ${isMoonberry ? '' : 'coral'}" 
@@ -16376,17 +16395,41 @@ function renderCheckCard(checkType, timeSlot, branch, isCompleted, submissionDat
         timeHtml = `<span style="font-size:.7rem;color:${CORAL};font-weight:600;background:rgba(255,134,116,.15);padding:2px 6px;border-radius:4px">${riskText}</span>`;
     }
     
+    // Puan bilgisi - her zaman göster (tamamlanmadıysa)
+    let pointsInfoHtml = '';
+    if (!isCompleted) {
+        pointsInfoHtml = `
+            <div style="display:flex;gap:6px;font-size:.65rem;margin-top:6px;flex-wrap:wrap">
+                <span style="display:flex;align-items:center;gap:3px;padding:3px 7px;background:rgba(39,174,96,.1);color:#27ae60;border-radius:4px;font-weight:600">
+                    <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                    Vaktinde: ${onTimePoints > 0 ? '+' : ''}${onTimePoints}
+                </span>
+                <span style="display:flex;align-items:center;gap:3px;padding:3px 7px;background:rgba(243,156,18,.1);color:#f39c12;border-radius:4px;font-weight:600">
+                    <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Geç: ${latePoints > 0 ? '+' : ''}${latePoints}
+                </span>
+                <span style="display:flex;align-items:center;gap:3px;padding:3px 7px;background:rgba(231,76,60,.1);color:#e74c3c;border-radius:4px;font-weight:600">
+                    <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Kaçırıldı: ${missedPoints}
+                </span>
+            </div>
+        `;
+    }
+    
     return `
-        <div class="${pulseClass}" style="background:${bgColor};border-left:3px solid ${accentColor};border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:8px;transition:all .2s;opacity:${opacity}" onclick="goTo('checklist')">
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                <span style="color:${accentColor};font-size:1rem;${isActive ? 'animation:pulse-dot 1.5s infinite' : ''}">${icon}</span>
-                <span style="font-weight:600;font-size:.85rem;color:var(--tx)">${checkType.name} - ${timeSlot}</span>
-                ${personnelHtml}
+        <div class="${pulseClass}" style="background:${bgColor};border-left:3px solid ${accentColor};border-radius:8px;padding:10px 14px;display:flex;flex-direction:column;cursor:pointer;margin-bottom:8px;transition:all .2s;opacity:${opacity}" onclick="goTo('checklist')">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                    <span style="color:${accentColor};font-size:1rem;${isActive ? 'animation:pulse-dot 1.5s infinite' : ''}">${icon}</span>
+                    <span style="font-weight:600;font-size:.85rem;color:var(--tx)">${checkType.name} - ${timeSlot}</span>
+                    ${personnelHtml}
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                    ${timeHtml}
+                    <span style="font-size:.75rem;font-weight:600;color:${accentColor};padding:3px 10px;background:${isCompleted ? 'rgba(156,163,175,.1)' : accentColor === CORAL ? 'rgba(255,134,116,.1)' : bgColor};border-radius:6px">${statusText}</span>
+                </div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px">
-                ${timeHtml}
-                <span style="font-size:.75rem;font-weight:600;color:${accentColor};padding:3px 10px;background:${isCompleted ? 'rgba(156,163,175,.1)' : accentColor === CORAL ? 'rgba(255,134,116,.1)' : bgColor};border-radius:6px">${statusText}</span>
-            </div>
+            ${pointsInfoHtml}
         </div>
     `;
 }
