@@ -15269,7 +15269,7 @@ async function loadTodayChecks() {
                 personnel: temizlikPersonnel,
                 points: CHECK_RULES.temizlik?.points || CHECK_RULES.aylik?.points || { onTime: 1, late: 0, missed: -1 },
                 priority: temizlikCompleted ? 90 : (isTemizlikMissed ? 99 : (isTemizlikActive ? 15 : 70)),
-                onClick: isTemizlikMissed ? '' : `goToChecklist('${branch}', 'aylik', '${shiftType}')`
+                onClick: isTemizlikMissed ? '' : `goToChecklist('${branch}', 'aylik', '${currentShiftType}')`
             });
             totalChecks++;
             if (temizlikCompleted) completedChecks++;
