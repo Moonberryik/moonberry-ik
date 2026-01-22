@@ -1771,30 +1771,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         
                         <!-- Check Türleri Tabları -->
                         <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap" id="checkTypeTabs">
-                            <button class="check-rule-tab active" onclick="selectCheckRuleTab('gunluk')" data-type="gunluk">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                Günlük Check
-                            </button>
-                            <button class="check-rule-tab" onclick="selectCheckRuleTab('platform')" data-type="platform">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-                                Platform
-                            </button>
-                            <button class="check-rule-tab" onclick="selectCheckRuleTab('temizlik')" data-type="temizlik">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6l3 1 2-3 2 3 3-1-1 3 3 2-3 2 1 3-3-1-2 3-2-3-3 1 1-3-3-2 3-2-1-3z"/></svg>
-                                Temizlik
-                            </button>
-                            <button class="check-rule-tab" onclick="selectCheckRuleTab('mudur')" data-type="mudur">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                Müdür Kontrol
-                            </button>
-                            <button class="check-rule-tab" onclick="selectCheckRuleTab('acilis')" data-type="acilis">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 18a5 5 0 00-10 0"/><line x1="12" y1="2" x2="12" y2="9"/><polyline points="8 6 12 2 16 6"/></svg>
-                                Açılış
-                            </button>
-                            <button class="check-rule-tab" onclick="selectCheckRuleTab('kapanis')" data-type="kapanis">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 18a5 5 0 00-10 0"/><line x1="12" y1="9" x2="12" y2="2"/><polyline points="16 6 12 10 8 6"/></svg>
-                                Kapanış
-                            </button>
+                            <!-- Dinamik olarak doldurulacak -->
                         </div>
                         
                         <!-- Seçili Check Türü Detayları -->
@@ -17423,8 +17400,82 @@ async function loadCheckRulesFromFirebase() {
 
 // Admin sayfası açıldığında check kurallarını yükle
 function initCheckRulesUI() {
-    // Varsayılan tab'ı seç
-    selectCheckRuleTab('gunluk');
+    const tabsContainer = document.getElementById('checkTypeTabs');
+    if (!tabsContainer) return;
+    
+    // Tüm checklist türlerini topla (unique)
+    const allTypes = new Set();
+    
+    // CHECKLIST_TYPES'dan
+    for (const types of Object.values(CHECKLIST_TYPES)) {
+        if (Array.isArray(types)) {
+            types.forEach(t => allTypes.add(t.id));
+        }
+    }
+    
+    // CHECK_RULES'dan
+    Object.keys(CHECK_RULES).forEach(id => allTypes.add(id));
+    
+    // DEFAULT_CHECK_RULES'dan
+    if (typeof DEFAULT_CHECK_RULES !== 'undefined') {
+        Object.keys(DEFAULT_CHECK_RULES).forEach(id => allTypes.add(id));
+    }
+    
+    // İkon mapping
+    const iconMap = {
+        gunluk: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+        platform: '<rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>',
+        temizlik: '<path d="M3 6l3 1 2-3 2 3 3-1-1 3 3 2-3 2 1 3-3-1-2 3-2-3-3 1 1-3-3-2 3-2-1-3z"/>',
+        aylik: '<path d="M3 6l3 1 2-3 2 3 3-1-1 3 3 2-3 2 1 3-3-1-2 3-2-3-3 1 1-3-3-2 3-2-1-3z"/>',
+        haftalik: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/>',
+        mudur: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+        acilis: '<path d="M17 18a5 5 0 00-10 0"/><line x1="12" y1="2" x2="12" y2="9"/><polyline points="8 6 12 2 16 6"/>',
+        kapanis: '<path d="M17 18a5 5 0 00-10 0"/><line x1="12" y1="9" x2="12" y2="2"/><polyline points="16 6 12 10 8 6"/>'
+    };
+    
+    // İsim mapping
+    const nameMap = {
+        gunluk: 'Günlük Check',
+        platform: 'Platform',
+        temizlik: 'Temizlik',
+        aylik: 'Aylık/Temizlik',
+        haftalik: 'Haftalık',
+        mudur: 'Müdür Kontrol',
+        acilis: 'Açılış',
+        kapanis: 'Kapanış'
+    };
+    
+    // Sıralama
+    const orderedTypes = ['gunluk', 'platform', 'acilis', 'kapanis', 'mudur', 'temizlik', 'aylik', 'haftalik'];
+    const sortedTypes = [...allTypes].sort((a, b) => {
+        const aIdx = orderedTypes.indexOf(a);
+        const bIdx = orderedTypes.indexOf(b);
+        if (aIdx === -1 && bIdx === -1) return a.localeCompare(b);
+        if (aIdx === -1) return 1;
+        if (bIdx === -1) return 1;
+        return aIdx - bIdx;
+    });
+    
+    // Tab HTML oluştur
+    let html = '';
+    sortedTypes.forEach((typeId, idx) => {
+        const icon = iconMap[typeId] || '<path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/>';
+        const name = nameMap[typeId] || CHECK_RULES[typeId]?.name || typeId;
+        
+        html += `
+            <button class="check-rule-tab ${idx === 0 ? 'active' : ''}" onclick="selectCheckRuleTab('${typeId}')" data-type="${typeId}">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">${icon}</svg>
+                ${name}
+            </button>
+        `;
+    });
+    
+    tabsContainer.innerHTML = html;
+    
+    // İlk tab'ı seç
+    if (sortedTypes.length > 0) {
+        selectCheckRuleTab(sortedTypes[0]);
+    }
 }
 
 // Eski fonksiyonlar (geriye uyumluluk)
@@ -21869,6 +21920,32 @@ async function addChecklistType(branch) {
         await configRef.set(checklistTypes);
         
         CHECKLIST_TYPES[branch] = checklistTypes[branch];
+        
+        // CHECK_RULES'a da ekle (yoksa)
+        if (!CHECK_RULES[typeId]) {
+            CHECK_RULES[typeId] = {
+                name: typeName,
+                description: `${typeName} kontrol listesi`,
+                enabled: true,
+                timeSlots: timeSlots.length > 0 ? timeSlots : null,
+                deadline: timeSlots.length === 0 ? '23:59' : null,
+                window: { before: 30, after: 30 },
+                lateWindow: 30,
+                points: { onTime: 0, late: 0, missed: -1 },
+                responsibleShift: 'auto'
+            };
+            
+            // Firebase'e de kaydet
+            try {
+                const sysDoc = await db.collection('config').doc('system').get();
+                const sysData = sysDoc.exists ? sysDoc.data() : {};
+                sysData.checkRules = CHECK_RULES;
+                await db.collection('config').doc('system').set(sysData, { merge: true });
+                console.log(`[CHECK_RULES] Yeni tür eklendi: ${typeId}`);
+            } catch (e) {
+                console.warn('CHECK_RULES kayıt hatası:', e);
+            }
+        }
         
         closeModal();
         toast('Checklist türü eklendi', 'success');
