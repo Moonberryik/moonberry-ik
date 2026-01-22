@@ -17408,25 +17408,36 @@ function toggleAllBranches(type) {
 
 // Gelişmiş check kurallarını kaydet
 async function saveAdvancedCheckRules() {
-    const types = ['gunluk', 'platform', 'temizlik', 'mudur', 'acilis', 'kapanis'];
+    // Tüm check türlerini dinamik olarak topla
+    const allTypes = new Set();
+    for (const types of Object.values(CHECKLIST_TYPES)) {
+        if (Array.isArray(types)) {
+            types.forEach(t => allTypes.add(t.id));
+        }
+    }
+    Object.keys(CHECK_RULES).forEach(id => allTypes.add(id));
+    Object.keys(DEFAULT_CHECK_RULES).forEach(id => allTypes.add(id));
+    
     const checkRules = {};
     
-    types.forEach(type => {
-        const baseRule = DEFAULT_CHECK_RULES[type];
-        const rule = { ...baseRule };
+    allTypes.forEach(type => {
+        const baseRule = DEFAULT_CHECK_RULES[type] || {};
+        const existingRule = CHECK_RULES[type] || {};
+        const rule = { ...baseRule, ...existingRule };
         
         // Enabled
         const enabledEl = document.getElementById(`checkRule_${type}_enabled`);
         if (enabledEl) rule.enabled = enabledEl.checked;
         
-        // Time slots (zaten CHECK_RULES'da güncel)
-        if (CHECK_RULES[type]?.timeSlots) {
-            rule.timeSlots = CHECK_RULES[type].timeSlots;
+        // Time slots
+        if (existingRule.timeSlots || baseRule.timeSlots) {
+            // Güncel timeSlots'ı al (addTimeSlot/removeTimeSlot ile güncelleniyor)
+            rule.timeSlots = CHECK_RULES[type]?.timeSlots || baseRule.timeSlots || [];
         }
         
         // Periods
-        if (CHECK_RULES[type]?.periods) {
-            rule.periods = CHECK_RULES[type].periods;
+        if (existingRule.periods || baseRule.periods) {
+            rule.periods = CHECK_RULES[type]?.periods || baseRule.periods;
         }
         
         // Window
@@ -17434,25 +17445,31 @@ async function saveAdvancedCheckRules() {
         const afterEl = document.getElementById(`checkRule_${type}_after`);
         const lateEl = document.getElementById(`checkRule_${type}_lateWindow`);
         if (beforeEl && afterEl) {
-            rule.window = { before: parseInt(beforeEl.value), after: parseInt(afterEl.value) };
-            rule.lateWindow = parseInt(lateEl?.value || 0);
+            rule.window = { before: parseInt(beforeEl.value) || 30, after: parseInt(afterEl.value) || 30 };
+            rule.lateWindow = parseInt(lateEl?.value) || 0;
         }
         
         // Deadline
         const deadlineEl = document.getElementById(`checkRule_${type}_deadline`);
         const activeFromEl = document.getElementById(`checkRule_${type}_activeFrom`);
-        if (deadlineEl) rule.deadline = deadlineEl.value;
-        if (activeFromEl) rule.activeFrom = activeFromEl.value;
+        if (deadlineEl?.value) rule.deadline = deadlineEl.value;
+        if (activeFromEl?.value) rule.activeFrom = activeFromEl.value;
         
-        // Points
+        // Points - HER ZAMAN form değerlerini al
         const onTimeEl = document.getElementById(`checkRule_${type}_onTime`);
         const latePointsEl = document.getElementById(`checkRule_${type}_late`);
         const missedEl = document.getElementById(`checkRule_${type}_missed`);
-        rule.points = {
-            onTime: parseInt(onTimeEl?.value || 0),
-            late: parseInt(latePointsEl?.value || 0),
-            missed: parseInt(missedEl?.value || -1)
-        };
+        
+        if (onTimeEl || latePointsEl || missedEl) {
+            rule.points = {
+                onTime: parseInt(onTimeEl?.value) || 0,
+                late: parseInt(latePointsEl?.value) || 0,
+                missed: parseInt(missedEl?.value) ?? -1
+            };
+        } else {
+            // Form elementi yoksa mevcut değerleri koru
+            rule.points = existingRule.points || baseRule.points || { onTime: 0, late: 0, missed: -1 };
+        }
         
         // Responsible shift
         const shiftRadio = document.querySelector(`input[name="checkRule_${type}_shift"]:checked`);
@@ -17460,14 +17477,16 @@ async function saveAdvancedCheckRules() {
         
         // Branches
         const allBranches = document.getElementById(`checkRule_${type}_branch_all`)?.checked;
-        if (allBranches) {
-            rule.branches = ['all'];
-        } else {
-            const checkedBranches = [];
-            document.querySelectorAll(`.branch-checkbox-${type}:checked`).forEach(cb => {
-                checkedBranches.push(cb.value);
-            });
-            rule.branches = checkedBranches.length > 0 ? checkedBranches : ['all'];
+        if (allBranches !== undefined) {
+            if (allBranches) {
+                rule.branches = ['all'];
+            } else {
+                const checkedBranches = [];
+                document.querySelectorAll(`.branch-checkbox-${type}:checked`).forEach(cb => {
+                    checkedBranches.push(cb.value);
+                });
+                rule.branches = checkedBranches.length > 0 ? checkedBranches : ['all'];
+            }
         }
         
         checkRules[type] = rule;
@@ -17482,13 +17501,24 @@ async function saveAdvancedCheckRules() {
     };
     
     try {
-        await db.collection('config').doc('system').update({
+        // Firebase'e kaydet
+        await db.collection('config').doc('system').set({
             checkRules,
             dashboardMessages,
+            // Diğer mevcut ayarları koru
+            whatsappGroups: SYSTEM_CONFIG.whatsappGroups || {},
+            platforms: SYSTEM_CONFIG.platforms || PLATFORMS,
+            branchHours: SYSTEM_CONFIG.branchHours || {},
+            shiftDuration: SYSTEM_CONFIG.shiftDuration || 9,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        }, { merge: true });
         
+        // Global değişkenleri güncelle
         CHECK_RULES = checkRules;
+        SYSTEM_CONFIG.dashboardMessages = dashboardMessages;
+        SYSTEM_CONFIG.checkRules = checkRules;
+        
+        console.log('[saveAdvancedCheckRules] Kaydedildi:', Object.keys(checkRules));
         toast('Check kuralları kaydedildi! ✓', 'success');
     } catch (e) {
         console.error('Kayıt hatası:', e);
