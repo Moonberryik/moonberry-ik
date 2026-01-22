@@ -4622,7 +4622,7 @@ function goTo(page) {
         // Immediate pre-fill (loadSystemConfig beklemeden)
         const subeSelectPre = document.getElementById('checklistSube');
         if (subeSelectPre && subeSelectPre.options.length === 0) {
-            const branchesPre = STATE.branches || DEFAULT_STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+            const branchesPre = STATE.branches || DEFAULT_STATE.branches || [];
             if (branchesPre.length > 0) {
                 subeSelectPre.innerHTML = branchesPre.map(b => `<option value="${b}">${b}</option>`).join('');
                 console.log('[Checklist] Pre-fill dropdown:', branchesPre.length, 'şube');
@@ -4638,7 +4638,7 @@ function goTo(page) {
         setTimeout(() => {
             const subeSelect = document.getElementById('checklistSube');
             if (subeSelect && subeSelect.options.length === 0) {
-                const branches = STATE.branches || DEFAULT_STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+                const branches = STATE.branches || DEFAULT_STATE.branches || [];
                 subeSelect.innerHTML = branches.map(b => `<option value="${b}">${b}</option>`).join('');
                 console.warn('[Checklist Init] 3s güvence fallback tetiklendi');
                 if (typeof loadChecklistTypes === 'function') loadChecklistTypes();
@@ -9433,7 +9433,7 @@ function showNewUserModal() {
         <option value="yonetici">👑 Yönetici</option>
     `;
     
-    const branchOptions = (STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'])
+    const branchOptions = (STATE.branches || [])
         .map(b => `<option value="${b}">${b}</option>`).join('');
     
     const body = `
@@ -13941,10 +13941,9 @@ function getChecklistTypeName(branch, typeId, defaultName) {
 }
 
 let SYSTEM_CONFIG = {};
-let BRANCH_HOURS = {
-    'Tuzla Port': { opening: '10:00', closing: { default: '01:00', friday: '01:30', saturday: '01:30' } },
-    'Şişli (Merkez)': { opening: '10:00', closing: { default: '01:30' } }
-};
+let BRANCH_HOURS = {};
+// BRANCH_HOURS Firebase'den SYSTEM_CONFIG.branchHours olarak yüklenir
+// Şube çalışma saatleri Ayarlar > Şube Çalışma Saatleri'nden ayarlanır
 
 // TEMİZLİK ÇİZELGESİ SHIFT TANIMLARI
 let TEMIZLIK_SHIFT_RULES = {
@@ -14506,7 +14505,7 @@ async function checkAndProcessMissedChecks() {
     const datesToCheck = [yesterdayStr, today];
     
     // Şubeler
-    const branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+    const branches = STATE.branches || [];
     const userBranch = currentUser?.branch;
     const branchesToCheck = (userBranch && userBranch !== 'all') ? [userBranch] : branches;
     
@@ -14794,7 +14793,7 @@ async function loadTodayChecks() {
     // Yönetici için tüm şubeler, diğerleri için kendi şubesi
     let branches = [];
     if (isAdmin || currentUser?.branch === 'all') {
-        branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+        branches = STATE.branches || [];
     } else {
         branches = [currentUser?.branch || 'Tuzla Port'];
     }
@@ -16777,7 +16776,7 @@ async function loadAllChecksOverview() {
         }
         
         // Şubeleri belirle
-        const branches = branchFilter === 'all' ? (STATE.branches || ['Tuzla Port', 'Şişli (Merkez)']) : [branchFilter];
+        const branches = branchFilter === 'all' ? (STATE.branches || []) : [branchFilter];
         
         let allSubmissions = [];
         let expectedChecks = [];
@@ -17187,7 +17186,7 @@ function renderBranchHoursSettings() {
     const container = document.getElementById('branchHoursContainer');
     if (!container) return;
     
-    const branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+    const branches = STATE.branches || [];
     const days = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
     const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     
@@ -17258,7 +17257,7 @@ function toggleDailyClosing(branchKey, sameForAll) {
 }
 
 async function saveBranchHours() {
-    const branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+    const branches = STATE.branches || [];
     const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     
     const branchHours = {};
@@ -17723,7 +17722,7 @@ function renderCheckRuleDetails(type) {
         return;
     }
     
-    const branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+    const branches = STATE.branches || [];
     
     // Dinamik isim al - CHECKLIST_TYPES'tan öncelikli
     let displayName = rule.name || type;
@@ -18614,7 +18613,7 @@ async function loadSystemConfig() {
         }
         
         // Temizlik Çizelgesi tipi yoksa ekle (her şube için)
-        const branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+        const branches = STATE.branches || [];
         branches.forEach(branch => {
             if (!CHECKLIST_TYPES[branch]) {
                 CHECKLIST_TYPES[branch] = [];
@@ -18650,7 +18649,7 @@ async function loadSystemConfig() {
         console.warn('Config yüklenemedi:', e);
         
         // Fallback - default checklist türleri
-        const branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+        const branches = STATE.branches || [];
         branches.forEach(branch => {
             if (!CHECKLIST_TYPES[branch]) {
                 CHECKLIST_TYPES[branch] = [
@@ -18693,9 +18692,9 @@ async function initChecklistPage() {
     
     // IMMEDIATE FILL - loadSystemConfig beklemeden dropdown'u doldur
     // STATE.branches DOMContentLoaded'da loadState() ile zaten dolu olmalı
-    let immediateBranches = STATE.branches || DEFAULT_STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+    let immediateBranches = STATE.branches || DEFAULT_STATE.branches || [];
     if (immediateBranches.length === 0) {
-        immediateBranches = DEFAULT_STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+        immediateBranches = DEFAULT_STATE.branches || [];
     }
     
     if (subeSelect.options.length === 0 && immediateBranches.length > 0) {
@@ -18727,7 +18726,7 @@ async function initChecklistPage() {
     
     // Güvence: branches hala boşsa DEFAULT_STATE'den al
     if (branches.length === 0) {
-        branches = DEFAULT_STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+        branches = DEFAULT_STATE.branches || [];
         console.warn('[Checklist Init] STATE.branches boş, fallback kullanıldı');
     }
     
@@ -18834,7 +18833,7 @@ async function loadChecklistTodayPanel() {
     // Şubeleri belirle
     let branches = [];
     if (isAdmin || currentUser?.branch === 'all') {
-        branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+        branches = STATE.branches || [];
     } else {
         branches = [currentUser?.branch || 'Tuzla Port'];
     }
@@ -21135,7 +21134,7 @@ async function loadKPIDashboard() {
     
     section.style.display = 'block';
     
-    const branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+    const branches = STATE.branches || [];
     const today = new Date();
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
     const monthStartStr = formatDateLocal(monthStart);
