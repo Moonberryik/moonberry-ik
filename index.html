@@ -14991,39 +14991,112 @@ async function loadTodayChecks() {
         }
         
         // 2. Temizlik Check
-        const isSabahTemizlik = currentHour >= 2 && currentHour < 16;
-        const shiftType = isSabahTemizlik ? 'sabah' : 'aksam';
-        const temizlikSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_aylik_${todayStr}_${shiftType}`;
-        let temizlikCompleted = false;
-        
-        try {
-            const doc = await db.collection('checklistSubmissions').doc(temizlikSubmissionId).get();
-            temizlikCompleted = doc.exists;
-        } catch (e) {}
-        
-        const temizlikPersonnel = getShiftPersonnel(branch, isSabahTemizlik ? 'acilis' : 'kapanis');
-        const temizlikDeadline = isSabahTemizlik ? '15:00' : '02:00';
-        
-        branchChecks.push({
-            id: 'temizlik',
-            name: getChecklistTypeName(branch, 'aylik', 'Temizlik Çizelgesi'),
-            icon: 'sparkle',
-            deadline: temizlikDeadline,
-            subLabel: isSabahTemizlik ? 'Açılış' : 'Kapanış',
-            isCompleted: temizlikCompleted,
-            isActive: !temizlikCompleted,
-            isMissed: false,
-            remainingText: '',
-            personnel: temizlikPersonnel,
-            points: { onTime: 1, missed: -1 },
-            priority: temizlikCompleted ? 90 : 20,
-            onClick: `goToChecklist('${branch}', 'aylik', '${shiftType}')`
-        });
-        totalChecks++;
-        if (temizlikCompleted) completedChecks++;
-        
-        // 3. Açılış Hazırlıkları (her zaman göster)
         {
+            // CHECK_RULES'dan ayarları al
+            const temizlikRules = CHECK_RULES.temizlik || CHECK_RULES.aylik || {};
+            
+            // Sabah/Akşam ayrımı için periods kullan veya default
+            const isSabahTemizlik = currentHour >= 6 && currentHour < 16;
+            const shiftType = isSabahTemizlik ? 'sabah' : 'aksam';
+            
+            // Sabah: 09:00-15:00, Akşam: 20:00-02:00 (varsayılan)
+            let temizlikActiveFrom = isSabahTemizlik ? '09:00' : '20:00';
+            let temizlikDeadline = isSabahTemizlik ? '15:00' : '02:00';
+            let temizlikLateWindow = temizlikRules.lateWindow || 30;
+            
+            // CHECK_RULES'da periods varsa kullan
+            if (temizlikRules.periods) {
+                const period = temizlikRules.periods.find(p => p.id === shiftType || p.shift === (isSabahTemizlik ? 'acilis' : 'kapanis'));
+                if (period) {
+                    temizlikActiveFrom = period.start || temizlikActiveFrom;
+                    temizlikDeadline = period.end || temizlikDeadline;
+                }
+            } else if (temizlikRules.activeFrom && temizlikRules.deadline) {
+                // Tek zaman dilimi varsa
+                temizlikActiveFrom = temizlikRules.activeFrom;
+                temizlikDeadline = temizlikRules.deadline;
+            }
+            
+            const temizlikSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_aylik_${todayStr}_${shiftType}`;
+            let temizlikCompleted = false;
+            
+            try {
+                const doc = await db.collection('checklistSubmissions').doc(temizlikSubmissionId).get();
+                temizlikCompleted = doc.exists;
+            } catch (e) {}
+            
+            // Aktiflik ve kaçırılma kontrolü
+            const [tafH, tafM] = temizlikActiveFrom.split(':').map(Number);
+            const [tdH, tdM] = temizlikDeadline.split(':').map(Number);
+            const nowMin = currentHour * 60 + currentMinutes;
+            let activeFromMin = tafH * 60 + tafM;
+            let deadlineMin = tdH * 60 + tdM;
+            let lateEndMin = deadlineMin + temizlikLateWindow;
+            
+            // Gece geçişi kontrolü
+            if (tdH < tafH) {
+                deadlineMin += 24 * 60;
+                lateEndMin += 24 * 60;
+            }
+            let adjustedNow = nowMin;
+            if (currentHour < 6 && tafH > 12) {
+                adjustedNow += 24 * 60;
+            }
+            
+            const isTemizlikActive = adjustedNow >= activeFromMin && adjustedNow <= deadlineMin && !temizlikCompleted;
+            const isTemizlikLate = adjustedNow > deadlineMin && adjustedNow <= lateEndMin && !temizlikCompleted;
+            const isTemizlikMissed = adjustedNow > lateEndMin && !temizlikCompleted;
+            
+            // Kalan süre hesapla
+            let temizlikRemainingMinutes = null;
+            if (isTemizlikActive) {
+                temizlikRemainingMinutes = deadlineMin - adjustedNow;
+            } else if (isTemizlikLate) {
+                temizlikRemainingMinutes = lateEndMin - adjustedNow;
+            } else if (isTemizlikMissed) {
+                temizlikRemainingMinutes = 0;
+            }
+            
+            // SubLabel belirleme
+            let temizlikSubLabel = isSabahTemizlik ? 'Açılış' : 'Kapanış';
+            if (!isTemizlikActive && !isTemizlikLate && !isTemizlikMissed && !temizlikCompleted) {
+                temizlikSubLabel = `${temizlikActiveFrom}'de aktif`;
+            } else if (isTemizlikLate) {
+                temizlikSubLabel = 'Geç kalındı!';
+            } else if (isTemizlikMissed) {
+                temizlikSubLabel = 'Kaçırıldı';
+            }
+            
+            const temizlikPersonnel = getShiftPersonnel(branch, isSabahTemizlik ? 'acilis' : 'kapanis');
+            
+            branchChecks.push({
+                id: 'temizlik',
+                name: getChecklistTypeName(branch, 'aylik', 'Temizlik ve Bakım'),
+                icon: 'sparkle',
+                deadline: temizlikDeadline,
+                subLabel: temizlikSubLabel,
+                isCompleted: temizlikCompleted,
+                isActive: isTemizlikActive || isTemizlikLate,
+                isMissed: isTemizlikMissed,
+                canStillFill: !isTemizlikMissed,
+                remainingMinutes: temizlikRemainingMinutes,
+                remainingText: '',
+                personnel: temizlikPersonnel,
+                points: CHECK_RULES.temizlik?.points || CHECK_RULES.aylik?.points || { onTime: 1, late: 0, missed: -1 },
+                priority: temizlikCompleted ? 90 : (isTemizlikMissed ? 99 : (isTemizlikActive ? 15 : 70)),
+                onClick: isTemizlikMissed ? '' : `goToChecklist('${branch}', 'aylik', '${shiftType}')`
+            });
+            totalChecks++;
+            if (temizlikCompleted) completedChecks++;
+        }
+        
+        // 3. Açılış Hazırlıkları
+        {
+            const acilisRules = CHECK_RULES.acilis || {};
+            const acilisActiveFrom = acilisRules.activeFrom || '09:00';
+            const acilisDeadline = acilisRules.deadline || '11:00';
+            const acilisLateWindow = acilisRules.lateWindow || 30;
+            
             const acilisSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_acilis_${todayStr}`;
             let acilisCompleted = false;
             try {
@@ -15031,41 +15104,68 @@ async function loadTodayChecks() {
                 acilisCompleted = doc.exists;
             } catch (e) {}
             
-            const acilisPersonnel = getShiftPersonnel(branch, 'acilis');
-            const isAcilisActive = currentHour >= 6 && currentHour < 12; // Aktiflik için saat kontrolü
-            const isAcilisMissed = !isAcilisActive && !acilisCompleted && currentHour >= 12;
-            const canFillAcilis = currentHour < 14; // 14:00'a kadar doldurulabilir
+            // Aktiflik ve kaçırılma kontrolü
+            const [aafH, aafM] = acilisActiveFrom.split(':').map(Number);
+            const [adH, adM] = acilisDeadline.split(':').map(Number);
+            const nowMin = currentHour * 60 + currentMinutes;
+            const acilisActiveFromMin = aafH * 60 + aafM;
+            const acilisDeadlineMin = adH * 60 + adM;
+            const acilisLateEndMin = acilisDeadlineMin + acilisLateWindow;
             
-            // Açılış için kalan süre
+            const isAcilisActive = nowMin >= acilisActiveFromMin && nowMin <= acilisDeadlineMin && !acilisCompleted;
+            const isAcilisLate = nowMin > acilisDeadlineMin && nowMin <= acilisLateEndMin && !acilisCompleted;
+            const isAcilisMissed = nowMin > acilisLateEndMin && !acilisCompleted;
+            
+            // Kalan süre
             let acilisRemainingMinutes = null;
-            if (isAcilisActive && !acilisCompleted) {
-                acilisRemainingMinutes = Math.max(0, (12 - currentHour) * 60 - currentMinutes);
+            if (isAcilisActive) {
+                acilisRemainingMinutes = acilisDeadlineMin - nowMin;
+            } else if (isAcilisLate) {
+                acilisRemainingMinutes = acilisLateEndMin - nowMin;
             } else if (isAcilisMissed) {
                 acilisRemainingMinutes = 0;
             }
+            
+            // SubLabel
+            let acilisSubLabel = '';
+            if (nowMin < acilisActiveFromMin && !acilisCompleted) {
+                acilisSubLabel = `${acilisActiveFrom}'de aktif`;
+            } else if (isAcilisLate) {
+                acilisSubLabel = 'Geç kalındı!';
+            } else if (isAcilisMissed) {
+                acilisSubLabel = 'Kaçırıldı';
+            }
+            
+            const acilisPersonnel = getShiftPersonnel(branch, 'acilis');
             
             branchChecks.push({
                 id: 'acilis',
                 name: getChecklistTypeName(branch, 'acilis', 'Açılış Hazırlıkları'),
                 icon: 'sunrise',
-                deadline: '10:30',
+                deadline: acilisDeadline,
+                subLabel: acilisSubLabel,
                 isCompleted: acilisCompleted,
-                isActive: isAcilisActive && !acilisCompleted,
+                isActive: isAcilisActive || isAcilisLate,
                 isMissed: isAcilisMissed,
-                canStillFill: canFillAcilis,
+                canStillFill: !isAcilisMissed,
                 remainingMinutes: acilisRemainingMinutes,
                 remainingText: '',
                 personnel: acilisPersonnel,
-                points: { onTime: 5, missed: -5 },
-                priority: acilisCompleted ? 95 : (isAcilisActive ? 5 : 80),
-                onClick: canFillAcilis ? `goToChecklist('${branch}', 'acilis', null)` : ''
+                points: acilisRules.points || { onTime: 3, late: 0, missed: -2 },
+                priority: acilisCompleted ? 95 : (isAcilisMissed ? 99 : (isAcilisActive ? 5 : 70)),
+                onClick: isAcilisMissed ? '' : `goToChecklist('${branch}', 'acilis', null)`
             });
             totalChecks++;
             if (acilisCompleted) completedChecks++;
         }
         
-        // 4. Kapanış Hazırlıkları (her zaman göster)
+        // 4. Kapanış Hazırlıkları
         {
+            const kapanisRules = CHECK_RULES.kapanis || {};
+            const kapanisActiveFrom = kapanisRules.activeFrom || '22:00';
+            const kapanisDeadline = kapanisRules.deadline || '02:00';
+            const kapanisLateWindow = kapanisRules.lateWindow || 30;
+            
             const kapanisSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_kapanis_${todayStr}`;
             let kapanisCompleted = false;
             try {
@@ -15073,40 +15173,67 @@ async function loadTodayChecks() {
                 kapanisCompleted = doc.exists;
             } catch (e) {}
             
-            const kapanisPersonnel = getShiftPersonnel(branch, 'kapanis');
-            const isKapanisActive = currentHour >= 20 || currentHour < 2; // Aktiflik için saat kontrolü
-            const isKapanisMissed = !kapanisCompleted && currentHour >= 2 && currentHour < 6; // 02:00-06:00 arası kaçırılmış
-            const canFillKapanis = currentHour >= 20 || currentHour < 4; // 04:00'a kadar doldurulabilir
+            // Aktiflik ve kaçırılma kontrolü (gece geçişi var)
+            const [kafH, kafM] = kapanisActiveFrom.split(':').map(Number);
+            const [kdH, kdM] = kapanisDeadline.split(':').map(Number);
+            const nowMin = currentHour * 60 + currentMinutes;
+            let kapanisActiveFromMin = kafH * 60 + kafM;
+            let kapanisDeadlineMin = kdH * 60 + kdM;
             
-            // Kapanış için kalan süre (02:00'a kadar)
+            // Gece geçişi kontrolü (deadline gece yarısından sonra ise)
+            if (kdH < kafH) {
+                kapanisDeadlineMin += 24 * 60;
+            }
+            let kapanisLateEndMin = kapanisDeadlineMin + kapanisLateWindow;
+            
+            let adjustedNow = nowMin;
+            if (currentHour < 6) {
+                adjustedNow += 24 * 60;
+            }
+            
+            const isKapanisActive = adjustedNow >= kapanisActiveFromMin && adjustedNow <= kapanisDeadlineMin && !kapanisCompleted;
+            const isKapanisLate = adjustedNow > kapanisDeadlineMin && adjustedNow <= kapanisLateEndMin && !kapanisCompleted;
+            const isKapanisMissed = adjustedNow > kapanisLateEndMin && !kapanisCompleted && currentHour < 12;
+            
+            // Kalan süre
             let kapanisRemainingMinutes = null;
-            if (isKapanisActive && !kapanisCompleted) {
-                if (currentHour >= 20) {
-                    // 20:00-23:59 arası: 02:00'a kalan
-                    kapanisRemainingMinutes = (24 - currentHour + 2) * 60 - currentMinutes;
-                } else {
-                    // 00:00-02:00 arası
-                    kapanisRemainingMinutes = Math.max(0, (2 - currentHour) * 60 - currentMinutes);
-                }
+            if (isKapanisActive) {
+                kapanisRemainingMinutes = kapanisDeadlineMin - adjustedNow;
+            } else if (isKapanisLate) {
+                kapanisRemainingMinutes = kapanisLateEndMin - adjustedNow;
             } else if (isKapanisMissed) {
                 kapanisRemainingMinutes = 0;
             }
+            
+            // SubLabel
+            let kapanisSubLabel = '';
+            const isBeforeKapanisTime = (currentHour >= 6 && currentHour < kafH);
+            if (isBeforeKapanisTime && !kapanisCompleted) {
+                kapanisSubLabel = `${kapanisActiveFrom}'de aktif`;
+            } else if (isKapanisLate) {
+                kapanisSubLabel = 'Geç kalındı!';
+            } else if (isKapanisMissed) {
+                kapanisSubLabel = 'Kaçırıldı';
+            }
+            
+            const kapanisPersonnel = getShiftPersonnel(branch, 'kapanis');
             
             branchChecks.push({
                 id: 'kapanis',
                 name: getChecklistTypeName(branch, 'kapanis', 'Kapanış Hazırlıkları'),
                 icon: 'sunset',
-                deadline: '01:30',
+                deadline: kapanisDeadline,
+                subLabel: kapanisSubLabel,
                 isCompleted: kapanisCompleted,
-                isActive: isKapanisActive && !kapanisCompleted,
+                isActive: isKapanisActive || isKapanisLate,
                 isMissed: isKapanisMissed,
-                canStillFill: canFillKapanis,
+                canStillFill: !isKapanisMissed,
                 remainingMinutes: kapanisRemainingMinutes,
                 remainingText: '',
                 personnel: kapanisPersonnel,
-                points: { onTime: 5, missed: -5 },
-                priority: kapanisCompleted ? 95 : (isKapanisActive ? 5 : 80),
-                onClick: canFillKapanis ? `goToChecklist('${branch}', 'kapanis', null)` : ''
+                points: kapanisRules.points || { onTime: 4, late: 0, missed: -2 },
+                priority: kapanisCompleted ? 95 : (isKapanisMissed ? 99 : (isKapanisActive ? 5 : 70)),
+                onClick: isKapanisMissed ? '' : `goToChecklist('${branch}', 'kapanis', null)`
             });
             totalChecks++;
             if (kapanisCompleted) completedChecks++;
