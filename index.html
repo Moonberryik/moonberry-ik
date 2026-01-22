@@ -15685,21 +15685,22 @@ async function loadTodayChecks() {
             const [activeH, activeM] = mudurActiveFrom.split(':').map(Number);
             const [deadlineRuleH, deadlineRuleM] = mudurDeadlineRule.split(':').map(Number);
             
-            // Şu anki saat aktif zaman diliminde mi?
+            // Şu anki saat aktif zaman diliminde mi? (ilk tahmin, sonra shift'e göre güncellenecek)
             const nowMinutesOfDay = currentHour * 60 + currentMinutes;
-            const activeFromMinutes = activeH * 60 + activeM;
-            let deadlineRuleMinutes = deadlineRuleH * 60 + deadlineRuleM;
+            let tempActiveFromMinutes = activeH * 60 + activeM;
+            let tempDeadlineRuleMinutes = deadlineRuleH * 60 + deadlineRuleM;
             
             // Gece geçişi kontrolü (deadline gece yarısından sonra ise)
             if (deadlineRuleH < activeH) {
-                deadlineRuleMinutes += 24 * 60;
+                tempDeadlineRuleMinutes += 24 * 60;
             }
-            let adjustedNowMinutes = nowMinutesOfDay;
+            let tempAdjustedNowMinutes = nowMinutesOfDay;
             if (currentHour < activeH && currentHour < 6) {
-                adjustedNowMinutes += 24 * 60;
+                tempAdjustedNowMinutes += 24 * 60;
             }
             
-            const isMudurTimeActive = adjustedNowMinutes >= activeFromMinutes && adjustedNowMinutes <= deadlineRuleMinutes;
+            // isMudurTimeActive aşağıda gerçek deadline'a göre yeniden hesaplanacak
+            let isMudurTimeActive = false;
             
             // Müdür OFF kontrolü - shift verisinden kontrol et
             let mudurPersonnel = null;
@@ -15793,14 +15794,10 @@ async function loadTodayChecks() {
                 let deadlineMinutes = dh * 60 + dm;
                 // Gece geçişi kontrolü
                 if (dh < 6) deadlineMinutes += 24 * 60;
-                if (currentHour < 6) {
-                    const adjustedNow = nowMinutes + 24 * 60;
-                    if (adjustedNow > deadlineMinutes && !mudurCompleted) {
-                        isMudurCheckMissed = true;
-                        canFillMudurCheck = false;
-                        mudurSubLabel = 'Süre doldu (-10 puan)';
-                    }
-                } else if (nowMinutes > deadlineMinutes && !mudurCompleted) {
+                let adjustedNowForMissed = nowMinutes;
+                if (currentHour < 6) adjustedNowForMissed += 24 * 60;
+                
+                if (adjustedNowForMissed > deadlineMinutes && !mudurCompleted) {
                     isMudurCheckMissed = true;
                     canFillMudurCheck = false;
                     mudurSubLabel = 'Süre doldu (-10 puan)';
@@ -15810,6 +15807,18 @@ async function loadTodayChecks() {
                 console.warn('Müdür OFF kontrolü hatası:', e);
                 mudurPersonnel = branchManagers[branch] || 'Mağaza Müdürü';
             }
+            
+            // isMudurTimeActive'i gerçek deadline'a göre yeniden hesapla
+            const [activeH, activeM] = mudurActiveFrom.split(':').map(Number);
+            const activeFromMinutes = activeH * 60 + activeM;
+            const [realDH, realDM] = mudurDeadline.split(':').map(Number);
+            let realDeadlineMinutes = realDH * 60 + realDM;
+            if (realDH < activeH) realDeadlineMinutes += 24 * 60; // Gece geçişi
+            
+            let adjustedNowForActive = currentHour * 60 + currentMinutes;
+            if (currentHour < activeH && currentHour < 6) adjustedNowForActive += 24 * 60;
+            
+            const isMudurTimeActive = adjustedNowForActive >= activeFromMinutes && adjustedNowForActive <= realDeadlineMinutes;
             
             // Müdür için kalan süre hesapla
             let mudurRemainingMinutes = null;
@@ -15841,13 +15850,13 @@ async function loadTodayChecks() {
                 isCompleted: mudurCompleted,
                 isActive: isMudurTimeActive && canFillMudurCheck && !mudurCompleted,
                 isMissed: isMudurCheckMissed,
-                canStillFill: canFillMudurCheck && isMudurTimeActive,
+                canStillFill: canFillMudurCheck && !isMudurCheckMissed,
                 remainingMinutes: mudurRemainingMinutes,
                 remainingText: isMudurCheckMissed ? '⚠️ GEÇTİ' : '',
                 personnel: [mudurPersonnel],
                 points: CHECK_RULES.mudur?.points || { onTime: 10, late: 0, missed: -10 },
                 priority: mudurCompleted ? 93 : (isMudurCheckMissed ? 99 : (isMudurTimeActive ? 25 : 70)),
-                onClick: (canFillMudurCheck && isMudurTimeActive) ? `goToChecklist('${branch}', 'mudur', null)` : ''
+                onClick: (!mudurCompleted && !isMudurCheckMissed) ? `goToChecklist('${branch}', 'mudur', null)` : ''
             });
             totalChecks++;
             if (mudurCompleted) completedChecks++;
