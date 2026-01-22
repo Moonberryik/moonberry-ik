@@ -17273,7 +17273,6 @@ const DEFAULT_CHECK_RULES = {
         name: 'Günlük Check', 
         description: 'Günlük operasyonel kontroller',
         timeSlots: ['10:00', '12:00', '15:00', '18:00', '21:00'],
-        window: { before: 30, after: 30 },
         lateWindow: 30,
         points: { onTime: 1, late: 0, missed: -2 },
         responsibleShift: 'auto', // auto = saat bazlı otomatik
@@ -17283,8 +17282,7 @@ const DEFAULT_CHECK_RULES = {
         name: 'Platform Check', 
         description: 'Trendyol, Yemeksepeti, Getir kontrolleri',
         timeSlots: ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'],
-        window: { before: 30, after: 30 },
-        lateWindow: 0,
+        lateWindow: 30,
         points: { onTime: 0, late: 0, missed: -1 },
         responsibleShift: 'all',
         branches: ['all']
@@ -17296,6 +17294,7 @@ const DEFAULT_CHECK_RULES = {
             { id: 'sabah', name: 'Açılış', start: '10:00', end: '15:00', shift: 'acilis' },
             { id: 'aksam', name: 'Kapanış', start: '20:00', end: '02:00', shift: 'kapanis' }
         ],
+        lateWindow: 30,
         points: { onTime: 0, late: -1, missed: -1 },
         branches: ['all']
     },
@@ -17304,6 +17303,7 @@ const DEFAULT_CHECK_RULES = {
         description: 'Yöneticilerin günlük kontrol checklist\'i',
         deadline: '23:00',
         activeFrom: '18:00',
+        lateWindow: 30,
         points: { onTime: 1, late: -1, missed: -2 },
         responsibleShift: 'mudur',
         branches: ['all']
@@ -17313,6 +17313,7 @@ const DEFAULT_CHECK_RULES = {
         description: 'Sabah açılış kontrolleri',
         deadline: '11:00',
         activeFrom: '09:00',
+        lateWindow: 30,
         points: { onTime: 1, late: -1, missed: -2 },
         responsibleShift: 'acilis',
         branches: ['all']
@@ -17322,6 +17323,7 @@ const DEFAULT_CHECK_RULES = {
         description: 'Gece kapanış kontrolleri',
         deadline: '02:00',
         activeFrom: '22:00',
+        lateWindow: 30,
         points: { onTime: 1, late: 0, missed: -2 },
         responsibleShift: 'kapanis',
         branches: ['all']
@@ -17420,7 +17422,7 @@ function renderCheckRuleDetails(type) {
         html += `
             <div style="margin-bottom:24px">
                 <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:12px">Zaman Ayarları</div>
-                <div class="time-slot-card">
+                <div class="time-slot-card" style="margin-bottom:16px">
                     <div style="display:flex;align-items:center;gap:16px;flex:1">
                         <div>
                             <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Aktif Olma Saati</div>
@@ -17433,31 +17435,11 @@ function renderCheckRuleDetails(type) {
                         </div>
                     </div>
                 </div>
-            </div>
-        `;
-    }
-    
-    // Zaman penceresi ayarları
-    if (rule.window) {
-        html += `
-            <div style="margin-bottom:24px">
-                <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:12px">Zaman Penceresi</div>
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
-                    <div style="background:var(--bg3);border-radius:10px;padding:14px">
-                        <div style="font-size:.75rem;color:var(--tx3);margin-bottom:6px">Başlangıç Toleransı (dk)</div>
-                        <input type="number" class="form-input" id="checkRule_${type}_before" value="${rule.window.before}" min="0" max="120" style="font-size:1rem;font-weight:600">
-                        <div style="font-size:.65rem;color:var(--tx3);margin-top:4px">Saatin kaç dk öncesinden başlar</div>
-                    </div>
-                    <div style="background:var(--bg3);border-radius:10px;padding:14px">
-                        <div style="font-size:.75rem;color:var(--tx3);margin-bottom:6px">Bitiş Toleransı (dk)</div>
-                        <input type="number" class="form-input" id="checkRule_${type}_after" value="${rule.window.after}" min="0" max="120" style="font-size:1rem;font-weight:600">
-                        <div style="font-size:.65rem;color:var(--tx3);margin-top:4px">Saatin kaç dk sonrasına kadar</div>
-                    </div>
-                    <div style="background:var(--bg3);border-radius:10px;padding:14px">
-                        <div style="font-size:.75rem;color:var(--tx3);margin-bottom:6px">Geç Penceresi (dk)</div>
-                        <input type="number" class="form-input" id="checkRule_${type}_lateWindow" value="${rule.lateWindow || 0}" min="0" max="120" style="font-size:1rem;font-weight:600">
-                        <div style="font-size:.65rem;color:var(--tx3);margin-top:4px">0 = geç yapılamaz</div>
-                    </div>
+                
+                <div style="background:var(--bg3);border-radius:10px;padding:14px">
+                    <div style="font-size:.75rem;color:var(--tx3);margin-bottom:6px">Geç Toleransı (dakika)</div>
+                    <input type="number" class="form-input" id="checkRule_${type}_lateWindow" value="${rule.lateWindow || 0}" min="0" max="180" style="font-size:1rem;font-weight:600;width:100px">
+                    <div style="font-size:.65rem;color:var(--tx3);margin-top:4px">Son teslim saatinden sonra kaç dakika geç yapılabilir</div>
                 </div>
             </div>
         `;
@@ -17712,13 +17694,15 @@ async function saveAdvancedCheckRules() {
             rule.periods = CHECK_RULES[type]?.periods || baseRule.periods;
         }
         
-        // Window
-        const beforeEl = document.getElementById(`checkRule_${type}_before`);
-        const afterEl = document.getElementById(`checkRule_${type}_after`);
+        // lateWindow (tüm check türleri için)
         const lateEl = document.getElementById(`checkRule_${type}_lateWindow`);
-        if (beforeEl && afterEl) {
-            rule.window = { before: parseInt(beforeEl.value) || 30, after: parseInt(afterEl.value) || 30 };
-            rule.lateWindow = parseInt(lateEl?.value) || 0;
+        if (lateEl) {
+            rule.lateWindow = parseInt(lateEl.value) || 0;
+        }
+        
+        // window varsa sil (artık kullanılmıyor)
+        if (rule.window) {
+            delete rule.window;
         }
         
         // Deadline
