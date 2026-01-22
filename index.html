@@ -1591,9 +1591,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">Pozisyon Yetkileri</button>
                     <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">Oturumlar</button>
                     <button class="admin-tab" onclick="showAdminTab('magazaSaatleri',this)">Mağaza Saatleri</button>
-                    <button class="admin-tab" onclick="showAdminTab('checkKurallari',this)">Check Kuralları</button>
+                    <button class="admin-tab" onclick="showAdminTab('checkKurallari',this)">Check & Puantaj Kuralları</button>
                     <button class="admin-tab" onclick="showAdminTab('checklistTurleri',this)">Checklist Türleri</button>
-                    <button class="admin-tab" onclick="showAdminTab('puantajKurallar',this)">Puantaj Kuralları</button>
                     <button class="admin-tab" onclick="showAdminTab('subeler',this)">Şubeler</button>
                     <button class="admin-tab" onclick="showAdminTab('pozisyonlar',this)">Pozisyonlar</button>
                     <button class="admin-tab" onclick="showAdminTab('ihlaller',this)">İhlaller</button>
@@ -1831,6 +1830,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                                 <label class="form-label">Kaçırılmış Mesaj</label>
                                 <input type="text" class="form-input" id="dashboardMsgMissed" placeholder="örn: Maalesef kaçırıldı" value="Kaçırıldı">
                             </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Puantaj Değerlendirme Kuralları (Yıldız Sistemi) -->
+                    <div class="admin-card" style="margin-top:20px">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                Puantaj Değerlendirme Kuralları
+                            </div>
+                            <button class="btn btn-sm btn-primary" onclick="showAddPuantajRuleModal()">+ Kural Ekle</button>
+                        </div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Manuel puantaj değerlendirmesinde kullanılacak kuralları belirleyin. Kurallar prim hesaplamasını etkiler.</p>
+                        <div class="admin-list" id="puantajRulesList">
+                            <p style="color:var(--tx2);text-align:center;padding:20px">Kurallar yükleniyor...</p>
                         </div>
                     </div>
                 </div>
@@ -8585,6 +8599,23 @@ async function loadPuantajAnaliz() {
     container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx2)">Analiz yükleniyor...</div>';
     
     try {
+        // 1. Önce aktif personel listesini çek
+        const personelSnapshot = await db.collection('personel').get();
+        const personelMap = {};
+        
+        personelSnapshot.forEach(doc => {
+            const d = doc.data();
+            if (d.status !== 'inactive' && d.status !== 'deleted') {
+                personelMap[doc.id] = {
+                    name: d.name,
+                    codeName: d.codeName,
+                    position: d.position,
+                    branch: d.branch
+                };
+            }
+        });
+        
+        // 2. puantaj koleksiyonundan veri çek
         let query = db.collection('puantaj');
         if (sube) query = query.where('branch', '==', sube);
         
@@ -8600,11 +8631,25 @@ async function loadPuantajAnaliz() {
         const personelStats = {};
         snapshot.forEach(doc => {
             const d = doc.data();
+            const personelInfo = personelMap[d.personelId];
+            
+            // Sadece aktif personelleri dahil et
+            if (!personelInfo) return;
+            
             if (!personelStats[d.personelId]) {
-                personelStats[d.personelId] = { id: d.personelId, toplamPuan: 0, negatif: 0, pozitif: 0, kayitlar: [] };
+                personelStats[d.personelId] = { 
+                    id: d.personelId, 
+                    name: personelInfo.name,
+                    position: personelInfo.position,
+                    toplamPuan: 0, 
+                    negatif: 0, 
+                    pozitif: 0, 
+                    kayitlar: [] 
+                };
             }
+            
             const yildiz = d.score || 3;
-            // Yeni puan sistemi: 1★=-3, 2★=-2, 3★=-1, 4★=+1, 5★=+2
+            // Puan sistemi: 1★=-3, 2★=-2, 3★=-1, 4★=+1, 5★=+2
             if (yildiz === 1) {
                 personelStats[d.personelId].toplamPuan -= 3;
                 personelStats[d.personelId].negatif++;
@@ -8623,18 +8668,6 @@ async function loadPuantajAnaliz() {
             }
             personelStats[d.personelId].kayitlar.push(d);
         });
-        
-        // Personel isimlerini al
-        const personelIds = Object.keys(personelStats);
-        for (const pid of personelIds) {
-            try {
-                const pDoc = await db.collection('personel').doc(pid).get();
-                if (pDoc.exists) {
-                    personelStats[pid].name = pDoc.data().name;
-                    personelStats[pid].position = pDoc.data().position;
-                }
-            } catch (e) {}
-        }
         
         const sortedPersonel = Object.values(personelStats).sort((a, b) => b.toplamPuan - a.toplamPuan);
         
@@ -15611,32 +15644,58 @@ async function loadLeaderboard() {
         const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         const monthStartStr = formatDateLocal(monthStart);
         const monthEndStr = formatDateLocal(monthEnd);
+        const periodKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         const monthName = now.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
         
-        // puantajNotes koleksiyonundan çek (daha güvenilir)
+        // 1. Aktif personel listesini çek
+        const personelSnapshot = await db.collection('personel').get();
+        const activePersonel = {};
+        const personelByDocId = {};
+        
+        personelSnapshot.forEach(doc => {
+            const d = doc.data();
+            if (d.status !== 'inactive' && d.status !== 'deleted') {
+                const normalizedId = normalizePersonelId(d.name);
+                activePersonel[normalizedId] = {
+                    docId: doc.id,
+                    name: d.name,
+                    codeName: d.codeName || formatDisplayName(d.name),
+                    branch: d.branch
+                };
+                personelByDocId[doc.id] = activePersonel[normalizedId];
+            }
+        });
+        
+        // Personel bazında puanları topla
+        const personelPoints = {};
+        
+        // 2. puantajNotes koleksiyonundan çek (otomatik check puanları)
         const notesSnapshot = await db.collection('puantajNotes')
             .where('date', '>=', monthStartStr)
             .where('date', '<=', monthEndStr)
             .get();
         
-        // Personel bazında puanları topla
-        const personelPoints = {};
-        
         notesSnapshot.forEach(doc => {
             const data = doc.data();
-            const personName = data.personelName || 'Bilinmiyor';
-            const displayName = formatDisplayName(personName);
+            const personelId = data.personelId || '';
             const points = data.points || 0;
             const status = data.status || 'completed';
             
+            // Sadece aktif personelleri dahil et
+            const personelInfo = activePersonel[personelId];
+            if (!personelInfo) return; // Silinmiş/bilinmeyen personeli atla
+            
+            const displayName = personelInfo.codeName;
+            
             if (!personelPoints[displayName]) {
                 personelPoints[displayName] = { 
-                    fullName: personName,
+                    fullName: personelInfo.name,
                     total: 0, 
                     onTime: 0, 
                     late: 0, 
                     missed: 0,
-                    completed: 0 
+                    completed: 0,
+                    manual: 0
                 };
             }
             
@@ -15645,6 +15704,39 @@ async function loadLeaderboard() {
             if (status === 'onTime') personelPoints[displayName].onTime++;
             else if (status === 'late') personelPoints[displayName].late++;
             else if (status === 'missed') personelPoints[displayName].missed++;
+        });
+        
+        // 3. puantaj koleksiyonundan çek (manuel değerlendirmeler)
+        const puantajSnapshot = await db.collection('puantaj')
+            .where('period', '==', periodKey)
+            .get();
+        
+        puantajSnapshot.forEach(doc => {
+            const data = doc.data();
+            const personelDocId = data.personelId;
+            const score = data.score || 3;
+            const points = score - 3; // 5→+2, 4→+1, 3→0, 2→-1, 1→-2
+            
+            // personelId ile eşleştir
+            const personelInfo = personelByDocId[personelDocId];
+            if (!personelInfo) return;
+            
+            const displayName = personelInfo.codeName;
+            
+            if (!personelPoints[displayName]) {
+                personelPoints[displayName] = { 
+                    fullName: personelInfo.name,
+                    total: 0, 
+                    onTime: 0, 
+                    late: 0, 
+                    missed: 0,
+                    completed: 0,
+                    manual: 0
+                };
+            }
+            
+            personelPoints[displayName].total += points;
+            personelPoints[displayName].manual++;
         });
         
         // Puanlara göre sırala
@@ -19974,47 +20066,84 @@ async function loadKPIDashboard() {
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
     const monthStartStr = formatDateLocal(monthStart);
     const todayStr = formatDateLocal(today);
+    const periodKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
     
     let html = '';
     
     for (const branch of branches) {
-        const branchKey = branch.replace(/[^a-zA-Z0-9]/g, '_');
-        let totalChecks = 0, completedChecks = 0, onTimeChecks = 0;
+        let totalChecks = 0, completedChecks = 0, onTimeChecks = 0, missedChecks = 0;
+        let totalPoints = 0, manualCount = 0;
         
         try {
-            const snapshot = await db.collection('checklistSubmissions')
+            // 1. checklistSubmissions
+            const checksSnapshot = await db.collection('checklistSubmissions')
                 .where('branch', '==', branch)
                 .where('date', '>=', monthStartStr)
                 .get();
             
-            snapshot.forEach(doc => {
+            checksSnapshot.forEach(doc => {
                 totalChecks++;
                 const data = doc.data();
                 if (data.completionRate >= 80) completedChecks++;
                 if (data.pointStatus === 'onTime') onTimeChecks++;
             });
-        } catch (e) {}
+            
+            // 2. puantajNotes (otomatik puanlar)
+            const notesSnapshot = await db.collection('puantajNotes')
+                .where('branch', '==', branch)
+                .where('date', '>=', monthStartStr)
+                .get();
+            
+            notesSnapshot.forEach(doc => {
+                const data = doc.data();
+                totalPoints += (data.points || 0);
+                if (data.status === 'onTime') onTimeChecks++;
+                else if (data.status === 'missed') missedChecks++;
+            });
+            
+            // 3. puantaj (manuel değerlendirmeler) - branch ile eşleştir
+            const puantajSnapshot = await db.collection('puantaj')
+                .where('branch', '==', branch)
+                .where('period', '==', periodKey)
+                .get();
+            
+            puantajSnapshot.forEach(doc => {
+                const data = doc.data();
+                const score = data.score || 3;
+                totalPoints += (score - 3);
+                manualCount++;
+            });
+            
+        } catch (e) {
+            console.warn('KPI veri hatası:', e);
+        }
         
-        const completionRate = totalChecks > 0 ? Math.round((completedChecks / totalChecks) * 100) : 0;
+        const totalActivity = totalChecks + missedChecks + manualCount;
+        const completionRate = totalActivity > 0 ? Math.round(((totalChecks + manualCount) / totalActivity) * 100) : 0;
         const onTimeRate = totalChecks > 0 ? Math.round((onTimeChecks / totalChecks) * 100) : 0;
         const isMoonberry = branch.toLowerCase().includes('şişli') || branch.toLowerCase().includes('sisli');
         const brandColor = isMoonberry ? '#008c95' : '#ff8674';
+        const pointColor = totalPoints > 0 ? '#27ae60' : totalPoints < 0 ? '#e74c3c' : 'var(--tx2)';
         
         html += `
             <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:14px;padding:16px;border-left:4px solid ${brandColor}">
                 <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem">${branch}</div>
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center">
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center">
                     <div>
                         <div style="font-size:1.3rem;font-weight:700;color:${brandColor}">${totalChecks}</div>
                         <div style="font-size:.65rem;color:var(--tx3)">Check</div>
                     </div>
                     <div>
-                        <div style="font-size:1.3rem;font-weight:700;color:${completionRate >= 80 ? '#27ae60' : '#e74c3c'}">%${completionRate}</div>
-                        <div style="font-size:.65rem;color:var(--tx3)">Tamamlama</div>
+                        <div style="font-size:1.3rem;font-weight:700;color:${manualCount > 0 ? '#3498db' : 'var(--tx3)'}">${manualCount}</div>
+                        <div style="font-size:.65rem;color:var(--tx3)">Manuel</div>
                     </div>
                     <div>
                         <div style="font-size:1.3rem;font-weight:700;color:${onTimeRate >= 70 ? '#27ae60' : '#f39c12'}">%${onTimeRate}</div>
                         <div style="font-size:.65rem;color:var(--tx3)">Vaktinde</div>
+                    </div>
+                    <div>
+                        <div style="font-size:1.3rem;font-weight:700;color:${pointColor}">${totalPoints > 0 ? '+' : ''}${totalPoints}</div>
+                        <div style="font-size:.65rem;color:var(--tx3)">Puan</div>
                     </div>
                 </div>
             </div>
