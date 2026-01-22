@@ -15509,21 +15509,29 @@ async function loadTodayChecks() {
             // Gece saatlerinde son slot'u (genelde 22:00) kontrol et
             const lastSlot = gunlukTimes[gunlukTimes.length - 1];
             const [lastH, lastM] = lastSlot.split(':').map(Number);
-            const lastSlotMinutes = lastH * 60 + lastM;
-            const lastDeadlineMinutes = lastSlotMinutes + gunlukLateWindow; // örn: 22:30
+            const lastSlotMinutes = lastH * 60 + lastM; // 22:00 = 1320
+            const lastDeadlineMinutes = lastSlotMinutes + gunlukLateWindow; // 22:30 = 1350
             
-            // Gece için adjusted hesaplama (00:32 = 24*60 + 32 = 1472 dakika)
-            const adjustedNowMinutes = nowMinutesTotal + 24 * 60;
-            const adjustedDeadline = lastDeadlineMinutes + 24 * 60; // 22:30 = 22*60+30+24*60
+            // Gece geçişi hesaplaması:
+            // Deadline akşamda (örn 22:30), şu an gece yarısından sonra (örn 00:38)
+            // Deadline'dan bu yana geçen süre = (gece yarısına kalan) + (gece yarısından şimdiye)
+            const minutesBeforeMidnight = 24 * 60 - lastDeadlineMinutes; // 1440 - 1350 = 90
+            const minutesPastMidnight = nowMinutesTotal; // 38
+            const minutesSinceDeadline = minutesBeforeMidnight + minutesPastMidnight; // 90 + 38 = 128
             
-            // Late window kontrolü: örn 22:00 + 30dk = 22:30
-            // Saat 00:32 = 1472 dakika, deadline 22:30 = 1350 dakika
-            // 1472 > 1350 → MISSED
-            if (adjustedNowMinutes <= adjustedDeadline) {
-                // Hala late window içinde
+            // Late window henüz geçmedi mi?
+            if (minutesSinceDeadline <= 0) {
+                // Henüz deadline'a ulaşılmadı (şu an deadline'dan önce - olası değil gece için)
                 activeGunlukTime = lastSlot;
                 isGunlukActive = true;
-                gunlukRemainingMinutes = adjustedDeadline - adjustedNowMinutes;
+                gunlukRemainingMinutes = -minutesSinceDeadline;
+            } else if (minutesSinceDeadline <= gunlukLateWindow) {
+                // Late window içinde (deadline geçti ama late window henüz bitmedi)
+                // Bu sadece late window çok büyükse mümkün (örn 120dk)
+                activeGunlukTime = lastSlot;
+                isGunlukActive = true;
+                isGunlukLate = true;
+                gunlukRemainingMinutes = gunlukLateWindow - minutesSinceDeadline;
             } else {
                 // Late window geçti - MISSED
                 activeGunlukTime = lastSlot;
