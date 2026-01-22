@@ -15927,8 +15927,15 @@ async function loadTodayChecks() {
             const isMissedRecent = check.isMissed && !check.isCompleted && check.canStillFill;
             const isDisabled = check.isMissed && !check.isCompleted && !check.canStillFill;
             
-            // Kart sınıfları
-            let cardClass = check.isCompleted ? 'completed' : (check.isActive ? 'active' : '');
+            // Kart sınıfları - missed durumunu da kontrol et
+            let cardClass = '';
+            if (check.isCompleted) {
+                cardClass = 'completed';
+            } else if (check.isMissed) {
+                cardClass = 'missed';
+            } else if (check.isActive) {
+                cardClass = 'active';
+            }
             if (isExpired) cardClass = 'expired'; // Süresi doldu ama kaçırılmış değil
             if (isMissedRecent) cardClass = 'missed-recent';
             if (isDisabled) cardClass = 'disabled';
