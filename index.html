@@ -15870,8 +15870,37 @@ async function loadTodayChecks() {
             if (haftalikCompleted) completedChecks++;
         }
         
-        // Check'leri önceliğe göre sırala
-        branchChecks.sort((a, b) => a.priority - b.priority);
+        // Check'leri akıllı sırala:
+        // 1. Aktif olanlar (süre yaklaşana göre - en az kalan en üstte)
+        // 2. Bekleyenler (henüz aktif olmamış)
+        // 3. Tamamlanmışlar
+        // 4. Kaçırılmış/Doldurulamaz (en altta)
+        branchChecks.sort((a, b) => {
+            // Kategori önceliği belirle
+            const getCategory = (check) => {
+                if (check.isCompleted) return 3; // Tamamlanmış
+                if (check.isMissed) return 4;    // Kaçırılmış (en altta)
+                if (check.isActive) return 1;    // Aktif (en üstte)
+                return 2;                        // Bekleyen
+            };
+            
+            const catA = getCategory(a);
+            const catB = getCategory(b);
+            
+            // Önce kategoriye göre sırala
+            if (catA !== catB) return catA - catB;
+            
+            // Aynı kategorideyse:
+            if (catA === 1) {
+                // Aktifler için: kalan süre az olan üstte
+                const remA = a.remainingMinutes ?? 9999;
+                const remB = b.remainingMinutes ?? 9999;
+                return remA - remB;
+            }
+            
+            // Diğer kategoriler için eski priority'yi kullan
+            return (a.priority || 50) - (b.priority || 50);
+        });
         
         // Şube HTML'i oluştur
         if (sortedBranches.length > 1) {
