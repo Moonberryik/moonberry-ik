@@ -14156,6 +14156,12 @@ function getWeekStart(date = new Date()) {
     return d;
 }
 
+// Haftanın başlangıç tarihini YYYY-MM-DD formatında döndür
+function getWeekKey(date = new Date()) {
+    const weekStart = getWeekStart(date);
+    return formatDateLocal(weekStart);
+}
+
 // Check için zaman penceresi hesapla
 function getCheckTimeWindow(checkType, targetTime, branch, date = new Date()) {
     const rules = CHECK_RULES[checkType];
@@ -14508,23 +14514,45 @@ async function checkAndProcessMissedChecks() {
             let shiftPersonnel = [];
             try {
                 const weekKey = getWeekKey(new Date(date));
-                const shiftDoc = await db.collection('shifts').doc(`${branch}_${weekKey}`).get();
                 
-                if (shiftDoc.exists) {
-                    const shiftData = shiftDoc.data();
-                    const dayOfWeek = new Date(date).getDay();
-                    const dayNames = ['pazar', 'pazartesi', 'sali', 'carsamba', 'persembe', 'cuma', 'cumartesi'];
-                    const dayKey = dayNames[dayOfWeek];
+                // DÜZELTME: ID ile değil, query ile shift bul
+                const shiftSnap = await db.collection('shifts')
+                    .where('branch', '==', branch)
+                    .where('weekStart', '==', weekKey)
+                    .limit(1)
+                    .get();
+                
+                if (!shiftSnap.empty) {
+                    const shiftData = shiftSnap.docs[0].data();
+                    // GÜN İNDEKSİ: Excel formatı - 0=Pazartesi, 6=Pazar
+                    let dayIndex = new Date(date).getDay() - 1;
+                    if (dayIndex < 0) dayIndex = 6; // Pazar için
+                    const dayIndexStr = String(dayIndex);
                     
-                    const personnel = shiftData.personnel || [];
-                    for (const person of personnel) {
-                        const dayShift = person[dayKey];
-                        if (dayShift && dayShift !== 'off' && dayShift !== 'OFF' && dayShift !== '-') {
-                            shiftPersonnel.push(person.name);
+                    // DÜZELTME: personnel yerine personelShifts + personelOrder kullan
+                    const personelShifts = shiftData.personelShifts || {};
+                    const personelOrder = shiftData.personelOrder || Object.keys(personelShifts);
+                    const personelFullNames = shiftData.personelFullNames || {};
+                    
+                    for (const personId of personelOrder) {
+                        const shifts = personelShifts[personId] || {};
+                        const dayShift = shifts[dayIndexStr];
+                        
+                        // OFF, boş veya '-' değilse çalışıyor demek
+                        if (dayShift && 
+                            dayShift.toUpperCase() !== 'OFF' && 
+                            !dayShift.includes('OFF') &&
+                            dayShift !== '-' && 
+                            dayShift.trim() !== '') {
+                            // Tam ismini al
+                            const fullName = personelFullNames[personId] || personId;
+                            shiftPersonnel.push(fullName);
                         }
                     }
                 }
-            } catch(e) {}
+            } catch(e) {
+                console.error('[AutoPuan] Shift okuma hatası:', branch, date, e.message);
+            }
             
             if (shiftPersonnel.length === 0) continue;
             
@@ -18836,31 +18864,49 @@ async function checkCurrentUserShift(branch, date) {
     
     try {
         const weekKey = getWeekKey(new Date(date));
-        const shiftDoc = await db.collection('shifts').doc(`${branch}_${weekKey}`).get();
         
-        if (!shiftDoc.exists) {
+        // DÜZELTME: ID ile değil, query ile shift bul
+        const shiftSnap = await db.collection('shifts')
+            .where('branch', '==', branch)
+            .where('weekStart', '==', weekKey)
+            .limit(1)
+            .get();
+        
+        if (shiftSnap.empty) {
             return { hasShift: false, shiftType: null, reason: 'no_shift_doc' };
         }
         
-        const shiftData = shiftDoc.data();
-        const dayOfWeek = new Date(date).getDay(); // 0=Pazar, 1=Pazartesi...
-        const dayNames = ['pazar', 'pazartesi', 'sali', 'carsamba', 'persembe', 'cuma', 'cumartesi'];
-        const dayKey = dayNames[dayOfWeek];
+        const shiftData = shiftSnap.docs[0].data();
+        // GÜN İNDEKSİ: Excel formatı - 0=Pazartesi, 6=Pazar
+        let dayIndex = new Date(date).getDay() - 1;
+        if (dayIndex < 0) dayIndex = 6; // Pazar için
+        const dayIndexStr = String(dayIndex);
         
         const userName = currentUser.name.toLowerCase().trim();
         
-        // Tüm personel verilerini kontrol et
-        const personnel = shiftData.personnel || [];
-        for (const person of personnel) {
-            const personName = (person.name || '').toLowerCase().trim();
+        // DÜZELTME: personelShifts + personelFullNames kullan
+        const personelShifts = shiftData.personelShifts || {};
+        const personelFullNames = shiftData.personelFullNames || {};
+        const personelOrder = shiftData.personelOrder || Object.keys(personelShifts);
+        
+        for (const personId of personelOrder) {
+            const fullName = personelFullNames[personId] || personId;
+            const personName = fullName.toLowerCase().trim();
+            
             if (personName === userName || personName.includes(userName) || userName.includes(personName)) {
-                const dayShift = person[dayKey];
-                if (dayShift && dayShift !== 'off' && dayShift !== 'OFF' && dayShift !== '-') {
+                const shifts = personelShifts[personId] || {};
+                const dayShift = shifts[dayIndexStr];
+                
+                if (dayShift && 
+                    dayShift.toUpperCase() !== 'OFF' && 
+                    !dayShift.toUpperCase().includes('OFF') &&
+                    dayShift !== '-' && 
+                    dayShift.trim() !== '') {
                     return { 
                         hasShift: true, 
                         shiftType: dayShift,
                         shiftTime: dayShift,
-                        personName: person.name
+                        personName: fullName
                     };
                 }
             }
