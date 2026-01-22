@@ -15251,7 +15251,7 @@ async function loadTodayChecks() {
             if (gunlukCompleted) completedChecks++;
         }
         
-        // 6. Müdür Kontrol (sadece müdürler için, tüm gün)
+        // 6. Müdür Kontrol (sadece müdürler için)
         if (isAdmin) {
             const mudurSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_mudur_${todayStr}`;
             let mudurCompleted = false;
@@ -15259,6 +15259,29 @@ async function loadTodayChecks() {
                 const doc = await db.collection('checklistSubmissions').doc(mudurSubmissionId).get();
                 mudurCompleted = doc.exists;
             } catch (e) {}
+            
+            // CHECK_RULES'dan aktiflik saatlerini al
+            const mudurRules = CHECK_RULES.mudur || {};
+            const mudurActiveFrom = mudurRules.activeFrom || '18:00';
+            const mudurDeadlineRule = mudurRules.deadline || '23:00';
+            const [activeH, activeM] = mudurActiveFrom.split(':').map(Number);
+            const [deadlineRuleH, deadlineRuleM] = mudurDeadlineRule.split(':').map(Number);
+            
+            // Şu anki saat aktif zaman diliminde mi?
+            const nowMinutesOfDay = currentHour * 60 + currentMinutes;
+            const activeFromMinutes = activeH * 60 + activeM;
+            let deadlineRuleMinutes = deadlineRuleH * 60 + deadlineRuleM;
+            
+            // Gece geçişi kontrolü (deadline gece yarısından sonra ise)
+            if (deadlineRuleH < activeH) {
+                deadlineRuleMinutes += 24 * 60;
+            }
+            let adjustedNowMinutes = nowMinutesOfDay;
+            if (currentHour < activeH && currentHour < 6) {
+                adjustedNowMinutes += 24 * 60;
+            }
+            
+            const isMudurTimeActive = adjustedNowMinutes >= activeFromMinutes && adjustedNowMinutes <= deadlineRuleMinutes;
             
             // Müdür OFF kontrolü - shift verisinden kontrol et
             let mudurPersonnel = null;
@@ -15385,6 +15408,12 @@ async function loadTodayChecks() {
                 mudurRemainingMinutes = 0;
             }
             
+            // Aktif değilse subLabel'i güncelle
+            if (!isMudurTimeActive && !mudurCompleted && !isMudurCheckMissed) {
+                mudurSubLabel = `${mudurActiveFrom}'de aktif`;
+                mudurRemainingMinutes = null; // Aktif değilse kalan süre gösterme
+            }
+            
             branchChecks.push({
                 id: 'mudur',
                 name: getChecklistTypeName(branch, 'mudur', 'Müdür Kontrol'),
@@ -15392,15 +15421,15 @@ async function loadTodayChecks() {
                 deadline: mudurDeadline,
                 subLabel: mudurSubLabel,
                 isCompleted: mudurCompleted,
-                isActive: canFillMudurCheck && !mudurCompleted,
+                isActive: isMudurTimeActive && canFillMudurCheck && !mudurCompleted,
                 isMissed: isMudurCheckMissed,
-                canStillFill: canFillMudurCheck,
+                canStillFill: canFillMudurCheck && isMudurTimeActive,
                 remainingMinutes: mudurRemainingMinutes,
-                remainingText: isMudurCheckMissed ? '⚠️ GEÇTİ' : (canFillMudurCheck ? '' : '⚠️'),
+                remainingText: isMudurCheckMissed ? '⚠️ GEÇTİ' : '',
                 personnel: [mudurPersonnel],
-                points: { onTime: 10, missed: -10 },
-                priority: mudurCompleted ? 93 : (isMudurCheckMissed ? 99 : (canFillMudurCheck ? 25 : 99)),
-                onClick: canFillMudurCheck ? `goToChecklist('${branch}', 'mudur', null)` : ''
+                points: CHECK_RULES.mudur?.points || { onTime: 10, late: 0, missed: -10 },
+                priority: mudurCompleted ? 93 : (isMudurCheckMissed ? 99 : (isMudurTimeActive ? 25 : 70)),
+                onClick: (canFillMudurCheck && isMudurTimeActive) ? `goToChecklist('${branch}', 'mudur', null)` : ''
             });
             totalChecks++;
             if (mudurCompleted) completedChecks++;
@@ -17367,65 +17396,42 @@ function renderTimeSlotCard(type, timeOrSlot, idx, rule) {
     // timeOrSlot string olabilir (eski format) veya obje olabilir (yeni format)
     const isObject = typeof timeOrSlot === 'object';
     const time = isObject ? timeOrSlot.time : timeOrSlot;
-    const slotWindow = isObject ? timeOrSlot.window : (rule.window || { before: 30, after: 30 });
-    const slotLateWindow = isObject ? (timeOrSlot.lateWindow || 0) : (rule.lateWindow || 0);
-    const slotPoints = isObject ? (timeOrSlot.points || rule.points) : (rule.points || { onTime: 0, late: 0, missed: -1 });
+    const slotWindow = isObject ? (timeOrSlot.window || rule.window) : (rule.window || { before: 30, after: 30 });
+    const slotLateWindow = isObject ? (timeOrSlot.lateWindow ?? rule.lateWindow ?? 0) : (rule.lateWindow || 0);
     
     return `
-        <div class="time-slot-card" id="timeSlot_${type}_${idx}" style="flex-direction:column;align-items:stretch;gap:12px;padding:16px">
-            <div style="display:flex;align-items:center;justify-content:space-between">
-                <div style="display:flex;align-items:center;gap:12px">
-                    <input type="time" class="time-slot-input" id="slot_${type}_${idx}_time" value="${time}" 
-                           onchange="updateTimeSlotField('${type}', ${idx}, 'time', this.value)" 
-                           style="font-size:1.1rem;font-weight:600;width:100px">
-                    <span style="color:var(--tx3);font-size:.8rem">Saat</span>
-                </div>
-                <button class="time-slot-delete" onclick="deleteTimeSlot('${type}', ${idx})" title="Sil">
-                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-            </div>
+        <div class="time-slot-card" id="timeSlot_${type}_${idx}" style="display:flex;align-items:center;gap:16px;padding:14px 16px">
+            <input type="time" class="time-slot-input" id="slot_${type}_${idx}_time" value="${time}" 
+                   onchange="updateTimeSlotField('${type}', ${idx}, 'time', this.value)" 
+                   style="font-size:1.1rem;font-weight:600;width:90px;text-align:center">
             
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-                <div style="background:var(--bg3);border-radius:8px;padding:10px">
-                    <div style="font-size:.7rem;color:var(--tx3);margin-bottom:4px">Erken Başla (dk)</div>
+            <div style="display:flex;align-items:center;gap:8px;flex:1">
+                <div style="display:flex;align-items:center;gap:4px">
+                    <span style="font-size:.7rem;color:var(--tx3)">Erken:</span>
                     <input type="number" class="form-input" id="slot_${type}_${idx}_before" value="${slotWindow.before || 30}" min="0" max="120"
                            onchange="updateTimeSlotField('${type}', ${idx}, 'before', this.value)"
-                           style="font-size:.9rem;padding:6px;text-align:center">
+                           style="width:50px;font-size:.85rem;padding:4px 6px;text-align:center">
+                    <span style="font-size:.7rem;color:var(--tx3)">dk</span>
                 </div>
-                <div style="background:var(--bg3);border-radius:8px;padding:10px">
-                    <div style="font-size:.7rem;color:var(--tx3);margin-bottom:4px">Geç Bitir (dk)</div>
+                <div style="display:flex;align-items:center;gap:4px">
+                    <span style="font-size:.7rem;color:var(--tx3)">Geç:</span>
                     <input type="number" class="form-input" id="slot_${type}_${idx}_after" value="${slotWindow.after || 30}" min="0" max="120"
                            onchange="updateTimeSlotField('${type}', ${idx}, 'after', this.value)"
-                           style="font-size:.9rem;padding:6px;text-align:center">
+                           style="width:50px;font-size:.85rem;padding:4px 6px;text-align:center">
+                    <span style="font-size:.7rem;color:var(--tx3)">dk</span>
                 </div>
-                <div style="background:var(--bg3);border-radius:8px;padding:10px">
-                    <div style="font-size:.7rem;color:var(--tx3);margin-bottom:4px">Geç Pencere (dk)</div>
+                <div style="display:flex;align-items:center;gap:4px">
+                    <span style="font-size:.7rem;color:var(--tx3)">Tolerans:</span>
                     <input type="number" class="form-input" id="slot_${type}_${idx}_lateWindow" value="${slotLateWindow}" min="0" max="120"
                            onchange="updateTimeSlotField('${type}', ${idx}, 'lateWindow', this.value)"
-                           style="font-size:.9rem;padding:6px;text-align:center">
+                           style="width:50px;font-size:.85rem;padding:4px 6px;text-align:center">
+                    <span style="font-size:.7rem;color:var(--tx3)">dk</span>
                 </div>
             </div>
             
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-                <div style="background:rgba(39,174,96,.08);border:1px solid rgba(39,174,96,.2);border-radius:8px;padding:10px;text-align:center">
-                    <div style="font-size:.65rem;color:#27ae60;font-weight:600;margin-bottom:4px">VAKTİNDE</div>
-                    <input type="number" class="form-input" id="slot_${type}_${idx}_onTime" value="${slotPoints.onTime || 0}"
-                           onchange="updateTimeSlotField('${type}', ${idx}, 'onTime', this.value)"
-                           style="font-size:1rem;font-weight:700;text-align:center;color:#27ae60;background:transparent;border:none;padding:4px">
-                </div>
-                <div style="background:rgba(243,156,18,.08);border:1px solid rgba(243,156,18,.2);border-radius:8px;padding:10px;text-align:center">
-                    <div style="font-size:.65rem;color:#f39c12;font-weight:600;margin-bottom:4px">GEÇ</div>
-                    <input type="number" class="form-input" id="slot_${type}_${idx}_late" value="${slotPoints.late || 0}"
-                           onchange="updateTimeSlotField('${type}', ${idx}, 'late', this.value)"
-                           style="font-size:1rem;font-weight:700;text-align:center;color:#f39c12;background:transparent;border:none;padding:4px">
-                </div>
-                <div style="background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.2);border-radius:8px;padding:10px;text-align:center">
-                    <div style="font-size:.65rem;color:#e74c3c;font-weight:600;margin-bottom:4px">YAPILMADI</div>
-                    <input type="number" class="form-input" id="slot_${type}_${idx}_missed" value="${slotPoints.missed ?? -1}"
-                           onchange="updateTimeSlotField('${type}', ${idx}, 'missed', this.value)"
-                           style="font-size:1rem;font-weight:700;text-align:center;color:#e74c3c;background:transparent;border:none;padding:4px">
-                </div>
-            </div>
+            <button class="time-slot-delete" onclick="deleteTimeSlot('${type}', ${idx})" title="Sil">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
         </div>
     `;
 }
@@ -17443,8 +17449,7 @@ function updateTimeSlotField(type, idx, field, value) {
             return {
                 time: slot,
                 window: { before: 30, after: 30 },
-                lateWindow: 0,
-                points: { ...CHECK_RULES[type].points } || { onTime: 0, late: 0, missed: -1 }
+                lateWindow: 0
             };
         }
         return slot;
@@ -17460,9 +17465,6 @@ function updateTimeSlotField(type, idx, field, value) {
         timeSlots[idx].window[field] = parseInt(value) || 0;
     } else if (field === 'lateWindow') {
         timeSlots[idx].lateWindow = parseInt(value) || 0;
-    } else if (field === 'onTime' || field === 'late' || field === 'missed') {
-        if (!timeSlots[idx].points) timeSlots[idx].points = { onTime: 0, late: 0, missed: -1 };
-        timeSlots[idx].points[field] = parseInt(value) || 0;
     }
     
     CHECK_RULES[type].timeSlots = timeSlots;
@@ -17480,8 +17482,7 @@ function addTimeSlot(type) {
             return {
                 time: slot,
                 window: { before: 30, after: 30 },
-                lateWindow: 0,
-                points: { ...CHECK_RULES[type].points } || { onTime: 0, late: 0, missed: -1 }
+                lateWindow: 0
             };
         }
         return slot;
@@ -17497,12 +17498,11 @@ function addTimeSlot(type) {
         newTime = `${String(newH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     }
     
-    // Yeni slot objesi
+    // Yeni slot objesi (puansız)
     const newSlot = {
         time: newTime,
         window: { before: 30, after: 30 },
-        lateWindow: 0,
-        points: { onTime: 0, late: 0, missed: -1 }
+        lateWindow: 0
     };
     
     timeSlots.push(newSlot);
