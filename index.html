@@ -13841,12 +13841,14 @@ const CHECKLIST_TYPE_ALIAS = {
     gunluk: "gunluk",
     gunluk_genel: "gunluk",
     guncel_genel: "gunluk",
-    gunluk_check: "gunluk"
+    gunluk_check: "gunluk",
+    temizlik: "aylik",         // temizlik -> aylik alias
+    aylik: "aylik"
 };
 
 function canonicalChecklistTypeId(typeId) {
     const t = (typeId || "").toString().trim().toLowerCase();
-    return CHECKLIST_TYPE_ALIAS[t] || typeId;
+    return CHECKLIST_TYPE_ALIAS[t] || t; // Alias yoksa lowercase versiyonu döndür
 }
 
 function sanitize(str) {
@@ -17611,10 +17613,20 @@ function renderCheckRuleDetails(type) {
     
     const branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
     
+    // Dinamik isim al - CHECKLIST_TYPES'tan öncelikli
+    let displayName = rule.name || type;
+    for (const br of branches) {
+        const typeInfo = CHECKLIST_TYPES[br]?.find(t => canonicalChecklistTypeId(t.id) === canonicalChecklistTypeId(type));
+        if (typeInfo?.name) {
+            displayName = typeInfo.name;
+            break;
+        }
+    }
+    
     let html = `
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px">
             <div>
-                <h3 style="color:var(--tx);font-size:1.2rem;font-weight:600;margin:0 0 4px 0">${rule.name || type}</h3>
+                <h3 style="color:var(--tx);font-size:1.2rem;font-weight:600;margin:0 0 4px 0">${displayName}</h3>
                 <p style="color:var(--tx2);font-size:.85rem;margin:0">${rule.description || ''}</p>
             </div>
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
@@ -18308,8 +18320,8 @@ function initCheckRulesUI() {
         kapanis: '<path d="M17 18a5 5 0 00-10 0"/><line x1="12" y1="9" x2="12" y2="2"/><polyline points="16 6 12 10 8 6"/>'
     };
     
-    // İsim mapping
-    const nameMap = {
+    // İsim mapping - CHECKLIST_TYPES'tan dinamik al, yoksa default kullan
+    const defaultNames = {
         gunluk: 'Günlük Check',
         platform: 'Platform',
         aylik: 'Temizlik Çizelgesi',
@@ -18317,6 +18329,20 @@ function initCheckRulesUI() {
         mudur: 'Müdür Kontrol',
         acilis: 'Açılış',
         kapanis: 'Kapanış'
+    };
+    
+    // Tüm şubelerden isimleri topla (ilk bulunan geçerli)
+    const getDynamicName = (typeId) => {
+        // Önce tüm şubelerde ara
+        for (const branch of Object.keys(CHECKLIST_TYPES)) {
+            const typeInfo = CHECKLIST_TYPES[branch]?.find(t => canonicalChecklistTypeId(t.id) === canonicalChecklistTypeId(typeId));
+            if (typeInfo?.name) return typeInfo.name;
+        }
+        // CHECK_RULES'ta ara
+        if (CHECK_RULES[typeId]?.name) return CHECK_RULES[typeId].name;
+        if (DEFAULT_CHECK_RULES[typeId]?.name) return DEFAULT_CHECK_RULES[typeId].name;
+        // Default
+        return defaultNames[typeId] || typeId;
     };
     
     // Sıralama - temizlik kaldırıldı, sadece aylik var
@@ -18337,7 +18363,7 @@ function initCheckRulesUI() {
     let html = '';
     sortedTypes.forEach((typeId, idx) => {
         const icon = iconMap[typeId] || '<path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/>';
-        const name = nameMap[typeId] || CHECK_RULES[typeId]?.name || typeId;
+        const name = getDynamicName(typeId);
         
         html += `
             <button class="check-rule-tab ${idx === 0 ? 'active' : ''}" onclick="selectCheckRuleTab('${typeId}')" data-type="${typeId}">
@@ -23665,11 +23691,14 @@ async function renderTemizlikChecklist(container, branch, date) {
             kapanis: { bg: 'rgba(155,89,182,.1)', border: '#9b59b6', icon: '🌙', label: 'Kapanış' }
         };
         
+        // Checklist ismini dinamik al
+        const checklistName = getChecklistTypeName(branch, 'aylik', 'Temizlik Çizelgesi');
+        
         let html = `
             <div style="margin-bottom:20px">
                 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
                     <div>
-                        <h3 style="color:var(--tx);font-size:1.1rem;font-weight:600;margin:0">🧹 Temizlik Çizelgesi</h3>
+                        <h3 style="color:var(--tx);font-size:1.1rem;font-weight:600;margin:0">🧹 ${checklistName}</h3>
                         <div style="font-size:.85rem;color:var(--tx2);margin-top:4px">${branch} - ${date}</div>
                     </div>
                     <div style="display:flex;gap:8px;flex-wrap:wrap">
