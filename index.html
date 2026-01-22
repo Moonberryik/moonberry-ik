@@ -1673,77 +1673,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                         <div class="btn-group"><button class="btn btn-primary btn-sm" onclick="updateAdminCredentials()">🔑 Güncelle</button></div>
                     </div>
-                    <!-- Veri Temizleme - Sadece admin görecek -->
+                    <!-- Puan Sıfırlama - Sadece admin görecek -->
                     <div class="admin-card" id="dataCleanupCard" style="margin-top:20px;display:none">
-                        <div class="admin-card-header"><div class="admin-card-title">🧹 Veri Yönetimi</div></div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Verileri yönetin ve Firebase'e yükleyin.</p>
-                        <div style="display:flex;gap:12px;flex-wrap:wrap">
-                            <button class="btn btn-primary btn-sm" onclick="window.open('seed.html', '_blank')">📋 Veri Yükleme Programı</button>
-                            <button class="btn btn-ghost btn-sm" onclick="cleanDuplicatePersonel()">👥 Duplicate Personel Temizle</button>
-                            <button class="btn btn-ghost btn-sm" onclick="cleanDuplicateShifts()">📅 Duplicate Shift Temizle</button>
-                        </div>
+                        <div class="admin-card-header"><div class="admin-card-title">🔄 Puan Yönetimi</div></div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Personel puanlarını sıfırlayın.</p>
                         
-                        <!-- Tüm Geçmişi Sil - TEHLİKELİ -->
-                        <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--bg4)">
-                            <div style="font-weight:600;color:#e74c3c;margin-bottom:12px">⚠️ Tehlikeli İşlemler</div>
-                            <p style="color:var(--tx2);font-size:.8rem;margin-bottom:12px">Bu işlemler <strong>geri alınamaz</strong>. Dikkatli kullanın!</p>
-                            <button class="btn btn-sm" style="background:#e74c3c;border-color:#e74c3c;color:#fff" onclick="deleteAllHistory()">🗑️ Tüm Check & Puan Geçmişini Sil</button>
-                            <div style="margin-top:10px;padding:10px;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);border-radius:8px">
-                                <div style="font-size:.75rem;color:#e74c3c"><strong>Dikkat:</strong> Bu işlem tüm checklist kayıtlarını, otomatik puanları ve manuel puanları kalıcı olarak siler. HTML'de hiçbir geçmiş kayıt görünmez hale gelir.</div>
-                            </div>
+                        <div style="padding:16px;background:rgba(231,76,60,.05);border:1px solid rgba(231,76,60,.2);border-radius:10px">
+                            <div style="font-weight:600;color:#e74c3c;margin-bottom:8px">⚠️ Dikkat</div>
+                            <p style="color:var(--tx2);font-size:.8rem;margin-bottom:12px">Bu işlem tüm personelin puanlarını sıfırlar. Checklist geçmişi korunur.</p>
+                            <button class="btn btn-sm" style="background:#e74c3c;border-color:#e74c3c;color:#fff" onclick="resetAllPoints()">🗑️ Tüm Puanları Sıfırla</button>
                         </div>
                         <div id="cleanupResults" style="margin-top:12px;padding:12px;background:var(--bg3);border-radius:8px;display:none"></div>
-                        
-                        <!-- Veri Migrasyon Araçları -->
-                        <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--bg4)">
-                            <div style="font-weight:600;color:var(--tx);margin-bottom:12px">🔄 Veri Migrasyon</div>
-                            <p style="color:var(--tx2);font-size:.8rem;margin-bottom:12px">Shift ve personel verilerini standartlaştır. Tüm key'ler uniqueId formatına çevrilir.</p>
-                            <div style="display:flex;gap:12px;flex-wrap:wrap">
-                                <button class="btn btn-warning btn-sm" onclick="runDataMigration()" style="background:#f39c12;border-color:#f39c12">⚡ Veri Migrasyonu Çalıştır</button>
-                                <button class="btn btn-ghost btn-sm" onclick="debugPersonelShiftData()">🔍 Debug: Tam Rapor</button>
-                                <button class="btn btn-ghost btn-sm" onclick="debugPuanSistemi()">💯 Debug: Puan Sistemi</button>
-                            </div>
-                            <div style="margin-top:10px;padding:10px;background:rgba(243,156,18,.1);border:1px solid rgba(243,156,18,.3);border-radius:8px">
-                                <div style="font-size:.75rem;color:#f39c12">⚠️ <strong>Dikkat:</strong> Migrasyon tüm shift'leri günceller. Çalıştırmadan önce Firebase konsolundan yedek alın.</div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Rol Önizleme - Sadece admin görecek -->
-                    <div class="admin-card" id="rolePreviewCard" style="margin-top:20px;display:none">
-                        <div class="admin-card-header"><div class="admin-card-title">👁️ Rol Önizleme</div></div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Diğer kullanıcı rollerinin arayüzde neleri görebileceğini önizleyin.</p>
-                        <div id="rolePreviewContent">
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label class="form-label">Önizlenecek Rol</label>
-                                    <select id="previewRoleSelect" class="form-input">
-                                        <option value="">-- Rol Seçin --</option>
-                                        <option value="barista">Barista (Salt Okunur)</option>
-                                        <option value="bolge_muduru">Bölge Müdürü</option>
-                                        <option value="magaza_muduru">Mağaza Müdürü</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Önizleme Şubesi</label>
-                                    <select id="previewBranchSelect" class="form-input">
-                                        <option value="">-- Şube Seçin --</option>
-                                        <option value="Şişli">Şişli</option>
-                                        <option value="Tuzla">Tuzla</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="btn-group" style="margin-top:16px">
-                                <button class="btn btn-primary btn-sm" onclick="startRolePreview()">👁️ Önizlemeyi Başlat</button>
-                            </div>
-                        </div>
-                        <div id="rolePreviewActive" style="display:none;padding:16px;background:var(--accent);border-radius:10px;text-align:center">
-                            <div style="color:#fff;font-weight:600;font-size:.95rem;margin-bottom:8px">🔍 Önizleme Modu Aktif</div>
-                            <div style="color:rgba(255,255,255,.8);font-size:.85rem;margin-bottom:12px">
-                                <span id="previewRoleName">-</span> olarak görüntülüyorsunuz
-                                (<span id="previewBranchName">-</span>)
-                            </div>
-                            <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.2);color:#fff;border-color:rgba(255,255,255,.3)" onclick="stopRolePreview()">✕ Önizlemeyi Sonlandır</button>
-                        </div>
                     </div>
                 </div>
 
@@ -5935,6 +5875,82 @@ async function confirmDeleteDuplicateShifts(idsJson) {
     } catch (e) {
         resultsDiv.innerHTML = `<p style="color:var(--red)">❌ Hata: ${e.message}</p>`;
     }
+}
+
+// Sadece Puanları Sıfırla - Checklist geçmişi korunur
+async function resetAllPoints() {
+    // Sadece admin
+    if (currentUser?.role !== 'admin') {
+        toast('Bu işlem için yetkiniz yok', 'error');
+        return;
+    }
+    
+    confirmModal(
+        'Puanları Sıfırla',
+        `<div style="text-align:center">
+            <div style="font-size:3rem;margin-bottom:16px">⚠️</div>
+            <div style="font-weight:600;color:#e74c3c;font-size:1.1rem;margin-bottom:12px">DİKKAT!</div>
+            <div style="color:var(--tx2);margin-bottom:20px">Bu işlem şunları <strong>kalıcı olarak</strong> silecek:</div>
+            <div style="background:rgba(231,76,60,.1);border-radius:10px;padding:16px;text-align:left;margin-bottom:20px">
+                <div style="margin-bottom:8px">🗑️ Tüm otomatik puanlar (puantajNotes)</div>
+                <div>🗑️ Tüm manuel puanlar (puantaj)</div>
+            </div>
+            <div style="background:rgba(39,174,96,.1);border-radius:10px;padding:12px;margin-bottom:16px">
+                <div style="color:#27ae60">✅ Checklist kayıtları KORUNACAK</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:8px;padding:12px">
+                <input type="text" id="confirmResetText" placeholder="Onaylamak için 'SIFIRLA' yazın" style="width:100%;padding:8px;border:2px solid var(--bg4);border-radius:6px;text-align:center;font-weight:600" />
+            </div>
+        </div>`,
+        async () => {
+            const confirmText = document.getElementById('confirmResetText')?.value;
+            if (confirmText !== 'SIFIRLA') {
+                toast('Onay metni yanlış', 'error');
+                return;
+            }
+            
+            try {
+                toast('Puan sıfırlama başlatılıyor...', 'info');
+                
+                let totalDeleted = 0;
+                
+                // 1. puantajNotes - otomatik puanlar
+                const notesSnap = await db.collection('puantajNotes').get();
+                if (notesSnap.size > 0) {
+                    const notesBatch = db.batch();
+                    notesSnap.docs.forEach(doc => {
+                        notesBatch.delete(doc.ref);
+                        totalDeleted++;
+                    });
+                    await notesBatch.commit();
+                    console.log(`✅ ${notesSnap.size} otomatik puan silindi`);
+                }
+                
+                // 2. puantaj - manuel puanlar
+                const puantajSnap = await db.collection('puantaj').get();
+                if (puantajSnap.size > 0) {
+                    const puantajBatch = db.batch();
+                    puantajSnap.docs.forEach(doc => {
+                        puantajBatch.delete(doc.ref);
+                        totalDeleted++;
+                    });
+                    await puantajBatch.commit();
+                    console.log(`✅ ${puantajSnap.size} manuel puan silindi`);
+                }
+                
+                toast(`✅ Toplam ${totalDeleted} puan kaydı silindi`, 'success');
+                
+                // Dashboard'u yenile
+                setTimeout(() => location.reload(), 1500);
+                
+            } catch (err) {
+                console.error('Puan sıfırlama hatası:', err);
+                toast('Hata: ' + err.message, 'error');
+            }
+        },
+        'Sıfırla',
+        'btn-danger'
+    );
 }
 
 // Tüm Check ve Puan Geçmişini Sil - SADECE ADMIN
@@ -23886,8 +23902,7 @@ async function renderTemizlikChecklist(container, branch, date) {
                                    normalizePersonelId(person.name) === currentUserId ||
                                    normalizePersonelId(person.name) === normalizePersonelId(currentUser?.name || '');
                     
-                    // Güvenli escape için
-                    const safeItemText = item.text.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                    // Güvenli escape için (person bilgileri)
                     const safePersonName = person.name.replace(/'/g, "\\'").replace(/"/g, "&quot;");
                     const safePersonId = person.id.replace(/'/g, "\\'");
                     
@@ -23913,6 +23928,7 @@ async function renderTemizlikChecklist(container, branch, date) {
                         const cooldown = await checkTemizlikCooldown(branch, item.id, new Date());
                         const isCompleted = !cooldown.canComplete;
                         const points = item.points?.done || 1;
+                        const safeItemText = (item.text || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
                         
                         html += `
                             <div class="temizlik-item ${isCompleted ? 'completed' : ''}" 
@@ -24163,138 +24179,6 @@ function getDefaultChecklistItems(branch, type) {
     console.warn(`Varsayılan maddeler bulunamadı: ${type} (baseType: ${checkType})`);
     return [];
 }
-
-// ==================== DEBUG / TEST PANELİ ====================
-let debugPanelOpen = false;
-let debugLogs = [];
-const MAX_DEBUG_LOGS = 50;
-
-// Console.error'ı yakala
-const originalConsoleError = console.error;
-console.error = function(...args) {
-    debugLogs.unshift({
-        type: 'error',
-        message: args.map(a => typeof a === 'object' ? JSON.stringify(a).substring(0, 200) : String(a)).join(' '),
-        time: new Date().toLocaleTimeString('tr-TR')
-    });
-    if (debugLogs.length > MAX_DEBUG_LOGS) debugLogs.pop();
-    originalConsoleError.apply(console, args);
-};
-
-// Console.warn'ı yakala
-const originalConsoleWarn = console.warn;
-console.warn = function(...args) {
-    debugLogs.unshift({
-        type: 'warn',
-        message: args.map(a => typeof a === 'object' ? JSON.stringify(a).substring(0, 200) : String(a)).join(' '),
-        time: new Date().toLocaleTimeString('tr-TR')
-    });
-    if (debugLogs.length > MAX_DEBUG_LOGS) debugLogs.pop();
-    originalConsoleWarn.apply(console, args);
-};
-
-function toggleDebugPanel() {
-    debugPanelOpen = !debugPanelOpen;
-    const panel = document.getElementById('debugPanel');
-    if (panel) {
-        panel.style.display = debugPanelOpen ? 'block' : 'none';
-        if (debugPanelOpen) refreshDebugPanel();
-    }
-}
-
-function refreshDebugPanel() {
-    const content = document.getElementById('debugContent');
-    if (!content) return;
-    
-    const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
-    
-    content.innerHTML = `
-        <div style="margin-bottom:16px">
-            <div style="font-weight:600;color:var(--tx);margin-bottom:8px;display:flex;align-items:center;gap:6px">
-                <span style="width:8px;height:8px;background:${db ? '#27ae60' : '#e74c3c'};border-radius:50%"></span>
-                Firebase Durumu
-            </div>
-            <div style="font-size:.8rem;color:var(--tx2);padding:8px;background:var(--bg3);border-radius:6px">
-                Bağlantı: ${db ? '✅ Aktif' : '❌ Bağlantı Yok'}<br>
-                Auth: ${currentUser ? '✅ Giriş Yapıldı' : '❌ Giriş Yok'}
-            </div>
-        </div>
-        
-        <div style="margin-bottom:16px">
-            <div style="font-weight:600;color:var(--tx);margin-bottom:8px">👤 Kullanıcı</div>
-            <div style="font-size:.8rem;color:var(--tx2);padding:8px;background:var(--bg3);border-radius:6px">
-                İsim: ${currentUser?.name || '-'}<br>
-                Kod: ${currentUser?.codeName || '-'}<br>
-                Rol: ${currentUser?.role || '-'}<br>
-                Şube: ${currentUser?.branch || '-'}
-            </div>
-        </div>
-        
-        <div style="margin-bottom:16px">
-            <div style="font-weight:600;color:var(--tx);margin-bottom:8px">📊 Global Değişkenler</div>
-            <div style="font-size:.75rem;color:var(--tx2);padding:8px;background:var(--bg3);border-radius:6px;max-height:100px;overflow-y:auto">
-                _weeklyTaskAssignments: ${window._weeklyTaskAssignments ? '✅' : '❌'}<br>
-                _dailyTaskAssignments: ${window._dailyTaskAssignments ? '✅' : '❌'}<br>
-                _currentChecklistItems: ${window._currentChecklistItems?.length || 0} madde<br>
-                _currentShiftPersonnel: ${window._currentShiftPersonnel?.join(', ') || '-'}
-            </div>
-        </div>
-        
-        <div style="margin-bottom:16px">
-            <div style="font-weight:600;color:var(--tx);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
-                📋 Son Loglar (${debugLogs.length})
-                <button onclick="debugLogs=[];refreshDebugPanel()" style="font-size:.7rem;padding:2px 8px;background:var(--bg3);border:none;border-radius:4px;cursor:pointer">Temizle</button>
-            </div>
-            <div style="font-size:.7rem;max-height:150px;overflow-y:auto;background:var(--bg3);border-radius:6px;padding:8px">
-                ${debugLogs.length === 0 ? '<div style="color:var(--tx3)">Log yok</div>' : 
-                    debugLogs.slice(0, 20).map(log => `
-                        <div style="padding:4px 0;border-bottom:1px solid var(--cardBorder);color:${log.type === 'error' ? '#e74c3c' : '#f39c12'}">
-                            <span style="opacity:.6">[${log.time}]</span> ${log.message.substring(0, 100)}
-                        </div>
-                    `).join('')
-                }
-            </div>
-        </div>
-        
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button onclick="location.reload()" class="btn btn-sm btn-ghost">🔄 Yenile</button>
-            <button onclick="localStorage.clear();toast('LocalStorage temizlendi','success')" class="btn btn-sm btn-ghost">🗑️ Cache Temizle</button>
-            <button onclick="navigator.clipboard.writeText(JSON.stringify({user:currentUser,logs:debugLogs},null,2));toast('Kopyalandı','success')" class="btn btn-sm btn-ghost">📋 Kopyala</button>
-        </div>
-    `;
-}
-
-// Debug paneli HTML'i sayfa yüklenince ekle
-document.addEventListener('DOMContentLoaded', function() {
-    // Sadece müdür/yönetici için debug butonu göster
-    setTimeout(() => {
-        const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
-        if (!isManager) return;
-        
-        // Floating buton
-        const btn = document.createElement('div');
-        btn.id = 'debugBtn';
-        btn.innerHTML = '🐛';
-        btn.style.cssText = 'position:fixed;bottom:20px;right:20px;width:44px;height:44px;background:#1e293b;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;box-shadow:0 4px 12px rgba(0,0,0,.3);z-index:9999;transition:transform .2s';
-        btn.onclick = toggleDebugPanel;
-        btn.onmouseover = () => btn.style.transform = 'scale(1.1)';
-        btn.onmouseout = () => btn.style.transform = 'scale(1)';
-        document.body.appendChild(btn);
-        
-        // Panel
-        const panel = document.createElement('div');
-        panel.id = 'debugPanel';
-        panel.style.cssText = 'display:none;position:fixed;bottom:80px;right:20px;width:320px;max-height:70vh;background:var(--bg);border:1px solid var(--cardBorder);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.2);z-index:9998;overflow:hidden';
-        panel.innerHTML = `
-            <div style="padding:14px 16px;background:linear-gradient(135deg,#1e293b,#334155);color:#fff;display:flex;justify-content:space-between;align-items:center">
-                <span style="font-weight:600">🐛 Debug Panel</span>
-                <button onclick="toggleDebugPanel()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.2rem;opacity:.7">✕</button>
-            </div>
-            <div id="debugContent" style="padding:16px;overflow-y:auto;max-height:calc(70vh - 60px)"></div>
-        `;
-        document.body.appendChild(panel);
-    }, 2000);
-});
     </script>
 </body>
 </html>
