@@ -7824,7 +7824,7 @@ async function loadPuantaj() {
                         ${p.negatifOlay === 0 && p.pozitifOlay === 0 ? `<span style="font-size:.65rem;padding:3px 6px;background:${brandBg};color:var(--tx3);border-radius:4px">Henüz kayıt yok</span>` : ''}
                     </div>
                     
-                    ${isDanger ? `
+                    ${isDanger && ['yonetici', 'bolge_muduru', 'magaza_muduru', 'mudur', 'admin'].includes(currentUser?.role) ? `
                         <div style="background:rgba(231,76,60,.12);border-radius:8px;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px">
                             <div style="display:flex;align-items:center;gap:8px">
                                 <svg width="14" height="14" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -8083,7 +8083,7 @@ function showPersonelPuanDetay(personelId, personName) {
     const notes = personelData.otomatikPuanlar || [];
     const manuelPuanlar = personelData.puanlar || [];
     
-    const canManage = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
+    const canManage = ['yonetici', 'bolge_muduru', 'magaza_muduru', 'mudur', 'admin'].includes(currentUser?.role);
     
     // İstatistikler - doğrudan personelData'dan al
     const autoTotal = personelData.otomatikPuan || 0;
@@ -8217,7 +8217,7 @@ function showPersonelPuanDetay(personelId, personName) {
 // Otomatik puantaj notu sil
 async function deleteAutoNote(noteId) {
     // Yetki kontrolü
-    const canManagePoints = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
+    const canManagePoints = ['yonetici', 'bolge_muduru', 'magaza_muduru', 'mudur', 'admin'].includes(currentUser?.role);
     if (!canManagePoints) {
         toast('Bu işlem için yetkiniz yok', 'error');
         return;
@@ -8511,8 +8511,8 @@ async function savePuantajFromModal() {
 
 // Prim Sıfırlama Fonksiyonu
 async function resetPersonelPrim(personelId, name) {
-    // Yetki kontrolü
-    const canReset = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
+    // Yetki kontrolü - sadece yöneticiler
+    const canReset = ['yonetici', 'bolge_muduru', 'magaza_muduru', 'mudur', 'admin'].includes(currentUser?.role);
     if (!canReset) {
         toast('Bu işlem için yetkiniz yok', 'error');
         return;
@@ -8558,9 +8558,8 @@ async function resetPersonelPrim(personelId, name) {
                     personelName: name,
                     period,
                     branch: sube,
-                    score: 5,
+                    score: telafiPuani,
                     type: 'prim_reset',
-                    resetBonus: telafiPuani,
                     note: `Prim sıfırlama (${mevcutPuan} → 0) - ${currentUser?.name || 'Yönetici'}`,
                     eventDate: new Date().toISOString().split('T')[0],
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
