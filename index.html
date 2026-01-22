@@ -15809,8 +15809,7 @@ async function loadTodayChecks() {
             }
             
             // isMudurTimeActive'i gerçek deadline'a göre yeniden hesapla
-            const [activeH, activeM] = mudurActiveFrom.split(':').map(Number);
-            const activeFromMinutes = activeH * 60 + activeM;
+            const realActiveFromMinutes = activeH * 60 + activeM;
             const [realDH, realDM] = mudurDeadline.split(':').map(Number);
             let realDeadlineMinutes = realDH * 60 + realDM;
             if (realDH < activeH) realDeadlineMinutes += 24 * 60; // Gece geçişi
@@ -15818,7 +15817,7 @@ async function loadTodayChecks() {
             let adjustedNowForActive = currentHour * 60 + currentMinutes;
             if (currentHour < activeH && currentHour < 6) adjustedNowForActive += 24 * 60;
             
-            const isMudurTimeActive = adjustedNowForActive >= activeFromMinutes && adjustedNowForActive <= realDeadlineMinutes;
+            isMudurTimeActive = adjustedNowForActive >= realActiveFromMinutes && adjustedNowForActive <= realDeadlineMinutes;
             
             // Müdür için kalan süre hesapla
             let mudurRemainingMinutes = null;
