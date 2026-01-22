@@ -432,7 +432,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     <script>
         (function() {
             const checkAuth = setInterval(() => {
-                if (typeof firebase !== 'undefined' && firebase.auth) {
+                // Firebase SDK yüklendi mi VE initialize edildi mi kontrol et
+                if (typeof firebase !== 'undefined' && firebase.auth && firebase.apps && firebase.apps.length > 0) {
                     clearInterval(checkAuth);
                     firebase.auth().onAuthStateChanged(user => {
                         if (!user) {
@@ -440,13 +441,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         }
                     });
                 }
-            }, 50);
+            }, 100);
             setTimeout(() => {
                 clearInterval(checkAuth);
-                if (typeof firebase === 'undefined' || !firebase.auth().currentUser) {
+                // Timeout sonunda hala hazır değilse login'e yönlendir
+                try {
+                    if (typeof firebase === 'undefined' || !firebase.apps || firebase.apps.length === 0 || !firebase.auth().currentUser) {
+                        window.location.replace('login.html');
+                    }
+                } catch (e) {
                     window.location.replace('login.html');
                 }
-            }, 3000);
+            }, 5000);
         })();
     </script>
 
@@ -18338,6 +18344,59 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
         isAssignedToMe, 
         isManager 
     });
+    
+    // ==================== ZAMAN KONTROLÜ ====================
+    // Checklist'in aktif saatlerinde mi kontrol et
+    let isInTimeWindow = true;
+    let timeWindowMessage = '';
+    
+    if (!isManager && !isSubmitted && ['acilis', 'kapanis', 'gunluk', 'guncel', 'mudur'].includes(type)) {
+        const rule = CHECK_RULES[type] || DEFAULT_CHECK_RULES[type];
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        const currentTotalMinutes = currentHour * 60 + currentMinute;
+        
+        if (type === 'acilis') {
+            // Açılış: 09:00 - 11:00 arası (BRANCH_HOURS'a göre dinamik olabilir)
+            const branchHours = BRANCH_HOURS[branch] || { open: '09:00', close: '23:00' };
+            const [openHour, openMin] = branchHours.open.split(':').map(Number);
+            const openTotalMinutes = openHour * 60 + openMin;
+            const deadlineMinutes = openTotalMinutes + 120; // Açılıştan 2 saat sonraya kadar
+            
+            if (currentTotalMinutes < openTotalMinutes || currentTotalMinutes > deadlineMinutes) {
+                isInTimeWindow = false;
+                const deadlineHour = Math.floor(deadlineMinutes / 60);
+                const deadlineMin = deadlineMinutes % 60;
+                timeWindowMessage = `Açılış checklisti ${branchHours.open} - ${String(deadlineHour).padStart(2,'0')}:${String(deadlineMin).padStart(2,'0')} saatleri arasında doldurulabilir.`;
+            }
+        } else if (type === 'kapanis') {
+            // Kapanış: Kapanıştan 2 saat önce - kapanış saatine kadar
+            const branchHours = BRANCH_HOURS[branch] || { open: '09:00', close: '23:00' };
+            const [closeHour, closeMin] = branchHours.close.split(':').map(Number);
+            const closeTotalMinutes = closeHour * 60 + closeMin;
+            const startMinutes = closeTotalMinutes - 120; // Kapanıştan 2 saat önce
+            
+            if (currentTotalMinutes < startMinutes) {
+                isInTimeWindow = false;
+                const startHour = Math.floor(startMinutes / 60);
+                const startMin = startMinutes % 60;
+                timeWindowMessage = `Kapanış checklisti ${String(startHour).padStart(2,'0')}:${String(startMin).padStart(2,'0')} - ${branchHours.close} saatleri arasında doldurulabilir.`;
+            }
+        }
+    }
+    
+    // Temizlik ve haftalık için zaman kontrolü yok
+    if (['aylik', 'haftalik'].includes(type)) {
+        isInTimeWindow = true;
+    }
+    
+    // Form doldurulabilir mi?
+    const canFillForm = isAssignedToMe && isInTimeWindow && !isSubmitted;
+    
+    console.log('Zaman kontrolü:', { type, isInTimeWindow, timeWindowMessage, canFillForm });
+    // ==================== ZAMAN KONTROLÜ SONU ====================
+    
     // ==================== ERİŞİM KONTROLÜ SONU ====================
     
     // Temizlik ve Bakım için tarih filtreleme
@@ -18531,6 +18590,26 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                             </div>
                             <div style="margin-top:12px;font-size:.85rem;color:var(--tx3)">
                                 <strong>Giriş yapan:</strong> ${currentUserDisplayName}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+                
+                ${!isInTimeWindow && !isSubmitted && !isManager ? `
+                <!-- ZAMAN UYARISI - Checklist saatleri dışında -->
+                <div style="margin-bottom:20px;padding:20px;background:linear-gradient(135deg,rgba(243,156,18,.1),rgba(243,156,18,.05));border:2px solid rgba(243,156,18,.3);border-radius:14px">
+                    <div style="display:flex;align-items:flex-start;gap:14px">
+                        <div style="width:44px;height:44px;background:rgba(243,156,18,.2);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                            <svg width="24" height="24" fill="none" stroke="#f39c12" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                        </div>
+                        <div>
+                            <div style="font-weight:700;color:#f39c12;font-size:1rem;margin-bottom:6px">Zaman Aralığı Dışında</div>
+                            <div style="font-size:.9rem;color:var(--tx2);line-height:1.5">
+                                ${timeWindowMessage}
+                            </div>
+                            <div style="margin-top:12px;font-size:.85rem;color:var(--tx3)">
+                                Şu anki saat: ${new Date().toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})}
                             </div>
                         </div>
                     </div>
@@ -18790,7 +18869,8 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
             const canEdit = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
             // Erişim kontrolü - isSubmitted veya atanmamışsa disable
             // Haftalık görevlerde: isMyTask kontrolü, diğerlerinde: isAssignedToMe kontrolü
-            const canInteract = ((isHaftalik || isAylik) ? isMyTask : isAssignedToMe) && !isSubmitted;
+            // Haftalık ve temizlik: isMyTask, diğerleri: isAssignedToMe + zaman kontrolü
+            const canInteract = ((isHaftalik || isAylik) ? isMyTask : (isAssignedToMe && isInTimeWindow)) && !isSubmitted;
             
             // Başkasının görevi ise uyarı mesajı
             const otherPersonWarning = (!isMyTask && assignedPersonel && (isAylik || isHaftalik) && !isManager && !isSubmitted) 
@@ -18848,7 +18928,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
     html += `
             </div>
             
-            ${!checklistEditMode && !isSubmitted && isAssignedToMe ? `
+            ${!checklistEditMode && !isSubmitted && canFillForm ? `
                 <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
                     <button class="btn btn-ghost" onclick="loadChecklist()" style="display:flex;align-items:center;gap:6px">
                         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -18860,11 +18940,11 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                     </button>
                 </div>
             ` : ''}
-            ${!checklistEditMode && !isSubmitted && !isAssignedToMe ? `
+            ${!checklistEditMode && !isSubmitted && !canFillForm ? `
                 <div style="margin-top:24px;text-align:center;padding:20px;background:var(--bg3);border-radius:12px">
                     <div style="color:var(--tx3);font-size:.9rem">
                         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px;opacity:.6"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                        Bu checklist'i sadece atanan personel doldurabilir
+                        ${!isAssignedToMe ? 'Bu checklist size atanmamış' : !isInTimeWindow ? 'Zaman aralığı dışında' : 'Bu checklist\'i doldurulamaz'}
                     </div>
                 </div>
             ` : ''}
