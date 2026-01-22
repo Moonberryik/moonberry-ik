@@ -15706,9 +15706,11 @@ async function loadTodayChecks() {
             let mudurPersonnel = null;
             let mudurSubLabel = '';
             let canFillMudurCheck = true;
-            let mudurDeadline = '23:30'; // Default: 23:00 + 30dk grace
-            let mudurShiftEndHour = 23;
             let isMudurCheckMissed = false;
+            
+            // Deadline CHECK_RULES'tan gelir (shift bitişine göre DEĞİL)
+            const mudurLateWindow = mudurRules.lateWindow || 30;
+            const mudurDeadline = mudurDeadlineRule; // CHECK_RULES'tan gelen deadline
             
             // Firebase'den müdür, yardımcı ve bölge müdürü bilgisi al
             try {
@@ -15727,9 +15729,9 @@ async function loadTodayChecks() {
                 // Shift verisinden OFF durumlarını kontrol et
                 const rawData = rawShiftData[branch];
                 
-                // Helper: personelin bugün OFF olup olmadığını ve shift saatini al
-                const getPersonShiftInfo = (person) => {
-                    if (!person || !rawData) return { isOff: false, shiftEnd: null };
+                // Helper: personelin bugün OFF olup olmadığını kontrol et
+                const isPersonOff = (person) => {
+                    if (!person || !rawData) return false;
                     const personId = person.uniqueId || normalizePersonelId(person.name);
                     const possibleKeys = [personId, person.codeName, person.name?.toLowerCase().replace(/\s+/g, '_')];
                     let shift = null;
@@ -15739,53 +15741,28 @@ async function loadTodayChecks() {
                             break;
                         }
                     }
-                    if (!shift) return { isOff: false, shiftEnd: null };
+                    if (!shift) return false;
                     const todayShift = shift[rawData.dayIndex] || '';
                     const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
-                    const isOff = cleanShift === 'OFF' || cleanShift === 'İ' || cleanShift === 'Y.İ' || cleanShift === '-' || cleanShift === 'X';
-                    
-                    // Shift bitiş saatini parse et
-                    let shiftEnd = null;
-                    const shiftTime = parseShiftTime(todayShift);
-                    if (shiftTime) {
-                        shiftEnd = shiftTime.endHour;
-                    }
-                    
-                    return { isOff, shiftEnd };
+                    return cleanShift === 'OFF' || cleanShift === 'İ' || cleanShift === 'Y.İ' || cleanShift === '-' || cleanShift === 'X';
                 };
                 
                 // Sırayla kontrol et: Müdür → Yardımcı → Bölge Müdürü
-                const mudurInfo = getPersonShiftInfo(mudur);
-                const yardimciInfo = getPersonShiftInfo(yardimci);
+                const mudurOff = isPersonOff(mudur);
+                const yardimciOff = isPersonOff(yardimci);
                 
-                let activeMudurShiftEnd = null;
-                
-                if (mudur && !mudurInfo.isOff) {
+                if (mudur && !mudurOff) {
                     mudurPersonnel = mudur.codeName || formatDisplayName(mudur.name);
-                    activeMudurShiftEnd = mudurInfo.shiftEnd;
-                } else if (yardimci && !yardimciInfo.isOff) {
+                } else if (yardimci && !yardimciOff) {
                     mudurPersonnel = yardimci.codeName || formatDisplayName(yardimci.name);
                     mudurSubLabel = 'Müdür izinli';
-                    activeMudurShiftEnd = yardimciInfo.shiftEnd;
                 } else if (bolgeMuduru) {
                     mudurPersonnel = bolgeMuduru.codeName || formatDisplayName(bolgeMuduru.name);
                     mudurSubLabel = 'Bölge müdürüne devredildi';
-                    // Bölge müdürü için shift yok, default deadline
                 } else {
                     canFillMudurCheck = false;
                     mudurPersonnel = 'Doldurulamaz';
                     mudurSubLabel = 'Müdür/yardımcı izinli';
-                }
-                
-                // Shift bitiş saati + 30dk grace period hesapla
-                if (activeMudurShiftEnd !== null) {
-                    mudurShiftEndHour = activeMudurShiftEnd;
-                    // Gece geçişi (örn: bitiş 01:00 = 25 olarak hesapla)
-                    let deadlineMinutes = (activeMudurShiftEnd * 60) + 30;
-                    if (activeMudurShiftEnd < 6) deadlineMinutes = ((24 + activeMudurShiftEnd) * 60) + 30;
-                    const deadlineHour = Math.floor(deadlineMinutes / 60) % 24;
-                    const deadlineMin = deadlineMinutes % 60;
-                    mudurDeadline = `${deadlineHour.toString().padStart(2, '0')}:${deadlineMin.toString().padStart(2, '0')}`;
                 }
                 
                 // Şu anki saat deadline'ı geçti mi kontrol et
@@ -15793,11 +15770,13 @@ async function loadTodayChecks() {
                 const [dh, dm] = mudurDeadline.split(':').map(Number);
                 let deadlineMinutes = dh * 60 + dm;
                 // Gece geçişi kontrolü
-                if (dh < 6) deadlineMinutes += 24 * 60;
+                if (dh < activeH) deadlineMinutes += 24 * 60;
                 let adjustedNowForMissed = nowMinutes;
-                if (currentHour < 6) adjustedNowForMissed += 24 * 60;
+                if (currentHour < activeH && currentHour < 6) adjustedNowForMissed += 24 * 60;
                 
-                if (adjustedNowForMissed > deadlineMinutes && !mudurCompleted) {
+                // Late window dahil deadline kontrolü
+                const deadlineWithLate = deadlineMinutes + mudurLateWindow;
+                if (adjustedNowForMissed > deadlineWithLate && !mudurCompleted) {
                     isMudurCheckMissed = true;
                     canFillMudurCheck = false;
                     mudurSubLabel = 'Süre doldu (-10 puan)';
