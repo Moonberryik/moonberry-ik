@@ -498,8 +498,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <span class="icon"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span> Checklist
                 </div>
                 
-                <!-- G13: Müdür Notları -->
-                <div class="nav-item" data-page="notlar" onclick="goTo('notlar')">
+                <!-- G13: Müdür Notları (sadece yönetici görebilir) -->
+                <div class="nav-item" id="nav-notlar" data-page="notlar" onclick="goTo('notlar')">
                     <span class="icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> Notlar
                 </div>
                 
@@ -1594,7 +1594,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <button class="admin-tab" onclick="showAdminTab('sablonlar',this)">Sözleşme Şablonları</button>
                     <button class="admin-tab" onclick="showAdminTab('belgeler',this)">Belge Şablonları</button>
                     <button class="admin-tab" id="tab-aktiviteler" onclick="showAdminTab('aktiviteler',this)">Aktiviteler</button>
-                    <button class="admin-tab" id="tab-yedekler" onclick="showAdminTab('yedekler',this)">Yedekler</button>
                 </div>
                 
                 <!-- Tüm Checkler Özet -->
@@ -2487,23 +2486,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                         <div class="admin-list" id="activityLogList" style="max-height:500px;overflow-y:auto">
                             <p style="color:var(--tx2);text-align:center;padding:20px">Aktiviteler yükleniyor...</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- G15: Yedekler -->
-                <div class="admin-section" id="admin-yedekler">
-                    <div class="admin-card">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
-                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                Otomatik Yedekler
-                            </div>
-                            <button class="btn btn-sm" style="background:#008c95;color:#fff" onclick="manualBackup()">+ Manuel Yedek Al</button>
-                        </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Her 3 saatte otomatik yedek • 30 günden eski silinir • Tarih+saat seç ve indir</p>
-                        <div id="backupsListContainer">
-                            <p style="color:var(--tx2);text-align:center;padding:40px">Yedekler yükleniyor...</p>
                         </div>
                     </div>
                 </div>
@@ -4046,11 +4028,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     // Giriş aktivitesini logla
                     logActivity('login', { device: navigator.userAgent });
-                    
-                    // G15: Yönetici ve Müdürler girince otomatik yedekleme
-                    if (['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role)) {
-                        setTimeout(() => runAutoBackup(), 30000); // 30 saniye sonra sessizce başlat
-                    }
                 } catch (error) {
                     console.error('Error loading user data:', error);
                 }
@@ -4390,9 +4367,9 @@ function applyUserPermissions() {
     // Yönetici her şeye erişebilir
     if (currentUser.role === 'yonetici') return;
     
-    // G15: Yedekler sekmesi sadece yönetici görebilir
-    const tabYedekler = document.getElementById('tab-yedekler');
-    if (tabYedekler) tabYedekler.style.display = 'none';
+    // Müdür Notları sadece yönetici görebilir
+    const navNotlar = document.getElementById('nav-notlar');
+    if (navNotlar) navNotlar.style.display = 'none';
     
     // Gelişmiş izin sistemini yükle ve uygula
     loadUserAdvancedPermissions();
@@ -4423,6 +4400,11 @@ function applyBaristaRestrictions() {
         if (visibleItems.length === 0) {
             group.style.display = 'none';
         }
+    });
+    
+    // Nav-divider'ları tamamen gizle (3 çizgi sorunu)
+    document.querySelectorAll('.nav-divider').forEach(div => {
+        div.style.display = 'none';
     });
     
     // Dashboard kartlarını kısıtla
@@ -4581,8 +4563,6 @@ function goTo(page) {
     if (page === 'borc') populateSubeSelect('borc_sube');
     if (page === 'avans') populateSubeSelect('avans_sube');
     if (page === 'zimmet') populateSubeSelect('zimmet_sube');
-    // G13: Müdür Notları
-    if (page === 'notlar') loadManagerNotes();
     // Checklist sayfası
     if (page === 'checklist') {
         // Immediate pre-fill (loadSystemConfig beklemeden)
@@ -5691,7 +5671,6 @@ function switchAdminTab(tab, btn) {
         loadSessionHistory();
     }
     if (tab === 'aktiviteler') loadActivityLogs();
-    if (tab === 'yedekler') loadBackupsList();
     if (tab === 'magazaSaatleri') renderBranchHoursSettings();
     if (tab === 'checkKurallari') renderCheckRulesSettings();
     if (tab === 'checklistTurleri') loadChecklistTypesConfig();
@@ -11365,327 +11344,6 @@ function updateLogos(theme) {
     setTimeout(() => updateDarkModeIcon(saved), 100);
 })();
 
-// ==================== G15: OTOMATİK YEDEKLEME ====================
-const BACKUP_CONFIG = {
-    // Tüm koleksiyonlar
-    collections: [
-        'personel',
-        'shifts', 
-        'checklists',
-        'checklistSubmissions',
-        'puantajNotes',
-        'managerNotes',
-        'weeklyTaskAssignments',
-        'dailyTaskAssignments',
-        'users',
-        'sessions',
-        'activityLogs',
-        'config'
-    ],
-    intervalHours: 3,      // Her 3 saatte bir
-    retentionDays: 30      // 30 günden eski yedekler silinir
-};
-
-async function runAutoBackup() {
-    const now = new Date();
-    const dateStr = formatDateLocal(now);
-    const timeStr = String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
-    
-    // Son 3 saat içinde yedek alınmış mı kontrol et
-    try {
-        const threeHoursAgo = new Date(now.getTime() - (BACKUP_CONFIG.intervalHours * 60 * 60 * 1000));
-        const snapshot = await db.collection('backups')
-            .orderBy('createdAt', 'desc')
-            .limit(1)
-            .get();
-        
-        if (!snapshot.empty) {
-            const lastBackup = snapshot.docs[0].data();
-            const lastTime = lastBackup.createdAt?.toDate?.() || new Date(0);
-            if (lastTime > threeHoursAgo) {
-                console.log('[Backup] Son 3 saat içinde yedek var, atlanıyor');
-                return;
-            }
-        }
-    } catch (e) {
-        console.log('[Backup] Kontrol hatası, devam ediliyor');
-    }
-    
-    const backupId = 'backup_' + dateStr + '_' + timeStr;
-    console.log('[Backup] Otomatik yedekleme başlıyor:', backupId);
-    
-    try {
-        const backupData = {
-            date: dateStr,
-            time: timeStr,
-            datetime: dateStr + ' ' + timeStr.slice(0,2) + ':' + timeStr.slice(2),
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            createdBy: currentUser?.name || 'Sistem',
-            collections: {}
-        };
-        
-        // Tüm koleksiyonları yedekle
-        for (const col of BACKUP_CONFIG.collections) {
-            try {
-                const snapshot = await db.collection(col).get();
-                const docs = [];
-                snapshot.forEach(doc => docs.push({ id: doc.id, ...doc.data() }));
-                backupData.collections[col] = docs;
-            } catch (e) {
-                backupData.collections[col] = [];
-            }
-        }
-        
-        // Kaydet
-        await db.collection('backups').doc(backupId).set(backupData);
-        console.log('[Backup] ✓ Yedekleme tamamlandı:', backupId);
-        
-        // Eski yedekleri temizle
-        await cleanOldBackups();
-        
-    } catch (e) {
-        console.error('[Backup] Hata:', e);
-    }
-}
-
-async function cleanOldBackups() {
-    try {
-        // Tüm yedekleri çek ve eski olanları sil
-        const snapshot = await db.collection('backups').get();
-        const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - BACKUP_CONFIG.retentionDays);
-        
-        const batch = db.batch();
-        let deleteCount = 0;
-        
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const createdAt = data.createdAt?.toDate?.();
-            if (createdAt && createdAt < cutoff) {
-                batch.delete(doc.ref);
-                deleteCount++;
-            }
-        });
-        
-        if (deleteCount > 0) {
-            await batch.commit();
-            console.log('[Backup] 🗑️ ' + deleteCount + ' eski yedek silindi');
-        }
-    } catch (e) {
-        console.warn('[Backup] Temizlik hatası:', e);
-    }
-}
-
-async function loadBackupsList() {
-    const container = document.getElementById('backupsListContainer');
-    if (!container) return;
-    
-    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tx3)">Yükleniyor...</div>';
-    
-    try {
-        const snapshot = await db.collection('backups')
-            .orderBy('createdAt', 'desc')
-            .limit(50)
-            .get();
-        
-        if (snapshot.empty) {
-            container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx3)">Henüz yedek yok</div>';
-            return;
-        }
-        
-        let html = '<div style="display:flex;flex-direction:column;gap:8px">';
-        const canDownload = currentUser?.role === 'yonetici';
-        
-        snapshot.forEach(doc => {
-            const d = doc.data();
-            const datetime = d.datetime || d.date || doc.id.replace('backup_', '');
-            const colCount = Object.keys(d.collections || {}).length;
-            let totalDocs = 0;
-            Object.values(d.collections || {}).forEach(arr => totalDocs += (arr?.length || 0));
-            const createdBy = d.createdBy || 'Sistem';
-            
-            const downloadBtn = canDownload 
-                ? `<button class="btn btn-sm" style="background:#008c95;color:#fff" onclick="downloadBackup('${doc.id}')">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    İndir
-                </button>`
-                : `<span style="font-size:.75rem;color:var(--tx3)">✓</span>`;
-            
-            html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg2);border-radius:10px;border:1px solid var(--bg4)">
-                <div>
-                    <div style="font-weight:600;color:var(--tx)">${datetime}</div>
-                    <div style="font-size:.75rem;color:var(--tx3)">${colCount} koleksiyon • ${totalDocs} kayıt • ${createdBy}</div>
-                </div>
-                ${downloadBtn}
-            </div>`;
-        });
-        html += '</div>';
-        
-        container.innerHTML = html;
-    } catch (e) {
-        container.innerHTML = '<div style="color:#e74c3c;padding:20px">Hata: ' + e.message + '</div>';
-    }
-}
-
-async function downloadBackup(backupId) {
-    // Sadece yonetici indirebilir
-    if (currentUser?.role !== 'yonetici') {
-        toast('Yedek indirme yetkisi sadece yöneticiye ait', 'error');
-        return;
-    }
-    
-    try {
-        toast('Yedek hazırlanıyor...', 'info');
-        
-        const doc = await db.collection('backups').doc(backupId).get();
-        if (!doc.exists) {
-            toast('Yedek bulunamadı', 'error');
-            return;
-        }
-        
-        const data = doc.data();
-        const json = JSON.stringify(data, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'moonberry_backup_' + data.date + '.json';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        toast('İndirildi ✓', 'success');
-    } catch (e) {
-        toast('Hata: ' + e.message, 'error');
-    }
-}
-
-async function manualBackup() {
-    // Sadece yonetici manuel yedek alabilir
-    if (currentUser?.role !== 'yonetici') {
-        toast('Manuel yedek alma yetkisi sadece yöneticiye ait', 'error');
-        return;
-    }
-    
-    const now = new Date();
-    const dateStr = formatDateLocal(now);
-    const timeStr = String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
-    const backupId = 'backup_' + dateStr + '_' + timeStr + '_manual';
-    
-    toast('Manuel yedekleme başladı...', 'info');
-    
-    try {
-        const backupData = {
-            date: dateStr,
-            time: timeStr,
-            datetime: dateStr + ' ' + timeStr.slice(0,2) + ':' + timeStr.slice(2),
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            createdBy: currentUser?.name || 'Sistem',
-            isManual: true,
-            collections: {}
-        };
-        
-        for (const col of BACKUP_CONFIG.collections) {
-            try {
-                const snapshot = await db.collection(col).get();
-                const docs = [];
-                snapshot.forEach(doc => docs.push({ id: doc.id, ...doc.data() }));
-                backupData.collections[col] = docs;
-            } catch (e) {}
-        }
-        
-        await db.collection('backups').doc(backupId).set(backupData);
-        toast('Yedekleme tamamlandı ✓', 'success');
-        loadBackupsList();
-    } catch (e) {
-        toast('Hata: ' + e.message, 'error');
-    }
-}
-
-// ==================== G13: MÜDÜR NOTLARI ====================
-async function loadManagerNotes() {
-    const container = document.getElementById('notlarContainer');
-    const subeSelect = document.getElementById('notlarSube');
-    if (!container) return;
-    
-    // Şube select doldur
-    if (subeSelect && subeSelect.options.length <= 1) {
-        const branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
-        subeSelect.innerHTML = branches.map(b => `<option value="${b}">${b}</option>`).join('');
-    }
-    
-    try {
-        const snapshot = await db.collection('managerNotes').orderBy('createdAt', 'desc').limit(50).get();
-        
-        if (snapshot.empty) {
-            container.innerHTML = '<p style="text-align:center;color:var(--tx2);padding:40px">Henüz not eklenmemiş</p>';
-            return;
-        }
-        
-        const pending = [], completed = [];
-        snapshot.forEach(doc => {
-            const n = { id: doc.id, ...doc.data() };
-            (n.completed ? completed : pending).push(n);
-        });
-        
-        let html = '';
-        if (pending.length) {
-            html += '<div style="margin-bottom:20px"><div style="font-weight:600;color:#f59e0b;margin-bottom:12px">⏳ Bekleyen (' + pending.length + ')</div>';
-            pending.forEach(n => { html += renderNoteCard(n, false); });
-            html += '</div>';
-        }
-        if (completed.length) {
-            html += '<div><div style="font-weight:600;color:#22c55e;margin-bottom:12px">✓ Tamamlanan (' + completed.length + ')</div>';
-            completed.forEach(n => { html += renderNoteCard(n, true); });
-            html += '</div>';
-        }
-        container.innerHTML = html;
-    } catch (e) {
-        container.innerHTML = '<p style="color:#e74c3c">Hata: ' + e.message + '</p>';
-    }
-}
-
-function renderNoteCard(n, done) {
-    const bg = done ? 'rgba(34,197,94,.1)' : 'rgba(245,158,11,.1)';
-    const border = done ? 'rgba(34,197,94,.3)' : 'rgba(245,158,11,.3)';
-    const date = n.createdAt?.toDate ? n.createdAt.toDate().toLocaleDateString('tr-TR') : '';
-    return `<div style="background:${bg};border:1px solid ${border};border-radius:12px;padding:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
-        <div><div style="font-weight:600;color:var(--tx)">${n.note}</div>
-        <div style="font-size:.75rem;color:var(--tx3)">${n.branch} • ${n.createdBy} • ${date}</div></div>
-        ${done ? '' : `<button class="btn btn-sm" style="background:#22c55e;color:#fff" onclick="completeNote('${n.id}')">✓</button>`}
-    </div>`;
-}
-
-async function addManagerNote() {
-    const branch = document.getElementById('notlarSube')?.value;
-    const note = document.getElementById('notlarText')?.value?.trim();
-    if (!note) { toast('Not boş olamaz', 'error'); return; }
-    
-    try {
-        await db.collection('managerNotes').add({
-            branch, note, createdBy: currentUser?.name || 'Bilinmiyor',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            completed: false
-        });
-        document.getElementById('notlarText').value = '';
-        toast('Not eklendi', 'success');
-        loadManagerNotes();
-    } catch (e) { toast('Hata: ' + e.message, 'error'); }
-}
-
-async function completeNote(id) {
-    try {
-        await db.collection('managerNotes').doc(id).update({
-            completed: true, completedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            completedBy: currentUser?.name || 'Bilinmiyor'
-        });
-        toast('Not tamamlandı', 'success');
-        loadManagerNotes();
-    } catch (e) { toast('Hata: ' + e.message, 'error'); }
-}
-
 // ==================== ADMIN ŞİFRE DEĞİŞTİRME ====================
 async function updateAdminCredentials() {
     const newUsername = document.getElementById('admin_new_username').value.trim();
@@ -14559,41 +14217,39 @@ async function loadTodayChecks() {
     // GÜNLÜK CHECK SAYILARINI ÇEK (Adaletli dağılım için)
     const dailyCheckCounts = {};
     const who14Filled = {}; // 14:00 dolduran kişiler (gün boyunca muaf)
-    const branchManagers = {}; // Şube müdürleri
-    // G14: PARALEL SORGU - dailyCheckCounts ve branchManagers aynı anda
     try {
-        const [checkCountResults, managersSnap] = await Promise.all([
-            // 1. Tüm şubelerin submission'larını paralel çek
-            Promise.all(branches.map(async (branch) => {
-                const submissions = await db.collection('checklistSubmissions')
-                    .where('branch', '==', branch)
-                    .where('date', '==', todayStr)
-                    .get();
-                return { branch, submissions };
-            })),
-            // 2. Müdürleri çek
-            db.collection('personel')
-                .where('role', 'in', ['magaza_muduru', 'magaza_mudur_yardimcisi'])
-                .get()
-        ]);
-        
-        // Check sayılarını işle
-        checkCountResults.forEach(({ branch, submissions }) => {
+        for (const branch of branches) {
             dailyCheckCounts[branch] = {};
             who14Filled[branch] = null;
+            
+            // Bugünkü tüm submission'ları çek
+            const submissions = await db.collection('checklistSubmissions')
+                .where('branch', '==', branch)
+                .where('date', '==', todayStr)
+                .get();
+            
             submissions.forEach(doc => {
                 const d = doc.data();
                 const personName = d.personName || d.personelId || '';
                 if (personName) {
                     dailyCheckCounts[branch][personName] = (dailyCheckCounts[branch][personName] || 0) + 1;
                 }
+                // 14:00 günlük check'i dolduran
                 if (doc.id.includes('_guncel_') && doc.id.includes('_1400')) {
                     who14Filled[branch] = personName;
                 }
             });
-        });
-        
-        // Müdürleri işle
+        }
+    } catch (e) {
+        console.warn('Check sayıları alınamadı:', e);
+    }
+    
+    // Şube müdürlerini çek
+    const branchManagers = {};
+    try {
+        const managersSnap = await db.collection('personel')
+            .where('role', 'in', ['magaza_muduru', 'magaza_mudur_yardimcisi'])
+            .get();
         managersSnap.forEach(doc => {
             const d = doc.data();
             const displayName = d.codeName || formatDisplayName(d.name);
@@ -14602,9 +14258,9 @@ async function loadTodayChecks() {
             }
         });
     } catch (e) {
-        console.warn('Check sayıları/müdür alınamadı:', e);
+        console.warn('Müdür bilgisi alınamadı:', e);
     }
-
+    
     // Karşılama kartını doldur
     if (welcomeCard) {
         const dateOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
@@ -15403,15 +15059,17 @@ async function loadMonthlyPoints() {
         let lateCount = 0;
         let missedCount = 0;
         
-        // puantajNotes koleksiyonundan çek (normalize edilmiş personelId ile)
+        // puantajNotes - sadece personelId ile filtrele (index gerektirmez)
         const notesSnapshot = await db.collection('puantajNotes')
             .where('personelId', '==', personelId)
-            .where('date', '>=', monthStartStr)
-            .where('date', '<=', monthEndStr)
             .get();
         
         notesSnapshot.forEach(doc => {
             const data = doc.data();
+            const docDate = data.date || '';
+            // Tarih filtrelemesi client-side
+            if (docDate < monthStartStr || docDate > monthEndStr) return;
+            
             const points = data.points || 0;
             totalPoints += points;
             
