@@ -17533,13 +17533,26 @@ const DEFAULT_CHECK_RULES = {
     },
     temizlik: { 
         name: 'Temizlik Çizelgesi', 
-        description: 'Sabah ve akşam temizlik görevleri',
-        periods: [
-            { id: 'sabah', name: 'Açılış', start: '10:00', end: '15:00', shift: 'acilis' },
-            { id: 'aksam', name: 'Kapanış', start: '20:00', end: '02:00', shift: 'kapanis' }
-        ],
+        description: 'Vardiya bazlı temizlik görevleri - 48 saat cooldown',
+        shifts: {
+            acilisci: { deadline: '15:00', window: { start: '10:00', end: '15:00' } },
+            araci: { deadline: '19:00', window: { start: '11:00', end: '19:00' } },
+            kapanisci: { deadline: '02:00', window: { start: '16:00', end: '02:00' } }
+        },
         lateWindow: 30,
-        points: { onTime: 0, late: -1, missed: -1 },
+        points: { onTime: 1, late: 0, missed: -1 },
+        branches: ['all']
+    },
+    aylik: { 
+        name: 'Temizlik Çizelgesi', 
+        description: 'Vardiya bazlı temizlik görevleri - 48 saat cooldown',
+        shifts: {
+            acilisci: { deadline: '15:00', window: { start: '10:00', end: '15:00' } },
+            araci: { deadline: '19:00', window: { start: '11:00', end: '19:00' } },
+            kapanisci: { deadline: '02:00', window: { start: '16:00', end: '02:00' } }
+        },
+        lateWindow: 30,
+        points: { onTime: 1, late: 0, missed: -1 },
         branches: ['all']
     },
     mudur: { 
@@ -17592,13 +17605,28 @@ function renderCheckRuleDetails(type) {
     const container = document.getElementById('checkRuleDetails');
     if (!container) return;
     
-    const rule = { ...DEFAULT_CHECK_RULES[type], ...CHECK_RULES[type] };
+    // Önce DEFAULT_CHECK_RULES'ta var mı kontrol et
+    const defaultRule = DEFAULT_CHECK_RULES[type] || {};
+    const checkRule = CHECK_RULES[type] || {};
+    const rule = { ...defaultRule, ...checkRule };
+    
+    // Eğer hiç tanım yoksa uyarı göster
+    if (!rule.name) {
+        container.innerHTML = `
+            <div style="text-align:center;padding:40px;color:var(--tx2)">
+                <div style="font-size:1.1rem;margin-bottom:8px">⚠️ Tanım Bulunamadı</div>
+                <div style="font-size:.85rem">"${type}" için kural tanımı mevcut değil.</div>
+            </div>
+        `;
+        return;
+    }
+    
     const branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
     
     let html = `
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px">
             <div>
-                <h3 style="color:var(--tx);font-size:1.2rem;font-weight:600;margin:0 0 4px 0">${rule.name}</h3>
+                <h3 style="color:var(--tx);font-size:1.2rem;font-weight:600;margin:0 0 4px 0">${rule.name || type}</h3>
                 <p style="color:var(--tx2);font-size:.85rem;margin:0">${rule.description || ''}</p>
             </div>
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
@@ -23396,15 +23424,32 @@ async function distributeTemizlikItems(branch, date) {
         const personName = personelFullNames[personId] || personId;
         const shiftUpper = todayShift.toUpperCase();
         
+        // BÖLGE MÜDÜRÜ checklist doldurmaz (tek başına değilse)
+        if (shiftUpper.includes('BÖLGE') || shiftUpper.includes('BOLGE')) {
+            // Bölge müdürü - sonra kontrol edilecek
+            personnel._bolgeMuduru = personnel._bolgeMuduru || [];
+            personnel._bolgeMuduru.push({ id: personId, name: personName, shift: todayShift });
+            return;
+        }
+        
         if (shiftUpper.includes('AÇILIŞ') || shiftUpper.includes('ACILIS')) {
             personnel.acilis.push({ id: personId, name: personName, shift: todayShift });
         } else if (shiftUpper.includes('KAPANIŞ') || shiftUpper.includes('KAPANIS')) {
             personnel.kapanis.push({ id: personId, name: personName, shift: todayShift });
-        } else {
-            // ARA, BÖLGE MÜDÜRÜ, veya diğer shiftler
+        } else if (shiftUpper.includes('ARA') || shiftUpper === 'ARA') {
             personnel.araci.push({ id: personId, name: personName, shift: todayShift });
         }
+        // Diğer shiftler (bilinmeyen) dahil edilmez
     });
+    
+    // Bölge müdürü SADECE tek başınaysa dahil et (hiç personel yoksa)
+    const totalPersonnel = personnel.acilis.length + personnel.araci.length + personnel.kapanis.length;
+    if (totalPersonnel === 0 && personnel._bolgeMuduru?.length > 0) {
+        // Hiç personel yok, bölge müdürü aracı olarak çalışsın
+        personnel.araci = personnel._bolgeMuduru;
+        console.log('[Temizlik] Sadece bölge müdürü var, aracı olarak atandı');
+    }
+    delete personnel._bolgeMuduru;
     
     // Temizlik maddelerini al
     const allItems = getDefaultChecklistItems(branch, 'aylik');
