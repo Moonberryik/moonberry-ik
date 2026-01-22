@@ -15508,38 +15508,28 @@ async function loadTodayChecks() {
             // Gece saatlerinde son slot'u (genelde 22:00) kontrol et
             const lastSlot = gunlukTimes[gunlukTimes.length - 1];
             const [lastH, lastM] = lastSlot.split(':').map(Number);
-            const lastSlotMinutes = lastH * 60 + lastM; // 22:00 = 1320
-            const lastDeadlineMinutes = lastSlotMinutes + gunlukLateWindow; // 22:30 = 1350
+            const lastSlotMinutes = lastH * 60 + lastM;
+            const lastDeadlineMinutes = lastSlotMinutes + gunlukLateWindow;
             
-            // Gece geçişi hesaplaması:
-            // Deadline akşamda (örn 22:30), şu an gece yarısından sonra (örn 00:38)
-            // Deadline'dan bu yana geçen süre = (gece yarısına kalan) + (gece yarısından şimdiye)
-            const minutesBeforeMidnight = 24 * 60 - lastDeadlineMinutes; // 1440 - 1350 = 90
-            const minutesPastMidnight = nowMinutesTotal; // 38
-            const minutesSinceDeadline = minutesBeforeMidnight + minutesPastMidnight; // 90 + 38 = 128
+            // Gece geçişi hesaplaması
+            const minutesBeforeMidnight = 24 * 60 - lastDeadlineMinutes;
+            const minutesPastMidnight = nowMinutesTotal;
+            const minutesSinceDeadline = minutesBeforeMidnight + minutesPastMidnight;
             
-            console.log(`[Günlük-${branch}] Gece hesaplama: minutesSinceDeadline=${minutesSinceDeadline}, lateWindow=${gunlukLateWindow}, MISSED=${minutesSinceDeadline > gunlukLateWindow}`);
-            
-            // Late window henüz geçmedi mi?
             if (minutesSinceDeadline <= 0) {
-                // Henüz deadline'a ulaşılmadı (şu an deadline'dan önce - olası değil gece için)
                 activeGunlukTime = lastSlot;
                 isGunlukActive = true;
                 gunlukRemainingMinutes = -minutesSinceDeadline;
             } else if (minutesSinceDeadline <= gunlukLateWindow) {
-                // Late window içinde (deadline geçti ama late window henüz bitmedi)
-                // Bu sadece late window çok büyükse mümkün (örn 120dk)
                 activeGunlukTime = lastSlot;
                 isGunlukActive = true;
                 isGunlukLate = true;
                 gunlukRemainingMinutes = gunlukLateWindow - minutesSinceDeadline;
             } else {
-                // Late window geçti - MISSED
                 activeGunlukTime = lastSlot;
                 isGunlukMissed = true;
                 isGunlukActive = false;
                 gunlukRemainingMinutes = 0;
-                console.log(`[Günlük-${branch}] ✅ MISSED olarak işaretlendi`);
             }
         } else {
             for (const timeStr of gunlukTimes) {
@@ -15657,8 +15647,6 @@ async function loadTodayChecks() {
                 gunlukPersonnel = [...getShiftPersonnel(branch, 'acilis'), ...getShiftPersonnel(branch, 'ara'), ...getShiftPersonnel(branch, 'kapanis')].filter((v, i, a) => a.indexOf(v) === i);
                 gunlukSubLabel = '';
             }
-            
-            console.log(`[Günlük-${branch}] Push öncesi: isGunlukMissed=${isGunlukMissed}, gunlukCompleted=${gunlukCompleted}, isMissed=${isGunlukMissed && !gunlukCompleted}`);
             
             branchChecks.push({
                 id: 'gunluk',
@@ -15948,11 +15936,6 @@ async function loadTodayChecks() {
             if (isMissedRecent) cardClasses = ['missed-recent']; // Override
             
             const cardClass = cardClasses.join(' ');
-            
-            // Debug log
-            if (check.id === 'gunluk' || check.id === 'platform') {
-                console.log(`[Card-${check.id}] isMissed=${check.isMissed}, isActive=${check.isActive}, cardClasses=${cardClasses.join(',')}`);
-            }
             
             // Yanıp sönme - süresi dolmuşsa ASLA yanıp sönme
             let pulseClass = '';
