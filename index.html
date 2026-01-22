@@ -19223,6 +19223,13 @@ async function loadChecklist() {
         return;
     }
     
+    // Temizlik Çizelgesi için özel işlem (madde bazlı dağıtım)
+    if (type === 'aylik' || type === 'temizlik') {
+        await renderTemizlikChecklist(container, branch, date);
+        checklistLoadingLock = false;
+        return;
+    }
+    
     // Otomatik saat belirleme - mevcut Türkiye saati
     const now = new Date();
     const turkeyTime = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -23348,6 +23355,464 @@ function showChecklistSettings() {
     showModal('⚙️ Checklist Ayarları', html, '<button class="btn btn-ghost" onclick="closeModal()">Kapat</button>');
 }
 
+// ==================== TEMİZLİK ÇİZELGESİ YÖNETİM SİSTEMİ ====================
+
+// Temizlik maddelerini shiftteki personele dinamik dağıt
+async function distributeTemizlikItems(branch, date) {
+    const weekKey = getWeekKey(new Date(date));
+    
+    // Shift verilerini al
+    const shiftSnap = await db.collection('shifts')
+        .where('branch', '==', branch)
+        .where('weekStart', '==', weekKey)
+        .limit(1)
+        .get();
+    
+    if (shiftSnap.empty) {
+        console.warn('[Temizlik] Shift bulunamadı:', branch, weekKey);
+        return null;
+    }
+    
+    const shiftData = shiftSnap.docs[0].data();
+    const personelShifts = shiftData.personelShifts || {};
+    const personelFullNames = shiftData.personelFullNames || {};
+    
+    // Gün indeksini hesapla (0=Pazartesi)
+    let dayIndex = new Date(date).getDay() - 1;
+    if (dayIndex < 0) dayIndex = 6;
+    const dayKey = String(dayIndex);
+    
+    // Bugün çalışan personeli kategorize et
+    const personnel = {
+        acilis: [],
+        araci: [],
+        kapanis: []
+    };
+    
+    Object.entries(personelShifts).forEach(([personId, shifts]) => {
+        const todayShift = shifts[dayKey];
+        if (!todayShift || todayShift.toUpperCase() === 'OFF' || todayShift === '-') return;
+        
+        const personName = personelFullNames[personId] || personId;
+        const shiftUpper = todayShift.toUpperCase();
+        
+        if (shiftUpper.includes('AÇILIŞ') || shiftUpper.includes('ACILIS')) {
+            personnel.acilis.push({ id: personId, name: personName, shift: todayShift });
+        } else if (shiftUpper.includes('KAPANIŞ') || shiftUpper.includes('KAPANIS')) {
+            personnel.kapanis.push({ id: personId, name: personName, shift: todayShift });
+        } else {
+            // ARA, BÖLGE MÜDÜRÜ, veya diğer shiftler
+            personnel.araci.push({ id: personId, name: personName, shift: todayShift });
+        }
+    });
+    
+    // Temizlik maddelerini al
+    const allItems = getDefaultChecklistItems(branch, 'aylik');
+    
+    // Maddeleri shift kategorisine göre grupla
+    const itemsByShift = {
+        acilis: allItems.filter(i => i.shift === 'acilis'),
+        araci: allItems.filter(i => i.shift === 'araci'),
+        kapanis: allItems.filter(i => i.shift === 'kapanis')
+    };
+    
+    // Aracı yoksa maddelerini açılış ve kapanışa dağıt
+    if (personnel.araci.length === 0 && itemsByShift.araci.length > 0) {
+        const araciItems = itemsByShift.araci;
+        const half = Math.ceil(araciItems.length / 2);
+        
+        // Yarısını açılışa, yarısını kapanışa
+        araciItems.slice(0, half).forEach(item => {
+            item.shift = 'acilis';
+            itemsByShift.acilis.push(item);
+        });
+        araciItems.slice(half).forEach(item => {
+            item.shift = 'kapanis';
+            itemsByShift.kapanis.push(item);
+        });
+        itemsByShift.araci = [];
+        console.log('[Temizlik] Aracı yok, maddeler dağıtıldı:', half, 'açılışa,', araciItems.length - half, 'kapanışa');
+    }
+    
+    // Her kategorideki maddeleri personele eşit dağıt
+    const assignments = {}; // { personId: [item1, item2, ...] }
+    
+    ['acilis', 'araci', 'kapanis'].forEach(shiftType => {
+        const items = itemsByShift[shiftType];
+        const people = personnel[shiftType];
+        
+        if (items.length === 0 || people.length === 0) return;
+        
+        // Maddeleri eşit dağıt
+        items.forEach((item, idx) => {
+            const personIdx = idx % people.length;
+            const person = people[personIdx];
+            
+            if (!assignments[person.id]) {
+                assignments[person.id] = {
+                    name: person.name,
+                    shift: shiftType,
+                    items: []
+                };
+            }
+            assignments[person.id].items.push({
+                ...item,
+                assignedTo: person.id,
+                assignedName: person.name
+            });
+        });
+    });
+    
+    return {
+        branch,
+        date,
+        weekKey,
+        personnel,
+        itemsByShift,
+        assignments,
+        totalItems: allItems.length
+    };
+}
+
+// Temizlik maddesi için 48 saat cooldown kontrolü
+async function checkTemizlikCooldown(branch, itemId, currentDate) {
+    const cooldownHours = 48;
+    const cooldownMs = cooldownHours * 60 * 60 * 1000;
+    
+    try {
+        // Son tamamlanma zamanını bul
+        const snap = await db.collection('temizlikCompletions')
+            .where('branch', '==', branch)
+            .where('itemId', '==', itemId)
+            .orderBy('completedAt', 'desc')
+            .limit(1)
+            .get();
+        
+        if (snap.empty) {
+            return { canComplete: true, lastCompleted: null, nextAvailable: null };
+        }
+        
+        const lastDoc = snap.docs[0].data();
+        const lastCompletedAt = lastDoc.completedAt?.toDate() || new Date(lastDoc.completedAt);
+        const now = new Date();
+        const elapsed = now - lastCompletedAt;
+        
+        if (elapsed >= cooldownMs) {
+            return { 
+                canComplete: true, 
+                lastCompleted: lastCompletedAt,
+                lastCompletedBy: lastDoc.completedByName,
+                nextAvailable: null 
+            };
+        }
+        
+        const nextAvailable = new Date(lastCompletedAt.getTime() + cooldownMs);
+        const remainingHours = Math.ceil((cooldownMs - elapsed) / (60 * 60 * 1000));
+        
+        return { 
+            canComplete: false, 
+            lastCompleted: lastCompletedAt,
+            lastCompletedBy: lastDoc.completedByName,
+            nextAvailable,
+            remainingHours
+        };
+    } catch (e) {
+        // Index yoksa veya başka hata - basit sorgu dene
+        try {
+            const snap = await db.collection('temizlikCompletions')
+                .where('branch', '==', branch)
+                .where('itemId', '==', itemId)
+                .get();
+            
+            if (snap.empty) {
+                return { canComplete: true, lastCompleted: null, nextAvailable: null };
+            }
+            
+            // En son tarihi manuel bul
+            let latest = null;
+            let latestDoc = null;
+            snap.forEach(doc => {
+                const d = doc.data();
+                const completedAt = d.completedAt?.toDate() || new Date(d.completedAt || d.date);
+                if (!latest || completedAt > latest) {
+                    latest = completedAt;
+                    latestDoc = d;
+                }
+            });
+            
+            if (!latest) {
+                return { canComplete: true, lastCompleted: null, nextAvailable: null };
+            }
+            
+            const now = new Date();
+            const elapsed = now - latest;
+            
+            if (elapsed >= cooldownMs) {
+                return { 
+                    canComplete: true, 
+                    lastCompleted: latest,
+                    lastCompletedBy: latestDoc?.completedByName,
+                    nextAvailable: null 
+                };
+            }
+            
+            const nextAvailable = new Date(latest.getTime() + cooldownMs);
+            const remainingHours = Math.ceil((cooldownMs - elapsed) / (60 * 60 * 1000));
+            
+            return { 
+                canComplete: false, 
+                lastCompleted: latest,
+                lastCompletedBy: latestDoc?.completedByName,
+                nextAvailable,
+                remainingHours
+            };
+        } catch (e2) {
+            console.warn('[Temizlik] Cooldown kontrolü hatası:', e2);
+            return { canComplete: true, lastCompleted: null, nextAvailable: null };
+        }
+    }
+}
+
+// Temizlik çizelgesi render fonksiyonu
+async function renderTemizlikChecklist(container, branch, date) {
+    container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--tx2)">
+        <div class="loading-spinner" style="margin:0 auto 16px"></div>
+        Temizlik çizelgesi yükleniyor...
+    </div>`;
+    
+    try {
+        // Shift verilerini çek
+        const distribution = await distributeTemizlikItems(branch, date);
+        
+        if (!distribution) {
+            container.innerHTML = `
+                <div style="text-align:center;padding:60px 20px">
+                    <div style="width:80px;height:80px;margin:0 auto 20px;background:linear-gradient(135deg,#fee2e2,#fecaca);border-radius:50%;display:flex;align-items:center;justify-content:center">
+                        <svg width="40" height="40" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 8v4M12 16h.01"/>
+                        </svg>
+                    </div>
+                    <div style="font-size:1.2rem;font-weight:600;color:var(--tx);margin-bottom:8px">Shift Verisi Bulunamadı</div>
+                    <div style="color:var(--tx2)">Bu hafta için shift kaydı yok.</div>
+                </div>
+            `;
+            return;
+        }
+        
+        // Mevcut kullanıcının ID'sini bul
+        const currentUserId = currentUser?.uniqueId || normalizePersonelId(currentUser?.name || '');
+        const isManager = ['yonetici', 'bolge_muduru', 'magaza_muduru', 'mudur', 'admin'].includes(currentUser?.role);
+        
+        // Vardiya renkleri
+        const shiftColors = {
+            acilis: { bg: 'rgba(39,174,96,.1)', border: '#27ae60', icon: '🌅', label: 'Açılış' },
+            araci: { bg: 'rgba(243,156,18,.1)', border: '#f39c12', icon: '☀️', label: 'Ara Vardiya' },
+            kapanis: { bg: 'rgba(155,89,182,.1)', border: '#9b59b6', icon: '🌙', label: 'Kapanış' }
+        };
+        
+        let html = `
+            <div style="margin-bottom:20px">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+                    <div>
+                        <h3 style="color:var(--tx);font-size:1.1rem;font-weight:600;margin:0">🧹 Temizlik Çizelgesi</h3>
+                        <div style="font-size:.85rem;color:var(--tx2);margin-top:4px">${branch} - ${date}</div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        ${Object.entries(shiftColors).map(([key, val]) => {
+                            const count = distribution.personnel[key]?.length || 0;
+                            return `<span style="font-size:.75rem;padding:4px 10px;border-radius:12px;background:${val.bg};color:${val.border};border:1px solid ${val.border}">${val.icon} ${val.label}: ${count} kişi</span>`;
+                        }).join('')}
+                    </div>
+                </div>
+            </div>
+            
+            <div style="background:rgba(0,140,149,.05);border:1px solid rgba(0,140,149,.2);border-radius:12px;padding:14px;margin-bottom:20px">
+                <div style="font-size:.85rem;color:var(--primary)">
+                    💡 Her madde <strong>48 saat</strong> cooldown süresine sahiptir. Yapılan madde 48 saat sonra tekrar aktif olur.
+                    ${isManager ? '<br>👤 Yönetici olarak tüm personelin maddelerini görebilir ve işaretleyebilirsiniz.' : ''}
+                </div>
+            </div>
+        `;
+        
+        // Her vardiya tipi için bölüm oluştur
+        for (const [shiftType, shiftConfig] of Object.entries(shiftColors)) {
+            const people = distribution.personnel[shiftType] || [];
+            const items = distribution.itemsByShift[shiftType] || [];
+            
+            if (items.length === 0) continue;
+            
+            html += `
+                <div style="margin-bottom:24px">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid ${shiftConfig.border}">
+                        <span style="font-size:1.3rem">${shiftConfig.icon}</span>
+                        <div style="font-weight:600;color:var(--tx)">${shiftConfig.label} Maddeleri</div>
+                        <span style="font-size:.8rem;color:var(--tx3)">(${items.length} madde)</span>
+                    </div>
+            `;
+            
+            if (people.length === 0) {
+                html += `
+                    <div style="padding:20px;background:var(--bg3);border-radius:10px;text-align:center;color:var(--tx2)">
+                        ⚠️ Bu vardiyada personel yok. Maddeler diğer vardiyalara dağıtıldı.
+                    </div>
+                `;
+            } else {
+                // Maddeleri personele dağıt ve göster
+                const itemsPerPerson = Math.ceil(items.length / people.length);
+                
+                for (let pIdx = 0; pIdx < people.length; pIdx++) {
+                    const person = people[pIdx];
+                    const personItems = items.slice(pIdx * itemsPerPerson, (pIdx + 1) * itemsPerPerson);
+                    
+                    if (personItems.length === 0) continue;
+                    
+                    const canEdit = isManager || person.id === currentUserId || normalizePersonelId(person.name) === currentUserId;
+                    
+                    html += `
+                        <div style="background:${shiftConfig.bg};border:1px solid ${shiftConfig.border}33;border-radius:12px;padding:16px;margin-bottom:12px">
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                                <div style="display:flex;align-items:center;gap:10px">
+                                    <div style="width:40px;height:40px;border-radius:50%;background:${shiftConfig.border};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:.9rem">
+                                        ${person.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <div style="font-weight:600;color:var(--tx)">${person.name}</div>
+                                        <div style="font-size:.75rem;color:var(--tx3)">${person.shift} - ${personItems.length} madde</div>
+                                    </div>
+                                </div>
+                                ${canEdit ? `<span style="font-size:.7rem;padding:4px 8px;background:#27ae60;color:#fff;border-radius:6px">✏️ Düzenleyebilirsin</span>` : ''}
+                            </div>
+                            
+                            <div style="display:grid;gap:8px">
+                    `;
+                    
+                    for (const item of personItems) {
+                        const cooldown = await checkTemizlikCooldown(branch, item.id, new Date());
+                        const isCompleted = !cooldown.canComplete;
+                        const points = item.points?.done || 1;
+                        
+                        html += `
+                            <div class="temizlik-item ${isCompleted ? 'completed' : ''}" 
+                                 style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg2);border-radius:8px;border:1px solid ${isCompleted ? '#27ae60' : 'var(--bg4)'};${isCompleted ? 'opacity:.7' : ''}">
+                                
+                                <div style="flex:1">
+                                    <div style="font-size:.9rem;color:var(--tx);${isCompleted ? 'text-decoration:line-through' : ''}">${item.text}</div>
+                                    <div style="font-size:.7rem;color:var(--tx3);margin-top:2px">
+                                        ${item.category} • <span style="color:${points > 0 ? '#27ae60' : '#e74c3c'}">${points > 0 ? '+' : ''}${points} puan</span>
+                                        ${isCompleted && cooldown.lastCompletedBy ? ` • ✅ ${cooldown.lastCompletedBy}` : ''}
+                                        ${isCompleted && cooldown.remainingHours ? ` • ⏰ ${cooldown.remainingHours}s sonra aktif` : ''}
+                                    </div>
+                                </div>
+                                
+                                ${canEdit ? `
+                                    <button class="btn btn-sm ${isCompleted ? 'btn-ghost' : 'btn-primary'}" 
+                                            onclick="handleTemizlikItemClick('${branch}', '${item.id}', '${item.text.replace(/'/g, "\\'")}', '${person.id}', '${person.name}')"
+                                            ${isCompleted ? 'disabled' : ''}
+                                            style="min-width:80px;font-size:.75rem">
+                                        ${isCompleted ? '✅ Yapıldı' : '☐ Tamamla'}
+                                    </button>
+                                ` : `
+                                    <div style="min-width:80px;text-align:center;font-size:.75rem;color:var(--tx3)">
+                                        ${isCompleted ? '✅ Yapıldı' : '⏳ Bekliyor'}
+                                    </div>
+                                `}
+                            </div>
+                        `;
+                    }
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            html += `</div>`;
+        }
+        
+        container.innerHTML = html;
+        
+    } catch (e) {
+        console.error('[Temizlik] Render hatası:', e);
+        container.innerHTML = `
+            <div style="text-align:center;padding:60px 20px;color:#e74c3c">
+                <div style="font-size:1.1rem;margin-bottom:8px">Hata oluştu</div>
+                <div style="font-size:.85rem">${e.message}</div>
+            </div>
+        `;
+    }
+}
+
+// Temizlik maddesi tıklama handler
+async function handleTemizlikItemClick(branch, itemId, itemText, personId, personName) {
+    // Onay iste
+    const confirmed = confirm(`"${itemText}" maddesini tamamlamak istiyor musunuz?\n\nSorumlu: ${personName}`);
+    if (!confirmed) return;
+    
+    // Tamamla
+    const success = await completeTemizlikItem(branch, itemId, itemText, personId, personName);
+    
+    if (success) {
+        // Sayfayı yenile
+        loadChecklist();
+    }
+}
+
+// Temizlik maddesini tamamla
+async function completeTemizlikItem(branch, itemId, itemText, personId, personName) {
+    const now = new Date();
+    const docId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${itemId}_${formatDateLocal(now)}_${Date.now()}`;
+    
+    try {
+        // Cooldown kontrolü
+        const cooldown = await checkTemizlikCooldown(branch, itemId, now);
+        if (!cooldown.canComplete) {
+            toast(`Bu madde ${cooldown.remainingHours} saat sonra tekrar yapılabilir`, 'warning');
+            return false;
+        }
+        
+        // Tamamlama kaydı
+        await db.collection('temizlikCompletions').doc(docId).set({
+            branch,
+            itemId,
+            itemText,
+            completedBy: personId,
+            completedByName: personName,
+            completedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            date: formatDateLocal(now)
+        });
+        
+        // Puan ekle
+        const items = getDefaultChecklistItems(branch, 'aylik');
+        const item = items.find(i => i.id === itemId);
+        const points = item?.points?.done || 1;
+        
+        const noteId = `temizlik_${normalizePersonelId(personName)}_${formatDateLocal(now)}_${itemId}`;
+        await db.collection('puantajNotes').doc(noteId).set({
+            personelId: normalizePersonelId(personName),
+            personelName: personName,
+            branch,
+            date: formatDateLocal(now),
+            checkType: 'temizlik',
+            itemId,
+            status: 'done',
+            points,
+            note: `Temizlik: ${itemText}`,
+            autoGenerated: true,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        console.log(`[Temizlik] ✅ ${personName}: ${itemText} (+${points} puan)`);
+        toast(`✅ ${itemText} tamamlandı (+${points} puan)`, 'success');
+        return true;
+    } catch (e) {
+        console.error('[Temizlik] Tamamlama hatası:', e);
+        toast('Hata oluştu: ' + e.message, 'error');
+        return false;
+    }
+}
+
 // Default checklist maddeleri - TÜM EXCEL MADDELERİ
 function getDefaultChecklistItems(branch, type) {
     // Type mapping - farklı ID'ler aynı base type'a işaret edebilir
@@ -23408,25 +23873,30 @@ function getDefaultChecklistItems(branch, type) {
         ];
     }
     
-    // Temizlik Çizelgesi (aylık)
+    // Temizlik Çizelgesi (aylık) - Her madde bir shift kategorisine atanmış
     if (checkType === 'aylik') {
         return [
-            { id: 'tem_01', text: 'Tüm masalar ve sandalyeler temizlendi', category: 'Salon' },
-            { id: 'tem_02', text: 'Zemin süpürüldü ve silindi', category: 'Salon' },
-            { id: 'tem_03', text: 'Vitrin camları temizlendi', category: 'Salon' },
-            { id: 'tem_04', text: 'Menü tahtaları/standları temizlendi', category: 'Salon' },
-            { id: 'tem_05', text: 'Kapı girişi ve paspaslar temizlendi', category: 'Salon' },
-            { id: 'tem_06', text: 'Bar tezgahı dezenfekte edildi', category: 'Bar' },
-            { id: 'tem_07', text: 'Espresso makinesi temizlendi', category: 'Bar' },
-            { id: 'tem_08', text: 'Öğütücüler temizlendi', category: 'Bar' },
-            { id: 'tem_09', text: 'Blenderlar temizlendi', category: 'Bar' },
-            { id: 'tem_10', text: 'Buzdolabı rafları düzenlendi', category: 'Bar' },
-            { id: 'tem_11', text: 'Bardak ve fincanlar dizildi', category: 'Bar' },
-            { id: 'tem_12', text: 'Çöpler boşaltıldı', category: 'Genel' },
-            { id: 'tem_13', text: 'WC kontrol edildi ve temizlendi', category: 'WC' },
-            { id: 'tem_14', text: 'Sabunluk ve kağıt havlu dolduruldu', category: 'WC' },
-            { id: 'tem_15', text: 'Depo düzenlendi', category: 'Depo' },
-            { id: 'tem_16', text: 'Ürün son kullanma tarihleri kontrol edildi', category: 'Depo' }
+            // AÇILIŞ MADDELERİ (Açılışçı yapar)
+            { id: 'tem_01', text: 'Kapı girişi ve paspaslar temizlendi', category: 'Salon', shift: 'acilis', points: { done: 1, missed: -1 } },
+            { id: 'tem_02', text: 'Masalar ve sandalyeler temizlendi (sabah)', category: 'Salon', shift: 'acilis', points: { done: 1, missed: -1 } },
+            { id: 'tem_03', text: 'Vitrin camları temizlendi', category: 'Salon', shift: 'acilis', points: { done: 1, missed: -1 } },
+            { id: 'tem_04', text: 'Buzdolabı rafları düzenlendi', category: 'Bar', shift: 'acilis', points: { done: 1, missed: -1 } },
+            { id: 'tem_05', text: 'SKT kontrolleri yapıldı', category: 'Depo', shift: 'acilis', points: { done: 2, missed: -2 } },
+            
+            // ARACI MADDELERİ (Ara vardiya yapar)
+            { id: 'tem_06', text: 'Bar tezgahı dezenfekte edildi', category: 'Bar', shift: 'araci', points: { done: 1, missed: -1 } },
+            { id: 'tem_07', text: 'Öğütücüler temizlendi', category: 'Bar', shift: 'araci', points: { done: 1, missed: -1 } },
+            { id: 'tem_08', text: 'Blenderlar temizlendi', category: 'Bar', shift: 'araci', points: { done: 1, missed: -1 } },
+            { id: 'tem_09', text: 'WC kontrol edildi (öğlen)', category: 'WC', shift: 'araci', points: { done: 1, missed: -1 } },
+            { id: 'tem_10', text: 'Çöpler boşaltıldı (öğlen)', category: 'Genel', shift: 'araci', points: { done: 1, missed: -1 } },
+            
+            // KAPANIŞ MADDELERİ (Kapanışçı yapar)
+            { id: 'tem_11', text: 'Zemin süpürüldü ve silindi', category: 'Salon', shift: 'kapanis', points: { done: 1, missed: -1 } },
+            { id: 'tem_12', text: 'Espresso makinesi temizlendi', category: 'Bar', shift: 'kapanis', points: { done: 2, missed: -2 } },
+            { id: 'tem_13', text: 'Bardak ve fincanlar dizildi', category: 'Bar', shift: 'kapanis', points: { done: 1, missed: -1 } },
+            { id: 'tem_14', text: 'WC temizlendi ve malzemeler dolduruldu', category: 'WC', shift: 'kapanis', points: { done: 1, missed: -1 } },
+            { id: 'tem_15', text: 'Çöpler boşaltıldı (akşam)', category: 'Genel', shift: 'kapanis', points: { done: 1, missed: -1 } },
+            { id: 'tem_16', text: 'Depo düzenlendi', category: 'Depo', shift: 'kapanis', points: { done: 1, missed: -1 } }
         ];
     }
     
