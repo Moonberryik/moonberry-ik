@@ -15036,6 +15036,14 @@ async function loadTodayChecks() {
             const isAcilisMissed = !isAcilisActive && !acilisCompleted && currentHour >= 12;
             const canFillAcilis = currentHour < 14; // 14:00'a kadar doldurulabilir
             
+            // Açılış için kalan süre
+            let acilisRemainingMinutes = null;
+            if (isAcilisActive && !acilisCompleted) {
+                acilisRemainingMinutes = Math.max(0, (12 - currentHour) * 60 - currentMinutes);
+            } else if (isAcilisMissed) {
+                acilisRemainingMinutes = 0;
+            }
+            
             branchChecks.push({
                 id: 'acilis',
                 name: getChecklistTypeName(branch, 'acilis', 'Açılış Hazırlıkları'),
@@ -15045,7 +15053,7 @@ async function loadTodayChecks() {
                 isActive: isAcilisActive && !acilisCompleted,
                 isMissed: isAcilisMissed,
                 canStillFill: canFillAcilis,
-                remainingMinutes: isAcilisActive ? Math.max(0, (12 - currentHour) * 60 - currentMinutes) : null,
+                remainingMinutes: acilisRemainingMinutes,
                 remainingText: '',
                 personnel: acilisPersonnel,
                 points: { onTime: 5, missed: -5 },
@@ -15067,6 +15075,23 @@ async function loadTodayChecks() {
             
             const kapanisPersonnel = getShiftPersonnel(branch, 'kapanis');
             const isKapanisActive = currentHour >= 20 || currentHour < 2; // Aktiflik için saat kontrolü
+            const isKapanisMissed = !kapanisCompleted && currentHour >= 2 && currentHour < 6; // 02:00-06:00 arası kaçırılmış
+            const canFillKapanis = currentHour >= 20 || currentHour < 4; // 04:00'a kadar doldurulabilir
+            
+            // Kapanış için kalan süre (02:00'a kadar)
+            let kapanisRemainingMinutes = null;
+            if (isKapanisActive && !kapanisCompleted) {
+                if (currentHour >= 20) {
+                    // 20:00-23:59 arası: 02:00'a kalan
+                    kapanisRemainingMinutes = (24 - currentHour + 2) * 60 - currentMinutes;
+                } else {
+                    // 00:00-02:00 arası
+                    kapanisRemainingMinutes = Math.max(0, (2 - currentHour) * 60 - currentMinutes);
+                }
+            } else if (isKapanisMissed) {
+                kapanisRemainingMinutes = 0;
+            }
+            
             branchChecks.push({
                 id: 'kapanis',
                 name: getChecklistTypeName(branch, 'kapanis', 'Kapanış Hazırlıkları'),
@@ -15074,12 +15099,14 @@ async function loadTodayChecks() {
                 deadline: '01:30',
                 isCompleted: kapanisCompleted,
                 isActive: isKapanisActive && !kapanisCompleted,
-                isMissed: false,
+                isMissed: isKapanisMissed,
+                canStillFill: canFillKapanis,
+                remainingMinutes: kapanisRemainingMinutes,
                 remainingText: '',
                 personnel: kapanisPersonnel,
                 points: { onTime: 5, missed: -5 },
                 priority: kapanisCompleted ? 95 : (isKapanisActive ? 5 : 80),
-                onClick: `goToChecklist('${branch}', 'kapanis', null)`
+                onClick: canFillKapanis ? `goToChecklist('${branch}', 'kapanis', null)` : ''
             });
             totalChecks++;
             if (kapanisCompleted) completedChecks++;
@@ -15343,6 +15370,21 @@ async function loadTodayChecks() {
                 mudurPersonnel = branchManagers[branch] || 'Mağaza Müdürü';
             }
             
+            // Müdür için kalan süre hesapla
+            let mudurRemainingMinutes = null;
+            if (!mudurCompleted && canFillMudurCheck) {
+                const nowMin = currentHour * 60 + currentMinutes;
+                const [dh, dm] = mudurDeadline.split(':').map(Number);
+                let deadlineMin = dh * 60 + dm;
+                // Gece geçişi
+                if (dh < 6) deadlineMin += 24 * 60;
+                let adjustedNow = nowMin;
+                if (currentHour < 6) adjustedNow += 24 * 60;
+                mudurRemainingMinutes = Math.max(0, deadlineMin - adjustedNow);
+            } else if (isMudurCheckMissed) {
+                mudurRemainingMinutes = 0;
+            }
+            
             branchChecks.push({
                 id: 'mudur',
                 name: getChecklistTypeName(branch, 'mudur', 'Müdür Kontrol'),
@@ -15353,7 +15395,7 @@ async function loadTodayChecks() {
                 isActive: canFillMudurCheck && !mudurCompleted,
                 isMissed: isMudurCheckMissed,
                 canStillFill: canFillMudurCheck,
-                remainingMinutes: null,
+                remainingMinutes: mudurRemainingMinutes,
                 remainingText: isMudurCheckMissed ? '⚠️ GEÇTİ' : (canFillMudurCheck ? '' : '⚠️'),
                 personnel: [mudurPersonnel],
                 points: { onTime: 10, missed: -10 },
