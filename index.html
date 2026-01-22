@@ -21437,14 +21437,48 @@ async function saveChecklistAndShare(branch, type, date, timeSlot, personName, r
         let pointStatus = 'completed';
         const rules = CHECK_RULES[type];
         
-        if (rules && timeSlot) {
+        if (rules) {
             const now = new Date();
-            const status = getCheckStatus(type, timeSlot, branch, true, now);
-            points = status.points;
-            pointStatus = status.status;
             
-            // Müdür hariç puan uygula - DOLDURAN KİŞİNİN rolüne bak, giriş yapanın değil
-            // personName'in müdür olup olmadığını kontrol et
+            // TimeSlot varsa timeSlot bazlı, yoksa deadline bazlı hesapla
+            if (timeSlot) {
+                const status = getCheckStatus(type, timeSlot, branch, true, now);
+                points = status.points;
+                pointStatus = status.status;
+            } else if (rules.deadline) {
+                // Deadline bazlı checkler (acilis, kapanis)
+                const [deadlineH, deadlineM] = rules.deadline.split(':').map(Number);
+                const deadlineTime = new Date(date);
+                deadlineTime.setHours(deadlineH, deadlineM, 0, 0);
+                
+                // Kapanış için ertesi gün
+                if (type === 'kapanis' && deadlineH < 12) {
+                    deadlineTime.setDate(deadlineTime.getDate() + 1);
+                }
+                
+                if (now <= deadlineTime) {
+                    points = rules.points?.onTime || 0;
+                    pointStatus = 'onTime';
+                } else {
+                    // Geç penceresi kontrolü
+                    const lateWindow = rules.lateWindow || 30;
+                    const lateDeadline = new Date(deadlineTime.getTime() + lateWindow * 60000);
+                    
+                    if (now <= lateDeadline) {
+                        points = rules.points?.late || 0;
+                        pointStatus = 'late';
+                    } else {
+                        points = rules.points?.missed || -1;
+                        pointStatus = 'missed';
+                    }
+                }
+            } else {
+                // Deadline yoksa vaktinde sayılır
+                points = rules.points?.onTime || 0;
+                pointStatus = 'onTime';
+            }
+            
+            // Müdür hariç puan kaydı yap
             let isPersonMudur = false;
             try {
                 const personelSnap = await db.collection('personel')
@@ -21457,13 +21491,13 @@ async function saveChecklistAndShare(branch, type, date, timeSlot, personName, r
                 }
             } catch (e) { console.warn('Personel rol kontrolü hatası:', e); }
             
-            if (!isPersonMudur && points !== 0) {
-                // Puantaj notunu oluştur - normalize edilmiş personelId kullan
+            // Her durumda puan kaydı yap (onTime dahil)
+            if (!isPersonMudur) {
                 await createAutoPuantajNote(
                     normalizePersonelId(personName),
                     personName,
                     type,
-                    timeSlot,
+                    timeSlot || rules.deadline || 'manual',
                     pointStatus,
                     points,
                     branch,
