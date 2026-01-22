@@ -14574,9 +14574,17 @@ async function checkSingleTimeSlot(branch, checkType, timeSlot, date, shiftPerso
     
     try {
         const existing = await db.collection('checklistSubmissions').doc(submissionId).get();
-        if (existing.exists) return; // Zaten doldurulmuş
         
-        // Doldurulmamış - puan notu var mı kontrol et
+        // Doc varsa ve status=missed değilse, doldurulmuş sayılır
+        if (existing.exists) {
+            const data = existing.data();
+            // Status=missed ise (manuel kaçırıldı işaretlenmişse) puan verilmeli
+            if (data.status !== 'missed' && data.pointStatus !== 'missed') {
+                return; // Doldurulmuş
+            }
+        }
+        
+        // Doldurulmamış veya missed - puan notu var mı kontrol et
         for (const personName of shiftPersonnel) {
             const personId = normalizePersonelId(personName);
             const noteId = `auto_${personId}_${date}_${checkType}_${timeSlot.replace(':', '')}`;
@@ -14623,9 +14631,16 @@ async function checkDeadlineBasedCheck(branch, checkType, date, shiftPersonnel, 
     
     try {
         const existing = await db.collection('checklistSubmissions').doc(submissionId).get();
-        if (existing.exists) return;
         
-        // Doldurulmamış - puan notu oluştur
+        // Doc varsa ve status=missed değilse, doldurulmuş sayılır
+        if (existing.exists) {
+            const data = existing.data();
+            if (data.status !== 'missed' && data.pointStatus !== 'missed') {
+                return; // Doldurulmuş
+            }
+        }
+        
+        // Doldurulmamış veya missed - puan notu oluştur
         for (const personName of shiftPersonnel) {
             const personId = normalizePersonelId(personName);
             const noteId = `auto_${personId}_${date}_${checkType}`;
