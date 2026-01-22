@@ -15725,15 +15725,29 @@ async function loadTodayChecks() {
                 }
             }
             
-            // Personel gösterimi
-            const personnelSize = dashboardConfig.personnelFontSize || '0.8rem';
-            const personnelText = check.personnel?.map(p => lookupPersonelDisplay(p)).join(', ') || '';
+            // Personel gösterimi - her personel ayrı badge
+            const personnelSize = dashboardConfig.personnelFontSize || '0.75rem';
+            let personnelHtml = '';
+            if (check.personnel && check.personnel.length > 0) {
+                const displayLimit = 3;
+                const personnelToShow = check.personnel.slice(0, displayLimit);
+                const remaining = check.personnel.length - displayLimit;
+                
+                personnelHtml = personnelToShow.map(p => {
+                    const displayName = lookupPersonelDisplay(p);
+                    return `<span class="check-personnel-tag" style="font-size:${personnelSize};padding:2px 6px;background:var(--bg4);border-radius:4px;white-space:nowrap">${displayName}</span>`;
+                }).join('');
+                
+                if (remaining > 0) {
+                    personnelHtml += `<span class="check-personnel-tag" style="font-size:${personnelSize};padding:2px 6px;background:var(--bg4);border-radius:4px;white-space:nowrap">+${remaining}</span>`;
+                }
+            }
             
             // Puan gösterimi - tüm seçenekler
             let pointsHtml = '';
             if (!check.isCompleted && check.points) {
                 pointsHtml = `
-                    <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end;font-size:.65rem;font-weight:600">
+                    <div style="display:flex;flex-direction:row;gap:4px;align-items:center;font-size:.65rem;font-weight:600">
                         <span style="display:flex;align-items:center;gap:3px;padding:2px 6px;background:rgba(39,174,96,.1);color:#27ae60;border-radius:3px" title="Vaktinde doldurulursa">
                             <svg width="9" height="9" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
                             ${check.points.onTime > 0 ? '+' : ''}${check.points.onTime}
@@ -15768,7 +15782,7 @@ async function loadTodayChecks() {
                         </div>
                         <div class="check-meta" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px">
                             ${check.subLabel ? `<span class="check-time-badge">${check.subLabel}</span>` : ''}
-                            ${personnelText ? `<span class="check-personnel-tag" style="font-size:${personnelSize}">${personnelText}</span>` : ''}
+                            ${personnelHtml}
                         </div>
                     </div>
                     <div class="check-status-wrap" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
