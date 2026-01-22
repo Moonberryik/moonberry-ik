@@ -16871,6 +16871,7 @@ async function saveManualCheck(branch, type, timeSlot, date) {
         await db.collection('checklistSubmissions').doc(submissionId).set({
             branch,
             type,
+            checklistType: type, // Otomatik puanlama için
             timeSlot,
             date,
             personName: personelName,
@@ -16879,6 +16880,7 @@ async function saveManualCheck(branch, type, timeSlot, date) {
             submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
             points,
             pointStatus: status,
+            status, // Otomatik puanlama için
             manualEntry: true,
             manualNote: note || 'Yönetici tarafından manuel eklendi',
             items: []
@@ -22119,6 +22121,7 @@ async function saveChecklistAndShare(branch, type, date, timeSlot, personName, r
             checklistId,
             branch,
             type,
+            checklistType: type, // Otomatik puanlama için
             date,
             timeSlot: timeSlot || null,
             personName,
@@ -22134,6 +22137,7 @@ async function saveChecklistAndShare(branch, type, date, timeSlot, personName, r
             // Puan bilgileri
             points,
             pointStatus,
+            status: pointStatus, // Otomatik puanlama için
             userRole: currentUser?.role
         };
         
@@ -22325,6 +22329,7 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
         
         await db.collection('checklistSubmissions').doc(submissionId).set({
             type: 'platform',
+            checklistType: 'platform', // Otomatik puanlama için
             date,
             personName,
             submittedBy: currentUser?.id,
@@ -22337,6 +22342,7 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
             },
             points: 0,
             pointStatus: 'completed',
+            status: 'completed', // Otomatik puanlama için
             userRole: currentUser?.role
         });
         
