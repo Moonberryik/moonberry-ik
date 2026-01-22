@@ -14372,6 +14372,180 @@ async function createAutoPuantajNote(personelId, personelName, checkType, checkT
 }
 
 // Yapılmayan checkler için otomatik puan işle
+// ==================== OTOMATİK KAÇIRILAN CHECK KONTROLÜ ====================
+// Dashboard/checklist yüklendiğinde geçmiş check'leri kontrol eder ve kaçırılanlar için puan keser
+async function checkAndProcessMissedChecks() {
+    // Sadece yönetici/müdür çalıştırabilir
+    if (!['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role)) {
+        return;
+    }
+    
+    console.log('[AutoPuan] Kaçırılan check kontrolü başlıyor...');
+    
+    const now = new Date();
+    const today = formatDateLocal(now);
+    
+    // Dün de kontrol et (gece vardiyası için)
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = formatDateLocal(yesterday);
+    
+    // Kontrol edilecek tarihler
+    const datesToCheck = [yesterdayStr, today];
+    
+    // Şubeler
+    const branches = STATE.branches || ['Tuzla Port', 'Şişli (Merkez)'];
+    const userBranch = currentUser?.branch;
+    const branchesToCheck = (userBranch && userBranch !== 'all') ? [userBranch] : branches;
+    
+    for (const branch of branchesToCheck) {
+        for (const date of datesToCheck) {
+            // Shift personelini al
+            let shiftPersonnel = [];
+            try {
+                const weekKey = getWeekKey(new Date(date));
+                const shiftDoc = await db.collection('shifts').doc(`${branch}_${weekKey}`).get();
+                
+                if (shiftDoc.exists) {
+                    const shiftData = shiftDoc.data();
+                    const dayOfWeek = new Date(date).getDay();
+                    const dayNames = ['pazar', 'pazartesi', 'sali', 'carsamba', 'persembe', 'cuma', 'cumartesi'];
+                    const dayKey = dayNames[dayOfWeek];
+                    
+                    const personnel = shiftData.personnel || [];
+                    for (const person of personnel) {
+                        const dayShift = person[dayKey];
+                        if (dayShift && dayShift !== 'off' && dayShift !== 'OFF' && dayShift !== '-') {
+                            shiftPersonnel.push(person.name);
+                        }
+                    }
+                }
+            } catch(e) {}
+            
+            if (shiftPersonnel.length === 0) continue;
+            
+            // Her check türü için kontrol et
+            const checkTypes = ['gunluk', 'acilis', 'kapanis'];
+            
+            for (const checkType of checkTypes) {
+                const rules = CHECK_RULES[checkType];
+                if (!rules || !rules.points?.missed) continue;
+                
+                // timeSlots varsa her biri için kontrol et
+                const timeSlots = rules.timeSlots || [];
+                
+                if (timeSlots.length > 0) {
+                    for (const timeSlot of timeSlots) {
+                        await checkSingleTimeSlot(branch, checkType, timeSlot, date, shiftPersonnel, rules);
+                    }
+                } else if (rules.deadline) {
+                    // Deadline bazlı check (acilis, kapanis)
+                    await checkDeadlineBasedCheck(branch, checkType, date, shiftPersonnel, rules);
+                }
+            }
+        }
+    }
+    
+    console.log('[AutoPuan] Kaçırılan check kontrolü tamamlandı');
+}
+
+// Tek bir timeSlot için check kontrolü
+async function checkSingleTimeSlot(branch, checkType, timeSlot, date, shiftPersonnel, rules) {
+    const now = new Date();
+    const [slotHour, slotMinute] = timeSlot.split(':').map(Number);
+    
+    // Check zamanı geçmiş mi?
+    const checkTime = new Date(date);
+    checkTime.setHours(slotHour, slotMinute, 0, 0);
+    
+    // Geç doldurum penceresi
+    const lateWindow = rules.lateWindow || 30;
+    const deadline = new Date(checkTime.getTime() + (rules.window?.after || 30) * 60000 + lateWindow * 60000);
+    
+    // Henüz süresi dolmamış
+    if (now < deadline) return;
+    
+    // Bu check doldurulmuş mu?
+    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType}_${date}_${timeSlot.replace(':', '')}`;
+    
+    try {
+        const existing = await db.collection('checklistSubmissions').doc(submissionId).get();
+        if (existing.exists) return; // Zaten doldurulmuş
+        
+        // Doldurulmamış - puan notu var mı kontrol et
+        for (const personName of shiftPersonnel) {
+            const personId = normalizePersonelId(personName);
+            const noteId = `auto_${personId}_${date}_${checkType}_${timeSlot.replace(':', '')}`;
+            
+            const noteExists = await db.collection('puantajNotes').doc(noteId).get();
+            if (!noteExists.exists) {
+                // Puan notu oluştur
+                console.log(`[AutoPuan] Kaçırılan: ${personName} - ${checkType} ${timeSlot} (${date})`);
+                await createAutoPuantajNote(
+                    personId,
+                    personName,
+                    checkType,
+                    timeSlot,
+                    'missed',
+                    rules.points.missed,
+                    branch,
+                    date
+                );
+            }
+        }
+    } catch(e) {
+        console.warn('[AutoPuan] Hata:', e);
+    }
+}
+
+// Deadline bazlı check kontrolü (açılış, kapanış)
+async function checkDeadlineBasedCheck(branch, checkType, date, shiftPersonnel, rules) {
+    const now = new Date();
+    const [deadlineHour, deadlineMinute] = (rules.deadline || '23:59').split(':').map(Number);
+    
+    const deadline = new Date(date);
+    deadline.setHours(deadlineHour, deadlineMinute, 0, 0);
+    
+    // Kapanış için ertesi gün
+    if (checkType === 'kapanis' && deadlineHour < 12) {
+        deadline.setDate(deadline.getDate() + 1);
+    }
+    
+    // Henüz süresi dolmamış
+    if (now < deadline) return;
+    
+    // Bu check doldurulmuş mu?
+    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType}_${date}`;
+    
+    try {
+        const existing = await db.collection('checklistSubmissions').doc(submissionId).get();
+        if (existing.exists) return;
+        
+        // Doldurulmamış - puan notu oluştur
+        for (const personName of shiftPersonnel) {
+            const personId = normalizePersonelId(personName);
+            const noteId = `auto_${personId}_${date}_${checkType}`;
+            
+            const noteExists = await db.collection('puantajNotes').doc(noteId).get();
+            if (!noteExists.exists) {
+                console.log(`[AutoPuan] Kaçırılan: ${personName} - ${checkType} (${date})`);
+                await createAutoPuantajNote(
+                    personId,
+                    personName,
+                    checkType,
+                    rules.deadline || '23:59',
+                    'missed',
+                    rules.points.missed,
+                    branch,
+                    date
+                );
+            }
+        }
+    } catch(e) {
+        console.warn('[AutoPuan] Hata:', e);
+    }
+}
+
 async function processMissedChecks(branch, checkType, timeSlot, date, shiftPersonnel) {
     // Sadece yönetici/müdür görünümünde işle (tekrarlı işlemi önlemek için)
     if (!['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role)) {
@@ -14539,6 +14713,9 @@ async function loadTodayChecks() {
     if (isAdmin) {
         loadLeaderboard();
         loadKPIDashboard();
+        
+        // Otomatik kaçırılan check kontrolü (arka planda çalışır)
+        setTimeout(() => checkAndProcessMissedChecks(), 5000);
     }
     
     // Shift verilerini yükle
@@ -15326,16 +15503,52 @@ async function loadMonthlyPoints() {
             else if (data.status === 'missed') missedCount++;
         });
         
-        // Eğer puantajNotes boşsa checklistSubmissions'dan da dene
-        if (notesSnapshot.empty) {
+        // 2. puantaj koleksiyonu - manuel değerlendirmeler
+        let manualCount = 0;
+        let personelDocId = null;
+        const periodKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        
+        try {
+            const personelQuery = await db.collection('personel')
+                .where('name', '==', userName)
+                .limit(1)
+                .get();
+            
+            if (!personelQuery.empty) {
+                personelDocId = personelQuery.docs[0].id;
+                
+                const puantajSnapshot = await db.collection('puantaj')
+                    .where('personelId', '==', personelDocId)
+                    .where('period', '==', periodKey)
+                    .get();
+                
+                puantajSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    // score 1-5 arası yıldız, puana çevir: 5=+2, 4=+1, 3=0, 2=-1, 1=-2
+                    const score = data.score || 3;
+                    const points = score - 3;
+                    totalPoints += points;
+                    manualCount++;
+                });
+            }
+        } catch(e) {
+            console.warn('Manuel puantaj yükleme hatası:', e);
+        }
+        
+        // 3. Eğer her iki koleksiyon da boşsa checklistSubmissions'dan da dene
+        if (notesSnapshot.empty && manualCount === 0) {
+            // Client-side filtreleme (composite index gerektirmez)
             const submissions = await db.collection('checklistSubmissions')
                 .where('personName', '==', userName)
-                .where('date', '>=', monthStartStr)
-                .where('date', '<=', monthEndStr)
                 .get();
             
             submissions.forEach(doc => {
                 const data = doc.data();
+                const docDate = data.date || '';
+                
+                // Tarih filtrelemesi client-side
+                if (docDate < monthStartStr || docDate > monthEndStr) return;
+                
                 const points = data.points || 0;
                 totalPoints += points;
                 
