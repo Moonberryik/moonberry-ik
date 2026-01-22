@@ -14564,7 +14564,11 @@ async function checkAndProcessMissedChecks() {
                 if (!rules || !rules.points?.missed) continue;
                 
                 // timeSlots varsa her biri için kontrol et
-                const timeSlots = rules.timeSlots || [];
+                // Array kontrolü - object veya undefined olabilir
+                let timeSlots = rules.timeSlots;
+                if (!Array.isArray(timeSlots)) {
+                    timeSlots = [];
+                }
                 
                 if (timeSlots.length > 0) {
                     for (const timeSlot of timeSlots) {
@@ -14584,7 +14588,18 @@ async function checkAndProcessMissedChecks() {
 // Tek bir timeSlot için check kontrolü
 async function checkSingleTimeSlot(branch, checkType, timeSlot, date, shiftPersonnel, rules) {
     const now = new Date();
-    const [slotHour, slotMinute] = timeSlot.split(':').map(Number);
+    
+    // timeSlot string veya object olabilir - normalize et
+    let timeStr = timeSlot;
+    if (typeof timeSlot === 'object' && timeSlot !== null) {
+        timeStr = timeSlot.time || timeSlot.slot || timeSlot.value || String(timeSlot);
+    }
+    if (typeof timeStr !== 'string' || !timeStr.includes(':')) {
+        console.warn('[AutoPuan] Geçersiz timeSlot formatı:', timeSlot);
+        return;
+    }
+    
+    const [slotHour, slotMinute] = timeStr.split(':').map(Number);
     
     // Check zamanı geçmiş mi?
     const checkTime = new Date(date);
@@ -14598,7 +14613,7 @@ async function checkSingleTimeSlot(branch, checkType, timeSlot, date, shiftPerso
     if (now < deadline) return;
     
     // Bu check doldurulmuş mu?
-    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType}_${date}_${timeSlot.replace(':', '')}`;
+    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType}_${date}_${timeStr.replace(':', '')}`;
     
     try {
         const existing = await db.collection('checklistSubmissions').doc(submissionId).get();
@@ -14615,17 +14630,17 @@ async function checkSingleTimeSlot(branch, checkType, timeSlot, date, shiftPerso
         // Doldurulmamış veya missed - puan notu var mı kontrol et
         for (const personName of shiftPersonnel) {
             const personId = normalizePersonelId(personName);
-            const noteId = `auto_${personId}_${date}_${checkType}_${timeSlot.replace(':', '')}`;
+            const noteId = `auto_${personId}_${date}_${checkType}_${timeStr.replace(':', '')}`;
             
             const noteExists = await db.collection('puantajNotes').doc(noteId).get();
             if (!noteExists.exists) {
                 // Puan notu oluştur
-                console.log(`[AutoPuan] Kaçırılan: ${personName} - ${checkType} ${timeSlot} (${date})`);
+                console.log(`[AutoPuan] Kaçırılan: ${personName} - ${checkType} ${timeStr} (${date})`);
                 await createAutoPuantajNote(
                     personId,
                     personName,
                     checkType,
-                    timeSlot,
+                    timeStr,
                     'missed',
                     rules.points.missed,
                     branch,
