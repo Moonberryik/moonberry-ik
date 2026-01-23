@@ -6325,15 +6325,139 @@ function addBranch() {
     `);
 }
 
-function saveBranch() {
-    const name = getVal('newBranchName');
-    if (name) {
+async function saveBranch() {
+    const name = getVal('newBranchName')?.trim();
+    if (!name) {
+        toast('Şube adı boş olamaz', 'error');
+        return;
+    }
+    
+    if (STATE.branches.includes(name)) {
+        toast('Bu şube zaten mevcut', 'error');
+        return;
+    }
+    
+    closeModal();
+    
+    // Progress modal göster
+    showModal('Şube Oluşturuluyor', `
+        <div style="text-align:center;padding:20px">
+            <div style="font-size:2rem;margin-bottom:16px">🏪</div>
+            <div style="font-weight:600;margin-bottom:12px">"${name}" oluşturuluyor...</div>
+            <div id="branchCreateStatus" style="color:var(--tx2);font-size:0.9rem">Hazırlanıyor...</div>
+            <div style="margin-top:16px;background:var(--bg3);border-radius:8px;overflow:hidden;height:8px">
+                <div id="branchCreateProgress" style="width:0%;height:100%;background:#008c95;transition:width .3s"></div>
+            </div>
+            <div id="branchCreateLog" style="margin-top:16px;text-align:left;font-size:0.75rem;color:var(--tx3);max-height:150px;overflow-y:auto"></div>
+        </div>
+    `, '');
+    
+    const statusEl = document.getElementById('branchCreateStatus');
+    const progressEl = document.getElementById('branchCreateProgress');
+    const logEl = document.getElementById('branchCreateLog');
+    
+    const log = (msg) => {
+        logEl.innerHTML += msg + '<br>';
+        logEl.scrollTop = logEl.scrollHeight;
+    };
+    
+    const setProgress = (pct, msg) => {
+        progressEl.style.width = pct + '%';
+        statusEl.textContent = msg;
+    };
+    
+    try {
+        // Kaynak şube - ilk mevcut şube (genelde Tuzla Port)
+        const sourceSourceBranch = STATE.branches[0] || 'Tuzla Port';
+        const sourceBranchKey = sourceSourceBranch.replace(/[^a-zA-Z0-9]/g, '_');
+        const newBranchKey = name.replace(/[^a-zA-Z0-9]/g, '_');
+        
+        // 1. STATE.branches'a ekle (10%)
+        setProgress(10, 'Şube listesine ekleniyor...');
         STATE.branches.push(name);
+        log(`✓ Şube listesine eklendi`);
+        
+        // 2. Firebase systemConfig/checkRules.branches güncelle (20%)
+        setProgress(20, 'Firebase ayarları güncelleniyor...');
+        await db.collection('systemConfig').doc('checkRules').update({
+            branches: firebase.firestore.FieldValue.arrayUnion(name)
+        });
+        log(`✓ Firebase branches güncellendi`);
+        
+        // 3. branchHours ekle (30%)
+        setProgress(30, 'Mağaza saatleri ayarlanıyor...');
+        const defaultHours = BRANCH_HOURS[sourceSourceBranch] || { open: '09:00', close: '23:00' };
+        await db.collection('systemConfig').doc('checkRules').update({
+            [`branchHours.${name}`]: defaultHours
+        });
+        BRANCH_HOURS[name] = defaultHours;
+        log(`✓ Mağaza saatleri ayarlandı (${defaultHours.open}-${defaultHours.close})`);
+        
+        // 4. Checklist'leri kopyala (40-80%)
+        setProgress(40, 'Checklist şablonları kopyalanıyor...');
+        const checklistTypes = ['acilis', 'kapanis', 'gunluk', 'mudur', 'platform', 'aylik', 'haftalik'];
+        let copiedCount = 0;
+        
+        for (let i = 0; i < checklistTypes.length; i++) {
+            const type = checklistTypes[i];
+            const sourceDocId = `${sourceBranchKey}_${type}`;
+            const targetDocId = `${newBranchKey}_${type}`;
+            
+            try {
+                const sourceDoc = await db.collection('checklists').doc(sourceDocId).get();
+                if (sourceDoc.exists) {
+                    const sourceData = sourceDoc.data();
+                    await db.collection('checklists').doc(targetDocId).set({
+                        ...sourceData,
+                        branch: name,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    copiedCount++;
+                    log(`✓ ${type}: ${sourceData.items?.length || 0} madde kopyalandı`);
+                }
+            } catch (e) {
+                log(`⚠ ${type}: Kopyalanamadı`);
+            }
+            
+            setProgress(40 + Math.round((i + 1) / checklistTypes.length * 40), `Checklist'ler kopyalanıyor... (${i + 1}/${checklistTypes.length})`);
+        }
+        
+        // 5. CHECKLIST_TYPES güncelle (85%)
+        setProgress(85, 'Checklist türleri ayarlanıyor...');
+        const sourceTypes = CHECKLIST_TYPES[sourceSourceBranch] || [];
+        CHECKLIST_TYPES[name] = JSON.parse(JSON.stringify(sourceTypes)); // Deep copy
+        
+        // Firebase'e kaydet
+        await db.collection('config').doc('checklistTypes').update({
+            [name]: CHECKLIST_TYPES[name]
+        });
+        log(`✓ Checklist türleri ayarlandı (${CHECKLIST_TYPES[name].length} tür)`);
+        
+        // 6. Local state kaydet (95%)
+        setProgress(95, 'Yerel ayarlar kaydediliyor...');
         saveState();
-        populateSelects();
-        renderAdminLists();
-        closeModal();
-        toast('Şube eklendi', 'success');
+        
+        // 7. Tamamlandı (100%)
+        setProgress(100, 'Tamamlandı!');
+        log(`\n✅ "${name}" şubesi ${copiedCount} checklist ile oluşturuldu!`);
+        
+        setTimeout(() => {
+            closeModal();
+            populateSelects();
+            renderAdminLists();
+            toast(`"${name}" şubesi oluşturuldu! (${copiedCount} checklist kopyalandı)`, 'success');
+        }, 1500);
+        
+    } catch (e) {
+        console.error('Şube oluşturma hatası:', e);
+        log(`\n❌ Hata: ${e.message}`);
+        setProgress(100, 'Hata oluştu!');
+        
+        setTimeout(() => {
+            closeModal();
+            toast('Şube oluşturma hatası: ' + e.message, 'error');
+        }, 2000);
     }
 }
 
@@ -18495,6 +18619,86 @@ function renderCheckRuleDetails(type) {
         </div>
     `;
     
+    // Haftalık görevler için özel ayarlar (cooldown, hafta başlangıç)
+    if (type === 'haftalik') {
+        const cooldownHours = rule.cooldownHours || 48;
+        const weekStartDay = rule.weekStartDay ?? 1; // 0=Pazar, 1=Pazartesi, ...
+        const weekStartHour = rule.weekStartHour || '03:00';
+        
+        const days = [
+            { value: 0, name: 'Pazar' },
+            { value: 1, name: 'Pazartesi' },
+            { value: 2, name: 'Salı' },
+            { value: 3, name: 'Çarşamba' },
+            { value: 4, name: 'Perşembe' },
+            { value: 5, name: 'Cuma' },
+            { value: 6, name: 'Cumartesi' }
+        ];
+        
+        const hours = [];
+        for (let h = 0; h <= 23; h++) {
+            hours.push(`${String(h).padStart(2, '0')}:00`);
+            hours.push(`${String(h).padStart(2, '0')}:30`);
+        }
+        
+        html += `
+            <div style="margin-bottom:24px">
+                <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:12px">🔄 Round-Robin Atama Ayarları</div>
+                
+                <div style="background:var(--bg3);border-radius:12px;padding:16px;margin-bottom:12px">
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:16px">
+                        
+                        <!-- Cooldown Süresi -->
+                        <div style="display:flex;flex-direction:column;gap:6px">
+                            <label style="font-size:.75rem;color:var(--tx3);text-transform:uppercase;letter-spacing:0.5px">
+                                ⏱️ Cooldown Süresi (saat)
+                            </label>
+                            <input type="number" class="form-input" id="checkRule_haftalik_cooldownHours" 
+                                   value="${cooldownHours}" min="1" max="168" 
+                                   style="font-size:1.1rem;font-weight:600;padding:10px 14px;width:100px">
+                            <span style="font-size:.65rem;color:var(--tx3)">Madde tamamlandıktan sonra tekrar aktif olana kadar</span>
+                        </div>
+                        
+                        <!-- Hafta Başlangıç Günü -->
+                        <div style="display:flex;flex-direction:column;gap:6px">
+                            <label style="font-size:.75rem;color:var(--tx3);text-transform:uppercase;letter-spacing:0.5px">
+                                📅 Hafta Başlangıç Günü
+                            </label>
+                            <select class="form-input" id="checkRule_haftalik_weekStartDay" 
+                                    style="font-size:1.1rem;font-weight:600;padding:10px 14px;min-width:140px">
+                                ${days.map(d => `<option value="${d.value}" ${d.value === weekStartDay ? 'selected' : ''}>${d.name}</option>`).join('')}
+                            </select>
+                            <span style="font-size:.65rem;color:var(--tx3)">Round-robin kaymasının yapılacağı gün</span>
+                        </div>
+                        
+                        <!-- Hafta Başlangıç Saati -->
+                        <div style="display:flex;flex-direction:column;gap:6px">
+                            <label style="font-size:.75rem;color:var(--tx3);text-transform:uppercase;letter-spacing:0.5px">
+                                🕐 Hafta Başlangıç Saati
+                            </label>
+                            <select class="form-input" id="checkRule_haftalik_weekStartHour" 
+                                    style="font-size:1.1rem;font-weight:600;padding:10px 14px;min-width:100px">
+                                ${hours.map(h => `<option value="${h}" ${h === weekStartHour ? 'selected' : ''}>${h}</option>`).join('')}
+                            </select>
+                            <span style="font-size:.65rem;color:var(--tx3)">Yeni hafta döngüsünün başlayacağı saat</span>
+                        </div>
+                        
+                    </div>
+                </div>
+                
+                <div style="padding:12px;background:rgba(0,140,149,.05);border-radius:8px;border:1px solid rgba(0,140,149,.2)">
+                    <div style="font-size:.75rem;color:var(--primary)">
+                        💡 <strong>Nasıl Çalışır:</strong><br>
+                        • Her hafta başlangıcında maddeler personele round-robin ile atanır<br>
+                        • Atanan kişi maddeyi tamamladığında cooldown süresi başlar<br>
+                        • Cooldown bitince madde tekrar aynı kişiye aktif olur<br>
+                        • Hafta sonunda kayma: Mehmet→Ali→Ayşe döner
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
     // Sorumlu vardiya
     html += `
         <div style="margin-bottom:24px">
@@ -18825,6 +19029,17 @@ async function saveAdvancedCheckRules() {
         const activeFromEl = document.getElementById(`checkRule_${type}_activeFrom`);
         if (deadlineEl?.value) rule.deadline = deadlineEl.value;
         if (activeFromEl?.value) rule.activeFrom = activeFromEl.value;
+        
+        // Haftalık için özel ayarlar (cooldown, hafta başlangıç)
+        if (type === 'haftalik') {
+            const cooldownEl = document.getElementById('checkRule_haftalik_cooldownHours');
+            const weekDayEl = document.getElementById('checkRule_haftalik_weekStartDay');
+            const weekHourEl = document.getElementById('checkRule_haftalik_weekStartHour');
+            
+            if (cooldownEl) rule.cooldownHours = parseInt(cooldownEl.value) || 48;
+            if (weekDayEl) rule.weekStartDay = parseInt(weekDayEl.value);
+            if (weekHourEl) rule.weekStartHour = weekHourEl.value || '03:00';
+        }
         
         // Points - HER ZAMAN form değerlerini al
         const onTimeEl = document.getElementById(`checkRule_${type}_onTime`);
