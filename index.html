@@ -8196,9 +8196,10 @@ async function loadPuantaj() {
             `;
         }
         
-        // === EKİP DURUMU ===
+        // === EKİP DURUMU (Toplam puana göre sıralı) ===
+        const sortedPersonelList = [...personelList].sort((a, b) => b.toplamPuan - a.toplamPuan);
         html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:20px">`;
-        personelList.forEach(p => {
+        sortedPersonelList.forEach(p => {
             const isRisk = p.toplamPuan <= -3;
             const isDanger = p.primDurumu === 'prim_yok';
             const puanColor = p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx)');
@@ -8227,7 +8228,29 @@ async function loadPuantaj() {
                         </div>
                         <div style="text-align:right">
                             <div style="font-size:1.4rem;font-weight:800;color:${puanColor};line-height:1">${puanSign}${p.toplamPuan}</div>
-                            <div style="font-size:.65rem;color:var(--tx3);text-transform:uppercase">puan</div>
+                            <div style="font-size:.65rem;color:var(--tx3);text-transform:uppercase">toplam</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Puan Detayı - Manuel/Otomatik/Toplam -->
+                    <div style="display:flex;gap:8px;margin-bottom:12px;background:var(--bg3);padding:10px;border-radius:8px">
+                        <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
+                            <div style="font-size:.65rem;color:var(--tx3);margin-bottom:2px">Manuel</div>
+                            <div style="font-size:.9rem;font-weight:700;color:${p.manuelPuan > 0 ? '#27ae60' : p.manuelPuan < 0 ? '#e74c3c' : 'var(--tx2)'}">
+                                ${p.manuelPuan > 0 ? '+' : ''}${p.manuelPuan || 0}
+                            </div>
+                        </div>
+                        <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
+                            <div style="font-size:.65rem;color:var(--tx3);margin-bottom:2px">Otomatik</div>
+                            <div style="font-size:.9rem;font-weight:700;color:${p.otomatikPuan > 0 ? '#27ae60' : p.otomatikPuan < 0 ? '#e74c3c' : 'var(--tx2)'}">
+                                ${p.otomatikPuan > 0 ? '+' : ''}${p.otomatikPuan || 0}
+                            </div>
+                        </div>
+                        <div style="flex:1;text-align:center">
+                            <div style="font-size:.65rem;color:var(--tx3);margin-bottom:2px">Toplam</div>
+                            <div style="font-size:.9rem;font-weight:700;color:${puanColor}">
+                                ${puanSign}${p.toplamPuan}
+                            </div>
                         </div>
                     </div>
                     
@@ -8238,18 +8261,6 @@ async function loadPuantaj() {
                         ${p.negatifOlay > 0 && p.kayitSayisi > 0 ? `<span style="font-size:.65rem;padding:3px 6px;background:rgba(231,76,60,.12);color:#c0392b;border-radius:4px">${p.kayitSayisi} manuel</span>` : ''}
                         ${p.negatifOlay === 0 && p.pozitifOlay === 0 ? `<span style="font-size:.65rem;padding:3px 6px;background:${brandBg};color:var(--tx3);border-radius:4px">Henüz kayıt yok</span>` : ''}
                     </div>
-                    
-                    ${isDanger && ['yonetici', 'bolge_muduru', 'magaza_muduru', 'mudur', 'admin'].includes(currentUser?.role) ? `
-                        <div style="background:rgba(231,76,60,.12);border-radius:8px;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px">
-                            <div style="display:flex;align-items:center;gap:8px">
-                                <svg width="14" height="14" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                                <span style="font-size:.75rem;color:#c0392b;font-weight:600">Prim eşiği aşıldı</span>
-                            </div>
-                            <button onclick="event.stopPropagation();resetPersonelPrim('${p.id}', '${p.name}')" style="padding:4px 10px;background:#e74c3c;color:#fff;border:none;border-radius:6px;font-size:.7rem;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-                                Primi Sıfırla
-                            </button>
-                        </div>
-                    ` : ''}
                     
                     <!-- Action Button - Animasyonlu -->
                     ${!isBarista ? `
@@ -8621,7 +8632,6 @@ function showPersonelPuanDetay(personelId, personName) {
     if (canManage) {
         footer = `
             <button class="btn btn-ghost" onclick="closeModal()">Kapat</button>
-            <button class="btn" style="background:#e74c3c;color:#fff" onclick="closeModal();resetPersonelPrim('${personelId}','${personName.replace(/'/g, "\\'")}')">Sıfırla</button>
             <button class="btn btn-primary" onclick="closeModal();showPuantajModal('${personelId}','${personName.replace(/'/g, "\\'")}')">Değerlendir</button>
         `;
     }
@@ -21256,27 +21266,54 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                     </div>
                 </div>
                 
-                <!-- Başlangıç Zamanı Banner -->
-                <div id="checklistTimerBanner" style="display:none;margin-bottom:16px;padding:14px 16px;background:linear-gradient(135deg,rgba(0,140,149,.15),rgba(0,140,149,.05));border:1px solid rgba(0,140,149,.3);border-radius:12px">
-                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-                        <div style="display:flex;align-items:center;gap:8px">
-                            <div style="width:8px;height:8px;background:#27ae60;border-radius:50%;animation:pulse 1.5s infinite"></div>
-                            <span style="font-weight:600;color:var(--tx)">Checklist Başladı</span>
+                ${!isSubmitted && canFillForm ? `
+                <!-- Checklist Başlat Overlay -->
+                <div id="checklistStartOverlay" style="position:relative;margin-bottom:16px">
+                    <div style="padding:40px 20px;background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(0,140,149,.05));border:2px dashed rgba(0,140,149,.4);border-radius:16px;text-align:center">
+                        <div style="width:80px;height:80px;margin:0 auto 20px;background:linear-gradient(135deg,#008c95,#00b4a0);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,140,149,.3)">
+                            <svg width="40" height="40" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 6v6l4 2"/>
+                            </svg>
                         </div>
-                        <div style="font-size:.9rem;color:var(--tx2)">
-                            <span id="checklistStartTimeDisplay">--:--:--</span>
+                        <div style="font-size:1.3rem;font-weight:700;color:var(--tx);margin-bottom:8px">Checklist'i Başlat</div>
+                        <div style="font-size:.9rem;color:var(--tx2);margin-bottom:20px;max-width:300px;margin-left:auto;margin-right:auto">
+                            Başlat butonuna tıkladığınızda süre sayacı başlayacak ve maddeler görünür olacak.
+                        </div>
+                        <button onclick="startChecklistTimer()" class="btn btn-primary" style="padding:14px 32px;font-size:1rem;border-radius:12px;background:linear-gradient(135deg,#008c95,#00b4a0);border:none;color:#fff;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(0,140,149,.3)">
+                            ▶️ Checklist'i Başlat
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Başlangıç Zamanı Banner (gizli başlar) -->
+                <div id="checklistTimerBanner" style="display:none;margin-bottom:16px;padding:16px 20px;background:linear-gradient(135deg,rgba(0,140,149,.15),rgba(0,140,149,.05));border:1px solid rgba(0,140,149,.3);border-radius:14px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+                        <div style="display:flex;align-items:center;gap:10px">
+                            <div style="width:10px;height:10px;background:#27ae60;border-radius:50%;animation:pulse 1.5s infinite"></div>
+                            <span style="font-weight:600;color:var(--tx)">Checklist Aktif</span>
+                            <span style="font-size:.8rem;color:var(--tx3)">|</span>
+                            <span style="font-size:.85rem;color:var(--tx2)">Başlangıç: <span id="checklistStartTimeDisplay">--:--:--</span></span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;background:rgba(0,140,149,.2);padding:8px 16px;border-radius:10px">
+                            <svg width="18" height="18" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 6v6l4 2"/>
+                            </svg>
+                            <span id="checklistElapsedTime" style="font-size:1.2rem;font-weight:700;color:#008c95;font-family:monospace;letter-spacing:1px">00:00:00</span>
                         </div>
                     </div>
                 </div>
                 
                 <style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}</style>
                 
-                <div style="margin-bottom:16px;padding:12px;background:rgba(255,134,116,.1);border-radius:10px;font-size:.85rem;color:var(--tx2)">
-                    ⚠️ <strong>Önemli:</strong> İlk maddeyi işaretlediğinizde süre başlar. Tüm maddeleri dikkatlice kontrol edin.
-                </div>
-            ` : ''}
-            
-            <div id="checklistItems">
+                <!-- Maddeler (başlangıçta blurlu) -->
+                <div id="checklistItemsWrapper" style="filter:blur(8px);pointer-events:none;opacity:0.5;transition:all .3s ease">
+                ` : `
+                <!-- Maddeler (tamamlanmış veya doldurulamaz - normal görünüm) -->
+                <div id="checklistItemsWrapper" style="transition:all .3s ease">
+                `}
+                <div id="checklistItems">
     `;
     
     // Item'ları render et
@@ -21567,6 +21604,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
     
     html += `
             </div>
+            </div><!-- /checklistItemsWrapper -->
             
             ${!checklistEditMode && !isSubmitted && canFillForm ? `
                 <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
@@ -22939,36 +22977,78 @@ function selectCheckOption(btn, itemId, value) {
         doneBtn.style.color = '#22c55e';
     }
     
-    // İlk madde işaretlendiğinde modal göster
-    if (!checklistFirstItemTime) {
-        const now = new Date();
-        const dateStr = now.toLocaleDateString('tr-TR', {day: '2-digit', month: '2-digit', year: 'numeric'});
-        const timeStr = now.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
-        
-        const typeSelect = document.getElementById('checklistType');
-        const typeName = typeSelect?.selectedOptions?.[0]?.text || 'Checklist';
-        
-        showModal('✅ Checklist Başladı', `
-            <div style="text-align:center;padding:20px 0">
-                <div style="font-size:3rem;margin-bottom:16px">⏱️</div>
-                <div style="font-size:1.2rem;font-weight:600;color:var(--tx);margin-bottom:8px">${typeName}</div>
-                <div style="font-size:2rem;font-weight:700;color:#008c95;margin-bottom:8px">${timeStr}</div>
-                <div style="font-size:1rem;color:var(--tx2)">${dateStr}</div>
-                <div style="margin-top:16px;padding:12px;background:var(--bg3);border-radius:8px;font-size:.9rem;color:var(--tx2)">
-                    Süre sayacı başladı. Tüm maddeleri kontrol edin.
-                </div>
-            </div>
-        `, `
-            <button class="btn btn-primary" onclick="confirmChecklistStart()">Tamam</button>
-        `);
-        
-        // Geçici olarak zamanı sakla
-        window.pendingChecklistStartTime = now;
-    }
-    
     // Tüm maddeler işaretlendi mi kontrol et
     checkAllItemsMarked();
 }
+
+// Checklist Timer Interval
+let checklistTimerInterval = null;
+
+// Checklist'i başlat butonu
+function startChecklistTimer() {
+    const overlay = document.getElementById('checklistStartOverlay');
+    const banner = document.getElementById('checklistTimerBanner');
+    const wrapper = document.getElementById('checklistItemsWrapper');
+    const startTimeEl = document.getElementById('checklistStartTimeDisplay');
+    const elapsedEl = document.getElementById('checklistElapsedTime');
+    
+    // Zamanı kaydet
+    const now = new Date();
+    checklistStartTime = now;
+    checklistFirstItemTime = now;
+    
+    // Başlangıç saatini göster
+    if (startTimeEl) {
+        startTimeEl.textContent = now.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+    }
+    
+    // Overlay'ı gizle
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+    
+    // Banner'ı göster
+    if (banner) {
+        banner.style.display = 'block';
+    }
+    
+    // Blur'u kaldır
+    if (wrapper) {
+        wrapper.style.filter = 'none';
+        wrapper.style.pointerEvents = 'auto';
+        wrapper.style.opacity = '1';
+    }
+    
+    // Önceki interval'ı temizle
+    if (checklistTimerInterval) {
+        clearInterval(checklistTimerInterval);
+    }
+    
+    // Canlı kronometre başlat
+    checklistTimerInterval = setInterval(() => {
+        if (!checklistStartTime) return;
+        
+        const elapsed = Math.floor((new Date() - checklistStartTime) / 1000);
+        const hours = Math.floor(elapsed / 3600);
+        const minutes = Math.floor((elapsed % 3600) / 60);
+        const seconds = elapsed % 60;
+        
+        const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        
+        if (elapsedEl) {
+            elapsedEl.textContent = timeStr;
+        }
+    }, 1000);
+    
+    console.log('[Checklist] Timer başladı:', now.toLocaleTimeString('tr-TR'));
+}
+
+// Sayfa değişince interval'ı temizle
+window.addEventListener('beforeunload', () => {
+    if (checklistTimerInterval) {
+        clearInterval(checklistTimerInterval);
+    }
+});
 
 // Checklist başlangıcını onayla
 function confirmChecklistStart() {
@@ -22993,13 +23073,31 @@ function confirmChecklistStart() {
 
 // Tüm maddelerin işaretlenip işaretlenmediğini kontrol et
 function checkAllItemsMarked() {
-    const items = document.querySelectorAll('#checklistItems .checklist-item');
+    const checklistType = document.getElementById('checklistType')?.value;
+    const isHaftalik = checklistType === 'haftalik';
+    
+    // Haftalık için sadece kişinin maddelerini say
+    let items, totalItems;
+    if (isHaftalik) {
+        // Sadece aktif (opacity:1 veya pointer-events:auto) maddeler
+        items = document.querySelectorAll('#checklistItems .checklist-item:not([style*="opacity: 0.7"]):not([style*="opacity:0.7"])');
+        totalItems = items.length;
+    } else {
+        items = document.querySelectorAll('#checklistItems .checklist-item');
+        totalItems = items.length;
+    }
+    
     let allMarked = true;
     let markedCount = 0;
     
     items.forEach(item => {
         const doneInput = item.querySelector('input[value="done"]');
         const notdoneInput = item.querySelector('input[value="notdone"]');
+        const isDisabled = doneInput?.disabled;
+        
+        // Disabled maddeler (başkasının görevi) sayılmaz
+        if (isDisabled) return;
+        
         if (doneInput?.checked || notdoneInput?.checked) {
             markedCount++;
         } else {
@@ -23007,18 +23105,47 @@ function checkAllItemsMarked() {
         }
     });
     
-    // İlerleme göstergesi güncelle (opsiyonel)
-    const progress = Math.round((markedCount / items.length) * 100);
+    // İlerleme göstergesi güncelle
+    const progress = totalItems > 0 ? Math.round((markedCount / totalItems) * 100) : 0;
     
     // Submit butonu aktifliği
     const submitBtn = document.querySelector('button[onclick*="submitChecklist"]');
     if (submitBtn) {
-        if (allMarked) {
+        if (allMarked && markedCount > 0) {
             submitBtn.classList.remove('btn-ghost');
             submitBtn.classList.add('btn-primary');
             submitBtn.innerHTML = '✅ Checklist\'i Tamamla';
+            
+            // Haftalık için otomatik tamamlama pop-up'ı göster
+            if (isHaftalik && !window._weeklyCompletionShown) {
+                window._weeklyCompletionShown = true;
+                showWeeklyCompletionPopup(markedCount);
+            }
         }
     }
+}
+
+// Haftalık tamamlama pop-up'ı
+function showWeeklyCompletionPopup(taskCount) {
+    const typeName = document.getElementById('checklistType')?.selectedOptions?.[0]?.text || 'Haftalık Görevler';
+    
+    showModal('🎉 Görevler Tamamlandı!', `
+        <div style="text-align:center;padding:20px 0">
+            <div style="width:80px;height:80px;margin:0 auto 20px;background:linear-gradient(135deg,#27ae60,#2ecc71);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(39,174,96,.3)">
+                <svg width="40" height="40" fill="none" stroke="#fff" stroke-width="3" viewBox="0 0 24 24">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+            </div>
+            <div style="font-size:1.3rem;font-weight:700;color:var(--tx);margin-bottom:8px">${taskCount} görevinizi tamamladınız!</div>
+            <div style="font-size:.95rem;color:var(--tx2);margin-bottom:20px">Checklist'i kaydetmek ister misiniz?</div>
+            <div style="padding:12px;background:var(--bg3);border-radius:10px;font-size:.85rem;color:var(--tx3)">
+                💡 Kaydettiğinizde puanlarınız hesaplanacak ve cooldown süreleri başlayacak.
+            </div>
+        </div>
+    `, `
+        <button class="btn btn-ghost" onclick="closeModal(); window._weeklyCompletionShown = false;">Daha Sonra</button>
+        <button class="btn btn-primary" onclick="closeModal(); document.querySelector('button[onclick*=\\'submitChecklist\\']')?.click();">✅ Checklist'i Tamamla</button>
+    `);
 }
 
 // Platform checklist render with status (zaman durumlu)
