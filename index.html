@@ -15385,20 +15385,29 @@ async function loadTodayChecks() {
         const platformRules = CHECK_RULES.platform || DEFAULT_CHECK_RULES.platform || {};
         const platformLateWindow = platformRules.lateWindow || 30; // dakika
         
-        // TimeSlots'u CHECK_RULES'tan al (object array olabilir, string array'e çevir)
-        let platformTimes = PLATFORM_CHECK_TIMES || ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'];
+        // TimeSlots'u CHECK_RULES'tan al - {start, end} formatını destekle
+        let platformSlots = []; // [{start: "10:00", end: "11:00"}, ...]
         if (platformRules.timeSlots && Array.isArray(platformRules.timeSlots)) {
-            const parsed = platformRules.timeSlots.map(slot => {
-                if (typeof slot === 'string') return slot;
-                if (slot && slot.start) return slot.start; // {start, end} formatı
-                if (slot && slot.time) return slot.time;
+            platformSlots = platformRules.timeSlots.map(slot => {
+                if (typeof slot === 'string') {
+                    return { start: slot, end: slot };
+                }
+                if (slot && slot.start) {
+                    return { start: slot.start, end: slot.end || slot.start };
+                }
                 return null;
             }).filter(Boolean);
-            if (parsed.length > 0) platformTimes = parsed;
+        }
+        if (platformSlots.length === 0) {
+            const defaultTimes = PLATFORM_CHECK_TIMES || ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'];
+            platformSlots = defaultTimes.map(t => ({ start: t, end: t }));
         }
         
-        let activePlatformTime = null;
-        let nextPlatformTime = null;
+        // Eski format uyumluluğu
+        const platformTimes = platformSlots.map(s => s.start);
+        
+        let activePlatformSlot = null;
+        let nextPlatformSlot = null;
         let platformRemainingMinutes = 0;
         let isPlatformLate = false;
         let isPlatformMissed = false;
@@ -15407,59 +15416,71 @@ async function loadTodayChecks() {
         const isLateNightPlatform = currentHour >= 0 && currentHour < 6;
         const nowMinutesPlatform = currentHour * 60 + currentMinutes;
         
-        if (isLateNightPlatform && platformTimes.includes('00:00')) {
+        // 00:00 slotunu bul
+        const midnightSlot = platformSlots.find(s => s.start === '00:00');
+        
+        if (isLateNightPlatform && midnightSlot) {
             // 00:00 slotunun late window kontrolü
-            const slotMinutes = 0; // 00:00
-            const deadlineMinutes = slotMinutes + platformLateWindow; // örn: 00:30
+            const [endH, endM] = midnightSlot.end.split(':').map(Number);
+            const slotEndMinutes = endH * 60 + endM;
+            const deadlineMinutes = slotEndMinutes + platformLateWindow;
             
-            // Gece için: saat 00:32 = 32 dakika, deadline 30 dakika
-            if (nowMinutesPlatform <= deadlineMinutes) {
-                // Hala late window içinde
-                activePlatformTime = '00:00';
+            if (nowMinutesPlatform <= slotEndMinutes) {
+                // Slot içinde
+                activePlatformSlot = midnightSlot;
+                platformRemainingMinutes = slotEndMinutes - nowMinutesPlatform + platformLateWindow;
+            } else if (nowMinutesPlatform <= deadlineMinutes) {
+                // Late window içinde
+                activePlatformSlot = midnightSlot;
                 platformRemainingMinutes = deadlineMinutes - nowMinutesPlatform;
-                if (nowMinutesPlatform > slotMinutes) isPlatformLate = true;
+                isPlatformLate = true;
             } else {
                 // Late window geçti - MISSED
-                activePlatformTime = '00:00';
+                activePlatformSlot = midnightSlot;
                 isPlatformMissed = true;
                 platformRemainingMinutes = 0;
             }
         } else if (!isLateNightPlatform) {
-            for (const timeStr of platformTimes) {
-                if (timeStr === '00:00') continue; // 00:00 ayrı ele alındı
+            for (const slot of platformSlots) {
+                if (slot.start === '00:00') continue; // 00:00 ayrı ele alındı
                 
-                const [h, m] = timeStr.split(':').map(Number);
-                const slotMinutes = h * 60 + m;
-                const deadlineMinutes = slotMinutes + platformLateWindow;
+                const [startH, startM] = slot.start.split(':').map(Number);
+                const [endH, endM] = slot.end.split(':').map(Number);
+                const slotStartMinutes = startH * 60 + startM;
+                const slotEndMinutes = endH * 60 + endM;
+                const deadlineMinutes = slotEndMinutes + platformLateWindow;
                 const nowMinutes = currentHour * 60 + currentMinutes;
                 
-                // Slot başlangıcından 15dk önce - deadline'a kadar aktif
-                const windowStart = slotMinutes - 15;
-                
-                if (nowMinutes >= windowStart && nowMinutes <= slotMinutes) {
-                    // Slot öncesi - aktif, vaktinde
-                    activePlatformTime = timeStr;
-                    platformRemainingMinutes = slotMinutes - nowMinutes + platformLateWindow;
+                // Slot başlangıcından deadline'a kadar aktif
+                if (nowMinutes >= slotStartMinutes && nowMinutes <= slotEndMinutes) {
+                    // Slot içinde - aktif, vaktinde
+                    activePlatformSlot = slot;
+                    platformRemainingMinutes = slotEndMinutes - nowMinutes + platformLateWindow;
                     break;
-                } else if (nowMinutes > slotMinutes && nowMinutes <= deadlineMinutes) {
+                } else if (nowMinutes > slotEndMinutes && nowMinutes <= deadlineMinutes) {
                     // Late window içinde
-                    activePlatformTime = timeStr;
+                    activePlatformSlot = slot;
                     platformRemainingMinutes = deadlineMinutes - nowMinutes;
                     isPlatformLate = true;
                     break;
-                } else if (nowMinutes > deadlineMinutes && nowMinutes < slotMinutes + 90) {
+                } else if (nowMinutes > deadlineMinutes && nowMinutes < slotStartMinutes + 120) {
                     // Slot geçti - missed
                     isPlatformMissed = true;
-                    activePlatformTime = timeStr;
+                    activePlatformSlot = slot;
                     break;
                 }
                 
                 // Gelecek en yakın slot
-                if (nowMinutes < windowStart && !nextPlatformTime) {
-                    nextPlatformTime = timeStr;
+                if (nowMinutes < slotStartMinutes && !nextPlatformSlot) {
+                    nextPlatformSlot = slot;
                 }
             }
         }
+        
+        // Display için slot seç
+        const displayPlatformSlot = activePlatformSlot || nextPlatformSlot;
+        const activePlatformTime = displayPlatformSlot?.start || null;
+        const nextPlatformTime = nextPlatformSlot?.start || null;
         
         if (activePlatformTime || nextPlatformTime) {
             const platformSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_platform_${todayStr}_${(activePlatformTime || '').replace(':', '')}`;
@@ -15561,20 +15582,20 @@ async function loadTodayChecks() {
                 id: 'platform',
                 name: getChecklistTypeName(branch, 'platform', 'Platform Kontrolü'),
                 icon: 'smartphone',
-                activeFrom: activePlatformTime || nextPlatformTime,
-                deadline: activePlatformTime || nextPlatformTime,
+                activeFrom: displayPlatformSlot?.start || '10:00',
+                deadline: displayPlatformSlot?.end || displayPlatformSlot?.start || '10:00',
                 lateWindow: platformLateWindow,
                 subLabel: platformSubLabel + (isPlatformMissed ? ' (Kaçırıldı)' : isPlatformLate ? ' (Geç!)' : ''),
                 isCompleted: platformCompleted,
-                isActive: !!activePlatformTime && !platformCompleted && !isPlatformMissed,
+                isActive: !!activePlatformSlot && !platformCompleted && !isPlatformMissed,
                 isMissed: isPlatformMissed && !platformCompleted,
                 canStillFill: !isPlatformMissed,
-                remainingMinutes: activePlatformTime && !platformCompleted && !isPlatformMissed ? platformRemainingMinutes : null,
-                remainingText: activePlatformTime && !platformCompleted && !isPlatformMissed ? `${platformRemainingMinutes}dk` : '',
+                remainingMinutes: activePlatformSlot && !platformCompleted && !isPlatformMissed ? platformRemainingMinutes : null,
+                remainingText: activePlatformSlot && !platformCompleted && !isPlatformMissed ? `${platformRemainingMinutes}dk` : '',
                 personnel: platformPersonnel,
                 points: (CHECK_RULES.platform || DEFAULT_CHECK_RULES.platform || {}).points || { onTime: 0, late: 0, missed: -1 },
-                priority: platformCompleted ? 90 : (isPlatformMissed ? 99 : (activePlatformTime ? 10 : 50)),
-                onClick: isPlatformMissed ? '' : `goToChecklist('${branch}', 'platform', '${activePlatformTime || nextPlatformTime || '10:00'}')`
+                priority: platformCompleted ? 90 : (isPlatformMissed ? 99 : (activePlatformSlot ? 10 : 50)),
+                onClick: isPlatformMissed ? '' : `goToChecklist('${branch}', 'platform', '${displayPlatformSlot?.start || '10:00'}')`
             });
             totalChecks++;
             if (platformCompleted) completedChecks++;
@@ -15902,7 +15923,7 @@ async function loadTodayChecks() {
         const gunlukTimes = gunlukSlots.map(s => s.start);
         
         let activeGunlukSlot = null;
-        let nextGunlukSlot = gunlukSlots[0]; // Default ilk slot
+        let nextGunlukSlot = null; // null ile başla, döngüde ilk gelecek slot atanacak
         let gunlukRemainingMinutes = 0;
         let isGunlukActive = false;
         let isGunlukLate = false;
@@ -15972,8 +15993,9 @@ async function loadTodayChecks() {
                 }
                 
                 // Gelecek en yakın slot
-                if (nowMinutes < windowStart && !activeGunlukSlot) {
+                if (nowMinutes < windowStart && !nextGunlukSlot) {
                     nextGunlukSlot = slot;
+                    break; // İlk gelecek slottan sonra dur
                 }
             }
         }
