@@ -356,6 +356,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .check-card-premium.urgent{border-left:3px solid #f39c12;animation:soft-pulse 1.5s ease-in-out infinite;--pulse-color:rgba(243,156,18,.25)}
 .check-card-premium.completed{opacity:.55;border-left:3px solid #27ae60}
 .check-card-premium.missed{opacity:.45;border-left:3px solid #9ca3af}
+.check-card-premium.waiting{opacity:.45;border-left:3px solid #95a5a6;filter:grayscale(30%)}
 .check-icon-wrap{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .check-icon-wrap.teal{background:linear-gradient(135deg,rgba(0,140,149,.12),rgba(0,140,149,.06))}
 .check-icon-wrap.coral{background:linear-gradient(135deg,rgba(255,134,116,.12),rgba(255,134,116,.06))}
@@ -14996,7 +14997,7 @@ async function loadTodayChecks() {
     
     // Her şube için check'leri topla ve render et
     for (const branch of sortedBranches) {
-        const isMoonberry = branch.includes('Şişli') || branch.includes('Merkez');
+        const isMoonberry = true; // Tüm şubeler Moonberry teal rengi
         const brandColor = isMoonberry ? '#008c95' : '#ff8674';
         const branchClass = isMoonberry ? 'sisli' : 'tuzla';
         const branchShortName = isMoonberry ? 'Şişli' : 'Tuzla';
@@ -15957,6 +15958,9 @@ async function loadTodayChecks() {
                 }
             } else if (check.isActive) {
                 cardClasses.push('active');
+            } else {
+                // Henüz aktif olmayan, bekleyen kartlar
+                cardClasses.push('waiting');
             }
             if (isExpired && !check.isMissed) cardClasses.push('expired');
             if (isMissedRecent) cardClasses = ['missed-recent']; // Override
@@ -16578,7 +16582,7 @@ function renderSimpleCheckCard(name, deadline, branch, isCompleted, isMissed, is
     const onTimePoints = rules?.points?.onTime || 1;
     
     // Şube rengi
-    const isMoonberry = branch.includes('Şişli') || branch.includes('Merkez');
+    const isMoonberry = true; // Tüm şubeler Moonberry teal rengi
     const brandColor = isMoonberry ? TEAL : CORAL;
     
     let bgColor, accentColor, statusText, statusBg, pulseClass = '', opacity = '1';
@@ -17224,7 +17228,7 @@ function renderBranchHoursSettings() {
     
     branches.forEach(branch => {
         const hours = BRANCH_HOURS[branch] || { opening: '10:00', closing: { default: '01:00' } };
-        const isMoonberry = branch.includes('Şişli') || branch.includes('Merkez');
+        const isMoonberry = true; // Tüm şubeler Moonberry teal rengi
         const brandColor = isMoonberry ? '#008c95' : '#ff8674';
         const brandName = isMoonberry ? 'MOONBERRY' : 'SUNBERRY';
         
@@ -18968,7 +18972,7 @@ async function loadChecklistTodayPanel() {
         const checkTypes = CHECKLIST_TYPES[branch] || [];
         if (checkTypes.length === 0) continue;
         
-        const isMoonberry = branch.includes('Şişli') || branch.includes('Merkez');
+        const isMoonberry = true; // Tüm şubeler Moonberry teal rengi
         const brandColor = isMoonberry ? '#008c95' : '#ff8674';
         
         for (const checkType of checkTypes) {
