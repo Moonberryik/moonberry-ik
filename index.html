@@ -1416,7 +1416,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
                 
                 <!-- Sekmeler -->
-                <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--cardBorder);padding-bottom:12px">
+                <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--cardBorder);padding-bottom:12px;flex-wrap:wrap">
                     <button class="puantaj-tab active" onclick="showPuantajTab('kayit', this)" style="padding:10px 20px;border:none;background:linear-gradient(135deg,var(--accent),#ff6b5b);color:#fff;border-radius:8px;cursor:pointer;font-weight:600;transition:all .2s;box-shadow:0 2px 12px rgba(255,134,116,.3);display:flex;align-items:center;gap:6px">
                         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         Kayıt
@@ -1428,6 +1428,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <button class="puantaj-tab" onclick="showPuantajTab('arsiv', this)" style="padding:10px 20px;border:none;background:var(--bg3);color:var(--tx);border-radius:8px;cursor:pointer;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:6px">
                         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg>
                         Arşiv
+                    </button>
+                    <button class="puantaj-tab" id="checklistlerTabBtn" onclick="showPuantajTab('checklistler', this)" style="padding:10px 20px;border:none;background:var(--bg3);color:var(--tx);border-radius:8px;cursor:pointer;font-weight:600;transition:all .2s;display:none;align-items:center;gap:6px">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                        Checklistler
                     </button>
                 </div>
                 
@@ -1571,6 +1575,51 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <!-- Detay Modal Alanı -->
                     <div id="arsivDetailPanel" style="display:none;margin-top:20px;background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px">
                         <!-- Dinamik detay içeriği -->
+                    </div>
+                </div>
+                
+                <!-- CHECKLISTLER SEKMESİ (Sadece Yöneticiler) -->
+                <div id="puantajChecklistlerTab" style="display:none">
+                    <div class="form-section">
+                        <div class="form-section-title" style="display:flex;align-items:center;gap:8px">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                            Doldurulan Checklistler
+                        </div>
+                        <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+                            <div class="form-group">
+                                <label class="form-label">Tarih</label>
+                                <input type="date" id="checklistlerTarih" class="form-input" onchange="loadFilledChecklists()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Şube</label>
+                                <select id="checklistlerSube" class="form-select" onchange="loadFilledChecklists()">
+                                    <option value="all">Tüm Şubeler</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Tür</label>
+                                <select id="checklistlerTur" class="form-select" onchange="loadFilledChecklists()">
+                                    <option value="all">Tümü</option>
+                                    <option value="acilis">Açılış</option>
+                                    <option value="kapanis">Kapanış</option>
+                                    <option value="gunluk">Günlük</option>
+                                    <option value="mudur">Müdür</option>
+                                    <option value="platform">Platform</option>
+                                    <option value="aylik">Temizlik</option>
+                                    <option value="haftalik">Haftalık</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Özet Kartları -->
+                    <div id="checklistlerSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">
+                        <!-- Dinamik doldurulacak -->
+                    </div>
+                    
+                    <!-- Checklist Listesi -->
+                    <div id="checklistlerContainer" style="display:grid;gap:12px">
+                        <p style="color:var(--tx2);text-align:center;padding:40px">Tarih seçin...</p>
                     </div>
                 </div>
             </div>
@@ -3991,6 +4040,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         await loadPersonelDisplayCache();
                         console.log('Cache yüklendi, dashboard yükleniyor...');
                         loadTodayChecks();
+                        initChecklistlerTab(); // Checklistler tabını yönetici için göster
                     });
                     
                     // Önizleme modunu kontrol et
@@ -8669,6 +8719,7 @@ function showPuantajTab(tab, btn) {
     document.getElementById('puantajKayitTab').style.display = 'none';
     document.getElementById('puantajAnalizTab').style.display = 'none';
     document.getElementById('puantajArsivTab').style.display = 'none';
+    document.getElementById('puantajChecklistlerTab').style.display = 'none';
     
     // Butonları güncelle
     document.querySelectorAll('.puantaj-tab').forEach(b => {
@@ -8705,9 +8756,177 @@ function showPuantajTab(tab, btn) {
         }
         populateSubeSelect('arsivSube');
         loadPuantajArsiv();
+    } else if (tab === 'checklistler') {
+        document.getElementById('puantajChecklistlerTab').style.display = 'block';
+        // Şube select'ini doldur
+        populateSubeSelect('checklistlerSube');
+        // Bugünün tarihini set et
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('checklistlerTarih').value = today;
+        loadFilledChecklists();
     }
 }
 
+// Checklistler tabı butonunu yönetici için göster
+function initChecklistlerTab() {
+    const isManager = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
+    const tabBtn = document.getElementById('checklistlerTabBtn');
+    if (tabBtn) {
+        tabBtn.style.display = isManager ? 'flex' : 'none';
+    }
+}
+
+// Doldurulan checklistleri yükle
+async function loadFilledChecklists() {
+    const container = document.getElementById('checklistlerContainer');
+    const summaryContainer = document.getElementById('checklistlerSummary');
+    const tarih = document.getElementById('checklistlerTarih')?.value;
+    const sube = document.getElementById('checklistlerSube')?.value || 'all';
+    const tur = document.getElementById('checklistlerTur')?.value || 'all';
+    
+    if (!tarih) {
+        container.innerHTML = '<p style="color:var(--tx2);text-align:center;padding:40px">Tarih seçin...</p>';
+        summaryContainer.innerHTML = '';
+        return;
+    }
+    
+    container.innerHTML = '<p style="color:var(--tx2);text-align:center;padding:40px">Yükleniyor...</p>';
+    
+    try {
+        // Checklistleri çek
+        let query = db.collection('checklistSubmissions').where('date', '==', tarih);
+        
+        const snap = await query.get();
+        let submissions = [];
+        
+        snap.forEach(doc => {
+            const data = doc.data();
+            // Filtrele
+            if (sube !== 'all' && data.branch !== sube) return;
+            if (tur !== 'all' && data.type !== tur) return;
+            
+            submissions.push({
+                id: doc.id,
+                ...data
+            });
+        });
+        
+        // Özet kartları
+        const totalCount = submissions.length;
+        const skippedCount = submissions.filter(s => s.skippedItems?.length > 0).length;
+        const totalDuration = submissions.reduce((sum, s) => sum + (s.actualDurationMinutes || 0), 0);
+        const avgDuration = totalCount > 0 ? Math.round(totalDuration / totalCount) : 0;
+        
+        summaryContainer.innerHTML = `
+            <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:16px;text-align:center">
+                <div style="font-size:1.8rem;font-weight:700;color:#008c95">${totalCount}</div>
+                <div style="font-size:.8rem;color:var(--tx2)">Doldurulan</div>
+            </div>
+            <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:16px;text-align:center">
+                <div style="font-size:1.8rem;font-weight:700;color:#f39c12">${skippedCount}</div>
+                <div style="font-size:.8rem;color:var(--tx2)">Eksik Madde Var</div>
+            </div>
+            <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:16px;text-align:center">
+                <div style="font-size:1.8rem;font-weight:700;color:#008c95">${avgDuration}dk</div>
+                <div style="font-size:.8rem;color:var(--tx2)">Ort. Süre</div>
+            </div>
+            <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:16px;text-align:center">
+                <div style="font-size:1.8rem;font-weight:700;color:#008c95">${totalDuration}dk</div>
+                <div style="font-size:.8rem;color:var(--tx2)">Toplam Süre</div>
+            </div>
+        `;
+        
+        if (submissions.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center;padding:60px 20px">
+                    <svg width="48" height="48" fill="none" stroke="var(--tx3)" stroke-width="1.5" viewBox="0 0 24 24" style="margin-bottom:16px;opacity:.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                    <div style="font-size:1.1rem;font-weight:600;color:var(--tx);margin-bottom:8px">Bu Tarihte Checklist Yok</div>
+                    <div style="font-size:.85rem;color:var(--tx3)">Seçili tarih ve filtrelere uygun checklist bulunamadı.</div>
+                </div>
+            `;
+            return;
+        }
+        
+        // Şubelere göre grupla
+        const byBranch = {};
+        submissions.forEach(s => {
+            if (!byBranch[s.branch]) byBranch[s.branch] = [];
+            byBranch[s.branch].push(s);
+        });
+        
+        let html = '';
+        
+        for (const [branch, items] of Object.entries(byBranch)) {
+            html += `
+                <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;overflow:hidden;margin-bottom:16px">
+                    <div style="background:linear-gradient(135deg,#008c95,#00a5af);color:#fff;padding:12px 16px;font-weight:600;display:flex;align-items:center;gap:8px">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        ${branch}
+                    </div>
+                    <div style="padding:12px">
+            `;
+            
+            // Türe göre grupla
+            const byType = {};
+            items.forEach(item => {
+                if (!byType[item.type]) byType[item.type] = [];
+                byType[item.type].push(item);
+            });
+            
+            for (const [type, typeItems] of Object.entries(byType)) {
+                const typeName = getChecklistTypeName(branch, type);
+                
+                html += `<div style="margin-bottom:12px">
+                    <div style="font-weight:600;color:var(--tx);margin-bottom:8px;font-size:.9rem">${typeName}</div>
+                `;
+                
+                for (const item of typeItems) {
+                    const startTime = item.startTime ? new Date(item.startTime).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'}) : '-';
+                    const endTime = item.endTime ? new Date(item.endTime).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'}) : '-';
+                    const duration = item.actualDurationMinutes || 0;
+                    const hasSkipped = item.skippedItems?.length > 0;
+                    const skippedCount = item.skippedItems?.length || 0;
+                    const completionRate = item.completionRate || 100;
+                    
+                    html += `
+                        <div style="background:var(--bg2);border:1px solid var(--bg4);border-radius:8px;padding:12px;margin-bottom:8px;${hasSkipped ? 'border-left:3px solid #f39c12;' : ''}">
+                            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                                <div>
+                                    <div style="font-weight:600;color:var(--tx)">${item.personName || item.submittedByName || 'Bilinmiyor'}</div>
+                                    <div style="font-size:.8rem;color:var(--tx2)">${startTime} - ${endTime} (${duration}dk)</div>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <span style="padding:4px 8px;border-radius:4px;font-size:.75rem;font-weight:600;background:${completionRate === 100 ? 'rgba(39,174,96,.1);color:#27ae60' : 'rgba(243,156,18,.1);color:#f39c12'}">${completionRate}%</span>
+                                    ${hasSkipped ? `<span style="padding:4px 8px;border-radius:4px;font-size:.75rem;font-weight:600;background:rgba(231,76,60,.1);color:#e74c3c">${skippedCount} eksik</span>` : ''}
+                                </div>
+                            </div>
+                            ${hasSkipped ? `
+                                <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bg4)">
+                                    <div style="font-size:.75rem;font-weight:600;color:#e74c3c;margin-bottom:6px">❌ Yapılmayan Maddeler:</div>
+                                    <ul style="margin:0;padding-left:20px;font-size:.8rem;color:var(--tx2)">
+                                        ${item.skippedItems.map(si => `<li style="margin-bottom:4px">${si.text || si.id}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }
+                
+                html += '</div>';
+            }
+            
+            html += '</div></div>';
+        }
+        
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Checklistler yüklenemedi:', error);
+        container.innerHTML = '<p style="color:#e74c3c;text-align:center;padding:40px">Hata oluştu!</p>';
+    }
+}
+
+// Checklist türü adını al
 async function savePuantajFromModal() {
     const personelId = document.getElementById('puantajPersonelId').value;
     const score = parseInt(document.getElementById('puantajScore').value);
@@ -14087,7 +14306,23 @@ function cleanupShiftListener() {
 function getChecklistTypeName(branch, typeId, defaultName) {
     const canonId = canonicalChecklistTypeId(typeId);
     const typeInfo = CHECKLIST_TYPES[branch]?.find(t => canonicalChecklistTypeId(t.id) === canonId);
-    return typeInfo?.name || defaultName;
+    if (typeInfo?.name) return typeInfo.name;
+    
+    // Fallback isimleri
+    if (!defaultName) {
+        const names = {
+            'acilis': 'Açılış Hazırlıkları',
+            'kapanis': 'Kapanış Hazırlıkları',
+            'gunluk': 'Günlük Genel Check',
+            'mudur': 'Müdür Kontrol',
+            'platform': 'Platform Kontrolü',
+            'aylik': 'Temizlik ve Bakım',
+            'haftalik': 'Haftalık Görevler',
+            'temizlik': 'Temizlik ve Bakım'
+        };
+        return names[typeId] || typeId;
+    }
+    return defaultName;
 }
 
 let SYSTEM_CONFIG = {};
@@ -22653,6 +22888,7 @@ async function submitChecklist(branch, type, date, timeSlot) {
     // Tüm maddelerin cevaplandığını kontrol et
     const items = document.querySelectorAll('#checklistItems .checklist-item');
     const responses = [];
+    const skippedItems = []; // Çarpı işaretlenen maddeler (notDone)
     let allAnswered = true;
     let doneCount = 0;
     
@@ -22661,17 +22897,35 @@ async function submitChecklist(branch, type, date, timeSlot) {
         const notdoneInput = item.querySelector('input[value="notdone"]');
         const itemId = doneInput?.name?.replace('check_', '');
         
+        // Madde metnini DOM'dan al
+        const textDiv = item.querySelector('div[style*="line-height:1.6"]') || 
+                        item.querySelector('.checklist-item-text-edit');
+        const itemText = textDiv?.textContent?.trim() || textDiv?.value?.trim() || '';
+        
         if (!doneInput?.checked && !notdoneInput?.checked) {
             allAnswered = false;
             item.style.borderColor = '#e74c3c';
         } else {
             item.style.borderColor = 'var(--cardBorder)';
             if (doneInput?.checked) doneCount++;
-            responses.push({
+            
+            const response = {
                 id: itemId,
                 checked: doneInput?.checked || false,
                 notDone: notdoneInput?.checked || false
-            });
+            };
+            
+            // Çarpı işaretlenen maddelere text ekle (geçmiş için önemli)
+            if (notdoneInput?.checked && itemText) {
+                response.text = itemText;
+                skippedItems.push({
+                    id: itemId,
+                    text: itemText,
+                    timestamp: new Date().toISOString()
+                });
+            }
+            
+            responses.push(response);
         }
     });
     
@@ -22689,12 +22943,12 @@ async function submitChecklist(branch, type, date, timeSlot) {
     
     // Süre uyarısı göster
     if (actualDuration > 0 && actualMinutes < minExpectedMinutes) {
-        showCompletionConfirmModal(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, items.length);
+        showCompletionConfirmModal(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, items.length, skippedItems);
         return;
     }
     
     // Doğrudan kaydet
-    await saveChecklistAndShare(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, items.length);
+    await saveChecklistAndShare(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, items.length, skippedItems);
 }
 
 // Sorumlu olmayan personel uyarısı
@@ -22725,7 +22979,7 @@ function showNotResponsibleWarning(branch, type, date, timeSlot, personName, res
 }
 
 // Tamamlama onay modal'ı
-function showCompletionConfirmModal(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, totalCount) {
+function showCompletionConfirmModal(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, totalCount, skippedItems = []) {
     const typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === type);
     const typeName = typeInfo?.name || type;
     
@@ -22756,19 +23010,21 @@ function showCompletionConfirmModal(branch, type, date, timeSlot, personName, re
     `;
     document.body.appendChild(modal);
     
-    // Responses'u geçici sakla
+    // Responses ve skippedItems'ı geçici sakla
     window._pendingResponses = responses;
+    window._pendingSkippedItems = skippedItems;
 }
 
 // Onaylı kaydet
 async function confirmAndSaveChecklist(branch, type, date, timeSlot, personName, actualMinutes, expectedMinutes, doneCount, totalCount) {
     document.getElementById('completionConfirmModal')?.remove();
     const responses = window._pendingResponses || [];
-    await saveChecklistAndShare(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, totalCount);
+    const skippedItems = window._pendingSkippedItems || [];
+    await saveChecklistAndShare(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, totalCount, skippedItems);
 }
 
 // Checklist'i kaydet ve paylaş
-async function saveChecklistAndShare(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, totalCount) {
+async function saveChecklistAndShare(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, totalCount, skippedItems = []) {
     try {
         const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
         const submissionId = `${checklistId}_${date}${timeSlot ? '_' + timeSlot.replace(':', '') : ''}`;
@@ -22847,6 +23103,16 @@ async function saveChecklistAndShare(branch, type, date, timeSlot, personName, r
             }
         }
         
+        // startTime null ise şimdiki zamandan actualMinutes çıkar
+        const now = new Date();
+        let startTimeStr = checklistStartTime?.toISOString() || null;
+        if (!startTimeStr && actualMinutes > 0) {
+            const estimatedStart = new Date(now.getTime() - actualMinutes * 60000);
+            startTimeStr = estimatedStart.toISOString();
+        } else if (!startTimeStr) {
+            startTimeStr = now.toISOString(); // Fallback: şimdiki zaman
+        }
+        
         const submissionData = {
             checklistId,
             branch,
@@ -22858,12 +23124,14 @@ async function saveChecklistAndShare(branch, type, date, timeSlot, personName, r
             submittedBy: currentUser?.id,
             submittedByName: currentUser?.name || personName,
             submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            startTime: checklistStartTime?.toISOString() || null,
-            endTime: new Date().toISOString(),
+            startTime: startTimeStr,
+            endTime: now.toISOString(),
             actualDurationMinutes: actualMinutes,
             expectedDurationMinutes: expectedMinutes,
             completionRate: Math.round((doneCount / totalCount) * 100),
             items: responses,
+            // Çarpı işaretlenen (yapılmayan) maddeler - geçmiş için önemli
+            skippedItems: skippedItems.length > 0 ? skippedItems : null,
             // Puan bilgileri
             points,
             pointStatus,
