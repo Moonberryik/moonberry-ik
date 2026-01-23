@@ -16480,12 +16480,24 @@ async function loadTodayChecks() {
                 console.warn('[Haftalık] Dashboard özet alınamadı:', e.message);
             }
             
-            // Zaman penceresi kontrolü
+            // Zaman penceresi kontrolü - GECE YARISI GEÇİŞİ DESTEĞİ
             const [activeH, activeM] = haftalikActiveFrom.split(':').map(Number);
             const [deadlineH, deadlineM] = haftalikDeadline.split(':').map(Number);
             const activeFromMinutes = activeH * 60 + activeM;
-            const deadlineMinutes = deadlineH * 60 + deadlineM;
-            const nowMinutes = currentHour * 60 + currentMinutes;
+            let deadlineMinutes = deadlineH * 60 + deadlineM;
+            let nowMinutes = currentHour * 60 + currentMinutes;
+            
+            // Gece yarısını geçen deadline (örn: 00:30, 01:00, 02:00)
+            // Eğer deadline saati active saatinden küçükse, gece yarısını geçiyor demektir
+            if (deadlineH < activeH) {
+                deadlineMinutes += 24 * 60; // Ertesi güne taşı
+            }
+            
+            // Gece yarısından sonra kontrol (00:00-03:00 arası)
+            // Eğer şu an gece yarısından sonra ve deadline ertesi günde ise
+            if (currentHour < 3 && deadlineH < activeH) {
+                nowMinutes += 24 * 60; // Şu anı da ertesi güne taşı
+            }
             
             const isInTimeWindow = nowMinutes >= activeFromMinutes && nowMinutes <= deadlineMinutes + haftalikLateWindow;
             
@@ -17643,7 +17655,7 @@ async function loadAllChecksOverview() {
             }
             
             const points = submission?.points || 0;
-            const pointsDisplay = points !== 0 ? `<span style="color:${points > 0 ? '#27ae60' : '#e74c3c'};font-weight:600">${points > 0 ? '+' : ''}${points}</span>` : '-';
+            const pointsDisplay = `<span style="color:${points > 0 ? '#27ae60' : points < 0 ? '#e74c3c' : '#95a5a6'};font-weight:600">${points > 0 ? '+' : ''}${points}</span>`;
             
             html += `
                 <tr style="border-bottom:1px solid var(--bg3)">
@@ -17797,10 +17809,8 @@ async function saveManualCheck(branch, type, timeSlot, date) {
             items: []
         });
         
-        // Puantaj notu oluştur
-        if (points !== 0) {
-            await createAutoPuantajNote(personelId, personelName, type, timeSlot, status, points, branch, date);
-        }
+        // Puantaj notu oluştur (0 puan dahil)
+        await createAutoPuantajNote(personelId, personelName, type, timeSlot, status, points, branch, date);
         
         toast('Check kaydedildi', 'success');
         closeModal();
