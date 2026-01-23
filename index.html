@@ -1819,16 +1819,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             </div>
                         </div>
                         
-                        <!-- Şube Seçimi -->
-                        <div style="display:flex;gap:12px;margin-bottom:20px">
-                            <button class="checklist-branch-tab active" onclick="selectChecklistTypeBranch('Tuzla Port')" data-branch="Tuzla Port" style="flex:1;padding:12px 16px;border:2px solid var(--bg4);background:var(--bg3);border-radius:10px;cursor:pointer;font-weight:600;color:var(--tx);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px">
-                                <span style="width:10px;height:10px;background:#ff8674;border-radius:50%"></span>
-                                Tuzla Port
-                            </button>
-                            <button class="checklist-branch-tab" onclick="selectChecklistTypeBranch('Şişli (Merkez)')" data-branch="Şişli (Merkez)" style="flex:1;padding:12px 16px;border:2px solid var(--bg4);background:var(--bg3);border-radius:10px;cursor:pointer;font-weight:600;color:var(--tx);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px">
-                                <span style="width:10px;height:10px;background:#008c95;border-radius:50%"></span>
-                                Şişli (Merkez)
-                            </button>
+                        <!-- Şube Seçimi - Dinamik -->
+                        <div id="checklistTypeBranchTabs" style="display:flex;gap:12px;margin-bottom:20px">
+                            <!-- JavaScript ile STATE.branches'dan doldurulacak -->
                         </div>
                         
                         <!-- Checklist Türleri Listesi -->
@@ -3599,8 +3592,8 @@ const DEFAULT_STATE = {
         vergiDairesi: 'Şişli',
         kep: 'tamaslan@hs01.kep.tr'
     },
-    branches: ['Tuzla Port', 'Şişli (Merkez)'],
-    branchCodes: {'Şişli (Merkez)': 'SIS', 'Tuzla Port': 'TZL'},
+    branches: ['Tuzla TRC', 'Şişli (Merkez)'],
+    branchCodes: {'Şişli (Merkez)': 'SIS', 'Tuzla TRC': 'TZL'},
     positions: [
         {id: 'barista', name: 'Barista / Servis', type: 'Mavi Yaka'},
         {id: 'mudur_yardimcisi', name: 'Müdür Yardımcısı', type: 'Gri Yaka'},
@@ -6307,14 +6300,162 @@ function editBranch(i) {
 }
 
 function updateBranch(i) {
-    const name = getVal('editBranchName');
-    if (name) {
-        STATE.branches[i] = name;
-        saveState();
-        populateSelects();
-        renderAdminLists();
+    const newName = getVal('editBranchName')?.trim();
+    const oldName = STATE.branches[i];
+    
+    if (!newName) {
+        toast('Şube adı boş olamaz', 'error');
+        return;
+    }
+    
+    if (newName === oldName) {
         closeModal();
-        toast('Güncellendi', 'success');
+        return;
+    }
+    
+    // Eğer sadece isim değişikliği varsa, migration yap
+    closeModal();
+    migrateBranchName(oldName, newName);
+}
+
+// Şube adı değişikliği - tüm Firebase kayıtlarını güncelle
+async function migrateBranchName(oldName, newName) {
+    showModal('Şube Güncelleniyor', `
+        <div style="text-align:center;padding:20px">
+            <div style="font-size:2rem;margin-bottom:16px">🔄</div>
+            <div style="font-weight:600;margin-bottom:12px">"${oldName}" → "${newName}"</div>
+            <div id="migrationStatus" style="color:var(--tx2);font-size:0.9rem">Hazırlanıyor...</div>
+            <div style="margin-top:16px;background:var(--bg3);border-radius:8px;overflow:hidden;height:8px">
+                <div id="migrationProgress" style="width:0%;height:100%;background:#008c95;transition:width .3s"></div>
+            </div>
+            <div id="migrationLog" style="margin-top:16px;text-align:left;font-size:0.75rem;color:var(--tx3);max-height:150px;overflow-y:auto"></div>
+        </div>
+    `, '');
+    
+    const statusEl = document.getElementById('migrationStatus');
+    const progressEl = document.getElementById('migrationProgress');
+    const logEl = document.getElementById('migrationLog');
+    
+    const log = (msg) => {
+        logEl.innerHTML += msg + '<br>';
+        logEl.scrollTop = logEl.scrollHeight;
+    };
+    
+    const setProgress = (pct, msg) => {
+        progressEl.style.width = pct + '%';
+        statusEl.textContent = msg;
+    };
+    
+    try {
+        let totalUpdated = 0;
+        
+        // 1. PERSONEL (10%)
+        setProgress(5, 'Personel kayıtları güncelleniyor...');
+        const personelSnap = await db.collection('personel').where('branch', '==', oldName).get();
+        for (const doc of personelSnap.docs) {
+            await doc.ref.update({ branch: newName });
+            totalUpdated++;
+        }
+        log(`✓ Personel: ${personelSnap.size} kayıt`);
+        setProgress(15, 'Vardiya kayıtları güncelleniyor...');
+        
+        // 2. SHIFTS (30%)
+        const shiftsSnap = await db.collection('shifts').where('branch', '==', oldName).get();
+        for (const doc of shiftsSnap.docs) {
+            await doc.ref.update({ branch: newName });
+            totalUpdated++;
+        }
+        log(`✓ Vardiyalar: ${shiftsSnap.size} kayıt`);
+        setProgress(35, 'Checklist kayıtları güncelleniyor...');
+        
+        // 3. CHECKLIST SUBMISSIONS (50%)
+        const subSnap = await db.collection('checklistSubmissions').where('branch', '==', oldName).get();
+        for (const doc of subSnap.docs) {
+            await doc.ref.update({ branch: newName });
+            totalUpdated++;
+        }
+        log(`✓ Checklist Submissions: ${subSnap.size} kayıt`);
+        setProgress(55, 'Checklist maddeleri taşınıyor...');
+        
+        // 4. CHECKLISTS - Doc ID değişmeli (70%)
+        const oldPrefix = oldName.replace(/\s+/g, '_').replace(/[()]/g, '');
+        const newPrefix = newName.replace(/\s+/g, '_').replace(/[()]/g, '');
+        const checkSnap = await db.collection('checklists').get();
+        const toMigrate = [];
+        checkSnap.forEach(doc => {
+            if (doc.id.startsWith(oldPrefix)) {
+                toMigrate.push({ oldId: doc.id, newId: doc.id.replace(oldPrefix, newPrefix), data: doc.data() });
+            }
+        });
+        for (const m of toMigrate) {
+            await db.collection('checklists').doc(m.newId).set(m.data);
+            await db.collection('checklists').doc(m.oldId).delete();
+            totalUpdated++;
+        }
+        log(`✓ Checklist Maddeleri: ${toMigrate.length} döküman`);
+        setProgress(75, 'Sistem ayarları güncelleniyor...');
+        
+        // 5. SYSTEM CONFIG - branches array (85%)
+        const configDoc = await db.collection('systemConfig').doc('checkRules').get();
+        if (configDoc.exists) {
+            const branches = configDoc.data().branches || [];
+            const idx = branches.indexOf(oldName);
+            if (idx !== -1) {
+                branches[idx] = newName;
+                await configDoc.ref.update({ branches });
+                log(`✓ systemConfig/checkRules.branches`);
+            }
+        }
+        setProgress(85, 'Checklist türleri güncelleniyor...');
+        
+        // 6. CONFIG/CHECKLIST TYPES (95%)
+        const typesDoc = await db.collection('config').doc('checklistTypes').get();
+        if (typesDoc.exists && typesDoc.data()[oldName]) {
+            const data = typesDoc.data();
+            data[newName] = data[oldName];
+            delete data[oldName];
+            await typesDoc.ref.set(data);
+            log(`✓ config/checklistTypes`);
+        }
+        
+        // 7. STATE.branches (local)
+        const stateIdx = STATE.branches.indexOf(oldName);
+        if (stateIdx !== -1) {
+            STATE.branches[stateIdx] = newName;
+        }
+        
+        // 8. BRANCH_HOURS güncelle
+        if (BRANCH_HOURS && BRANCH_HOURS[oldName]) {
+            BRANCH_HOURS[newName] = BRANCH_HOURS[oldName];
+            delete BRANCH_HOURS[oldName];
+        }
+        
+        setProgress(100, 'Tamamlandı!');
+        log(`<strong style="color:#27ae60">✓ Toplam ${totalUpdated} kayıt güncellendi</strong>`);
+        
+        // Başarı mesajı ve kapat
+        setTimeout(() => {
+            closeModal();
+            saveState();
+            populateSelects();
+            renderAdminLists();
+            toast(`Şube "${newName}" olarak güncellendi`, 'success');
+            
+            // Dashboard'u yenile
+            if (typeof loadTodayChecks === 'function') {
+                loadTodayChecks();
+            }
+        }, 1500);
+        
+    } catch (error) {
+        console.error('Migration hatası:', error);
+        setProgress(0, 'Hata oluştu!');
+        log(`<strong style="color:#e74c3c">✗ Hata: ${error.message}</strong>`);
+        
+        setTimeout(() => {
+            closeModal();
+            toast('Şube güncellenirken hata oluştu', 'error');
+        }, 2000);
     }
 }
 
@@ -9391,7 +9532,7 @@ async function saveUserLogin(isEdit) {
         const userData = {
             name: name,
             role: role || 'barista',
-            branch: branch || 'Tuzla Port',
+            branch: branch || STATE.branches?.[0] || 'Tuzla TRC',
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         
@@ -9492,7 +9633,7 @@ async function createNewUser() {
     const name = document.getElementById('newUserName')?.value?.trim();
     const password = document.getElementById('newUserPassword')?.value;
     const role = document.getElementById('newUserRole')?.value || 'barista';
-    const branch = document.getElementById('newUserBranch')?.value || 'Tuzla Port';
+    const branch = document.getElementById('newUserBranch')?.value || STATE.branches?.[0] || 'Tuzla TRC';
     
     if (!username) { toast('Kullanıcı adı gerekli', 'error'); return; }
     if (!name) { toast('Görünen ad gerekli', 'error'); return; }
@@ -13391,7 +13532,7 @@ async function uploadExcelToFirebase() {
     // Branch isim dönüşümü
     const branchMap = {
         'Şişli': 'Şişli (Merkez)',
-        'Tuzla': 'Tuzla Port'
+        'Tuzla': 'Tuzla TRC'
     };
     
     try {
@@ -14767,12 +14908,12 @@ async function loadTodayChecks() {
     if (!section || !container) return;
     
     // Dashboard için shift listener kur (ilk şube)
-    const userBranch = currentUser?.branch || 'Tuzla Port';
+    const userBranch = currentUser?.branch || STATE.branches?.[0] || 'Tuzla TRC';
     if (userBranch && userBranch !== 'all') {
         setupShiftListener(userBranch);
     } else {
         // Admin için ilk şubeyi dinle
-        const firstBranch = STATE.branches?.[0] || 'Tuzla Port';
+        const firstBranch = STATE.branches?.[0] || 'Tuzla TRC';
         setupShiftListener(firstBranch);
     }
     
@@ -14804,7 +14945,7 @@ async function loadTodayChecks() {
     if (isAdmin || currentUser?.branch === 'all') {
         branches = STATE.branches || [];
     } else {
-        branches = [currentUser?.branch || 'Tuzla Port'];
+        branches = [currentUser?.branch || STATE.branches?.[0] || 'Tuzla TRC'];
     }
     
     const primaryBranch = branches[0];
@@ -17385,7 +17526,7 @@ async function saveBranchHours() {
 
 // ==================== ADMIN - CHECKLIST TÜRLERİ YÖNETİMİ ====================
 
-let selectedChecklistTypeBranch = 'Tuzla Port';
+let selectedChecklistTypeBranch = null; // STATE.branches[0] ile init edilecek
 let checklistTypesData = {};
 
 // Checklist türlerini Firebase'den yükle
@@ -17401,27 +17542,22 @@ async function loadChecklistTypesConfig() {
                 }
             }
         } else {
-            // Varsayılan türler
-            checklistTypesData = {
-                'Tuzla Port': [
-                    {id: 'acilis', name: 'Açılış', icon: 'sunrise'},
-                    {id: 'kapanis', name: 'Kapanış', icon: 'sunset'},
-                    {id: 'gunluk', name: 'Günlük Check', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
-                    {id: 'mudur', name: 'Müdür Kontrol', icon: 'user-check', managerOnly: true},
-                    {id: 'platform', name: 'Platform Check', icon: 'smartphone', timeSlots: ['10:00','12:00','15:00','18:00','21:00','00:00']},
-                    {id: 'haftalik', name: 'Haftalık Görevler', icon: 'calendar-week'},
-                    {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
-                ],
-                'Şişli (Merkez)': [
-                    {id: 'acilis', name: 'Açılış', icon: 'sunrise'},
-                    {id: 'kapanis', name: 'Kapanış', icon: 'sunset'},
-                    {id: 'gunluk', name: 'Günlük Check', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
-                    {id: 'mudur', name: 'Müdür Kontrol', icon: 'user-check', managerOnly: true},
-                    {id: 'platform', name: 'Platform Check', icon: 'smartphone', timeSlots: ['10:00','12:00','15:00','18:00','21:00','00:00']},
-                    {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
-                ]
-            };
+            // Varsayılan türler - STATE.branches'dan dinamik
+            const defaultTypes = [
+                {id: 'acilis', name: 'Açılış', icon: 'sunrise'},
+                {id: 'kapanis', name: 'Kapanış', icon: 'sunset'},
+                {id: 'gunluk', name: 'Günlük Check', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
+                {id: 'mudur', name: 'Müdür Kontrol', icon: 'user-check', managerOnly: true},
+                {id: 'platform', name: 'Platform Check', icon: 'smartphone', timeSlots: ['10:00','12:00','15:00','18:00','21:00','00:00']},
+                {id: 'haftalik', name: 'Haftalık Görevler', icon: 'calendar-week'},
+                {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
+            ];
+            checklistTypesData = {};
+            (STATE.branches || []).forEach(branch => {
+                checklistTypesData[branch] = [...defaultTypes];
+            });
         }
+        renderChecklistTypeBranchTabs();
         renderChecklistTypes();
     } catch (e) {
         console.error('Checklist türleri yüklenemedi:', e);
@@ -17429,16 +17565,43 @@ async function loadChecklistTypesConfig() {
     }
 }
 
+// Şube tab'larını render et (dinamik)
+function renderChecklistTypeBranchTabs() {
+    const container = document.getElementById('checklistTypeBranchTabs');
+    if (!container) return;
+    
+    const branches = STATE.branches || [];
+    if (branches.length === 0) return;
+    
+    // İlk şubeyi seç (eğer seçili değilse)
+    if (!selectedChecklistTypeBranch) {
+        selectedChecklistTypeBranch = branches[0];
+    }
+    
+    container.innerHTML = branches.map(branch => {
+        const isActive = branch === selectedChecklistTypeBranch;
+        return `
+            <button class="checklist-branch-tab ${isActive ? 'active' : ''}" 
+                    onclick="selectChecklistTypeBranch('${branch}')" 
+                    data-branch="${branch}" 
+                    style="flex:1;padding:12px 16px;border:2px solid ${isActive ? '#008c95' : 'var(--bg4)'};background:${isActive ? 'rgba(0,140,149,.1)' : 'var(--bg3)'};border-radius:10px;cursor:pointer;font-weight:600;color:var(--tx);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px">
+                <span style="width:10px;height:10px;background:#008c95;border-radius:50%"></span>
+                ${branch}
+            </button>
+        `;
+    }).join('');
+}
+
 // Şube seçimi
 function selectChecklistTypeBranch(branch) {
     selectedChecklistTypeBranch = branch;
     
-    // Tab stillerini güncelle
+    // Tab stillerini güncelle (Moonberry teal)
     document.querySelectorAll('.checklist-branch-tab').forEach(tab => {
         const isActive = tab.dataset.branch === branch;
         tab.classList.toggle('active', isActive);
-        tab.style.borderColor = isActive ? (branch.includes('Şişli') ? '#008c95' : '#ff8674') : 'var(--bg4)';
-        tab.style.background = isActive ? (branch.includes('Şişli') ? 'rgba(0,140,149,.1)' : 'rgba(255,134,116,.1)') : 'var(--bg3)';
+        tab.style.borderColor = isActive ? '#008c95' : 'var(--bg4)';
+        tab.style.background = isActive ? 'rgba(0,140,149,.1)' : 'var(--bg3)';
     });
     
     renderChecklistTypes();
@@ -17450,8 +17613,7 @@ function renderChecklistTypes() {
     if (!container) return;
     
     const types = checklistTypesData[selectedChecklistTypeBranch] || [];
-    const isMoonberry = selectedChecklistTypeBranch.includes('Şişli');
-    const brandColor = isMoonberry ? '#008c95' : '#ff8674';
+    const brandColor = '#008c95'; // Moonberry teal
     
     const iconMap = {
         'sunrise': '🌅',
@@ -17666,7 +17828,7 @@ async function syncChecklistTypesWithSeed() {
     
     // seed.html'deki orijinal CHECKLIST_TYPES
     const SEED_CHECKLIST_TYPES = {
-        'Tuzla Port': [
+        'Tuzla TRC': [
             {id: 'acilis', name: 'Açılış Hazırlıkları', icon: 'sunrise'},
             {id: 'kapanis', name: 'Kapanış Hazırlıkları', icon: 'sunset'},
             {id: 'gunluk', name: 'Günlük Genel Check', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
@@ -18924,7 +19086,7 @@ async function loadChecklistTodayPanel() {
     if (isAdmin || currentUser?.branch === 'all') {
         branches = STATE.branches || [];
     } else {
-        branches = [currentUser?.branch || 'Tuzla Port'];
+        branches = [currentUser?.branch || STATE.branches?.[0] || 'Tuzla TRC'];
     }
     
     // Bu haftanın tarih aralığını hesapla
@@ -21372,7 +21534,7 @@ async function generateWeeklyReport(branch) {
 }
 
 async function showWeeklyReportModal(branch) {
-    const report = await generateWeeklyReport(branch || currentUser?.branch || 'Tuzla Port');
+    const report = await generateWeeklyReport(branch || currentUser?.branch || STATE.branches?.[0] || 'Tuzla TRC');
     
     showModal('📊 Haftalık Rapor', `
         <div style="padding:10px 0">
