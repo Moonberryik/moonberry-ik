@@ -3601,7 +3601,7 @@ const DEFAULT_STATE = {
         vergiDairesi: 'Şişli',
         kep: 'tamaslan@hs01.kep.tr'
     },
-    branches: ['Şişli (Merkez)', 'Tuzla Port'],
+    branches: ['Tuzla Port', 'Şişli (Merkez)'],
     branchCodes: {'Şişli (Merkez)': 'SIS', 'Tuzla Port': 'TZL'},
     positions: [
         {id: 'barista', name: 'Barista / Servis', type: 'Mavi Yaka'},
@@ -14983,8 +14983,8 @@ async function loadTodayChecks() {
         'Tebrikler, devam et! 🎯'
     ];
     
-    // Şube sıralaması
-    const branchOrder = JSON.parse(localStorage.getItem('dashboardBranchOrder') || '["Tuzla Port", "Şişli (Merkez)"]');
+    // Şube sıralaması - STATE.branches'dan (Firebase'den yüklenen dinamik değer)
+    const branchOrder = STATE.branches || [];
     const sortedBranches = [...branches].sort((a, b) => {
         const aIndex = branchOrder.findIndex(o => a.includes(o) || o.includes(a));
         const bIndex = branchOrder.findIndex(o => b.includes(o) || o.includes(b));
