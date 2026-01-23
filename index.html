@@ -16418,7 +16418,9 @@ async function loadTodayChecks() {
             let subLabel = 'Bu hafta';
             let personnelTags = [];
             let isActive = false;
+            let isAllDone = false;
             let remainingText = '';
+            let statusIcon = ''; // Durum ikonu
             
             try {
                 if (personnelId && !isManager) {
@@ -16426,18 +16428,35 @@ async function loadTodayChecks() {
                     weeklySummary = await getWeeklyDashboardSummary(branch, personnelId);
                     
                     if (weeklySummary && weeklySummary.total > 0) {
-                        const activeCount = weeklySummary.active;
+                        const todoCount = weeklySummary.todoCount; // pending + overdue + active
                         const cooldownCount = weeklySummary.cooldown;
-                        const completedCount = weeklySummary.tasks.filter(t => t.status === 'completed').length;
+                        const overdueCount = weeklySummary.overdue;
+                        const pendingCount = weeklySummary.pending;
                         
-                        if (activeCount > 0) {
-                            subLabel = `${activeCount} görev bekliyor`;
+                        if (todoCount > 0) {
+                            // Yapılacak görev var
+                            if (overdueCount > 0) {
+                                subLabel = `⚠️ ${overdueCount} görev süresi doldu!`;
+                                statusIcon = 'overdue';
+                            } else if (pendingCount > 0 && weeklySummary.nearestDeadline) {
+                                subLabel = `${pendingCount} görev · ${weeklySummary.nearestDeadline.message}`;
+                                statusIcon = 'pending';
+                            } else {
+                                subLabel = `${todoCount} görev bekliyor`;
+                                statusIcon = 'pending';
+                            }
                             isActive = true;
-                        } else if (cooldownCount > 0 && weeklySummary.nearestCooldown) {
-                            subLabel = weeklySummary.nearestCooldown.message;
-                            remainingText = '';
+                        } else if (cooldownCount > 0) {
+                            // Tüm görevler cooldown'da - BAŞARILI
+                            isAllDone = true;
+                            statusIcon = 'success';
+                            if (weeklySummary.nearestCooldown) {
+                                subLabel = `✅ Tamamlandı · ${weeklySummary.nearestCooldown.message}`;
+                            } else {
+                                subLabel = `✅ ${cooldownCount} görev tamamlandı`;
+                            }
                         } else {
-                            subLabel = `${completedCount}/${weeklySummary.total} tamamlandı`;
+                            subLabel = `${weeklySummary.completed}/${weeklySummary.total} tamamlandı`;
                         }
                     }
                 } else {
@@ -16470,8 +16489,8 @@ async function loadTodayChecks() {
             
             const isInTimeWindow = nowMinutes >= activeFromMinutes && nowMinutes <= deadlineMinutes + haftalikLateWindow;
             
-            // Haftalık için canStillFill: aktif görevi varsa doldurabilir
-            const canStillFill = (weeklySummary?.active > 0 || weeklySummary?.cooldown > 0) && isInTimeWindow;
+            // Haftalık için canStillFill: todoCount > 0 veya cooldown > 0
+            const canStillFill = (weeklySummary?.todoCount > 0 || weeklySummary?.cooldown > 0) && isInTimeWindow;
             
             branchChecks.push({
                 id: 'haftalik',
@@ -16481,19 +16500,20 @@ async function loadTodayChecks() {
                 deadline: haftalikDeadline,
                 lateWindow: haftalikLateWindow,
                 subLabel: subLabel,
-                isCompleted: weeklySummary?.active === 0 && weeklySummary?.cooldown === 0 && weeklySummary?.total > 0,
+                isCompleted: isAllDone,
                 isActive: isActive && isInTimeWindow,
                 isMissed: false,
-                canStillFill: canStillFill, // EKLENDİ
+                canStillFill: canStillFill,
                 remainingText: remainingText,
                 personnel: personnelTags,
                 points: haftalikRules.points || { onTime: 1, late: 0, missed: -2 },
-                priority: isActive ? 25 : 85,
+                priority: isActive ? 25 : (isAllDone ? 75 : 85),
                 onClick: `goToChecklist('${branch}', 'haftalik', null)`,
-                weeklySummary: weeklySummary // Ekstra bilgi için
+                weeklySummary: weeklySummary,
+                statusIcon: statusIcon // Kart için ek ikon
             });
             totalChecks++;
-            if (weeklySummary?.active === 0 && weeklySummary?.cooldown === 0) completedChecks++;
+            if (isAllDone) completedChecks++;
         }
         
         // Check'leri akıllı sırala:
@@ -21314,12 +21334,28 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
         // Cooldown badge (haftalık için)
         let cooldownBadgeHtml = '';
         if (isHaftalik && cooldownStatus) {
-            if (cooldownStatus.status === 'completed' || cooldownStatus.status === 'cooldown') {
-                // Tamamlanmış veya cooldown'da
+            if (cooldownStatus.status === 'pending_countdown') {
+                // Yapılmayı bekliyor - geri sayım göster
+                cooldownBadgeHtml = `
+                    <span style="font-size:.75rem;padding:4px 10px;border-radius:5px;background:rgba(0,140,149,0.15);color:#008c95;font-weight:600;display:inline-flex;align-items:center;gap:4px">
+                        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                        ⏳ ${cooldownStatus.message}
+                    </span>
+                `;
+            } else if (cooldownStatus.status === 'overdue') {
+                // Süresi dolmuş!
+                cooldownBadgeHtml = `
+                    <span style="font-size:.75rem;padding:4px 10px;border-radius:5px;background:rgba(239,68,68,0.15);color:#ef4444;font-weight:600;display:inline-flex;align-items:center;gap:4px">
+                        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                        ⚠️ ${cooldownStatus.message}
+                    </span>
+                `;
+            } else if (cooldownStatus.status === 'cooldown') {
+                // Tamamlanmış, cooldown'da
                 cooldownBadgeHtml = `
                     <span style="font-size:.75rem;padding:4px 10px;border-radius:5px;background:rgba(39,174,96,0.15);color:#27ae60;font-weight:600;display:inline-flex;align-items:center;gap:4px">
                         <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        ${cooldownStatus.message}
+                        ✅ ${cooldownStatus.message}
                     </span>
                 `;
             } else if (cooldownStatus.status === 'active' && cooldownStatus.message === 'Tekrar yapılabilir') {
@@ -21429,7 +21465,8 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
             // Haftalık görevlerde: isMyTask kontrolü + cooldown kontrolü, diğerlerinde: isAssignedToMe kontrolü
             // Haftalık ve temizlik: isMyTask, diğerleri: isAssignedToMe + zaman kontrolü
             
-            // Haftalık için cooldown kontrolü
+            // Haftalık için cooldown kontrolü - sadece "cooldown" durumunda interact edilemez
+            // pending_countdown, overdue, active durumlarında görev yapılabilir
             let isCooldownActive = false;
             if (isHaftalik && cooldownStatus) {
                 isCooldownActive = cooldownStatus.status === 'cooldown';
@@ -21448,6 +21485,12 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                 warningMessage = `<div style="font-size:.75rem;color:#27ae60;margin-top:6px;display:flex;align-items:center;gap:4px">
                     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                     ✅ Tamamlandı · ${cooldownStatus.message}
+                   </div>`;
+            } else if (isHaftalik && cooldownStatus?.status === 'overdue' && isMyTask) {
+                // Süresi dolmuş uyarısı
+                warningMessage = `<div style="font-size:.75rem;color:#ef4444;margin-top:6px;display:flex;align-items:center;gap:4px">
+                    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                    ⚠️ Süresi doldu! Hemen tamamlayın.
                    </div>`;
             }
             const otherPersonWarning = warningMessage;
@@ -25397,11 +25440,37 @@ function getItemCooldownStatus(assignment) {
     if (!assignment) return { status: 'unknown', remainingMs: 0 };
     
     const now = new Date();
+    const cooldownHours = assignment.cooldownHours || 48;
+    const cooldownMs = cooldownHours * 60 * 60 * 1000;
     
+    // PENDING durumu - atandığı andan itibaren cooldown başlar
     if (assignment.status === 'pending') {
-        return { status: 'active', remainingMs: 0, message: 'Yapılmayı bekliyor' };
+        const assignedAt = assignment.assignedAt ? new Date(assignment.assignedAt) : now;
+        const deadline = new Date(assignedAt.getTime() + cooldownMs);
+        const remainingMs = deadline.getTime() - now.getTime();
+        
+        if (remainingMs > 0) {
+            // Süre devam ediyor - yapılmayı bekliyor
+            const hours = Math.floor(remainingMs / (1000 * 60 * 60));
+            const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+            return {
+                status: 'pending_countdown',
+                remainingMs,
+                message: `${hours}s ${minutes}dk kaldı`,
+                deadline: deadline.toISOString()
+            };
+        } else {
+            // Süre doldu ama yapılmadı
+            return { 
+                status: 'overdue', 
+                remainingMs: 0, 
+                message: 'Süresi doldu!',
+                isOverdue: true
+            };
+        }
     }
     
+    // COMPLETED durumu - tamamlandıktan sonra cooldown
     if (assignment.status === 'completed' && assignment.nextActiveAt) {
         const nextActive = new Date(assignment.nextActiveAt);
         const remainingMs = nextActive.getTime() - now.getTime();
@@ -25420,6 +25489,11 @@ function getItemCooldownStatus(assignment) {
             // Cooldown bitti, tekrar aktif
             return { status: 'active', remainingMs: 0, message: 'Tekrar yapılabilir' };
         }
+    }
+    
+    // COMPLETED ama nextActiveAt yok (eski kayıt)
+    if (assignment.status === 'completed') {
+        return { status: 'completed_no_cooldown', remainingMs: 0, message: 'Tamamlandı ✓' };
     }
     
     if (assignment.status === 'missed') {
@@ -25447,11 +25521,27 @@ async function getWeeklyDashboardSummary(branch, personnelId) {
     const tasks = await getPersonnelWeeklyTasks(branch, personnelId);
     
     const total = tasks.length;
-    const active = tasks.filter(t => t.cooldownStatus.status === 'active').length;
+    
+    // Yeni durum hesaplamaları
+    const pending = tasks.filter(t => t.cooldownStatus.status === 'pending_countdown').length;
+    const overdue = tasks.filter(t => t.cooldownStatus.status === 'overdue').length;
     const cooldown = tasks.filter(t => t.cooldownStatus.status === 'cooldown').length;
     const completed = tasks.filter(t => t.status === 'completed').length;
+    const active = tasks.filter(t => t.cooldownStatus.status === 'active').length; // Tekrar yapılabilir
     
-    // En yakın aktif olacak maddenin geri sayımı
+    // Yapılması gereken görevler = pending + overdue + active (tekrar yapılabilir)
+    const todoCount = pending + overdue + active;
+    
+    // En yakın deadline (pending görevler için)
+    let nearestDeadline = null;
+    tasks.filter(t => t.cooldownStatus.status === 'pending_countdown')
+        .forEach(t => {
+            if (!nearestDeadline || t.cooldownStatus.remainingMs < nearestDeadline.remainingMs) {
+                nearestDeadline = t.cooldownStatus;
+            }
+        });
+    
+    // En yakın aktif olacak madde (cooldown'daki görevler için)
     let nearestCooldown = null;
     tasks.filter(t => t.cooldownStatus.status === 'cooldown')
         .forEach(t => {
@@ -25462,11 +25552,16 @@ async function getWeeklyDashboardSummary(branch, personnelId) {
     
     return {
         total,
-        active,
-        cooldown,
-        completed,
-        nearestCooldown,
+        pending,       // Yapılmayı bekliyor (geri sayımlı)
+        overdue,       // Süresi dolmuş
+        cooldown,      // Tamamlanmış, bekleme süresi
+        completed,     // Toplam tamamlanan
+        active,        // Tekrar yapılabilir
+        todoCount,     // Yapılması gereken toplam
+        nearestDeadline, // En yakın deadline
+        nearestCooldown, // En yakın aktif olacak
         tasks
+    };
     };
 }
     </script>
