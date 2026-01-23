@@ -15186,7 +15186,9 @@ async function loadTodayChecks() {
                 id: 'platform',
                 name: getChecklistTypeName(branch, 'platform', 'Platform Kontrolü'),
                 icon: 'smartphone',
+                activeFrom: activePlatformTime || nextPlatformTime,
                 deadline: activePlatformTime || nextPlatformTime,
+                lateWindow: platformLateWindow,
                 subLabel: platformSubLabel + (isPlatformMissed ? ' (Kaçırıldı)' : isPlatformLate ? ' (Geç!)' : ''),
                 isCompleted: platformCompleted,
                 isActive: !!activePlatformTime && !platformCompleted && !isPlatformMissed,
@@ -15321,7 +15323,9 @@ async function loadTodayChecks() {
                 id: 'temizlik',
                 name: getChecklistTypeName(branch, 'aylik', 'Temizlik ve Bakım'),
                 icon: 'sparkle',
+                activeFrom: temizlikActiveFrom,
                 deadline: temizlikDeadline,
+                lateWindow: temizlikLateWindow,
                 subLabel: temizlikSubLabel,
                 isCompleted: temizlikCompleted,
                 isActive: isTemizlikActive || isTemizlikLate,
@@ -15390,7 +15394,9 @@ async function loadTodayChecks() {
                 id: 'acilis',
                 name: getChecklistTypeName(branch, 'acilis', 'Açılış Hazırlıkları'),
                 icon: 'sunrise',
+                activeFrom: acilisActiveFrom,
                 deadline: acilisDeadline,
+                lateWindow: acilisLateWindow,
                 subLabel: acilisSubLabel,
                 isCompleted: acilisCompleted,
                 isActive: isAcilisActive || isAcilisLate,
@@ -15470,7 +15476,9 @@ async function loadTodayChecks() {
                 id: 'kapanis',
                 name: getChecklistTypeName(branch, 'kapanis', 'Kapanış Hazırlıkları'),
                 icon: 'sunset',
+                activeFrom: kapanisActiveFrom,
                 deadline: kapanisDeadline,
+                lateWindow: kapanisLateWindow,
                 subLabel: kapanisSubLabel,
                 isCompleted: kapanisCompleted,
                 isActive: isKapanisActive || isKapanisLate,
@@ -15663,7 +15671,9 @@ async function loadTodayChecks() {
                 id: 'gunluk',
                 name: getChecklistTypeName(branch, 'gunluk', 'Günlük Genel Check'),
                 icon: 'clipboard',
+                activeFrom: activeGunlukTime || displayGunlukTime,
                 deadline: displayGunlukTime,
+                lateWindow: gunlukLateWindow,
                 subLabel: gunlukSubLabel + (isGunlukMissed ? ' (Kaçırıldı)' : isGunlukLate ? ' (Geç!)' : isGunlukActive ? '' : ' (Bekliyor)'),
                 isCompleted: gunlukCompleted,
                 isActive: isGunlukActive && !gunlukCompleted,
@@ -15834,7 +15844,9 @@ async function loadTodayChecks() {
                 id: 'mudur',
                 name: getChecklistTypeName(branch, 'mudur', 'Müdür Kontrol'),
                 icon: 'usercheck',
+                activeFrom: mudurActiveFrom,
                 deadline: mudurDeadline,
+                lateWindow: mudurLateWindow,
                 subLabel: mudurSubLabel,
                 isCompleted: mudurCompleted,
                 isActive: isMudurTimeActive && canFillMudurCheck && !mudurCompleted,
@@ -15862,18 +15874,25 @@ async function loadTodayChecks() {
                 haftalikCompleted = doc.exists;
             } catch (e) {}
             
+            const haftalikRules = CHECK_RULES.haftalik || DEFAULT_CHECK_RULES.haftalik || {};
+            const haftalikActiveFrom = haftalikRules.activeFrom || '09:00';
+            const haftalikDeadline = haftalikRules.deadline || '23:00';
+            const haftalikLateWindow = haftalikRules.lateWindow || 30;
+            
             branchChecks.push({
                 id: 'haftalik',
                 name: getChecklistTypeName(branch, 'haftalik', 'Haftalık Görevler'),
                 icon: 'calendar',
-                deadline: '23:00',
+                activeFrom: haftalikActiveFrom,
+                deadline: haftalikDeadline,
+                lateWindow: haftalikLateWindow,
                 subLabel: isPazartesi ? 'Bugün atanır' : 'Bu hafta',
                 isCompleted: haftalikCompleted,
                 isActive: isPazartesi && !haftalikCompleted,
                 isMissed: false,
                 remainingText: '',
                 personnel: [],
-                points: (CHECK_RULES.haftalik || DEFAULT_CHECK_RULES.haftalik || {}).points || { onTime: 0, late: 0, missed: -1 },
+                points: haftalikRules.points || { onTime: 0, late: 0, missed: -1 },
                 priority: haftalikCompleted ? 91 : (isPazartesi ? 30 : 85),
                 onClick: `goToChecklist('${branch}', 'haftalik', null)`
             });
@@ -16078,6 +16097,42 @@ async function loadTodayChecks() {
             }
             
             // Puan gösterimi - tüm seçenekler
+            // Saat + Puan birleşik gösterim
+            let timePointsHtml = '';
+            if (check.points && check.activeFrom && check.deadline) {
+                // Geç bitiş saatini hesapla
+                const [dH, dM] = check.deadline.split(':').map(Number);
+                const lateEndMin = dH * 60 + dM + (check.lateWindow || 30);
+                const lateEndH = Math.floor(lateEndMin / 60) % 24;
+                const lateEndM = lateEndMin % 60;
+                const lateEndStr = `${String(lateEndH).padStart(2, '0')}:${String(lateEndM).padStart(2, '0')}`;
+                
+                // Geç puan 0 ise gösterme
+                const showLate = check.lateWindow > 0 && check.points.late !== undefined;
+                
+                timePointsHtml = `
+                    <div style="display:flex;align-items:center;gap:6px;font-size:0.72rem;color:var(--tx2);flex-wrap:wrap">
+                        <span style="display:flex;align-items:center;gap:4px">
+                            <span style="color:var(--tx3)">⏰</span>
+                            <span style="font-weight:500">${check.activeFrom}-${check.deadline}</span>
+                            <span style="color:#27ae60;font-weight:600">${check.points.onTime > 0 ? '+' : ''}${check.points.onTime} puan</span>
+                        </span>
+                        ${showLate ? `
+                            <span style="color:var(--tx3)">·</span>
+                            <span style="display:flex;align-items:center;gap:3px">
+                                <span>${lateEndStr}'e kadar</span>
+                                <span style="color:#f39c12;font-weight:600">${check.points.late > 0 ? '+' : ''}${check.points.late} puan</span>
+                            </span>
+                        ` : ''}
+                        <span style="color:var(--tx3)">·</span>
+                        <span style="display:flex;align-items:center;gap:3px">
+                            <span>Sonra</span>
+                            <span style="color:#e74c3c;font-weight:600">${check.points.missed} puan</span>
+                        </span>
+                    </div>
+                `;
+            }
+            
             let pointsHtml = '';
             if (!check.isCompleted && check.points) {
                 pointsHtml = `
@@ -16115,12 +16170,11 @@ async function loadTodayChecks() {
                             <span class="check-message ${messageClass}">${statusMessage}</span>
                         </div>
                         <div class="check-meta" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px">
-                            ${check.subLabel ? `<span class="check-time-badge">${check.subLabel}</span>` : ''}
+                            ${timePointsHtml || (check.subLabel ? `<span class="check-time-badge">${check.subLabel}</span>` : '')}
                             ${personnelHtml}
                         </div>
                     </div>
                     <div class="check-status-wrap" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-                        ${pointsHtml}
                         ${countdownHtml}
                     </div>
                 </div>
