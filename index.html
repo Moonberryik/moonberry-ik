@@ -21266,9 +21266,8 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                     </div>
                 </div>
                 
-                ${!isSubmitted && canFillForm ? `
                 <!-- Checklist Başlat Overlay -->
-                <div id="checklistStartOverlay" style="position:relative;margin-bottom:16px">
+                <div id="checklistStartOverlay" style="display:${!isSubmitted && canFillForm ? 'block' : 'none'};position:relative;margin-bottom:16px">
                     <div style="padding:40px 20px;background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(0,140,149,.05));border:2px dashed rgba(0,140,149,.4);border-radius:16px;text-align:center">
                         <div style="width:80px;height:80px;margin:0 auto 20px;background:linear-gradient(135deg,#008c95,#00b4a0);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,140,149,.3)">
                             <svg width="40" height="40" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24">
@@ -21307,12 +21306,8 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                 
                 <style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}</style>
                 
-                <!-- Maddeler (başlangıçta blurlu) -->
-                <div id="checklistItemsWrapper" style="filter:blur(8px);pointer-events:none;opacity:0.5;transition:all .3s ease">
-                ` : `
-                <!-- Maddeler (tamamlanmış veya doldurulamaz - normal görünüm) -->
-                <div id="checklistItemsWrapper" style="transition:all .3s ease">
-                `}
+                <!-- Maddeler -->
+                <div id="checklistItemsWrapper" style="filter:${!isSubmitted && canFillForm ? 'blur(8px)' : 'none'};pointer-events:${!isSubmitted && canFillForm ? 'none' : 'auto'};opacity:${!isSubmitted && canFillForm ? '0.5' : '1'};transition:all .3s ease">
                 <div id="checklistItems">
     `;
     
