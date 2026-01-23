@@ -24837,6 +24837,403 @@ function getDefaultChecklistItems(branch, type) {
     console.warn(`[Checklist] Firebase'de madde bulunamadı: ${branch}/${type} - seed.html ile yükleyin`);
     return [];
 }
+
+// ============================================
+// HAFTALIK GÖREVLER - ROUND-ROBIN ATAMA SİSTEMİ
+// ============================================
+
+// Hafta başlangıç tarihini hesapla
+function getWeekStartDate(date = new Date()) {
+    const rules = CHECK_RULES.haftalik || {};
+    const weekStartDay = rules.weekStartDay ?? 1; // 0=Pazar, 1=Pazartesi (varsayılan)
+    const weekStartHour = rules.weekStartHour || '03:00';
+    const [startH, startM] = weekStartHour.split(':').map(Number);
+    
+    const d = new Date(date);
+    const currentDay = d.getDay();
+    const currentHour = d.getHours();
+    const currentMinute = d.getMinutes();
+    
+    // Kaç gün geriye gitmemiz gerekiyor?
+    let daysBack = (currentDay - weekStartDay + 7) % 7;
+    
+    // Eğer bugün başlangıç günü ama henüz başlangıç saatine gelmediyse, geçen haftaya git
+    if (daysBack === 0 && (currentHour < startH || (currentHour === startH && currentMinute < startM))) {
+        daysBack = 7;
+    }
+    
+    d.setDate(d.getDate() - daysBack);
+    d.setHours(startH, startM, 0, 0);
+    
+    return d;
+}
+
+// Hafta ID'si oluştur (YYYY-WW formatında)
+function getWeekId(date = new Date()) {
+    const weekStart = getWeekStartDate(date);
+    return weekStart.toISOString().split('T')[0]; // YYYY-MM-DD
+}
+
+// Atama havuzundaki personeli al (yöneticiler ve müdürler hariç)
+async function getAssignmentPool(branch) {
+    const pool = [];
+    
+    try {
+        // Tüm aktif personeli al
+        const snap = await db.collection('personel')
+            .where('branch', '==', branch)
+            .get();
+        
+        // Bugünkü müdür shift'ini kontrol et (müdür yardımcısı için)
+        const todayStr = new Date().toISOString().split('T')[0];
+        let isMudurOnShift = false;
+        
+        try {
+            const shiftSnap = await db.collection('shifts')
+                .where('branch', '==', branch)
+                .where('date', '==', todayStr)
+                .get();
+            
+            shiftSnap.forEach(doc => {
+                const d = doc.data();
+                if (d.role === 'magaza_muduru' || d.position?.includes('Müdür') && !d.position?.includes('Yardımcısı')) {
+                    isMudurOnShift = true;
+                }
+            });
+        } catch (e) {
+            console.warn('[Haftalık] Shift kontrolü yapılamadı:', e.message);
+        }
+        
+        snap.forEach(doc => {
+            const d = doc.data();
+            
+            // Aktif olmayan personeli atla
+            if (d.aktif === false || d.active === false) return;
+            
+            // Yöneticileri hariç tut
+            if (['yonetici', 'bolge_muduru'].includes(d.role)) return;
+            
+            // Mağaza müdürünü hariç tut
+            if (d.role === 'magaza_muduru') return;
+            
+            // Müdür yardımcısı kontrolü - müdür shiftte değilse dahil etme
+            const isMudurYardimcisi = d.position?.includes('Müdür Yardımcısı') || 
+                                      d.role === 'magaza_mudur_yardimcisi' ||
+                                      d.role === 'mudur_yardimcisi';
+            
+            if (isMudurYardimcisi && isMudurOnShift) {
+                // Müdür shiftte ise, müdür yardımcısı normal personel gibi havuza dahil
+            } else if (isMudurYardimcisi && !isMudurOnShift) {
+                // Müdür shiftte değilse, müdür yardımcısı yöneticilik yapıyor, hariç tut
+                return;
+            }
+            
+            pool.push({
+                id: doc.id,
+                uniqueId: d.uniqueId || doc.id,
+                name: d.name,
+                codeName: d.codeName || d.name,
+                role: d.role,
+                position: d.position
+            });
+        });
+        
+        // İsme göre sırala (tutarlı sıralama için)
+        pool.sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+        
+    } catch (e) {
+        console.error('[Haftalık] Personel havuzu alınamadı:', e);
+    }
+    
+    return pool;
+}
+
+// Haftalık atama oluştur veya mevcut atamayı al
+async function getOrCreateWeeklyAssignments(branch) {
+    const weekId = getWeekId();
+    const docId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekId}`;
+    
+    try {
+        // Mevcut atamayı kontrol et
+        const doc = await db.collection('weeklyAssignments').doc(docId).get();
+        
+        if (doc.exists) {
+            console.log('[Haftalık] Mevcut atama bulundu:', docId);
+            return doc.data();
+        }
+        
+        // Yeni atama oluştur
+        console.log('[Haftalık] Yeni atama oluşturuluyor:', docId);
+        return await createWeeklyAssignments(branch, weekId);
+        
+    } catch (e) {
+        console.error('[Haftalık] Atama alınamadı:', e);
+        return null;
+    }
+}
+
+// Yeni haftalık atama oluştur (round-robin)
+async function createWeeklyAssignments(branch, weekId) {
+    const branchKey = branch.replace(/[^a-zA-Z0-9]/g, '_');
+    const docId = `${branchKey}_${weekId}`;
+    
+    try {
+        // Personel havuzunu al
+        const pool = await getAssignmentPool(branch);
+        
+        if (pool.length === 0) {
+            console.warn('[Haftalık] Atama havuzu boş!');
+            return null;
+        }
+        
+        console.log('[Haftalık] Atama havuzu:', pool.map(p => p.codeName));
+        
+        // Checklist maddelerini al
+        const checklistDoc = await db.collection('checklists').doc(`${branchKey}_haftalik`).get();
+        if (!checklistDoc.exists) {
+            console.warn('[Haftalık] Checklist bulunamadı!');
+            return null;
+        }
+        
+        const items = checklistDoc.data().items || [];
+        if (items.length === 0) {
+            console.warn('[Haftalık] Checklist maddeleri boş!');
+            return null;
+        }
+        
+        // Önceki haftanın rotationIndex'ini al (kayma için)
+        let rotationIndex = 0;
+        const prevWeekStart = new Date(getWeekStartDate());
+        prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+        const prevWeekId = prevWeekStart.toISOString().split('T')[0];
+        const prevDocId = `${branchKey}_${prevWeekId}`;
+        
+        try {
+            const prevDoc = await db.collection('weeklyAssignments').doc(prevDocId).get();
+            if (prevDoc.exists) {
+                rotationIndex = ((prevDoc.data().rotationIndex || 0) + 1) % pool.length;
+                console.log('[Haftalık] Önceki rotationIndex:', prevDoc.data().rotationIndex, '→ Yeni:', rotationIndex);
+            }
+        } catch (e) {
+            console.log('[Haftalık] Önceki hafta verisi yok, rotationIndex=0');
+        }
+        
+        // Round-robin atama yap
+        const assignments = [];
+        const rules = CHECK_RULES.haftalik || {};
+        const cooldownHours = rules.cooldownHours || 48;
+        
+        items.forEach((item, idx) => {
+            // Madde için uygun roller (eğer tanımlanmışsa)
+            const allowedRoles = item.roles || null; // null = tümü
+            
+            // Uygun personeli filtrele
+            let eligiblePool = pool;
+            if (allowedRoles && allowedRoles.length > 0 && allowedRoles[0] !== 'all') {
+                eligiblePool = pool.filter(p => 
+                    allowedRoles.includes(p.role) || 
+                    allowedRoles.includes(p.position)
+                );
+            }
+            
+            if (eligiblePool.length === 0) {
+                console.warn(`[Haftalık] Madde "${item.text?.substring(0, 30)}" için uygun personel yok!`);
+                eligiblePool = pool; // Fallback: tüm havuz
+            }
+            
+            // Round-robin ile ata (rotationIndex kaydırma ile)
+            const assigneeIndex = (idx + rotationIndex) % eligiblePool.length;
+            const assignee = eligiblePool[assigneeIndex];
+            
+            assignments.push({
+                itemId: item.id || `item_${idx}`,
+                itemText: item.text || '',
+                personnelId: assignee.uniqueId,
+                personnelName: assignee.codeName,
+                personnelFullName: assignee.name,
+                assignedAt: new Date().toISOString(),
+                cooldownHours: cooldownHours,
+                status: 'pending', // pending, completed, missed
+                completedAt: null,
+                nextActiveAt: null // Cooldown sonrası tekrar aktif olacağı zaman
+            });
+        });
+        
+        // Firebase'e kaydet
+        const data = {
+            branch,
+            weekStart: weekId,
+            rotationIndex,
+            assignments,
+            pool: pool.map(p => ({ id: p.uniqueId, name: p.codeName })),
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        await db.collection('weeklyAssignments').doc(docId).set(data);
+        console.log('[Haftalık] Atama oluşturuldu:', docId, `(${assignments.length} madde, ${pool.length} personel)`);
+        
+        return data;
+        
+    } catch (e) {
+        console.error('[Haftalık] Atama oluşturma hatası:', e);
+        return null;
+    }
+}
+
+// Bir maddeyi tamamla
+async function completeWeeklyItem(branch, itemId, personnelId) {
+    const weekId = getWeekId();
+    const docId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekId}`;
+    
+    try {
+        const doc = await db.collection('weeklyAssignments').doc(docId).get();
+        if (!doc.exists) {
+            console.error('[Haftalık] Atama bulunamadı:', docId);
+            return false;
+        }
+        
+        const data = doc.data();
+        const assignments = data.assignments || [];
+        const rules = CHECK_RULES.haftalik || {};
+        const cooldownHours = rules.cooldownHours || 48;
+        
+        // İlgili maddeyi bul
+        const assignment = assignments.find(a => a.itemId === itemId && a.personnelId === personnelId);
+        if (!assignment) {
+            console.error('[Haftalık] Atama bulunamadı:', itemId, personnelId);
+            return false;
+        }
+        
+        // Tamamla
+        const now = new Date();
+        assignment.status = 'completed';
+        assignment.completedAt = now.toISOString();
+        assignment.nextActiveAt = new Date(now.getTime() + cooldownHours * 60 * 60 * 1000).toISOString();
+        
+        // Güncelle
+        await db.collection('weeklyAssignments').doc(docId).update({
+            assignments,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        console.log(`[Haftalık] ✅ Madde tamamlandı: ${assignment.itemText?.substring(0, 30)} (${assignment.personnelName})`);
+        
+        // Puan ekle
+        const points = rules.points?.onTime || 1;
+        await addWeeklyPoints(branch, personnelId, assignment.personnelName, itemId, points, 'completed');
+        
+        return true;
+        
+    } catch (e) {
+        console.error('[Haftalık] Tamamlama hatası:', e);
+        return false;
+    }
+}
+
+// Haftalık puan ekle
+async function addWeeklyPoints(branch, personnelId, personnelName, itemId, points, status) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const noteId = `haftalik_${personnelId}_${todayStr}_${itemId}`;
+    
+    try {
+        await db.collection('puantajNotes').doc(noteId).set({
+            personelId: personnelId,
+            personelName: personnelName,
+            branch,
+            date: todayStr,
+            checkType: 'haftalik',
+            itemId,
+            status,
+            points,
+            note: `Haftalık görev ${status === 'completed' ? 'tamamlandı' : 'kaçırıldı'}`,
+            autoGenerated: true,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        console.log(`[Haftalık] Puan eklendi: ${personnelName} ${points > 0 ? '+' : ''}${points}`);
+    } catch (e) {
+        console.error('[Haftalık] Puan ekleme hatası:', e);
+    }
+}
+
+// Cooldown kontrolü - aktif maddeler için geri sayım
+function getItemCooldownStatus(assignment) {
+    if (!assignment) return { status: 'unknown', remainingMs: 0 };
+    
+    const now = new Date();
+    
+    if (assignment.status === 'pending') {
+        return { status: 'active', remainingMs: 0, message: 'Yapılmayı bekliyor' };
+    }
+    
+    if (assignment.status === 'completed' && assignment.nextActiveAt) {
+        const nextActive = new Date(assignment.nextActiveAt);
+        const remainingMs = nextActive.getTime() - now.getTime();
+        
+        if (remainingMs > 0) {
+            // Cooldown devam ediyor
+            const hours = Math.floor(remainingMs / (1000 * 60 * 60));
+            const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+            return {
+                status: 'cooldown',
+                remainingMs,
+                message: `${hours}s ${minutes}dk sonra aktif`,
+                nextActiveAt: assignment.nextActiveAt
+            };
+        } else {
+            // Cooldown bitti, tekrar aktif
+            return { status: 'active', remainingMs: 0, message: 'Tekrar yapılabilir' };
+        }
+    }
+    
+    if (assignment.status === 'missed') {
+        return { status: 'missed', remainingMs: 0, message: 'Kaçırıldı' };
+    }
+    
+    return { status: 'unknown', remainingMs: 0 };
+}
+
+// Personelin haftalık görevlerini al
+async function getPersonnelWeeklyTasks(branch, personnelId) {
+    const assignments = await getOrCreateWeeklyAssignments(branch);
+    if (!assignments) return [];
+    
+    return (assignments.assignments || [])
+        .filter(a => a.personnelId === personnelId)
+        .map(a => ({
+            ...a,
+            cooldownStatus: getItemCooldownStatus(a)
+        }));
+}
+
+// Dashboard için haftalık özet
+async function getWeeklyDashboardSummary(branch, personnelId) {
+    const tasks = await getPersonnelWeeklyTasks(branch, personnelId);
+    
+    const total = tasks.length;
+    const active = tasks.filter(t => t.cooldownStatus.status === 'active').length;
+    const cooldown = tasks.filter(t => t.cooldownStatus.status === 'cooldown').length;
+    const completed = tasks.filter(t => t.status === 'completed').length;
+    
+    // En yakın aktif olacak maddenin geri sayımı
+    let nearestCooldown = null;
+    tasks.filter(t => t.cooldownStatus.status === 'cooldown')
+        .forEach(t => {
+            if (!nearestCooldown || t.cooldownStatus.remainingMs < nearestCooldown.remainingMs) {
+                nearestCooldown = t.cooldownStatus;
+            }
+        });
+    
+    return {
+        total,
+        active,
+        cooldown,
+        completed,
+        nearestCooldown,
+        tasks
+    };
+}
     </script>
 </body>
 </html>
