@@ -16410,7 +16410,7 @@ async function loadTodayChecks() {
             const haftalikLateWindow = haftalikRules.lateWindow || 30;
             
             // Personel ID'sini belirle
-            let personnelId = currentUser?.uniqueId || currentUser?.id;
+            let personnelId = currentUser?.personelId || currentUser?.uniqueId || currentUser?.id;
             const isManager = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
             
             // Haftalık özet bilgisi al
@@ -25101,7 +25101,7 @@ async function createWeeklyAssignments(branch, weekId) {
             assignments.push({
                 itemId: item.id || `item_${idx}`,
                 itemText: item.text || '',
-                personnelId: assignee.uniqueId,
+                personnelId: assignee.id, // doc.id kullan - currentUser.personelId ile eşleşir
                 personnelName: assignee.codeName,
                 personnelFullName: assignee.name,
                 assignedAt: new Date().toISOString(),
