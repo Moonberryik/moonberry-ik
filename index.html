@@ -16402,21 +16402,73 @@ async function loadTodayChecks() {
             if (mudurCompleted) completedChecks++;
         }
         
-        // 7. Haftalık Görevler (her zaman göster)
-        const dayOfWeek = today.getDay();
-        const isPazartesi = dayOfWeek === 1;
+        // 7. Haftalık Görevler (Round-Robin - Personel Bazlı)
         {
-            const haftalikSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_haftalik_${todayStr}`;
-            let haftalikCompleted = false;
-            try {
-                const doc = await db.collection('checklistSubmissions').doc(haftalikSubmissionId).get();
-                haftalikCompleted = doc.exists;
-            } catch (e) {}
-            
             const haftalikRules = CHECK_RULES.haftalik || DEFAULT_CHECK_RULES.haftalik || {};
             const haftalikActiveFrom = haftalikRules.activeFrom || '09:00';
             const haftalikDeadline = haftalikRules.deadline || '23:00';
             const haftalikLateWindow = haftalikRules.lateWindow || 30;
+            
+            // Personel ID'sini belirle
+            let personnelId = currentUser?.uniqueId || currentUser?.id;
+            const isManager = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
+            
+            // Haftalık özet bilgisi al
+            let weeklySummary = null;
+            let subLabel = 'Bu hafta';
+            let personnelTags = [];
+            let isActive = false;
+            let remainingText = '';
+            
+            try {
+                if (personnelId && !isManager) {
+                    // Normal personel - kendi görevlerini gör
+                    weeklySummary = await getWeeklyDashboardSummary(branch, personnelId);
+                    
+                    if (weeklySummary && weeklySummary.total > 0) {
+                        const activeCount = weeklySummary.active;
+                        const cooldownCount = weeklySummary.cooldown;
+                        const completedCount = weeklySummary.tasks.filter(t => t.status === 'completed').length;
+                        
+                        if (activeCount > 0) {
+                            subLabel = `${activeCount} görev bekliyor`;
+                            isActive = true;
+                        } else if (cooldownCount > 0 && weeklySummary.nearestCooldown) {
+                            subLabel = weeklySummary.nearestCooldown.message;
+                            remainingText = '';
+                        } else {
+                            subLabel = `${completedCount}/${weeklySummary.total} tamamlandı`;
+                        }
+                    }
+                } else {
+                    // Yönetici - tüm atamaları özet olarak gör
+                    const assignments = await getOrCreateWeeklyAssignments(branch);
+                    if (assignments) {
+                        const allAssignments = assignments.assignments || [];
+                        const pendingCount = allAssignments.filter(a => a.status === 'pending').length;
+                        const completedCount = allAssignments.filter(a => a.status === 'completed').length;
+                        
+                        subLabel = `${completedCount}/${allAssignments.length} tamamlandı`;
+                        
+                        // Atanan personelleri göster
+                        const uniquePersonnel = [...new Set(allAssignments.map(a => a.personnelName))];
+                        personnelTags = uniquePersonnel.slice(0, 4);
+                        
+                        isActive = pendingCount > 0;
+                    }
+                }
+            } catch (e) {
+                console.warn('[Haftalık] Dashboard özet alınamadı:', e.message);
+            }
+            
+            // Zaman penceresi kontrolü
+            const [activeH, activeM] = haftalikActiveFrom.split(':').map(Number);
+            const [deadlineH, deadlineM] = haftalikDeadline.split(':').map(Number);
+            const activeFromMinutes = activeH * 60 + activeM;
+            const deadlineMinutes = deadlineH * 60 + deadlineM;
+            const nowMinutes = currentHour * 60 + currentMinutes;
+            
+            const isInTimeWindow = nowMinutes >= activeFromMinutes && nowMinutes <= deadlineMinutes + haftalikLateWindow;
             
             branchChecks.push({
                 id: 'haftalik',
@@ -16425,18 +16477,19 @@ async function loadTodayChecks() {
                 activeFrom: haftalikActiveFrom,
                 deadline: haftalikDeadline,
                 lateWindow: haftalikLateWindow,
-                subLabel: isPazartesi ? 'Bugün atanır' : 'Bu hafta',
-                isCompleted: haftalikCompleted,
-                isActive: isPazartesi && !haftalikCompleted,
+                subLabel: subLabel,
+                isCompleted: weeklySummary?.active === 0 && weeklySummary?.cooldown === 0 && weeklySummary?.total > 0,
+                isActive: isActive && isInTimeWindow,
                 isMissed: false,
-                remainingText: '',
-                personnel: [],
-                points: haftalikRules.points || { onTime: 0, late: 0, missed: -1 },
-                priority: haftalikCompleted ? 91 : (isPazartesi ? 30 : 85),
-                onClick: `goToChecklist('${branch}', 'haftalik', null)`
+                remainingText: remainingText,
+                personnel: personnelTags,
+                points: haftalikRules.points || { onTime: 1, late: 0, missed: -2 },
+                priority: isActive ? 25 : 85,
+                onClick: `goToChecklist('${branch}', 'haftalik', null)`,
+                weeklySummary: weeklySummary // Ekstra bilgi için
             });
             totalChecks++;
-            if (haftalikCompleted) completedChecks++;
+            if (weeklySummary?.active === 0 && weeklySummary?.cooldown === 0) completedChecks++;
         }
         
         // Check'leri akıllı sırala:
