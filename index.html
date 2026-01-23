@@ -15945,7 +15945,8 @@ async function loadTodayChecks() {
             const isUrgent = check.isActive && !check.isCompleted && hasTimeLeft && check.remainingMinutes <= 15;
             const isWarning = check.isActive && !check.isCompleted && hasTimeLeft && check.remainingMinutes <= 30 && check.remainingMinutes > 15;
             const isMissedRecent = check.isMissed && !check.isCompleted && check.canStillFill;
-            const isDisabled = check.isMissed && !check.isCompleted && !check.canStillFill;
+            const isWaiting = !check.isCompleted && !check.isMissed && !check.isActive;
+            const isDisabled = (check.isMissed && !check.isCompleted && !check.canStillFill) || isWaiting;
             
             // Kart sınıfları - birden fazla class olabilir
             let cardClasses = [];
@@ -15961,6 +15962,7 @@ async function loadTodayChecks() {
             } else {
                 // Henüz aktif olmayan, bekleyen kartlar
                 cardClasses.push('waiting');
+                cardClasses.push('disabled');
             }
             if (isExpired && !check.isMissed) cardClasses.push('expired');
             if (isMissedRecent) cardClasses = ['missed-recent']; // Override
