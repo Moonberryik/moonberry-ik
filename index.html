@@ -20915,6 +20915,28 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
         });
     }
     
+    // Haftalık için sıralama: Kişinin maddeleri en üstte
+    if (isHaftalik && weeklyAssignments?.rawAssignments && !isManager) {
+        const currentPersonnelId = currentUser?.personelId || currentUser?.uniqueId || currentUser?.id;
+        
+        filteredItems = [...filteredItems].sort((a, b) => {
+            const aAssignment = weeklyAssignments.rawAssignments.find(x => x.itemId === a.id);
+            const bAssignment = weeklyAssignments.rawAssignments.find(x => x.itemId === b.id);
+            
+            const aIsMyTask = aAssignment?.personnelId === currentPersonnelId;
+            const bIsMyTask = bAssignment?.personnelId === currentPersonnelId;
+            
+            // Kişinin maddeleri en üstte
+            if (aIsMyTask && !bIsMyTask) return -1;
+            if (!aIsMyTask && bIsMyTask) return 1;
+            
+            // Aynı kategorideyse orijinal sırayı koru
+            return 0;
+        });
+        
+        console.log('[Haftalık] Maddeler sıralandı - kişinin maddeleri üstte');
+    }
+    
     // Zamanlama sıfırla (yeni checklist)
     if (!isSubmitted) {
         checklistStartTime = null;
@@ -21226,9 +21248,23 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
         // Görev ataması kontrolü (haftalık veya günlük)
         let assignedPersonel = '';
         let isMyTask = true; // Varsayılan: herkese açık
+        let cooldownStatus = null; // Haftalık için cooldown durumu
         
-        if (isHaftalik && weeklyAssignments?.assignments) {
-            // Haftalık görevler
+        if (isHaftalik && weeklyAssignments?.rawAssignments) {
+            // Haftalık görevler - yeni sistem (personnelId ile eşleştir)
+            const assignment = weeklyAssignments.rawAssignments.find(a => a.itemId === item.id);
+            assignedPersonel = assignment?.personnelName || weeklyAssignments.assignments?.[item.id] || '';
+            
+            if (assignment && !isManager) {
+                // Personel doc ID ile eşleştir
+                const currentPersonnelId = currentUser?.personelId || currentUser?.uniqueId || currentUser?.id;
+                isMyTask = assignment.personnelId === currentPersonnelId;
+                
+                // Cooldown durumu
+                cooldownStatus = getItemCooldownStatus(assignment);
+            }
+        } else if (isHaftalik && weeklyAssignments?.assignments) {
+            // Eski format uyumluluğu
             assignedPersonel = weeklyAssignments.assignments[item.id] || '';
             if (assignedPersonel && !isManager) {
                 const currentUserDisplayName = getPersonelDisplayName(currentUser) || currentUser?.name || '';
@@ -21275,12 +21311,40 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
             }
         }
         
+        // Cooldown badge (haftalık için)
+        let cooldownBadgeHtml = '';
+        if (isHaftalik && cooldownStatus) {
+            if (cooldownStatus.status === 'completed' || cooldownStatus.status === 'cooldown') {
+                // Tamamlanmış veya cooldown'da
+                cooldownBadgeHtml = `
+                    <span style="font-size:.75rem;padding:4px 10px;border-radius:5px;background:rgba(39,174,96,0.15);color:#27ae60;font-weight:600;display:inline-flex;align-items:center;gap:4px">
+                        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        ${cooldownStatus.message}
+                    </span>
+                `;
+            } else if (cooldownStatus.status === 'active' && cooldownStatus.message === 'Tekrar yapılabilir') {
+                // Cooldown bitti, tekrar aktif
+                cooldownBadgeHtml = `
+                    <span style="font-size:.75rem;padding:4px 10px;border-radius:5px;background:rgba(243,156,18,0.15);color:#f39c12;font-weight:600;display:inline-flex;align-items:center;gap:4px">
+                        🔄 Tekrar yapılabilir
+                    </span>
+                `;
+            }
+        }
+        
         // Görev atama badge (haftalık veya günlük paylaşım)
         let assignedBadgeHtml = '';
         if (assignedPersonel) {
             // Marka renkli dolgulu badge - okunabilir
-            const badgeBg = isMyTask ? '#008c95' : '#6b7280';
-            const badgeColor = '#fff';
+            let badgeBg = isMyTask ? '#008c95' : '#6b7280';
+            let badgeColor = '#fff';
+            
+            // Haftalık için cooldown durumuna göre badge rengi
+            if (isHaftalik && cooldownStatus?.status === 'cooldown') {
+                badgeBg = '#9ca3af'; // Gri - cooldown'da
+            } else if (isHaftalik && cooldownStatus?.status === 'completed') {
+                badgeBg = '#27ae60'; // Yeşil - tamamlanmış
+            }
             
             // Atama değiştirme butonu için doğru fonksiyon
             let editOnClick = '';
@@ -21299,6 +21363,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                     ${assignedPersonel}
                     ${editOnClick ? `<span onclick="${editOnClick}" style="cursor:pointer;opacity:.7;margin-left:4px" title="Değiştir">✏️</span>` : ''}
                 </span>
+                ${cooldownBadgeHtml}
             `;
         }
         
@@ -21361,17 +21426,31 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
             // Normal mod - TAM DOLGU RENGİ
             const canEdit = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
             // Erişim kontrolü - isSubmitted veya atanmamışsa disable
-            // Haftalık görevlerde: isMyTask kontrolü, diğerlerinde: isAssignedToMe kontrolü
+            // Haftalık görevlerde: isMyTask kontrolü + cooldown kontrolü, diğerlerinde: isAssignedToMe kontrolü
             // Haftalık ve temizlik: isMyTask, diğerleri: isAssignedToMe + zaman kontrolü
-            const canInteract = ((isHaftalik || isAylik) ? isMyTask : (isAssignedToMe && isInTimeWindow)) && !isSubmitted;
             
-            // Başkasının görevi ise uyarı mesajı
-            const otherPersonWarning = (!isMyTask && assignedPersonel && (isAylik || isHaftalik) && !isManager && !isSubmitted) 
-                ? `<div style="font-size:.75rem;color:#f59e0b;margin-top:6px;display:flex;align-items:center;gap:4px">
+            // Haftalık için cooldown kontrolü
+            let isCooldownActive = false;
+            if (isHaftalik && cooldownStatus) {
+                isCooldownActive = cooldownStatus.status === 'cooldown';
+            }
+            
+            const canInteract = ((isHaftalik || isAylik) ? (isMyTask && !isCooldownActive) : (isAssignedToMe && isInTimeWindow)) && !isSubmitted;
+            
+            // Başkasının görevi ise veya cooldown'da ise uyarı mesajı
+            let warningMessage = '';
+            if (!isMyTask && assignedPersonel && (isAylik || isHaftalik) && !isManager && !isSubmitted) {
+                warningMessage = `<div style="font-size:.75rem;color:#f59e0b;margin-top:6px;display:flex;align-items:center;gap:4px">
                     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
                     Bu maddeyi <strong style="margin:0 3px">${assignedPersonel}</strong> dolduracak
-                   </div>` 
-                : '';
+                   </div>`;
+            } else if (isCooldownActive && isMyTask && cooldownStatus?.message) {
+                warningMessage = `<div style="font-size:.75rem;color:#27ae60;margin-top:6px;display:flex;align-items:center;gap:4px">
+                    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    ✅ Tamamlandı · ${cooldownStatus.message}
+                   </div>`;
+            }
+            const otherPersonWarning = warningMessage;
             
             html += `
                 <div class="checklist-item" data-item-id="${item.id}" style="display:flex;align-items:flex-start;gap:14px;padding:18px 20px;border-radius:14px;margin-bottom:14px;background:${hasColor ? itemColor : 'var(--bg2)'};box-shadow:0 3px 12px rgba(0,0,0,.1);${!canInteract ? 'opacity:0.7;' : ''}">
@@ -22216,17 +22295,32 @@ async function clearTaskAssignmentsForBranch(branch, weekStart) {
  * 4. rotationIndex'e göre dağıt (her hafta sıra kayar)
  */
 async function getWeeklyTaskAssignments(branch, weekStart) {
-    const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekStart}`;
-    
+    // Yeni round-robin sistemini kullan
     try {
-        // Mevcut atamaları kontrol et
-        const existingDoc = await db.collection('weeklyTaskAssignments').doc(assignmentDocId).get();
-        if (existingDoc.exists) {
-            return existingDoc.data();
-        }
+        const data = await getOrCreateWeeklyAssignments(branch);
+        if (!data) return null;
         
-        // Yoksa otomatik oluştur
-        return await generateWeeklyTaskAssignments(branch, weekStart);
+        // Eski format uyumluluğu için dönüştür
+        // Yeni: { assignments: [{personnelId, personnelName, itemId, ...}] }
+        // Eski: { assignments: {itemId: personnelName} }
+        const oldFormatAssignments = {};
+        const personnelIds = {}; // itemId -> personnelId mapping
+        
+        (data.assignments || []).forEach(a => {
+            oldFormatAssignments[a.itemId] = a.personnelName;
+            personnelIds[a.itemId] = a.personnelId;
+        });
+        
+        return {
+            branch: data.branch,
+            weekStart: data.weekStart,
+            assignments: oldFormatAssignments,
+            personnelIds: personnelIds, // Yeni alan - submit için lazım
+            personnel: data.pool?.map(p => p.name) || [],
+            rotationIndex: data.rotationIndex,
+            rawAssignments: data.assignments, // Tam veri
+            createdAt: data.createdAt
+        };
     } catch (e) {
         console.error('Haftalık görev atamaları alınamadı:', e);
         return null;
@@ -23164,6 +23258,12 @@ async function submitChecklist(branch, type, date, timeSlot) {
     // YÖNETİCİ KONTROLÜ - yöneticiler her şeyi doldurabilir
     const isManager = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
     
+    // HAFTALIK ÖZEL SUBMIT
+    if (type === 'haftalik') {
+        await submitWeeklyChecklist(branch, date, personName, isManager);
+        return;
+    }
+    
     if (!isManager) {
         // Giriş yapan kullanıcının adı
         const currentUserName = currentUser?.name?.toLowerCase() || '';
@@ -23210,7 +23310,8 @@ async function submitChecklist(branch, type, date, timeSlot) {
         const itemId = doneInput?.name?.replace('check_', '');
         
         // Madde metnini DOM'dan al
-        const textDiv = item.querySelector('div[style*="line-height:1.6"]') || 
+        const textDiv = item.querySelector('div[style*="line-through"]') || 
+                        item.querySelector('div[style*="line-height:1.6"]') || 
                         item.querySelector('.checklist-item-text-edit');
         const itemText = textDiv?.textContent?.trim() || textDiv?.value?.trim() || '';
         
@@ -23261,6 +23362,83 @@ async function submitChecklist(branch, type, date, timeSlot) {
     
     // Doğrudan kaydet
     await saveChecklistAndShare(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, items.length, skippedItems);
+}
+
+// HAFTALIK CHECKLIST ÖZEL SUBMIT
+async function submitWeeklyChecklist(branch, date, personName, isManager) {
+    const currentPersonnelId = currentUser?.personelId || currentUser?.uniqueId || currentUser?.id;
+    const weeklyAssignments = window._weeklyTaskAssignments;
+    
+    if (!weeklyAssignments?.rawAssignments) {
+        toast('Haftalık atama bilgisi bulunamadı', 'error');
+        return;
+    }
+    
+    // Sadece kişinin maddelerini bul
+    const myAssignments = isManager 
+        ? weeklyAssignments.rawAssignments 
+        : weeklyAssignments.rawAssignments.filter(a => a.personnelId === currentPersonnelId);
+    
+    if (myAssignments.length === 0) {
+        toast('Size atanmış görev bulunmuyor', 'warning');
+        return;
+    }
+    
+    // DOM'dan işaretlenen maddeleri al
+    const items = document.querySelectorAll('#checklistItems .checklist-item');
+    let completedCount = 0;
+    let skippedCount = 0;
+    const errors = [];
+    
+    for (const item of items) {
+        const doneInput = item.querySelector('input[value="done"]');
+        const notdoneInput = item.querySelector('input[value="notdone"]');
+        const itemId = doneInput?.name?.replace('check_', '');
+        
+        // Bu madde kişiye atanmış mı?
+        const assignment = myAssignments.find(a => a.itemId === itemId);
+        if (!assignment) continue; // Başkasının maddesi, atla
+        
+        // Zaten tamamlanmış mı?
+        if (assignment.status === 'completed') continue;
+        
+        // İşaretlenmiş mi?
+        if (doneInput?.checked) {
+            // Tamamla ve cooldown başlat
+            try {
+                await completeWeeklyItem(branch, itemId, assignment.personnelId);
+                completedCount++;
+                
+                // UI güncelle - maddeyi yeşil yap
+                item.style.opacity = '0.6';
+                item.style.background = 'rgba(39,174,96,0.1)';
+                
+            } catch (e) {
+                console.error('Madde tamamlama hatası:', e);
+                errors.push(assignment.itemText);
+            }
+        } else if (notdoneInput?.checked) {
+            skippedCount++;
+        }
+    }
+    
+    // Sonuç mesajı
+    if (completedCount > 0) {
+        toast(`✅ ${completedCount} görev tamamlandı! Cooldown başladı.`, 'success');
+        
+        // Sayfayı yenile (atamaları güncellemek için)
+        setTimeout(() => {
+            loadChecklist();
+        }, 1500);
+    } else if (skippedCount > 0) {
+        toast(`${skippedCount} görev atlandı`, 'info');
+    } else {
+        toast('Lütfen en az bir görevi işaretleyin', 'warning');
+    }
+    
+    if (errors.length > 0) {
+        console.error('Tamamlanamayan görevler:', errors);
+    }
 }
 
 // Sorumlu olmayan personel uyarısı
