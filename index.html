@@ -16470,6 +16470,9 @@ async function loadTodayChecks() {
             
             const isInTimeWindow = nowMinutes >= activeFromMinutes && nowMinutes <= deadlineMinutes + haftalikLateWindow;
             
+            // Haftalık için canStillFill: aktif görevi varsa doldurabilir
+            const canStillFill = (weeklySummary?.active > 0 || weeklySummary?.cooldown > 0) && isInTimeWindow;
+            
             branchChecks.push({
                 id: 'haftalik',
                 name: getChecklistTypeName(branch, 'haftalik', 'Haftalık Görevler'),
@@ -16481,6 +16484,7 @@ async function loadTodayChecks() {
                 isCompleted: weeklySummary?.active === 0 && weeklySummary?.cooldown === 0 && weeklySummary?.total > 0,
                 isActive: isActive && isInTimeWindow,
                 isMissed: false,
+                canStillFill: canStillFill, // EKLENDİ
                 remainingText: remainingText,
                 personnel: personnelTags,
                 points: haftalikRules.points || { onTime: 1, late: 0, missed: -2 },
