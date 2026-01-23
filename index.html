@@ -23621,14 +23621,49 @@ async function distributeTemizlikItems(branch, date) {
     }
     delete personnel._bolgeMuduru;
     
-    // Temizlik maddelerini al
-    const allItems = getDefaultChecklistItems(branch, 'aylik');
+    // Temizlik maddelerini Firebase'den al
+    let allItems = [];
+    const docId = sanitize(branch) + '_aylik';
+    try {
+        const checklistDoc = await db.collection('checklists').doc(docId).get();
+        if (checklistDoc.exists && checklistDoc.data().items?.length > 0) {
+            allItems = checklistDoc.data().items;
+            console.log('[Temizlik] Firebase\'den yüklendi:', docId, allItems.length, 'madde');
+        } else {
+            console.warn('[Temizlik] Firebase\'de madde bulunamadı:', docId);
+            allItems = getDefaultChecklistItems(branch, 'aylik'); // fallback
+        }
+    } catch (e) {
+        console.error('[Temizlik] Firebase hatası:', e);
+        allItems = getDefaultChecklistItems(branch, 'aylik'); // fallback
+    }
+    
+    // responsible alanını shift'e çevir (Firebase'deki format: AÇILIŞÇI, ARACI, KAPANIŞÇI, HER SHIFT)
+    const responsibleToShift = {
+        'AÇILIŞÇI': 'acilis',
+        'ACILISCI': 'acilis',
+        'ARACI': 'araci',
+        'KAPANIŞÇI': 'kapanis',
+        'KAPANISCI': 'kapanis',
+        'HER SHIFT': 'hershift'
+    };
+    
+    allItems = allItems.map(item => {
+        if (!item.shift && item.responsible) {
+            const shiftType = responsibleToShift[item.responsible.toUpperCase()] || 'hershift';
+            return { ...item, shift: shiftType };
+        }
+        return item;
+    });
+    
+    // "HER SHIFT" maddelerini tüm kategorilere ekle
+    const herShiftItems = allItems.filter(i => i.shift === 'hershift');
     
     // Maddeleri shift kategorisine göre grupla
     const itemsByShift = {
-        acilis: allItems.filter(i => i.shift === 'acilis'),
-        araci: allItems.filter(i => i.shift === 'araci'),
-        kapanis: allItems.filter(i => i.shift === 'kapanis')
+        acilis: [...allItems.filter(i => i.shift === 'acilis'), ...herShiftItems.map(i => ({...i, shift: 'acilis'}))],
+        araci: [...allItems.filter(i => i.shift === 'araci'), ...herShiftItems.map(i => ({...i, shift: 'araci'}))],
+        kapanis: [...allItems.filter(i => i.shift === 'kapanis'), ...herShiftItems.map(i => ({...i, shift: 'kapanis'}))]
     };
     
     // Aracı yoksa maddelerini açılış ve kapanışa dağıt
