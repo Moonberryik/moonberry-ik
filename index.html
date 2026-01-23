@@ -15875,20 +15875,34 @@ async function loadTodayChecks() {
         const gunlukRules = CHECK_RULES.gunluk || DEFAULT_CHECK_RULES.gunluk || {};
         const gunlukLateWindow = gunlukRules.lateWindow || 30; // dakika
         
-        // TimeSlots'u CHECK_RULES'tan al (object array olabilir, string array'e çevir)
-        let gunlukTimes = ['14:00', '18:00', '22:00']; // default
+        // TimeSlots'u CHECK_RULES'tan al - {start, end} formatını destekle
+        let gunlukSlots = []; // [{start: "14:00", end: "16:00"}, ...]
         if (gunlukRules.timeSlots && Array.isArray(gunlukRules.timeSlots)) {
-            gunlukTimes = gunlukRules.timeSlots.map(slot => {
-                if (typeof slot === 'string') return slot;
-                if (slot && slot.start) return slot.start; // {start, end} formatı
-                if (slot && slot.time) return slot.time;
+            gunlukSlots = gunlukRules.timeSlots.map(slot => {
+                if (typeof slot === 'string') {
+                    // Eski format: sadece saat string'i
+                    return { start: slot, end: slot };
+                }
+                if (slot && slot.start) {
+                    // Yeni format: {start, end}
+                    return { start: slot.start, end: slot.end || slot.start };
+                }
                 return null;
             }).filter(Boolean);
-            if (gunlukTimes.length === 0) gunlukTimes = ['14:00', '18:00', '22:00'];
+        }
+        if (gunlukSlots.length === 0) {
+            gunlukSlots = [
+                { start: '14:00', end: '14:00' },
+                { start: '18:00', end: '18:00' },
+                { start: '22:00', end: '22:00' }
+            ];
         }
         
-        let activeGunlukTime = null;
-        let nextGunlukTime = gunlukTimes[0]; // Default ilk slot
+        // Eski format için uyumluluk - string array
+        const gunlukTimes = gunlukSlots.map(s => s.start);
+        
+        let activeGunlukSlot = null;
+        let nextGunlukSlot = gunlukSlots[0]; // Default ilk slot
         let gunlukRemainingMinutes = 0;
         let isGunlukActive = false;
         let isGunlukLate = false;
@@ -15899,9 +15913,9 @@ async function loadTodayChecks() {
         const nowMinutesTotal = currentHour * 60 + currentMinutes;
         
         if (isLateNight) {
-            // Gece saatlerinde son slot'u (genelde 22:00) kontrol et
-            const lastSlot = gunlukTimes[gunlukTimes.length - 1];
-            const [lastH, lastM] = lastSlot.split(':').map(Number);
+            // Gece saatlerinde son slot'u kontrol et
+            const lastSlot = gunlukSlots[gunlukSlots.length - 1];
+            const [lastH, lastM] = lastSlot.end.split(':').map(Number);
             const lastSlotMinutes = lastH * 60 + lastM;
             const lastDeadlineMinutes = lastSlotMinutes + gunlukLateWindow;
             
@@ -15911,59 +15925,63 @@ async function loadTodayChecks() {
             const minutesSinceDeadline = minutesBeforeMidnight + minutesPastMidnight;
             
             if (minutesSinceDeadline <= 0) {
-                activeGunlukTime = lastSlot;
+                activeGunlukSlot = lastSlot;
                 isGunlukActive = true;
                 gunlukRemainingMinutes = -minutesSinceDeadline;
             } else if (minutesSinceDeadline <= gunlukLateWindow) {
-                activeGunlukTime = lastSlot;
+                activeGunlukSlot = lastSlot;
                 isGunlukActive = true;
                 isGunlukLate = true;
                 gunlukRemainingMinutes = gunlukLateWindow - minutesSinceDeadline;
             } else {
-                activeGunlukTime = lastSlot;
+                activeGunlukSlot = lastSlot;
                 isGunlukMissed = true;
                 isGunlukActive = false;
                 gunlukRemainingMinutes = 0;
             }
         } else {
-            for (const timeStr of gunlukTimes) {
-                const [h, m] = timeStr.split(':').map(Number);
-                const slotMinutes = h * 60 + m;
-                const deadlineMinutes = slotMinutes + gunlukLateWindow;
+            for (const slot of gunlukSlots) {
+                const [startH, startM] = slot.start.split(':').map(Number);
+                const [endH, endM] = slot.end.split(':').map(Number);
+                const slotStartMinutes = startH * 60 + startM;
+                const slotEndMinutes = endH * 60 + endM;
+                const deadlineMinutes = slotEndMinutes + gunlukLateWindow;
                 const nowMinutes = currentHour * 60 + currentMinutes;
                 
-                // Slot başlangıcından 30dk önce - deadline'a kadar aktif
-                const windowStart = slotMinutes - 30;
+                // Slot başlangıcından deadline'a kadar aktif pencere
+                const windowStart = slotStartMinutes;
                 
-                if (nowMinutes >= windowStart && nowMinutes <= slotMinutes) {
-                    // Slot öncesi - aktif, vaktinde
-                    activeGunlukTime = timeStr;
-                    gunlukRemainingMinutes = slotMinutes - nowMinutes + gunlukLateWindow;
+                if (nowMinutes >= windowStart && nowMinutes <= slotEndMinutes) {
+                    // Slot içinde - aktif, vaktinde
+                    activeGunlukSlot = slot;
+                    gunlukRemainingMinutes = slotEndMinutes - nowMinutes + gunlukLateWindow;
                     isGunlukActive = true;
                     break;
-                } else if (nowMinutes > slotMinutes && nowMinutes <= deadlineMinutes) {
+                } else if (nowMinutes > slotEndMinutes && nowMinutes <= deadlineMinutes) {
                     // Late window içinde
-                    activeGunlukTime = timeStr;
+                    activeGunlukSlot = slot;
                     gunlukRemainingMinutes = deadlineMinutes - nowMinutes;
                     isGunlukActive = true;
                     isGunlukLate = true;
                     break;
-                } else if (nowMinutes > deadlineMinutes && nowMinutes < slotMinutes + 120) {
+                } else if (nowMinutes > deadlineMinutes && nowMinutes < slotStartMinutes + 180) {
                     // Slot geçti ama çok uzak değil - missed
-                    activeGunlukTime = timeStr;
+                    activeGunlukSlot = slot;
                     isGunlukMissed = true;
                     break;
                 }
                 
                 // Gelecek en yakın slot
-                if (nowMinutes < windowStart && !activeGunlukTime) {
-                    nextGunlukTime = timeStr;
+                if (nowMinutes < windowStart && !activeGunlukSlot) {
+                    nextGunlukSlot = slot;
                 }
             }
         }
         
         // Aktif veya bir sonraki slot'u kullan
-        const displayGunlukTime = activeGunlukTime || nextGunlukTime;
+        const displayGunlukSlot = activeGunlukSlot || nextGunlukSlot;
+        const displayGunlukTime = displayGunlukSlot?.start || '14:00';
+        const displayGunlukEnd = displayGunlukSlot?.end || displayGunlukTime;
         
         {
             const gunlukSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_guncel_${todayStr}_${displayGunlukTime.replace(':', '')}`;
@@ -16046,8 +16064,8 @@ async function loadTodayChecks() {
                 id: 'gunluk',
                 name: getChecklistTypeName(branch, 'gunluk', 'Günlük Genel Check'),
                 icon: 'clipboard',
-                activeFrom: activeGunlukTime || displayGunlukTime,
-                deadline: displayGunlukTime,
+                activeFrom: displayGunlukTime,
+                deadline: displayGunlukEnd,
                 lateWindow: gunlukLateWindow,
                 subLabel: gunlukSubLabel + (isGunlukMissed ? ' (Kaçırıldı)' : isGunlukLate ? ' (Geç!)' : isGunlukActive ? '' : ' (Bekliyor)'),
                 isCompleted: gunlukCompleted,
