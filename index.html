@@ -21266,7 +21266,27 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                     </div>
                 </div>
                 
-                <!-- Başlangıç Zamanı Banner -->
+                <!-- Checklist Başlat Butonu -->
+                <div id="checklistStartOverlay" style="margin-bottom:20px;padding:24px;background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(0,140,149,.03));border:2px dashed rgba(0,140,149,.4);border-radius:16px;text-align:center">
+                    <div style="width:60px;height:60px;margin:0 auto 16px;background:linear-gradient(135deg,#008c95,#00b4a0);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,140,149,.3)">
+                        <svg width="28" height="28" fill="none" stroke="#fff" stroke-width="2.5" viewBox="0 0 24 24">
+                            <polygon points="5 3 19 12 5 21 5 3"/>
+                        </svg>
+                    </div>
+                    <div style="font-size:1.1rem;font-weight:700;color:var(--tx);margin-bottom:8px">Checklist'i Başlatmaya Hazır</div>
+                    <div style="font-size:.85rem;color:var(--tx2);margin-bottom:20px">Başlat butonuna tıklayınca süre sayacı başlayacak</div>
+                    <button onclick="startChecklistTimer()" style="padding:14px 48px;background:linear-gradient(135deg,#008c95,#00a89d);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(0,140,149,.4);transition:all .2s">
+                        <span style="display:flex;align-items:center;gap:8px;justify-content:center">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 6v6l4 2"/>
+                            </svg>
+                            Checklist'i Başlat
+                        </span>
+                    </button>
+                </div>
+                
+                <!-- Başlangıç Zamanı Banner (Başlatınca görünür) -->
                 <div id="checklistTimerBanner" style="display:none;margin-bottom:16px;padding:16px 20px;background:linear-gradient(135deg,rgba(0,140,149,.15),rgba(0,140,149,.05));border:1px solid rgba(0,140,149,.3);border-radius:14px">
                     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
                         <div style="display:flex;align-items:center;gap:10px">
@@ -21286,12 +21306,9 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                 </div>
                 
                 <style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}</style>
-                
-                <div style="margin-bottom:16px;padding:12px;background:rgba(255,134,116,.1);border-radius:10px;font-size:.85rem;color:var(--tx2)">
-                    ⚠️ <strong>Önemli:</strong> Sayaç otomatik başladı. Tüm maddeleri dikkatlice kontrol edin.
-                </div>
             ` : ''}
             
+            <div id="checklistItemsWrapper" style="${!isSubmitted ? 'filter:blur(4px);opacity:0.6;pointer-events:none;transition:all .3s ease' : ''}">
             <div id="checklistItems">
     `;
     
@@ -21583,6 +21600,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
     
     html += `
             </div>
+            </div>
             
             ${!checklistEditMode && !isSubmitted && canFillForm ? `
                 <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
@@ -21618,13 +21636,6 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
     `;
     
     container.innerHTML = html;
-    
-    // Timer'ı başlat (sadece submit edilmemiş checklistler için)
-    if (!isSubmitted) {
-        setTimeout(() => {
-            startChecklistTimer();
-        }, 100);
-    }
 }
 
 // Temizlik ve Bakım - Hepsini/Bugünü Göster toggle
@@ -22969,8 +22980,10 @@ function selectCheckOption(btn, itemId, value) {
 // Checklist Timer Interval
 let checklistTimerInterval = null;
 
-// Checklist timer'ı başlat - sayfa açılınca otomatik başlar
+// Checklist timer'ı başlat - butona basınca çalışır
 function startChecklistTimer() {
+    const overlay = document.getElementById('checklistStartOverlay');
+    const wrapper = document.getElementById('checklistItemsWrapper');
     const banner = document.getElementById('checklistTimerBanner');
     const liveTimeEl = document.getElementById('checklistLiveTime');
     const elapsedEl = document.getElementById('checklistElapsedTime');
@@ -22986,7 +22999,19 @@ function startChecklistTimer() {
     checklistStartTime = now;
     checklistFirstItemTime = now;
     
-    // Banner'ı göster
+    // 1. Overlay'ı gizle
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+    
+    // 2. Blur'u kaldır
+    if (wrapper) {
+        wrapper.style.filter = 'none';
+        wrapper.style.opacity = '1';
+        wrapper.style.pointerEvents = 'auto';
+    }
+    
+    // 3. Banner'ı göster
     banner.style.display = 'block';
     
     // İlk güncelleme
