@@ -4111,6 +4111,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Önce config'i yükle (email mapping için)
                     await loadSystemConfig();
                     
+                    // Admin kontrolü (bu emailler her zaman girebilir)
+                    const isAdmin = user.email === 'admin@moonberrycoffee.com' || user.email === 'tamer@moonberrycoffee.com';
+                    
                     // 1. ÖNCE PERSONEL koleksiyonundan email ile bul
                     let foundInPersonel = false;
                     const personelSnapshot = await db.collection('personel').where('email', '==', user.email).limit(1).get();
@@ -4134,26 +4137,25 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                     
-                    // 2. Personel'de bulunamadıysa users koleksiyonuna bak
-                    if (!foundInPersonel) {
-                        const userDoc = await db.collection('users').doc(user.uid).get();
-                        if (userDoc.exists) {
-                            currentUser = { id: user.uid, email: user.email, ...userDoc.data() };
-                            console.log('✅ Users koleksiyonundan kullanıcı bulundu');
-                        } else {
-                            // 3. Email mapping'den bak
-                            const emailMatch = personnelMapping.find(p => p.email?.toLowerCase() === user.email?.toLowerCase());
-                            const isAdmin = user.email === 'admin@moonberrycoffee.com' || user.email === 'tamer@moonberrycoffee.com';
-                            
-                            currentUser = {
-                                id: user.uid,
-                                email: user.email,
-                                name: emailMatch?.name || (isAdmin ? 'Yönetici' : user.email.split('@')[0]),
-                                role: emailMatch?.role || (isAdmin ? 'yonetici' : 'barista'),
-                                branch: emailMatch?.branch || (isAdmin ? 'all' : '')
-                            };
-                            console.log('✅ Email mapping veya varsayılan kullanıcı:', currentUser.name, currentUser.role);
-                        }
+                    // 2. GÜVENLİK: Personel'de bulunamadı VE admin değilse → LOGOUT
+                    if (!foundInPersonel && !isAdmin) {
+                        console.log('🚫 Personel kaydı bulunamadı, erişim engellendi:', user.email);
+                        await firebase.auth().signOut();
+                        alert('Bu hesap artık aktif değil.');
+                        window.location.replace('login.html');
+                        return;
+                    }
+                    
+                    // 3. Admin ise özel ayar
+                    if (!foundInPersonel && isAdmin) {
+                        currentUser = {
+                            id: user.uid,
+                            email: user.email,
+                            name: 'Yönetici',
+                            role: 'yonetici',
+                            branch: 'all'
+                        };
+                        console.log('✅ Admin kullanıcı:', currentUser.email);
                     }
                     
                     // Kullanıcı adını sidebar'da göster
