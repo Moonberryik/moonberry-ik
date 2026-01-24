@@ -1650,7 +1650,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <button class="admin-tab active" onclick="showAdminTab('genel',this)">Genel</button>
                     <button class="admin-tab" onclick="showAdminTab('tumCheckler',this)">Tüm Checkler</button>
                     <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">Pozisyonlar ve Yetkiler</button>
-                    <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">Oturumlar</button>
+                    <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">Oturumlar & Aktiviteler</button>
                     <button class="admin-tab" onclick="showAdminTab('magazaSaatleri',this)">Mağaza Saatleri</button>
                     <button class="admin-tab" onclick="showAdminTab('checkKurallari',this)">Check & Puantaj Kuralları</button>
                     <button class="admin-tab" onclick="showAdminTab('checklistTurleri',this)">Checklist Türleri</button>
@@ -1659,7 +1659,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <button class="admin-tab" onclick="showAdminTab('ihlaller',this)">İhlaller</button>
                     <button class="admin-tab" onclick="showAdminTab('sablonlar',this)">Sözleşme Şablonları</button>
                     <button class="admin-tab" onclick="showAdminTab('belgeler',this)">Belge Şablonları</button>
-                    <button class="admin-tab" id="tab-aktiviteler" onclick="showAdminTab('aktiviteler',this)">Aktiviteler</button>
+                    <!-- Aktiviteler artık Oturumlar ile birleşti -->
                     <button class="admin-tab" id="tab-yedekler" onclick="showAdminTab('yedekler',this)">Yedekler</button>
                 </div>
                 
@@ -2119,6 +2119,38 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Kullanıcı Aktiviteleri (Oturumlar ile birleştirildi) -->
+                    <div class="admin-card" style="margin-top:16px">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                                Kullanıcı Aktiviteleri
+                            </div>
+                            <button class="btn btn-sm btn-ghost" onclick="loadActivityLogs()" style="display:flex;align-items:center;gap:4px">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                                Yenile
+                            </button>
+                        </div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Kullanıcıların sistem üzerindeki hareketlerini takip edin.</p>
+                        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+                            <select id="activityUserFilter" class="form-select" style="min-width:160px" onchange="loadActivityLogs()">
+                                <option value="">Tüm Kullanıcılar</option>
+                            </select>
+                            <select id="activityTypeFilter" class="form-select" style="min-width:140px" onchange="loadActivityLogs()">
+                                <option value="">Tüm Aktiviteler</option>
+                                <option value="login">Giriş</option>
+                                <option value="logout">Çıkış</option>
+                                <option value="page_view">Sayfa Görüntüleme</option>
+                                <option value="document_create">Belge Oluşturma</option>
+                                <option value="data_edit">Veri Düzenleme</option>
+                            </select>
+                            <input type="date" id="activityDateFilter" class="form-input" style="width:160px" onchange="loadActivityLogs()">
+                        </div>
+                        <div class="admin-list" id="activityLogList" style="max-height:400px;overflow-y:auto">
+                            <p style="color:var(--tx2);text-align:center;padding:20px">Aktiviteler yükleniyor...</p>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Puantaj Kuralları -->
@@ -2449,39 +2481,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                 </div>
 
-                <!-- Aktiviteler (Sadece Yönetici) -->
-                <div class="admin-section" id="admin-aktiviteler">
-                    <div class="admin-card">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
-                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
-                                Kullanıcı Aktiviteleri
-                            </div>
-                            <button class="btn btn-sm btn-ghost" onclick="loadActivityLogs()" style="display:flex;align-items:center;gap:4px">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-                                Yenile
-                            </button>
-                        </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Kullanıcıların sistem üzerindeki hareketlerini takip edin.</p>
-                        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-                            <select id="activityUserFilter" class="form-select" style="min-width:160px" onchange="loadActivityLogs()">
-                                <option value="">Tüm Kullanıcılar</option>
-                            </select>
-                            <select id="activityTypeFilter" class="form-select" style="min-width:140px" onchange="loadActivityLogs()">
-                                <option value="">Tüm Aktiviteler</option>
-                                <option value="login">Giriş</option>
-                                <option value="logout">Çıkış</option>
-                                <option value="page_view">Sayfa Görüntüleme</option>
-                                <option value="document_create">Belge Oluşturma</option>
-                                <option value="data_edit">Veri Düzenleme</option>
-                            </select>
-                            <input type="date" id="activityDateFilter" class="form-input" style="width:160px" onchange="loadActivityLogs()">
-                        </div>
-                        <div class="admin-list" id="activityLogList" style="max-height:500px;overflow-y:auto">
-                            <p style="color:var(--tx2);text-align:center;padding:20px">Aktiviteler yükleniyor...</p>
-                        </div>
-                    </div>
-                </div>
+                <!-- Aktiviteler artık Oturumlar ile birleştirildi - admin-oturumlar içinde -->
                 
                 <!-- G15: Yedekler -->
                 <div class="admin-section" id="admin-yedekler">
@@ -3955,6 +3955,9 @@ function loadState() {
             // Deep merge for nested objects like company
             STATE = {...DEFAULT_STATE, ...parsed};
             STATE.company = {...DEFAULT_STATE.company, ...parsed.company};
+            
+            // Pozisyon migration - eksik role ve icon alanlarını ekle
+            migratePositions();
         } catch(e) {
             STATE = {...DEFAULT_STATE};
         }
@@ -3962,6 +3965,28 @@ function loadState() {
         STATE = {...DEFAULT_STATE};
     }
     saveState();
+}
+
+// Eski pozisyonlara role ve icon ekle
+function migratePositions() {
+    const defaultRoles = {
+        'barista': { role: 'barista', icon: '🧑‍🍳' },
+        'mudur_yardimcisi': { role: 'mudur_yardimcisi', icon: '👔' },
+        'magaza_muduru': { role: 'magaza_muduru', icon: '🏪' },
+        'bolge_muduru': { role: 'bolge_muduru', icon: '🌍' }
+    };
+    
+    STATE.positions = STATE.positions.map(p => {
+        // role yoksa ekle
+        if (!p.role) {
+            p.role = defaultRoles[p.id]?.role || 'barista';
+        }
+        // icon yoksa ekle
+        if (!p.icon) {
+            p.icon = defaultRoles[p.id]?.icon || '👤';
+        }
+        return p;
+    });
 }
 
 function saveState() {
@@ -5840,8 +5865,9 @@ function switchAdminTab(tab, btn) {
         loadSessionSettings();
         loadActiveSessions();
         loadSessionHistory();
+        loadActivityLogs(); // Aktiviteler de oturumlar sekmesinde
     }
-    if (tab === 'aktiviteler') loadActivityLogs();
+    // aktiviteler artık oturumlar ile birleştirildi
     if (tab === 'yedekler') loadBackupsList();
     if (tab === 'magazaSaatleri') renderBranchHoursSettings();
     if (tab === 'checkKurallari') renderCheckRulesSettings();
@@ -6053,7 +6079,7 @@ async function changeMyPassword(docId) {
 function renderAdminLists() {
     // Yönetici-only tab'ları kontrol et
     const adminOnlyTabs = ['tab-kullanicilar', 'tab-oturumlar', 'tab-aktiviteler'];
-    const adminOnlySections = ['admin-kullanicilar', 'admin-oturumlar', 'admin-aktiviteler'];
+    const adminOnlySections = ['admin-kullanicilar', 'admin-oturumlar'];
     
     if (currentUser?.role !== 'yonetici') {
         // Tab butonlarını gizle
@@ -7390,14 +7416,75 @@ function addPosition() {
             </div>
             <div class="form-group full">
                 <label class="form-label">Emoji İkonu</label>
-                <input type="text" id="newPosIcon" class="form-input" placeholder="🧑‍🍳" maxlength="4" style="width:80px">
-                <small style="color:var(--tx2);font-size:.7rem">Yetki kartında gösterilecek emoji</small>
+                <div style="display:flex;align-items:center;gap:12px">
+                    <div id="newPosIconPreview" style="font-size:2rem;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--bg3);border-radius:12px;cursor:pointer" onclick="toggleEmojiPicker('newPosIcon')">👤</div>
+                    <input type="hidden" id="newPosIcon" value="👤">
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="toggleEmojiPicker('newPosIcon')">Emoji Seç</button>
+                </div>
+                <div id="emojiPickerNewPosIcon" class="emoji-picker" style="display:none"></div>
             </div>
         </div>
     `, `
         <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
         <button class="btn btn-primary" onclick="savePosition()">Ekle</button>
     `);
+}
+
+// Emoji Picker - Premium ve Minimalist kategoriler
+const EMOJI_CATEGORIES = {
+    'İş & Meslek': ['👤', '🧑‍🍳', '👔', '🏪', '🌍', '👨‍💼', '👩‍💼', '🧑‍💻', '👨‍🔧', '👩‍🔬', '🧑‍🏫', '👨‍⚕️', '👩‍🍳', '🧑‍🔬', '👷', '🕵️', '💼', '📋', '📊', '📈'],
+    'Yönetim': ['🎯', '⭐', '🏆', '🥇', '👑', '🔑', '🛡️', '⚙️', '🎖️', '🏅', '💎', '✨', '🌟', '💫', '🔒', '🔓'],
+    'İletişim': ['💬', '📱', '📞', '📧', '✉️', '📝', '📄', '🗂️', '📁', '🗃️', '💻', '🖥️', '⌨️', '🖱️'],
+    'Finans': ['💰', '💵', '💳', '🏦', '📊', '💹', '📈', '📉', '🧮', '💲', '🪙', '💸'],
+    'Zaman': ['⏰', '🕐', '📅', '🗓️', '⏱️', '⌛', '⏳', '🔔', '📆'],
+    'Duygular': ['😊', '🙂', '😎', '🤝', '👍', '✅', '❤️', '💪', '🎉', '🚀', '⚡', '🔥']
+};
+
+function toggleEmojiPicker(inputId) {
+    const picker = document.getElementById('emojiPicker' + inputId.charAt(0).toUpperCase() + inputId.slice(1));
+    if (!picker) return;
+    
+    if (picker.style.display === 'none') {
+        renderEmojiPicker(picker, inputId);
+        picker.style.display = 'block';
+    } else {
+        picker.style.display = 'none';
+    }
+}
+
+function renderEmojiPicker(container, inputId) {
+    let html = '<div style="background:var(--bg2);border:1px solid var(--cardBorder);border-radius:12px;padding:16px;margin-top:12px;max-height:300px;overflow-y:auto">';
+    
+    for (const [category, emojis] of Object.entries(EMOJI_CATEGORIES)) {
+        html += `<div style="margin-bottom:12px">
+            <div style="font-size:.75rem;color:var(--tx2);margin-bottom:8px;font-weight:600">${category}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px">
+                ${emojis.map(e => `
+                    <button type="button" onclick="selectEmoji('${inputId}', '${e}')" 
+                        style="font-size:1.5rem;width:40px;height:40px;border:none;background:var(--bg3);border-radius:8px;cursor:pointer;transition:all .15s"
+                        onmouseover="this.style.background='var(--bg4)';this.style.transform='scale(1.1)'"
+                        onmouseout="this.style.background='var(--bg3)';this.style.transform='none'">${e}</button>
+                `).join('')}
+            </div>
+        </div>`;
+    }
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function selectEmoji(inputId, emoji) {
+    // Hidden input'u güncelle
+    const input = document.getElementById(inputId);
+    if (input) input.value = emoji;
+    
+    // Preview'ı güncelle
+    const preview = document.getElementById(inputId + 'Preview');
+    if (preview) preview.textContent = emoji;
+    
+    // Picker'ı kapat
+    const picker = document.getElementById('emojiPicker' + inputId.charAt(0).toUpperCase() + inputId.slice(1));
+    if (picker) picker.style.display = 'none';
 }
 
 function savePosition() {
@@ -7475,7 +7562,12 @@ function editPosition(i) {
             </div>
             <div class="form-group full">
                 <label class="form-label">Emoji İkonu</label>
-                <input type="text" id="editPosIcon" class="form-input" value="${p.icon || '👤'}" maxlength="4" style="width:80px">
+                <div style="display:flex;align-items:center;gap:12px">
+                    <div id="editPosIconPreview" style="font-size:2rem;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--bg3);border-radius:12px;cursor:pointer" onclick="toggleEmojiPicker('editPosIcon')">${p.icon || '👤'}</div>
+                    <input type="hidden" id="editPosIcon" value="${p.icon || '👤'}">
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="toggleEmojiPicker('editPosIcon')">Emoji Seç</button>
+                </div>
+                <div id="emojiPickerEditPosIcon" class="emoji-picker" style="display:none"></div>
             </div>
         </div>
     `, `
