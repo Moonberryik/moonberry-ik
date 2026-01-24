@@ -6453,7 +6453,7 @@ async function saveBranch() {
         
         for (let i = 0; i < testUsers.length; i++) {
             const user = testUsers[i];
-            const email = `${branchShortName}_${user.suffix}@test.moonberry.com.tr`;
+            const email = `${branchShortName}_${user.suffix}@moonberrycoffee.com`;
             
             try {
                 // Firebase Auth'a ekle (secondary app ile)
@@ -6527,7 +6527,12 @@ async function saveBranch() {
         createdPersonelIds.forEach((p, idx) => {
             const odaId = normalizeTurkishChars(p.displayName).replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
             personelOrder.push(odaId);
-            personelNames[odaId] = p.displayName.split(' ').slice(-2).map((n,i) => i === 0 ? n : n.charAt(0) + '.').join(' ');
+            
+            // Kısa isim: Şube adını çıkar, kalan kısmı kullan
+            // "Ataşehir Marina Test Müdür" → "Test Müdür"
+            // "Ataşehir Marina Barista 1" → "Barista 1"
+            const shortName = p.displayName.replace(name, '').trim();
+            personelNames[odaId] = shortName || p.displayName;
             personelFullNames[odaId] = p.displayName;
             
             // Haftalık shift ataması (0=Pazartesi, 6=Pazar)
@@ -6601,27 +6606,37 @@ async function saveBranch() {
             // Shift sayfasına git ve yeni şubeyi seç
             setTimeout(() => {
                 goTo('shift');
-                // Şube seçimini ayarla
-                setTimeout(() => {
+                // Şube seçimini ayarla (sayfa yüklenmesi için bekle)
+                setTimeout(async () => {
                     const shiftBranchSelect = document.getElementById('shiftSube');
                     if (shiftBranchSelect) {
                         shiftBranchSelect.value = name;
                         // Önce shift listesini yükle (hafta dropdown'ı dolsun)
                         if (typeof loadShiftList === 'function') {
-                            loadShiftList();
+                            await loadShiftList();
                         }
-                        // Hafta dropdown'ı yüklendikten sonra shift'i göster
+                        // Hafta dropdown'ı yüklendikten sonra "Bu hafta" seç
                         setTimeout(() => {
                             const weekSelect = document.getElementById('shiftHafta');
                             if (weekSelect && weekSelect.options.length > 0) {
-                                weekSelect.selectedIndex = 0; // En güncel hafta
+                                // "Bu hafta" seçeneğini bul veya ilk seçeneği seç
+                                for (let i = 0; i < weekSelect.options.length; i++) {
+                                    if (weekSelect.options[i].text.includes('Bu hafta')) {
+                                        weekSelect.selectedIndex = i;
+                                        break;
+                                    }
+                                }
+                                // Hiç "Bu hafta" yoksa ilk seçeneği al
+                                if (weekSelect.selectedIndex < 0) {
+                                    weekSelect.selectedIndex = 0;
+                                }
                             }
                             if (typeof loadShiftWeek === 'function') {
                                 loadShiftWeek();
                             }
-                        }, 500);
+                        }, 1000);
                     }
-                }, 500);
+                }, 800);
             }, 1000);
         }, 2000);
         
