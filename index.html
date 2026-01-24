@@ -1648,17 +1648,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
                 <div class="admin-tabs">
                     <button class="admin-tab active" id="tab-genel" onclick="showAdminTab('genel',this)">Genel</button>
-                    <button class="admin-tab" onclick="showAdminTab('tumCheckler',this)">Tüm Checkler</button>
+                    <button class="admin-tab" id="tab-tumCheckler" onclick="showAdminTab('tumCheckler',this)">Tüm Checkler</button>
                     <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">Pozisyon Yetkileri</button>
                     <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">Oturumlar</button>
-                    <button class="admin-tab" onclick="showAdminTab('magazaSaatleri',this)">Mağaza Saatleri</button>
-                    <button class="admin-tab" onclick="showAdminTab('checkKurallari',this)">Check & Puantaj Kuralları</button>
-                    <button class="admin-tab" onclick="showAdminTab('checklistTurleri',this)">Checklist Türleri</button>
-                    <button class="admin-tab" onclick="showAdminTab('subeler',this)">Şubeler</button>
-                    <button class="admin-tab" onclick="showAdminTab('pozisyonlar',this)">Pozisyonlar</button>
-                    <button class="admin-tab" onclick="showAdminTab('ihlaller',this)">İhlaller</button>
-                    <button class="admin-tab" onclick="showAdminTab('sablonlar',this)">Sözleşme Şablonları</button>
-                    <button class="admin-tab" onclick="showAdminTab('belgeler',this)">Belge Şablonları</button>
+                    <button class="admin-tab" id="tab-magazaSaatleri" onclick="showAdminTab('magazaSaatleri',this)">Mağaza Saatleri</button>
+                    <button class="admin-tab" id="tab-checkKurallari" onclick="showAdminTab('checkKurallari',this)">Check & Puantaj Kuralları</button>
+                    <button class="admin-tab" id="tab-checklistTurleri" onclick="showAdminTab('checklistTurleri',this)">Checklist Türleri</button>
+                    <button class="admin-tab" id="tab-subeler" onclick="showAdminTab('subeler',this)">Şubeler</button>
+                    <button class="admin-tab" id="tab-pozisyonlar" onclick="showAdminTab('pozisyonlar',this)">Pozisyonlar</button>
+                    <button class="admin-tab" id="tab-ihlaller" onclick="showAdminTab('ihlaller',this)">İhlaller</button>
+                    <button class="admin-tab" id="tab-sablonlar" onclick="showAdminTab('sablonlar',this)">Sözleşme Şablonları</button>
+                    <button class="admin-tab" id="tab-belgeler" onclick="showAdminTab('belgeler',this)">Belge Şablonları</button>
                     <button class="admin-tab" id="tab-aktiviteler" onclick="showAdminTab('aktiviteler',this)">Aktiviteler</button>
                     <button class="admin-tab" id="tab-yedekler" onclick="showAdminTab('yedekler',this)">Yedekler</button>
                 </div>
@@ -1914,125 +1914,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <div class="admin-card">
                         <div class="admin-card-header">
                             <div class="admin-card-title">🔐 Pozisyon Yetkileri</div>
+                            <button class="btn btn-primary" onclick="saveAllRolePermissions()">💾 Tümünü Kaydet</button>
                         </div>
                         <p style="color:var(--tx2);font-size:.9rem;margin-bottom:24px">
-                            Her pozisyon için hangi sayfaları görebileceğini ve hangi işlemleri yapabileceğini belirleyin.
+                            Tüm pozisyonların yetkilerini tek bir sayfada düzenleyin. Değişiklikleri kaydetmeyi unutmayın.
                         </p>
                         
-                        <!-- Pozisyon Kartları -->
-                        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
-                            <!-- Barista -->
-                            <div class="permission-card" onclick="selectRoleForPermissions('barista')" style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#3498db';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
-                                <div style="font-size:2rem;margin-bottom:8px">🧑‍🍳</div>
-                                <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:4px">Barista</div>
-                                <div style="font-size:.7rem;color:var(--tx2)">Günlük operasyon</div>
-                                <div style="margin-top:8px;padding:4px 8px;background:#3498db22;color:#3498db;border-radius:6px;font-size:.65rem;font-weight:500">Sınırlı</div>
-                            </div>
-                            
-                            <!-- Mağaza Müdür Yardımcısı -->
-                            <div class="permission-card" onclick="selectRoleForPermissions('magaza_mudur_yardimcisi')" style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#ff8674';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
-                                <div style="font-size:2rem;margin-bottom:8px">👔</div>
-                                <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:4px">Müdür Yrd.</div>
-                                <div style="font-size:.7rem;color:var(--tx2)">Yardımcı yönetim</div>
-                                <div style="margin-top:8px;padding:4px 8px;background:#ff867422;color:#ff8674;border-radius:6px;font-size:.65rem;font-weight:500">Orta</div>
-                            </div>
-                            
-                            <!-- Mağaza Müdürü -->
-                            <div class="permission-card" onclick="selectRoleForPermissions('magaza_muduru')" style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#008c95';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
-                                <div style="font-size:2rem;margin-bottom:8px">🏪</div>
-                                <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:4px">Mağaza Müdürü</div>
-                                <div style="font-size:.7rem;color:var(--tx2)">Şube yönetimi</div>
-                                <div style="margin-top:8px;padding:4px 8px;background:#008c9522;color:#008c95;border-radius:6px;font-size:.65rem;font-weight:500">Geniş</div>
-                            </div>
-                            
-                            <!-- Bölge Müdürü -->
-                            <div class="permission-card" onclick="selectRoleForPermissions('bolge_muduru')" style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#9b59b6';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
-                                <div style="font-size:2rem;margin-bottom:8px">🌍</div>
-                                <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:4px">Bölge Müdürü</div>
-                                <div style="font-size:.7rem;color:var(--tx2)">Çoklu şube</div>
-                                <div style="margin-top:8px;padding:4px 8px;background:#9b59b622;color:#9b59b6;border-radius:6px;font-size:.65rem;font-weight:500">Tam</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Seçili Rol İzinleri -->
-                        <div id="selectedRolePermissions" style="display:none;background:var(--bg2);border:1px solid var(--cardBorder);border-radius:16px;padding:24px">
-                            <div style="display:flex;align-items:center;justify-content:between;margin-bottom:20px">
-                                <div style="display:flex;align-items:center;gap:12px">
-                                    <span id="selectedRoleIcon" style="font-size:2rem">🧑‍🍳</span>
-                                    <div>
-                                        <div id="selectedRoleName" style="font-weight:600;color:var(--tx);font-size:1.2rem">Barista</div>
-                                        <div id="selectedRoleDesc" style="font-size:.8rem;color:var(--tx2)">Yetkileri düzenle</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
-                                <!-- Sayfalar -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
-                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem;display:flex;align-items:center;gap:8px">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>
-                                        Sayfalar
-                                    </div>
-                                    <div style="display:flex;flex-direction:column;gap:8px" id="pagePermissions"></div>
-                                </div>
-                                
-                                <!-- Belgeler -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
-                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem;display:flex;align-items:center;gap:8px">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                        Belgeler
-                                    </div>
-                                    <div style="display:flex;flex-direction:column;gap:8px" id="docPermissions"></div>
-                                </div>
-                                
-                                <!-- Formlar -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
-                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem;display:flex;align-items:center;gap:8px">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                                        Formlar
-                                    </div>
-                                    <div style="display:flex;flex-direction:column;gap:8px" id="formPermissions"></div>
-                                </div>
-                                
-                                <!-- Yönetim -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
-                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem;display:flex;align-items:center;gap:8px">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                                        Yönetim
-                                    </div>
-                                    <div style="display:flex;flex-direction:column;gap:8px" id="adminPermissions"></div>
-                                </div>
-                                
-                                <!-- Özel Yetkiler -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
-                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem;display:flex;align-items:center;gap:8px">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                                        Özel Yetkiler
-                                    </div>
-                                    <div style="display:flex;flex-direction:column;gap:8px" id="specialPermissions"></div>
-                                </div>
-                                
-                                <!-- Limitler -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
-                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem;display:flex;align-items:center;gap:8px">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                                        Limitler
-                                    </div>
-                                    <div style="display:flex;flex-direction:column;gap:8px" id="limitsPermissions"></div>
-                                </div>
-                            </div>
-                            
-                            <div style="display:flex;gap:12px;margin-top:20px;justify-content:flex-end">
-                                <button class="btn btn-ghost" onclick="hideRolePermissions()">İptal</button>
-                                <button class="btn btn-primary" onclick="saveAdvancedPermissions()">Yetkileri Kaydet</button>
-                            </div>
-                        </div>
-                        
-                        <!-- Bilgi -->
-                        <div id="permissionsInfo" style="text-align:center;padding:40px;color:var(--tx2)">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:.5;margin-bottom:12px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><circle cx="12" cy="16" r="1"/></svg>
-                            <div style="font-size:1rem;font-weight:500;color:var(--tx);margin-bottom:8px">Bir pozisyon seçin</div>
-                            <div style="font-size:.85rem">Yukarıdaki kartlardan düzenlemek istediğiniz pozisyona tıklayın</div>
+                        <!-- Yetki Tablosu -->
+                        <div id="permissionsTableContainer" style="overflow-x:auto">
+                            <!-- JavaScript ile doldurulacak -->
                         </div>
                     </div>
                 </div>
@@ -4266,22 +4156,24 @@ function populateSubeSelect(selectId) {
     if (!sel) return;
     
     const userBranch = currentUser?.branch;
-    const isAdmin = currentUser?.role === 'yonetici' || currentUser?.role === 'bolge_muduru';
+    const isYonetici = currentUser?.role === 'yonetici';
+    const perms = window.userAdvancedPermissions;
+    const canViewAllBranches = isYonetici || (perms?.special?.view_all_branches === true);
     
     let branches = STATE.branches || [];
     
-    // Mağaza müdürü sadece kendi şubesini görsün
-    if (!isAdmin && userBranch) {
+    // Tüm şubeleri göremiyorsa sadece kendi şubesini göster
+    if (!canViewAllBranches && userBranch) {
         branches = branches.filter(b => b === userBranch);
     }
     
     sel.innerHTML = branches.map(b => `<option value="${b}">${b}</option>`).join('');
     
-    // Mağaza müdürü ise kendi şubesini seç
-    if (!isAdmin && userBranch) {
+    // Kendi şubesini seç (varsa)
+    if (!canViewAllBranches && userBranch) {
         sel.value = userBranch;
-    } else {
-        // Admin/Bölge Müdürü için default: Tuzla Port
+    } else if (branches.length > 0) {
+        // Admin/tüm şubeleri görebilenler için default: ilk şube veya Tuzla
         const tuzlaOption = Array.from(sel.options).find(o => o.value.toLowerCase().includes('tuzla'));
         if (tuzlaOption) {
             sel.value = tuzlaOption.value;
@@ -4562,21 +4454,7 @@ function goTo(page) {
     if (page === 'katalog') renderViolations();
     if (page === 'admin') {
         renderAdminLists();
-        // Genel sekmesi sadece yönetici görebilir
-        const tabGenel = document.getElementById('tab-genel');
-        if (tabGenel) {
-            if (currentUser && currentUser.role === 'yonetici') {
-                tabGenel.style.display = '';
-            } else {
-                tabGenel.style.display = 'none';
-                // Eğer Genel sekmesi aktifse, başka bir sekmeye geç
-                if (tabGenel.classList.contains('active')) {
-                    // İlk görünür sekmeyi bul ve aktif yap
-                    const visibleTab = document.querySelector('.admin-tab:not([style*="display: none"]):not(#tab-genel)');
-                    if (visibleTab) visibleTab.click();
-                }
-            }
-        }
+        applyAdminTabPermissions();
     }
     if (page === 'personel') loadPersonelList();
     if (page === 'puantaj') { 
@@ -5697,6 +5575,55 @@ function checkAdminPin() {
     }
 }
 
+// Admin sekme izinlerini uygula
+function applyAdminTabPermissions() {
+    const isYonetici = currentUser?.role === 'yonetici';
+    const perms = window.userAdvancedPermissions;
+    
+    // Sadece yönetici görebilir sekmeler
+    const yoneticiOnlyTabs = ['genel', 'kullanicilar', 'oturumlar', 'aktiviteler', 'yedekler'];
+    
+    // Rol atanabilir sekmeler (PERMISSION_STRUCTURE.adminTabs'dan)
+    const rolAtanabilirTabs = ['tumCheckler', 'magazaSaatleri', 'checkKurallari', 'checklistTurleri', 'subeler', 'pozisyonlar', 'ihlaller', 'sablonlar', 'belgeler'];
+    
+    let firstVisibleTab = null;
+    let currentActiveHidden = false;
+    
+    // Tüm sekmeleri kontrol et
+    document.querySelectorAll('.admin-tab').forEach(tab => {
+        const tabId = tab.id?.replace('tab-', '');
+        if (!tabId) return;
+        
+        let canView = false;
+        
+        if (isYonetici) {
+            // Yönetici her şeyi görebilir
+            canView = true;
+        } else if (yoneticiOnlyTabs.includes(tabId)) {
+            // Yönetici only sekme - diğerleri göremez
+            canView = false;
+        } else if (rolAtanabilirTabs.includes(tabId)) {
+            // Rol atanabilir sekme - izne bak
+            canView = perms?.adminTabs?.[tabId] === true;
+        }
+        
+        tab.style.display = canView ? '' : 'none';
+        
+        if (canView && !firstVisibleTab) {
+            firstVisibleTab = tab;
+        }
+        
+        if (!canView && tab.classList.contains('active')) {
+            currentActiveHidden = true;
+        }
+    });
+    
+    // Aktif sekme gizlendiyse ilk görünür sekmeye geç
+    if (currentActiveHidden && firstVisibleTab) {
+        firstVisibleTab.click();
+    }
+}
+
 function showAdminTab(tab, btn) {
     // Kaydedilmemiş belge şablonu değişikliği kontrolü
     if (hasUnsavedDocChanges && currentPage === 'admin') {
@@ -5718,6 +5645,7 @@ function switchAdminTab(tab, btn) {
     btn.classList.add('active');
     document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
     document.getElementById('admin-' + tab).classList.add('active');
+    if (tab === 'kullanicilar') renderPermissionsTable();
     if (tab === 'sablonlar') loadTemplate();
     if (tab === 'belgeler') loadDocTemplate('tutanak', 'olay');
     if (tab === 'oturumlar') {
@@ -5743,32 +5671,7 @@ function loadAdminFields() {
 }
 
 function renderAdminLists() {
-    // Yönetici-only tab'ları kontrol et
-    const adminOnlyTabs = ['tab-kullanicilar', 'tab-oturumlar', 'tab-aktiviteler'];
-    const adminOnlySections = ['admin-kullanicilar', 'admin-oturumlar', 'admin-aktiviteler'];
-    
-    if (currentUser?.role !== 'yonetici') {
-        // Tab butonlarını gizle
-        adminOnlyTabs.forEach(tabId => {
-            const tab = document.getElementById(tabId);
-            if (tab) tab.style.display = 'none';
-        });
-        // Bölümleri de gizle (güvenlik)
-        adminOnlySections.forEach(sectionId => {
-            const section = document.getElementById(sectionId);
-            if (section) section.style.display = 'none';
-        });
-    } else {
-        // Yönetici için göster
-        adminOnlyTabs.forEach(tabId => {
-            const tab = document.getElementById(tabId);
-            if (tab) tab.style.display = '';
-        });
-        adminOnlySections.forEach(sectionId => {
-            const section = document.getElementById(sectionId);
-            if (section) section.style.display = '';
-        });
-    }
+    // Sekme izinleri applyAdminTabPermissions() ile yönetiliyor
     
     // Yönetici için özel kartları göster
     const adminPasswordCard = document.getElementById('adminPasswordCard');
@@ -10292,18 +10195,23 @@ const PERMISSION_STRUCTURE = {
         { id: 'avans', label: 'Avans Talebi' },
         { id: 'zimmet', label: 'Zimmet Formu' }
     ],
-    admin: [
-        { id: 'admin_genel', label: 'Genel Ayarlar' },
-        { id: 'admin_kullanicilar', label: 'Pozisyon Yetkileri' },
-        { id: 'admin_puantaj', label: 'Puantaj Kuralları' },
-        { id: 'admin_subeler', label: 'Şube Yönetimi' },
-        { id: 'admin_pozisyonlar', label: 'Pozisyonlar' },
-        { id: 'admin_ihlaller', label: 'İhlal Düzenleme' },
-        { id: 'admin_sablonlar', label: 'Şablonlar' },
-        { id: 'admin_oturumlar', label: 'Oturum Ayarları' }
+    adminTabs: [
+        // Rol atanabilir sekmeler (UI'da gösterilir)
+        { id: 'tumCheckler', label: 'Tüm Checkler' },
+        { id: 'magazaSaatleri', label: 'Mağaza Saatleri' },
+        { id: 'checkKurallari', label: 'Check & Puantaj Kuralları' },
+        { id: 'checklistTurleri', label: 'Checklist Türleri' },
+        { id: 'subeler', label: 'Şubeler' },
+        { id: 'pozisyonlar', label: 'Pozisyonlar' },
+        { id: 'ihlaller', label: 'İhlaller' },
+        { id: 'sablonlar', label: 'Sözleşme Şablonları' },
+        { id: 'belgeler', label: 'Belge Şablonları' }
     ],
+    // Sadece yönetici görebilir - UI'da rol atama yapılmaz
+    adminTabsYoneticiOnly: ['genel', 'kullanicilar', 'oturumlar', 'aktiviteler', 'yedekler'],
     special: [
         { id: 'ayarlar_erisim', label: 'Ayarlar sayfasına erişebilir' },
+        { id: 'view_all_branches', label: 'Tüm şubeleri görebilir' },
         { id: 'print_shift', label: 'Shift planını yazdırabilir' },
         { id: 'create_shift_week', label: 'Yeni shift haftası oluşturabilir' },
         { id: 'view_checklist_history', label: 'Geçmiş checklisti görebilir' },
@@ -10323,37 +10231,247 @@ const DEFAULT_ROLE_PERMISSIONS = {
         pages: { dashboard: { view: true, edit: false }, personel: { view: false, edit: false }, puantaj: { view: true, edit: false }, shift: { view: true, edit: false }, checklist: { view: true, edit: true }, katalog: { view: false, edit: false } },
         documents: { sozlesme: { view: false, edit: false }, tutanak: { view: false, edit: false }, savunma: { view: false, edit: false }, fesih: { view: false, edit: false }, istifa: { view: false, edit: false }, ibraname: { view: false, edit: false } },
         forms: { borc: { view: false, edit: false }, avans: { view: false, edit: false }, zimmet: { view: false, edit: false } },
-        admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: false, admin_sablonlar: false, admin_oturumlar: false },
-        special: { ayarlar_erisim: false, print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false },
+        adminTabs: { tumCheckler: false, magazaSaatleri: false, checkKurallari: false, checklistTurleri: false, subeler: false, pozisyonlar: false, ihlaller: false, sablonlar: false, belgeler: false },
+        special: { ayarlar_erisim: false, view_all_branches: false, print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 1 }
     },
     magaza_mudur_yardimcisi: {
         pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
-        admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false },
-        special: { ayarlar_erisim: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
+        adminTabs: { tumCheckler: false, magazaSaatleri: false, checkKurallari: false, checklistTurleri: false, subeler: false, pozisyonlar: false, ihlaller: true, sablonlar: false, belgeler: false },
+        special: { ayarlar_erisim: true, view_all_branches: false, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 5 }
     },
     magaza_muduru: {
         pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
-        admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false },
-        special: { ayarlar_erisim: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
+        adminTabs: { tumCheckler: true, magazaSaatleri: true, checkKurallari: false, checklistTurleri: false, subeler: false, pozisyonlar: false, ihlaller: true, sablonlar: false, belgeler: false },
+        special: { ayarlar_erisim: true, view_all_branches: false, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 5 }
     },
     bolge_muduru: {
         pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: true }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
-        admin: { admin_genel: true, admin_kullanicilar: false, admin_puantaj: true, admin_subeler: true, admin_pozisyonlar: true, admin_ihlaller: true, admin_sablonlar: true, admin_oturumlar: true },
-        special: { ayarlar_erisim: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true },
+        adminTabs: { tumCheckler: true, magazaSaatleri: true, checkKurallari: true, checklistTurleri: true, subeler: true, pozisyonlar: true, ihlaller: true, sablonlar: true, belgeler: true },
+        special: { ayarlar_erisim: true, view_all_branches: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true },
         limits: { shift_history_weeks: 999 }
     }
 };
 
-// Pozisyon seçimi için yeni fonksiyonlar
+// Rol bilgileri
+const ROLE_INFO = {
+    barista: { icon: '🧑‍🍳', name: 'Barista', color: '#3498db' },
+    magaza_mudur_yardimcisi: { icon: '👔', name: 'Müdür Yrd.', color: '#ff8674' },
+    magaza_muduru: { icon: '🏪', name: 'Mağaza Müd.', color: '#008c95' },
+    bolge_muduru: { icon: '🌍', name: 'Bölge Müd.', color: '#9b59b6' }
+};
+
+// Tüm rollerin izinleri (bellek)
+let allRolePermissions = {};
+
+// Yetki tablosunu oluştur
+async function renderPermissionsTable() {
+    const container = document.getElementById('permissionsTableContainer');
+    if (!container) return;
+    
+    // Tüm rollerin izinlerini yükle
+    await loadAllRolePermissions();
+    
+    const roles = ['barista', 'magaza_mudur_yardimcisi', 'magaza_muduru', 'bolge_muduru'];
+    
+    let html = `
+        <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+            <thead>
+                <tr style="background:var(--bg3)">
+                    <th style="text-align:left;padding:12px 16px;border-bottom:2px solid var(--cardBorder);min-width:200px">İzin</th>
+                    ${roles.map(r => `
+                        <th style="text-align:center;padding:12px 8px;border-bottom:2px solid var(--cardBorder);min-width:100px">
+                            <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                                <span style="font-size:1.2rem">${ROLE_INFO[r].icon}</span>
+                                <span style="font-weight:600;color:${ROLE_INFO[r].color}">${ROLE_INFO[r].name}</span>
+                            </div>
+                        </th>
+                    `).join('')}
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    // SAYFALAR
+    html += renderPermissionSection('📄 SAYFALAR', PERMISSION_STRUCTURE.pages, roles, 'pages', true);
+    
+    // BELGELER
+    html += renderPermissionSection('📑 BELGELER', PERMISSION_STRUCTURE.documents, roles, 'documents', true);
+    
+    // FORMLAR
+    html += renderPermissionSection('📋 FORMLAR', PERMISSION_STRUCTURE.forms, roles, 'forms', true);
+    
+    // ADMIN SEKMELERİ
+    html += renderPermissionSection('⚙️ AYARLAR SEKMELERİ', PERMISSION_STRUCTURE.adminTabs, roles, 'adminTabs', false);
+    
+    // ÖZEL İZİNLER
+    html += renderPermissionSection('🔑 ÖZEL İZİNLER', PERMISSION_STRUCTURE.special, roles, 'special', false);
+    
+    html += `
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// Yetki bölümü oluştur
+function renderPermissionSection(title, items, roles, category, hasViewEdit) {
+    let html = `
+        <tr>
+            <td colspan="${roles.length + 1}" style="padding:16px 16px 8px;font-weight:700;color:var(--tx);background:var(--bg2);border-bottom:1px solid var(--cardBorder)">
+                ${title}
+            </td>
+        </tr>
+    `;
+    
+    items.forEach((item, index) => {
+        const bgColor = index % 2 === 0 ? 'var(--bg)' : 'var(--bg2)';
+        html += `
+            <tr style="background:${bgColor}">
+                <td style="padding:10px 16px;border-bottom:1px solid var(--cardBorder);color:var(--tx)">
+                    ${item.label}
+                </td>
+                ${roles.map(role => {
+                    const perms = allRolePermissions[role]?.[category]?.[item.id];
+                    if (hasViewEdit) {
+                        const viewChecked = perms?.view ? 'checked' : '';
+                        const editChecked = perms?.edit ? 'checked' : '';
+                        return `
+                            <td style="text-align:center;padding:8px;border-bottom:1px solid var(--cardBorder)">
+                                <div style="display:flex;justify-content:center;gap:8px">
+                                    <label style="display:flex;align-items:center;gap:2px;cursor:pointer" title="Görüntüle">
+                                        <input type="checkbox" data-role="${role}" data-cat="${category}" data-id="${item.id}" data-type="view" ${viewChecked} style="width:16px;height:16px;accent-color:#27ae60">
+                                        <span style="font-size:.65rem;color:var(--tx2)">G</span>
+                                    </label>
+                                    <label style="display:flex;align-items:center;gap:2px;cursor:pointer" title="Düzenle">
+                                        <input type="checkbox" data-role="${role}" data-cat="${category}" data-id="${item.id}" data-type="edit" ${editChecked} style="width:16px;height:16px;accent-color:#3498db">
+                                        <span style="font-size:.65rem;color:var(--tx2)">D</span>
+                                    </label>
+                                </div>
+                            </td>
+                        `;
+                    } else {
+                        const checked = perms === true ? 'checked' : '';
+                        return `
+                            <td style="text-align:center;padding:8px;border-bottom:1px solid var(--cardBorder)">
+                                <input type="checkbox" data-role="${role}" data-cat="${category}" data-id="${item.id}" data-type="access" ${checked} style="width:18px;height:18px;accent-color:#ff8674;cursor:pointer">
+                            </td>
+                        `;
+                    }
+                }).join('')}
+            </tr>
+        `;
+    });
+    
+    return html;
+}
+
+// Tüm rollerin izinlerini yükle
+async function loadAllRolePermissions() {
+    const roles = ['barista', 'magaza_mudur_yardimcisi', 'magaza_muduru', 'bolge_muduru'];
+    
+    for (const role of roles) {
+        // Varsayılan izinlerle başla
+        allRolePermissions[role] = JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS[role]));
+        
+        try {
+            const doc = await db.collection('advancedPermissions').doc(role).get();
+            if (doc.exists) {
+                const fbPerms = doc.data();
+                // Firebase izinlerini birleştir
+                allRolePermissions[role] = mergePermissions(allRolePermissions[role], fbPerms);
+            }
+        } catch (error) {
+            console.error(`${role} izin yükleme hatası:`, error);
+        }
+    }
+}
+
+// İzinleri birleştir
+function mergePermissions(defaults, firebase) {
+    const merged = JSON.parse(JSON.stringify(defaults));
+    
+    if (firebase.pages) merged.pages = { ...merged.pages, ...firebase.pages };
+    if (firebase.documents) merged.documents = { ...merged.documents, ...firebase.documents };
+    if (firebase.forms) merged.forms = { ...merged.forms, ...firebase.forms };
+    if (firebase.adminTabs) merged.adminTabs = { ...merged.adminTabs, ...firebase.adminTabs };
+    if (firebase.special) merged.special = { ...merged.special, ...firebase.special };
+    if (firebase.limits) merged.limits = { ...merged.limits, ...firebase.limits };
+    
+    return merged;
+}
+
+// Tüm rollerin izinlerini kaydet
+async function saveAllRolePermissions() {
+    const roles = ['barista', 'magaza_mudur_yardimcisi', 'magaza_muduru', 'bolge_muduru'];
+    const container = document.getElementById('permissionsTableContainer');
+    if (!container) return;
+    
+    // Checkbox'lardan izinleri oku
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    
+    // Önce mevcut yapıları kopyala
+    const newPerms = {};
+    roles.forEach(role => {
+        newPerms[role] = JSON.parse(JSON.stringify(allRolePermissions[role] || DEFAULT_ROLE_PERMISSIONS[role]));
+    });
+    
+    // Checkbox'ları oku
+    checkboxes.forEach(cb => {
+        const role = cb.dataset.role;
+        const cat = cb.dataset.cat;
+        const id = cb.dataset.id;
+        const type = cb.dataset.type;
+        
+        if (!role || !cat || !id) return;
+        
+        if (type === 'view' || type === 'edit') {
+            if (!newPerms[role][cat]) newPerms[role][cat] = {};
+            if (!newPerms[role][cat][id]) newPerms[role][cat][id] = { view: false, edit: false };
+            newPerms[role][cat][id][type] = cb.checked;
+        } else {
+            // access type (adminTabs, special)
+            if (!newPerms[role][cat]) newPerms[role][cat] = {};
+            newPerms[role][cat][id] = cb.checked;
+        }
+    });
+    
+    // Firebase'e kaydet
+    try {
+        const batch = db.batch();
+        
+        for (const role of roles) {
+            const ref = db.collection('advancedPermissions').doc(role);
+            batch.set(ref, newPerms[role]);
+        }
+        
+        await batch.commit();
+        
+        // Bellekteki kopyayı güncelle
+        allRolePermissions = newPerms;
+        
+        toast('Tüm yetkiler kaydedildi', 'success');
+        
+        // Mevcut kullanıcının izinlerini yeniden yükle
+        if (currentUser && currentUser.role !== 'yonetici') {
+            await loadUserAdvancedPermissions();
+        }
+    } catch (error) {
+        console.error('Yetki kaydetme hatası:', error);
+        toast('Kaydetme hatası: ' + error.message, 'error');
+    }
+}
+
+// Pozisyon seçimi için yeni fonksiyonlar (eski uyumluluk için)
 let selectedRoleForPerm = null;
 
 function selectRoleForPermissions(role) {
