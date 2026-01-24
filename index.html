@@ -7374,15 +7374,21 @@ async function executeDeleteBranch(branchName, index) {
         }
         log(`✓ ${personelSnap.size} personel silindi`);
         
-        // 4. Users koleksiyonundan sil (50%)
+        // 4. Users ve Credentials koleksiyonundan sil (50%)
         setProgress(50, 'Kullanıcı kayıtları siliniyor...');
         for (const email of deletedEmails) {
             try {
                 await db.collection('users').doc(email).delete();
                 totalDeleted++;
             } catch (e) {}
+            // Credentials'ı da sil
+            try {
+                const credDocId = email.toLowerCase().replace(/[@.]/g, '_');
+                await db.collection('credentials').doc(credDocId).delete();
+                totalDeleted++;
+            } catch (e) {}
         }
-        log(`✓ ${deletedEmails.length} kullanıcı kaydı silindi`);
+        log(`✓ ${deletedEmails.length} kullanıcı ve credentials kaydı silindi`);
         
         // 5. Shift'leri sil (60%)
         setProgress(60, 'Shift kayıtları siliniyor...');
@@ -8889,7 +8895,27 @@ async function deletePersonel(id) {
     
     confirmModal('Personel Sil', 'Bu personeli silmek istediğinize emin misiniz?', async () => {
         try {
+            // Önce personel verisini al (email için)
+            const personelDoc = await db.collection('personel').doc(id).get();
+            const personelData = personelDoc.exists ? personelDoc.data() : null;
+            const email = personelData?.email;
+            
+            // 1. Personel'i sil
             await db.collection('personel').doc(id).delete();
+            
+            // 2. Credentials'ı sil (varsa)
+            if (email) {
+                await deleteCredential(email);
+                console.log('Credentials silindi:', email);
+            }
+            
+            // 3. Users koleksiyonundan sil (varsa)
+            if (email) {
+                try {
+                    await db.collection('users').doc(email).delete();
+                } catch (e) { /* Users'ta yoksa sorun değil */ }
+            }
+            
             toast('Personel silindi ✓', 'success');
             refreshPersonelCache();
             loadPersonelList();
