@@ -23034,15 +23034,8 @@ function confirmChecklistStart() {
         checklistFirstItemTime = window.pendingChecklistStartTime;
         checklistStartTime = window.pendingChecklistStartTime;
         
-        // Banner'ı göster
-        const banner = document.getElementById('checklistTimerBanner');
-        if (banner) {
-            banner.style.display = 'block';
-            const timeDisplay = document.getElementById('checklistStartTimeDisplay');
-            if (timeDisplay) {
-                timeDisplay.textContent = checklistStartTime.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
-            }
-        }
+        // Banner'ı göster ve timer'ı başlat
+        startChecklistTimer();
         
         delete window.pendingChecklistStartTime;
     }
