@@ -7504,7 +7504,17 @@ async function loadPersonelList() {
     container.innerHTML = '<p style="color:var(--tx2);text-align:center;padding:20px">Yükleniyor...</p>';
     
     try {
-        const snapshot = await db.collection('personel').orderBy('name').get();
+        // Mağaza müdürü için şube filtresi
+        const isFullAdmin = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
+        const userBranch = currentUser?.branch;
+        
+        let query = db.collection('personel').orderBy('name');
+        // Mağaza müdürü sadece kendi şubesinin personelini görebilir
+        if (!isFullAdmin && userBranch && userBranch !== 'all') {
+            query = db.collection('personel').where('branch', '==', userBranch);
+        }
+        
+        const snapshot = await query.get();
         
         if (snapshot.empty) {
             container.innerHTML = '<p style="color:var(--tx2);text-align:center;padding:40px">Henüz personel kaydı yok. "Yeni Personel" butonuna tıklayarak ekleyin.</p>';
@@ -15572,14 +15582,15 @@ async function loadTodayChecks() {
     }
     
     const todayStr = formatDateLocal(today);
-    const isAdmin = ['yonetici', 'bolge_muduru', 'magaza_muduru', 'mudur', 'admin'].includes(currentUser?.role);
+    const isFullAdmin = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
+    const isStoreManager = currentUser?.role === 'magaza_muduru';
     const userName = currentUser?.name || 'Personel';
     const currentHour = now.getHours();
     const currentMinutes = now.getMinutes();
     
-    // Yönetici için tüm şubeler, diğerleri için kendi şubesi
+    // Yönetici/bölge müdürü için tüm şubeler, mağaza müdürü ve diğerleri için kendi şubesi
     let branches = [];
-    if (isAdmin || currentUser?.branch === 'all') {
+    if (isFullAdmin || currentUser?.branch === 'all') {
         branches = STATE.branches || [];
     } else {
         branches = [currentUser?.branch || STATE.branches?.[0] || 'Tuzla TRC'];
@@ -15644,16 +15655,16 @@ async function loadTodayChecks() {
         
         document.getElementById('welcomeDate').textContent = dateStr;
         document.getElementById('welcomeMessage').textContent = `${greeting}, ${userName.split(' ')[0]}! 👋`;
-        document.getElementById('welcomeBranch').innerHTML = `<span>📍</span> <span>${isAdmin ? 'Tüm Şubeler' : primaryBranch}</span>`;
+        document.getElementById('welcomeBranch').innerHTML = `<span>📍</span> <span>${isFullAdmin ? 'Tüm Şubeler' : primaryBranch}</span>`;
         
         // Shift bilgisi
-        let shiftInfo = isAdmin ? 'Yönetici' : '-';
+        let shiftInfo = isFullAdmin ? 'Yönetici' : '-';
         welcomeCard.style.display = 'block';
         document.getElementById('welcomeShift').innerHTML = `<span>⏰</span> <span>${shiftInfo}</span>`;
     }
     
     // Aylık puan kartı (sadece personel için)
-    if (monthlyCard && !isAdmin) {
+    if (monthlyCard && !isFullAdmin) {
         monthlyCard.style.display = 'block';
         loadMonthlyPoints(); // Puan verilerini yükle
     } else if (monthlyCard) {
@@ -15661,7 +15672,7 @@ async function loadTodayChecks() {
     }
     
     // Leaderboard ve KPI Dashboard (sadece yöneticiler için)
-    if (isAdmin) {
+    if (isFullAdmin) {
         loadLeaderboard();
         loadKPIDashboard();
         
@@ -16508,7 +16519,7 @@ async function loadTodayChecks() {
         }
         
         // 6. Müdür Kontrol (sadece müdürler için)
-        if (isAdmin) {
+        if (isFullAdmin || isStoreManager) {
             const mudurSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_mudur_${todayStr}`;
             let mudurCompleted = false;
             try {
@@ -17250,12 +17261,17 @@ async function loadLeaderboard() {
     
     if (!section || !container) return;
     
-    const isAdmin = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
+    const isFullAdmin = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
+    const isStoreManager = currentUser?.role === 'magaza_muduru';
     
-    if (!isAdmin) {
+    // Sadece yöneticiler ve mağaza müdürleri görebilir
+    if (!isFullAdmin && !isStoreManager) {
         section.style.display = 'none';
         return;
     }
+    
+    // Mağaza müdürü için şube filtresi
+    const userBranch = currentUser?.branch;
     
     section.style.display = 'block';
     container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tx3)">Yükleniyor...</div>';
@@ -17270,8 +17286,12 @@ async function loadLeaderboard() {
         const periodKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         const monthName = now.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
         
-        // 1. Aktif personel listesini çek
-        const personelSnapshot = await db.collection('personel').get();
+        // 1. Aktif personel listesini çek (mağaza müdürü için şube filtreli)
+        let personelQuery = db.collection('personel');
+        if (isStoreManager && userBranch && userBranch !== 'all') {
+            personelQuery = personelQuery.where('branch', '==', userBranch);
+        }
+        const personelSnapshot = await personelQuery.get();
         const activePersonel = {};
         const personelByDocId = {};
         
