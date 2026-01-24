@@ -21273,7 +21273,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                             <div style="width:10px;height:10px;background:#27ae60;border-radius:50%;animation:pulse 1.5s infinite"></div>
                             <span style="font-weight:600;color:var(--tx)">Checklist Aktif</span>
                             <span style="font-size:.8rem;color:var(--tx3)">|</span>
-                            <span style="font-size:.85rem;color:var(--tx2)">Başlangıç: <span id="checklistStartTimeDisplay">--:--:--</span></span>
+                            <span style="font-size:.85rem;color:var(--tx2)">🕐 <span id="checklistLiveTime">--:--:--</span></span>
                         </div>
                         <div style="display:flex;align-items:center;gap:8px;background:rgba(0,140,149,.2);padding:8px 16px;border-radius:10px">
                             <svg width="18" height="18" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24">
@@ -21288,7 +21288,7 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                 <style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}</style>
                 
                 <div style="margin-bottom:16px;padding:12px;background:rgba(255,134,116,.1);border-radius:10px;font-size:.85rem;color:var(--tx2)">
-                    ⚠️ <strong>Önemli:</strong> İlk maddeyi işaretlediğinizde süre başlar. Tüm maddeleri dikkatlice kontrol edin.
+                    ⚠️ <strong>Önemli:</strong> Sayaç otomatik başladı. Tüm maddeleri dikkatlice kontrol edin.
                 </div>
             ` : ''}
             
@@ -21618,6 +21618,13 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
     `;
     
     container.innerHTML = html;
+    
+    // Timer'ı başlat (sadece submit edilmemiş checklistler için)
+    if (!isSubmitted) {
+        setTimeout(() => {
+            startChecklistTimer();
+        }, 100);
+    }
 }
 
 // Temizlik ve Bakım - Hepsini/Bugünü Göster toggle
@@ -22962,63 +22969,56 @@ function selectCheckOption(btn, itemId, value) {
 // Checklist Timer Interval
 let checklistTimerInterval = null;
 
-// Checklist'i başlat butonu
+// Checklist timer'ı başlat - sayfa açılınca otomatik başlar
 function startChecklistTimer() {
-    const overlay = document.getElementById('checklistStartOverlay');
     const banner = document.getElementById('checklistTimerBanner');
-    const wrapper = document.getElementById('checklistItemsWrapper');
-    const startTimeEl = document.getElementById('checklistStartTimeDisplay');
+    const liveTimeEl = document.getElementById('checklistLiveTime');
     const elapsedEl = document.getElementById('checklistElapsedTime');
+    
+    // Elementler yoksa çık
+    if (!banner || !liveTimeEl || !elapsedEl) {
+        console.log('[Timer] Elementler bulunamadı, timer başlatılamadı');
+        return;
+    }
     
     // Zamanı kaydet
     const now = new Date();
     checklistStartTime = now;
     checklistFirstItemTime = now;
     
-    // Başlangıç saatini göster
-    if (startTimeEl) {
-        startTimeEl.textContent = now.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
-    }
-    
-    // Overlay'ı gizle
-    if (overlay) {
-        overlay.style.display = 'none';
-    }
-    
     // Banner'ı göster
-    if (banner) {
-        banner.style.display = 'block';
-    }
+    banner.style.display = 'block';
     
-    // Blur'u kaldır
-    if (wrapper) {
-        wrapper.style.filter = 'none';
-        wrapper.style.pointerEvents = 'auto';
-        wrapper.style.opacity = '1';
-    }
+    // İlk güncelleme
+    liveTimeEl.textContent = now.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+    elapsedEl.textContent = '00:00:00';
     
     // Önceki interval'ı temizle
     if (checklistTimerInterval) {
         clearInterval(checklistTimerInterval);
+        checklistTimerInterval = null;
     }
     
-    // Canlı kronometre başlat
+    // Canlı timer başlat - her saniye güncelle
     checklistTimerInterval = setInterval(() => {
-        if (!checklistStartTime) return;
+        const currentTime = new Date();
         
-        const elapsed = Math.floor((new Date() - checklistStartTime) / 1000);
-        const hours = Math.floor(elapsed / 3600);
-        const minutes = Math.floor((elapsed % 3600) / 60);
-        const seconds = elapsed % 60;
+        // 1. Canlı saat güncelle
+        if (liveTimeEl) {
+            liveTimeEl.textContent = currentTime.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+        }
         
-        const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-        
-        if (elapsedEl) {
-            elapsedEl.textContent = timeStr;
+        // 2. Geçen süre güncelle
+        if (elapsedEl && checklistStartTime) {
+            const elapsed = Math.floor((currentTime - checklistStartTime) / 1000);
+            const hours = Math.floor(elapsed / 3600);
+            const minutes = Math.floor((elapsed % 3600) / 60);
+            const seconds = elapsed % 60;
+            elapsedEl.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         }
     }, 1000);
     
-    console.log('[Checklist] Timer başladı:', now.toLocaleTimeString('tr-TR'));
+    console.log('[Timer] Başladı:', now.toLocaleTimeString('tr-TR'));
 }
 
 // Sayfa değişince interval'ı temizle
