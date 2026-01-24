@@ -4313,10 +4313,6 @@ function applyUserPermissions() {
     const navNotlar = document.getElementById('nav-notlar');
     if (navNotlar) navNotlar.style.display = 'none';
     
-    // G15: Yedekler sekmesi sadece yönetici görebilir
-    const tabYedekler = document.getElementById('tab-yedekler');
-    if (tabYedekler) tabYedekler.style.display = 'none';
-    
     // Gelişmiş izin sistemini yükle ve uygula
     loadUserAdvancedPermissions();
 }
@@ -5664,22 +5660,36 @@ function switchAdminTab(tab, btn) {
     btn.classList.add('active');
     document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
     document.getElementById('admin-' + tab).classList.add('active');
-    if (tab === 'kullanicilar') renderPermissionsTable();
-    if (tab === 'sablonlar') loadTemplate();
-    if (tab === 'belgeler') loadDocTemplate('tutanak', 'olay');
+    
+    // Sekme yükleme işlemleri
+    if (tab === 'genel') {
+        loadBackupsList(); // Yedekler Genel içinde
+    }
+    if (tab === 'kullanicilar') {
+        renderPermissionsTable();
+    }
     if (tab === 'oturumlar') {
         loadSessionSettings();
         loadActiveSessions();
         loadSessionHistory();
+        loadActivityLogs(); // Aktiviteler Oturumlar içinde
     }
-    if (tab === 'aktiviteler') loadActivityLogs();
-    if (tab === 'yedekler') loadBackupsList();
-    if (tab === 'magazaSaatleri') renderBranchHoursSettings();
-    if (tab === 'checkKurallari') renderCheckRulesSettings();
-    if (tab === 'checklistTurleri') loadChecklistTypesConfig();
+    if (tab === 'subelerSaatler') {
+        renderBranchHoursSettings(); // Saatler
+        // Şube listesi renderAdminLists() ile render ediliyor
+    }
+    if (tab === 'checkKurallari') {
+        renderCheckRulesSettings();
+    }
+    if (tab === 'checklistTurleri') {
+        loadChecklistTypesConfig();
+    }
     if (tab === 'tumCheckler') {
         populateSubeSelect('allChecksBranchFilter', true);
         loadAllChecksOverview();
+    }
+    if (tab === 'sablonlar') {
+        loadTemplate(); // Sözleşme şablonları varsayılan
     }
 }
 
