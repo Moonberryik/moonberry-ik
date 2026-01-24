@@ -571,8 +571,41 @@ body::before {
         const db = firebase.firestore();
         
         // ==================== GÜVENLİK DEĞİŞKENLERİ ====================
-        const MAX_ATTEMPTS = 5;
-        const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 dakika
+        const MAX_ATTEMPTS = 3;
+        const LOCKOUT_DURATION = 30 * 60 * 1000; // 30 dakika
+        
+        // ==================== GÜVENLİK: ŞİFRE DECODE ====================
+        // Obfuscated şifre decode (credentials koleksiyonundan)
+        function decodeCredential(data) {
+            if (!data || !data.k) return null;
+            try {
+                // k = encoded password, s = salt
+                const decoded = atob(data.k);
+                // Salt varsa kaldır (son 4 karakter)
+                if (data.s && decoded.endsWith(data.s)) {
+                    return decoded.slice(0, -data.s.length);
+                }
+                return decoded;
+            } catch (e) {
+                console.error('Decode hatası');
+                return null;
+            }
+        }
+        
+        // ==================== GÜVENLİK: LOGIN LOG ====================
+        async function logLoginAttempt(email, success, reason = '') {
+            try {
+                await db.collection('loginLogs').add({
+                    e: email ? email.substring(0, 3) + '***' : 'unknown', // Gizlenmiş email
+                    s: success,
+                    r: reason,
+                    t: firebase.firestore.FieldValue.serverTimestamp(),
+                    ua: navigator.userAgent.substring(0, 50) // Kısaltılmış
+                });
+            } catch (err) {
+                // Log hatası kritik değil, devam et
+            }
+        }
         
         let loginAttempts = parseInt(localStorage.getItem('mb_login_attempts') || '0');
         let lockoutUntil = parseInt(localStorage.getItem('mb_lockout_until') || '0');
@@ -679,7 +712,8 @@ body::before {
                 // 1. Önce Firebase Auth ile dene
                 await auth.signInWithEmailAndPassword(email, password);
                 
-                // Başarılı giriş
+                // Başarılı giriş - Log
+                await logLoginAttempt(email, true, 'auth');
                 clearLockout();
                 showToast('Giriş başarılı! Yönlendiriliyorsunuz...', 'success');
                 
@@ -690,33 +724,30 @@ body::before {
             } catch (authError) {
                 console.log('Firebase Auth hatası:', authError.code);
                 
-                // 2. Kullanıcı bulunamadıysa Firestore'dan kontrol et
+                // 2. Kullanıcı bulunamadıysa credentials koleksiyonundan kontrol et
                 if (authError.code === 'auth/user-not-found' || authError.code === 'auth/invalid-credential') {
                     try {
-                        // Firestore'dan personel ara
-                        const personelSnapshot = await db.collection('personel')
-                            .where('email', '==', email)
-                            .limit(1)
-                            .get();
+                        // Email'i doc ID formatına çevir (güvenlik için hash-like)
+                        const emailDocId = email.replace(/[@.]/g, '_');
                         
-                        if (!personelSnapshot.empty) {
-                            const personelDoc = personelSnapshot.docs[0];
-                            const personelData = personelDoc.data();
+                        // credentials koleksiyonundan tek döküman çek
+                        const credDoc = await db.collection('credentials').doc(emailDocId).get();
+                        
+                        if (credDoc.exists) {
+                            const credData = credDoc.data();
                             
-                            // Şifre kontrolü
-                            if (personelData.password && personelData.password === password) {
-                                console.log('Firestore şifresi eşleşti, Firebase Auth kullanıcısı oluşturuluyor...');
+                            // Obfuscated şifreyi decode et ve karşılaştır
+                            const storedPassword = decodeCredential(credData);
+                            
+                            if (storedPassword && storedPassword === password) {
+                                console.log('Credentials şifresi eşleşti, Firebase Auth kullanıcısı oluşturuluyor...');
                                 
                                 try {
                                     // Firebase Auth'ta yeni kullanıcı oluştur
                                     await auth.createUserWithEmailAndPassword(email, password);
                                     
-                                    // Personel kaydını güncelle - plain text şifreyi kaldır
-                                    await db.collection('personel').doc(personelDoc.id).update({
-                                        hasPassword: true,
-                                        password: firebase.firestore.FieldValue.delete()
-                                    });
-                                    
+                                    // Başarılı giriş - Log
+                                    await logLoginAttempt(email, true, 'credentials_new');
                                     clearLockout();
                                     showToast('Hesabınız aktive edildi! Yönlendiriliyorsunuz...', 'success');
                                     
@@ -728,20 +759,28 @@ body::before {
                                 } catch (createError) {
                                     console.error('Kullanıcı oluşturma hatası:', createError);
                                     if (createError.code === 'auth/email-already-in-use') {
+                                        // Auth var ama şifre yanlış
+                                        await logLoginAttempt(email, false, 'wrong_password');
                                         showError('Şifre hatalı.');
                                     } else {
-                                        showError('Hesap oluşturulamadı: ' + createError.message);
+                                        await logLoginAttempt(email, false, 'create_error');
+                                        showError('Hesap oluşturulamadı.');
                                     }
                                 }
                             } else {
+                                // Şifre yanlış
+                                await logLoginAttempt(email, false, 'wrong_password');
                                 showError('Şifre hatalı.');
                             }
                         } else {
+                            // Kullanıcı yok
+                            await logLoginAttempt(email, false, 'user_not_found');
                             showError('Bu e-posta ile kayıtlı kullanıcı bulunamadı.');
                         }
                         
                     } catch (firestoreError) {
                         console.error('Firestore hatası:', firestoreError);
+                        await logLoginAttempt(email, false, 'db_error');
                         showError('Veritabanı hatası. Lütfen tekrar deneyin.');
                     }
                 } else {
