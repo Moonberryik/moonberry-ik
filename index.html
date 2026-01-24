@@ -1727,6 +1727,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                         <div class="btn-group"><button class="btn btn-primary btn-sm" onclick="updateAdminCredentials()">🔑 Güncelle</button></div>
                     </div>
+                    <!-- Admin Email Listesi - Sadece admin görecek -->
+                    <div class="admin-card" id="adminEmailsCard" style="margin-top:20px;display:none">
+                        <div class="admin-card-header"><div class="admin-card-title">👑 Yönetici E-posta Listesi</div></div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Bu listedeki e-postalar personel kaydı olmasa bile sisteme erişebilir.</p>
+                        <div class="form-group">
+                            <label class="form-label">Admin E-postalar (her satıra bir tane)</label>
+                            <textarea id="adminEmailsList" class="form-input" rows="5" placeholder="admin@moonberrycoffee.com&#10;tamer@moonberrycoffee.com" style="font-family:monospace;font-size:.85rem"></textarea>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-ghost btn-sm" onclick="loadAdminEmailsToUI()">↻ Yenile</button>
+                            <button class="btn btn-primary btn-sm" onclick="saveAdminEmailsFromUI()">💾 Kaydet</button>
+                        </div>
+                    </div>
                     <!-- Puan Sıfırlama - Sadece admin görecek -->
                     <div class="admin-card" id="dataCleanupCard" style="margin-top:20px;display:none">
                         <div class="admin-card-header"><div class="admin-card-title">🔄 Puan Yönetimi</div></div>
@@ -4111,8 +4124,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Önce config'i yükle (email mapping için)
                     await loadSystemConfig();
                     
-                    // Admin kontrolü (bu emailler her zaman girebilir)
-                    const isAdmin = user.email === 'admin@moonberrycoffee.com' || user.email === 'tamer@moonberrycoffee.com';
+                    // Admin kontrolü - Config'den dinamik liste
+                    const isAdmin = await checkAdminEmail(user.email);
                     
                     // 1. ÖNCE PERSONEL koleksiyonundan email ile bul
                     let foundInPersonel = false;
@@ -6207,10 +6220,15 @@ function renderAdminLists() {
     
     // Yönetici için özel kartları göster
     const adminPasswordCard = document.getElementById('adminPasswordCard');
+    const adminEmailsCard = document.getElementById('adminEmailsCard');
     const dataCleanupCard = document.getElementById('dataCleanupCard');
     const rolePreviewCard = document.getElementById('rolePreviewCard');
     if (currentUser?.role === 'yonetici') {
         if (adminPasswordCard) adminPasswordCard.style.display = 'block';
+        if (adminEmailsCard) {
+            adminEmailsCard.style.display = 'block';
+            loadAdminEmailsToUI(); // Listeyi yükle
+        }
         if (dataCleanupCard) dataCleanupCard.style.display = 'block';
         if (rolePreviewCard) rolePreviewCard.style.display = 'block';
     }
@@ -13474,6 +13492,39 @@ async function updateAdminCredentials() {
     }
 }
 
+// ==================== ADMIN EMAIL YÖNETİMİ ====================
+// Admin email listesini UI'a yükle
+async function loadAdminEmailsToUI() {
+    try {
+        await loadAdminEmails(); // Firebase'den çek
+        const textarea = document.getElementById('adminEmailsList');
+        if (textarea) {
+            textarea.value = _adminEmails.join('\n');
+        }
+    } catch (e) {
+        console.error('Admin emails yüklenemedi:', e);
+        toast('Yükleme hatası', 'error');
+    }
+}
+
+// UI'dan admin email listesini kaydet
+async function saveAdminEmailsFromUI() {
+    const textarea = document.getElementById('adminEmailsList');
+    if (!textarea) return;
+    
+    const emails = textarea.value
+        .split('\n')
+        .map(e => e.trim().toLowerCase())
+        .filter(e => e && e.includes('@'));
+    
+    if (emails.length === 0) {
+        toast('En az bir admin email gerekli', 'error');
+        return;
+    }
+    
+    await saveAdminEmails(emails);
+}
+
 // ==================== SHIFT SİSTEMİ ====================
 // Shift tipleri ve saat aralıkları
 const SHIFT_TYPES = ['AÇILIŞ', 'ARA', 'KAPANIŞ', 'OFF', 'Y.İ', 'BÖLGE MÜDÜRÜ'];
@@ -20602,8 +20653,78 @@ let checklistExpectedDuration = 0; // saniye cinsinden
 let personnelMapping = [];
 
 // Tüm config'i Firebase'den yükle
+// ==================== ADMIN EMAIL KONTROLÜ ====================
+// Config'den dinamik admin listesi
+let _adminEmails = ['admin@moonberrycoffee.com']; // Varsayılan (fallback)
+
+async function checkAdminEmail(email) {
+    if (!email) return false;
+    const emailLower = email.toLowerCase();
+    
+    // Önce cache'den kontrol
+    if (_adminEmails.includes(emailLower)) return true;
+    
+    // Firebase'den güncel listeyi çek
+    try {
+        const securityDoc = await db.collection('systemConfig').doc('security').get();
+        if (securityDoc.exists && securityDoc.data().adminEmails) {
+            _adminEmails = securityDoc.data().adminEmails.map(e => e.toLowerCase());
+        }
+    } catch (e) {
+        console.log('Admin email listesi yüklenemedi, varsayılan kullanılıyor');
+    }
+    
+    return _adminEmails.includes(emailLower);
+}
+
+// Admin email listesini yükle
+async function loadAdminEmails() {
+    try {
+        const securityDoc = await db.collection('systemConfig').doc('security').get();
+        if (securityDoc.exists && securityDoc.data().adminEmails) {
+            _adminEmails = securityDoc.data().adminEmails.map(e => e.toLowerCase());
+            console.log('[Config] Admin emails yüklendi:', _adminEmails.length);
+        } else {
+            // İlk kullanım - varsayılan admin oluştur
+            await db.collection('systemConfig').doc('security').set({
+                adminEmails: ['admin@moonberrycoffee.com', 'tamer@moonberrycoffee.com'],
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            _adminEmails = ['admin@moonberrycoffee.com', 'tamer@moonberrycoffee.com'];
+            console.log('[Config] Varsayılan admin emails oluşturuldu');
+        }
+    } catch (e) {
+        console.error('Admin emails yüklenemedi:', e);
+    }
+}
+
+// Admin email ekle/sil
+async function saveAdminEmails(emails) {
+    try {
+        const cleanEmails = emails
+            .map(e => e.trim().toLowerCase())
+            .filter(e => e && e.includes('@'));
+        
+        await db.collection('systemConfig').doc('security').set({
+            adminEmails: cleanEmails,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        
+        _adminEmails = cleanEmails;
+        toast('Admin listesi güncellendi ✓', 'success');
+        return true;
+    } catch (e) {
+        console.error('Admin emails kaydedilemedi:', e);
+        toast('Kaydetme hatası', 'error');
+        return false;
+    }
+}
+
 async function loadSystemConfig() {
     try {
+        // Admin emails yükle
+        await loadAdminEmails();
+        
         // Sistem ayarları
         const sysDoc = await db.collection('config').doc('system').get();
         if (sysDoc.exists) {
