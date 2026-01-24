@@ -1694,6 +1694,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 
                 <!-- Genel -->
                 <div class="admin-section active" id="admin-genel">
+                    <!-- PROFİLİM - Tüm kullanıcılar görecek -->
+                    <div class="admin-card" id="myProfileCard" style="margin-bottom:20px">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="18" height="18" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                Profilim
+                            </div>
+                        </div>
+                        <div id="myProfileContainer">
+                            <div style="text-align:center;padding:20px;color:var(--tx2)">Yükleniyor...</div>
+                        </div>
+                    </div>
+                    
                     <div class="admin-card" id="companySettingsCard">
                         <div class="admin-card-header"><div class="admin-card-title">Şirket Bilgileri</div></div>
                         <div class="form-grid">
@@ -2717,6 +2730,31 @@ function normalizeTurkishChars(str) {
         .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
         .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
         .replace(/i̇/g, 'i'); // combining dot varsa temizle
+}
+
+// ==================== ŞİFRE ENCODE/DECODE ====================
+// Base64 ile basit şifreleme (admin görebilsin diye)
+function encodePassword(plainPassword) {
+    if (!plainPassword) return '';
+    try {
+        // Basit obfuscation: reverse + base64
+        const reversed = plainPassword.split('').reverse().join('');
+        return btoa(unescape(encodeURIComponent(reversed)));
+    } catch (e) {
+        console.error('Şifre encode hatası:', e);
+        return '';
+    }
+}
+
+function decodePassword(encodedPassword) {
+    if (!encodedPassword) return '';
+    try {
+        const reversed = decodeURIComponent(escape(atob(encodedPassword)));
+        return reversed.split('').reverse().join('');
+    } catch (e) {
+        console.error('Şifre decode hatası:', e);
+        return '';
+    }
 }
 
 // Personel map oluştur: displayName/codeName → {uniqueId, fullName}
@@ -4554,7 +4592,10 @@ function goTo(page) {
     }
     
     if (page === 'katalog') renderViolations();
-    if (page === 'admin') renderAdminLists();
+    if (page === 'admin') { 
+        renderAdminLists(); 
+        loadMyProfile(); // Profilim kartını yükle
+    }
     if (page === 'personel') loadPersonelList();
     if (page === 'puantaj') { 
         populateSubeSelect('puantajSube'); 
@@ -5692,6 +5733,7 @@ function switchAdminTab(tab, btn) {
     btn.classList.add('active');
     document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
     document.getElementById('admin-' + tab).classList.add('active');
+    if (tab === 'genel') loadMyProfile();
     if (tab === 'sablonlar') loadTemplate();
     if (tab === 'belgeler') loadDocTemplate('tutanak', 'olay');
     if (tab === 'oturumlar') {
@@ -5714,6 +5756,198 @@ function loadAdminFields() {
     document.getElementById('admin_company_name').value = STATE.company.name;
     document.getElementById('admin_mersis').value = STATE.company.mersis;
     document.getElementById('admin_address').value = STATE.company.address;
+}
+
+// ==================== PROFİLİM ====================
+async function loadMyProfile() {
+    const container = document.getElementById('myProfileContainer');
+    if (!container) return;
+    
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tx2)">Yükleniyor...</div>';
+    
+    try {
+        // Mevcut kullanıcının personel kaydını bul
+        const email = currentUser?.email;
+        if (!email) {
+            container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tx3)">Kullanıcı bilgisi bulunamadı</div>';
+            return;
+        }
+        
+        const personelSnap = await db.collection('personel').where('email', '==', email).limit(1).get();
+        
+        if (personelSnap.empty) {
+            container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tx3)">Personel kaydı bulunamadı</div>';
+            return;
+        }
+        
+        const personelDoc = personelSnap.docs[0];
+        const p = personelDoc.data();
+        const docId = personelDoc.id;
+        
+        // Pozisyon bilgisi
+        const roleNames = {
+            'yonetici': 'Yönetici',
+            'bolge_muduru': 'Bölge Müdürü',
+            'magaza_muduru': 'Mağaza Müdürü',
+            'magaza_mudur_yardimcisi': 'Müdür Yardımcısı',
+            'barista': 'Barista'
+        };
+        
+        container.innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                <!-- Sol: Bilgiler -->
+                <div>
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--bg4)">
+                        <div style="width:60px;height:60px;background:linear-gradient(135deg,#008c95,#00a8a8);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem;font-weight:600">
+                            ${(p.name || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <div style="font-size:1.2rem;font-weight:600;color:var(--tx)">${p.name || '-'}</div>
+                            <div style="font-size:.85rem;color:var(--tx2)">${p.position || roleNames[p.role] || 'Personel'}</div>
+                            <div style="font-size:.75rem;color:var(--tx3)">${p.branch || '-'}</div>
+                        </div>
+                    </div>
+                    
+                    <div style="display:grid;gap:10px;font-size:.85rem">
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <span style="width:24px;color:var(--tx3)">📧</span>
+                            <span style="color:var(--tx2)">${p.email || '-'}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <span style="width:24px;color:var(--tx3)">📱</span>
+                            <input type="tel" id="myProfile_phone" value="${p.phone || ''}" class="form-input" style="flex:1" placeholder="Telefon">
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <span style="width:24px;color:var(--tx3)">📍</span>
+                            <input type="text" id="myProfile_address" value="${p.address || ''}" class="form-input" style="flex:1" placeholder="Adres">
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <span style="width:24px;color:var(--tx3)">🏦</span>
+                            <input type="text" id="myProfile_iban" value="${p.iban || ''}" class="form-input" style="flex:1" placeholder="IBAN">
+                        </div>
+                    </div>
+                    
+                    <button onclick="saveMyProfile('${docId}')" class="btn btn-primary btn-sm" style="margin-top:16px">
+                        💾 Bilgilerimi Kaydet
+                    </button>
+                </div>
+                
+                <!-- Sağ: Şifre Değiştirme -->
+                <div style="background:var(--bg3);padding:16px;border-radius:12px">
+                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                        Şifre Değiştir
+                    </div>
+                    
+                    <div style="display:grid;gap:10px">
+                        <div>
+                            <label style="font-size:.75rem;color:var(--tx3);display:block;margin-bottom:4px">Mevcut Şifre</label>
+                            <div style="display:flex;gap:8px">
+                                <input type="password" id="myProfile_currentPassword" class="form-input" style="flex:1" placeholder="••••••••">
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size:.75rem;color:var(--tx3);display:block;margin-bottom:4px">Yeni Şifre</label>
+                            <input type="password" id="myProfile_newPassword" class="form-input" placeholder="En az 6 karakter">
+                        </div>
+                        <div>
+                            <label style="font-size:.75rem;color:var(--tx3);display:block;margin-bottom:4px">Yeni Şifre (Tekrar)</label>
+                            <input type="password" id="myProfile_confirmPassword" class="form-input" placeholder="Şifreyi tekrar girin">
+                        </div>
+                    </div>
+                    
+                    <button onclick="changeMyPassword('${docId}')" class="btn btn-sm" style="margin-top:12px;background:#e74c3c;color:#fff;border:none">
+                        🔑 Şifremi Değiştir
+                    </button>
+                </div>
+            </div>
+        `;
+        
+    } catch (error) {
+        console.error('Profil yükleme hatası:', error);
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--red)">Yükleme hatası: ' + error.message + '</div>';
+    }
+}
+
+// Profil bilgilerini kaydet
+async function saveMyProfile(docId) {
+    const phone = document.getElementById('myProfile_phone')?.value?.trim() || '';
+    const address = document.getElementById('myProfile_address')?.value?.trim() || '';
+    const iban = document.getElementById('myProfile_iban')?.value?.trim() || '';
+    
+    try {
+        await db.collection('personel').doc(docId).update({
+            phone,
+            address,
+            iban,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        toast('Bilgileriniz güncellendi', 'success');
+    } catch (error) {
+        console.error('Profil kaydetme hatası:', error);
+        toast('Kaydetme hatası: ' + error.message, 'error');
+    }
+}
+
+// Kendi şifremi değiştir
+async function changeMyPassword(docId) {
+    const currentPassword = document.getElementById('myProfile_currentPassword')?.value || '';
+    const newPassword = document.getElementById('myProfile_newPassword')?.value || '';
+    const confirmPassword = document.getElementById('myProfile_confirmPassword')?.value || '';
+    
+    if (!currentPassword) {
+        toast('Mevcut şifrenizi girin', 'error');
+        return;
+    }
+    
+    if (!newPassword || newPassword.length < 6) {
+        toast('Yeni şifre en az 6 karakter olmalı', 'error');
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        toast('Yeni şifreler eşleşmiyor', 'error');
+        return;
+    }
+    
+    try {
+        const user = firebase.auth().currentUser;
+        if (!user) {
+            toast('Oturum bulunamadı', 'error');
+            return;
+        }
+        
+        // Önce mevcut şifre ile yeniden kimlik doğrula
+        const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+        await user.reauthenticateWithCredential(credential);
+        
+        // Firebase Auth şifresini güncelle
+        await user.updatePassword(newPassword);
+        
+        // Firestore'da encoded şifreyi güncelle
+        await db.collection('personel').doc(docId).update({
+            password: encodePassword(newPassword),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        toast('Şifreniz başarıyla değiştirildi', 'success');
+        
+        // Alanları temizle
+        document.getElementById('myProfile_currentPassword').value = '';
+        document.getElementById('myProfile_newPassword').value = '';
+        document.getElementById('myProfile_confirmPassword').value = '';
+        
+    } catch (error) {
+        console.error('Şifre değiştirme hatası:', error);
+        if (error.code === 'auth/wrong-password') {
+            toast('Mevcut şifre yanlış', 'error');
+        } else if (error.code === 'auth/requires-recent-login') {
+            toast('Güvenlik için yeniden giriş yapın', 'error');
+        } else {
+            toast('Şifre değiştirme hatası: ' + error.message, 'error');
+        }
+    }
 }
 
 function renderAdminLists() {
@@ -6469,15 +6703,17 @@ async function saveBranch() {
                     }
                 }
                 
-                // Personel koleksiyonuna ekle
+                // Personel koleksiyonuna ekle (şifre encoded olarak)
                 const personelRef = await db.collection('personel').add({
                     name: user.displayName,
                     email: email,
+                    password: encodePassword(testPassword),
                     role: user.role,
                     branch: name,
                     status: 'active',
                     isTestUser: true,
                     hasFirebaseAuth: true,
+                    hasPassword: true,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
@@ -7609,6 +7845,7 @@ async function loadPersonelList() {
     try {
         // Mağaza müdürü için şube filtresi
         const isFullAdmin = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
+        const isYonetici = currentUser?.role === 'yonetici'; // Sadece yönetici şifre görebilir
         const userBranch = currentUser?.branch;
         
         let query = db.collection('personel').orderBy('name');
@@ -7623,6 +7860,9 @@ async function loadPersonelList() {
             container.innerHTML = '<p style="color:var(--tx2);text-align:center;padding:40px">Henüz personel kaydı yok. "Yeni Personel" butonuna tıklayarak ekleyin.</p>';
             return;
         }
+        
+        // Şifre göster/gizle state
+        window._showPasswords = window._showPasswords || false;
         
         // Pozisyondan rol belirleme
         const positionToRole = {
@@ -7655,7 +7895,19 @@ async function loadPersonelList() {
             trash: '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>'
         };
         
-        let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">';
+        // Şifre göster butonu (sadece yönetici)
+        let headerHtml = '';
+        if (isYonetici) {
+            headerHtml = `
+                <div style="margin-bottom:16px;display:flex;justify-content:flex-end">
+                    <button onclick="toggleShowPasswords()" class="btn btn-sm" style="background:${window._showPasswords ? '#e74c3c' : 'var(--bg3)'};color:${window._showPasswords ? '#fff' : 'var(--tx)'};border:none;font-size:.8rem">
+                        ${window._showPasswords ? '🔒 Şifreleri Gizle' : '🔓 Şifreleri Göster'}
+                    </button>
+                </div>
+            `;
+        }
+        
+        let html = headerHtml + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">';
         snapshot.forEach(doc => {
             const p = doc.data();
             const docId = doc.id;
@@ -7690,6 +7942,11 @@ async function loadPersonelList() {
                         <div style="display:flex;align-items:center;gap:4px">${ICONS.phone} ${p.phone || '-'}</div>
                         <div style="display:flex;align-items:center;gap:4px;overflow:hidden">${ICONS.mail} <span style="overflow:hidden;text-overflow:ellipsis">${p.email || '-'}</span></div>
                         <div style="display:flex;align-items:center;gap:4px">${ICONS.id} ${p.tc ? p.tc.slice(0, 3) + '***' : '-'}</div>
+                        ${isYonetici && p.password ? `
+                            <div style="display:flex;align-items:center;gap:4px;grid-column:span 2;margin-top:4px;padding:4px 8px;background:${window._showPasswords ? 'rgba(231,76,60,.1)' : 'var(--bg3)'};border-radius:4px">
+                                ${ICONS.key} <span style="font-family:monospace">${window._showPasswords ? decodePassword(p.password) : '••••••••'}</span>
+                            </div>
+                        ` : ''}
                     </div>
                     
                     <!-- Footer -->
@@ -7901,9 +8158,10 @@ async function savePersonel() {
         }
     }
     
-    // Şifre girilmişse kaydet
+    // Şifre girilmişse encode ederek kaydet
     if (password) {
-        data.password = password;
+        data.password = encodePassword(password);
+        data.passwordPlain = password; // Geçici - Auth için
         data.hasPassword = true;
     }
     
@@ -7915,30 +8173,37 @@ async function savePersonel() {
                 const secondaryApp = firebase.initializeApp(firebase.app().options, 'Secondary');
                 const secondaryAuth = secondaryApp.auth();
                 
-                await secondaryAuth.createUserWithEmailAndPassword(email, password);
+                await secondaryAuth.createUserWithEmailAndPassword(email, data.passwordPlain);
                 console.log('Firebase Auth kullanıcısı oluşturuldu:', email);
                 
                 // Secondary app'i temizle
                 await secondaryApp.delete();
                 
-                // Şifreyi Firestore'dan kaldır (artık Auth'ta)
-                delete data.password;
+                // Şifre Auth'ta, Firestore'da encoded olarak tut (admin görebilsin)
+                // passwordPlain'i temizle
+                delete data.passwordPlain;
                 data.hasFirebaseAuth = true;
                 
                 toast('Kullanıcı hesabı oluşturuldu ✓', 'success');
             } catch (authError) {
                 if (authError.code === 'auth/email-already-in-use') {
                     console.log('Kullanıcı zaten mevcut:', email);
-                    // Şifreyi Firestore'da tut (login'de migrate edilecek)
+                    // Şifreyi Firestore'da tut (encoded)
+                    delete data.passwordPlain;
                 } else if (authError.code === 'auth/app/duplicate-app') {
                     // Secondary app zaten var, devam et
                     console.log('Secondary app zaten mevcut');
+                    delete data.passwordPlain;
                 } else {
                     console.error('Auth hatası:', authError);
-                    // Şifreyi Firestore'da sakla, login'de migrate edilir
+                    // Şifreyi Firestore'da sakla (encoded)
+                    delete data.passwordPlain;
                 }
             }
         }
+        
+        // passwordPlain kaldı ise temizle
+        delete data.passwordPlain;
         
         // Email varsa users koleksiyonunu da güncelle
         if (email) {
@@ -8080,6 +8345,17 @@ async function savePersonel() {
         console.error('Kayıt hatası:', error);
         toast('Kayıt hatası: ' + error.message, 'error');
     }
+}
+
+// Şifreleri göster/gizle toggle (sadece yönetici)
+function toggleShowPasswords() {
+    if (currentUser?.role !== 'yonetici') {
+        toast('Bu işlem için yetkiniz yok', 'error');
+        return;
+    }
+    window._showPasswords = !window._showPasswords;
+    loadPersonelList(); // Listeyi yeniden yükle
+    toast(window._showPasswords ? 'Şifreler gösteriliyor' : 'Şifreler gizlendi', 'info');
 }
 
 function editPersonel(id) {
