@@ -1655,7 +1655,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <button class="admin-tab" id="tab-checkKurallari" onclick="showAdminTab('checkKurallari',this)">Check & Puantaj Kuralları</button>
                     <button class="admin-tab" id="tab-checklistTurleri" onclick="showAdminTab('checklistTurleri',this)">Checklist Türleri</button>
                     <button class="admin-tab" id="tab-subeler" onclick="showAdminTab('subeler',this)">Şubeler</button>
-                    <button class="admin-tab" id="tab-pozisyonlar" onclick="showAdminTab('pozisyonlar',this)">Pozisyonlar</button>
                     <button class="admin-tab" id="tab-ihlaller" onclick="showAdminTab('ihlaller',this)">İhlaller</button>
                     <button class="admin-tab" id="tab-sablonlar" onclick="showAdminTab('sablonlar',this)">Sözleşme Şablonları</button>
                     <button class="admin-tab" id="tab-belgeler" onclick="showAdminTab('belgeler',this)">Belge Şablonları</button>
@@ -1863,14 +1862,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         
                         <div style="background:linear-gradient(135deg,rgba(0,140,149,.08),rgba(0,140,149,.02));border:1px solid rgba(0,140,149,.15);border-radius:12px;padding:16px;margin-bottom:24px">
                             <div style="font-size:.85rem;color:var(--tx2);line-height:1.5">
-                                Her şube için checklist türlerini düzenleyebilirsiniz. Türlerin <strong>isimlerini</strong>, <strong>ikonlarını</strong> ve <strong>sıralamalarını</strong> değiştirebilirsiniz. 
-                                Bu değişiklikler dashboard ve checklist sayfalarında görünür.
+                                <strong>Global checklist türleri</strong> - Burada yaptığınız değişiklikler <strong>tüm şubelerde</strong> geçerli olur. 
+                                Türlerin <strong>isimlerini</strong>, <strong>ikonlarını</strong> değiştirebilir, yeni tür ekleyebilirsiniz.
                             </div>
                         </div>
                         
-                        <!-- Şube Seçimi - Dinamik -->
-                        <div id="checklistTypeBranchTabs" style="display:flex;gap:12px;margin-bottom:20px">
-                            <!-- JavaScript ile STATE.branches'dan doldurulacak -->
+                        <!-- Şube Önizleme Seçimi (sadece önizleme için - türler global) -->
+                        <div style="margin-bottom:16px">
+                            <div style="font-size:.8rem;color:var(--tx2);margin-bottom:8px">📍 Şube Önizleme (erişim izninize göre):</div>
+                            <div id="checklistTypeBranchTabs" style="display:flex;gap:12px">
+                                <!-- JavaScript ile STATE.branches'dan doldurulacak -->
+                            </div>
                         </div>
                         
                         <!-- Checklist Türleri Listesi -->
@@ -2237,17 +2239,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <button class="btn btn-sm btn-primary" onclick="addBranch()">+ Ekle</button>
                         </div>
                         <div class="admin-list" id="branchList"></div>
-                    </div>
-                </div>
-
-                <!-- Pozisyonlar -->
-                <div class="admin-section" id="admin-pozisyonlar">
-                    <div class="admin-card">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title">👔 Pozisyonlar</div>
-                            <button class="btn btn-sm btn-primary" onclick="addPosition()">+ Ekle</button>
-                        </div>
-                        <div class="admin-list" id="positionList"></div>
                     </div>
                 </div>
 
@@ -10243,7 +10234,7 @@ const PERMISSION_STRUCTURE = {
         { id: 'belgeler', label: 'Belge Şablonları' }
     ],
     // Sadece yönetici görebilir - UI'da rol atama yapılmaz
-    adminTabsYoneticiOnly: ['genel', 'kullanicilar', 'oturumlar', 'aktiviteler', 'yedekler', 'pozisyonlar'],
+    adminTabsYoneticiOnly: ['genel', 'kullanicilar', 'oturumlar', 'aktiviteler', 'yedekler'],
     special: [
         { id: 'ayarlar_erisim', label: 'Ayarlar sayfasına erişebilir' },
         { id: 'view_all_branches', label: 'Tüm şubeleri görebilir' },
@@ -18201,23 +18192,17 @@ async function saveBranchHours() {
 // ==================== ADMIN - CHECKLIST TÜRLERİ YÖNETİMİ ====================
 
 let selectedChecklistTypeBranch = null; // STATE.branches[0] ile init edilecek
-let checklistTypesData = {};
+let checklistTypesData = []; // Global liste (artık şube bazlı değil)
 
-// Checklist türlerini Firebase'den yükle
+// Checklist türlerini Firebase'den yükle (GLOBAL)
 async function loadChecklistTypesConfig() {
     try {
-        const doc = await db.collection('config').doc('checklistTypes').get();
+        const doc = await db.collection('config').doc('checklistTypesGlobal').get();
         if (doc.exists) {
-            const data = doc.data();
-            checklistTypesData = {};
-            for (const [key, value] of Object.entries(data)) {
-                if (Array.isArray(value)) {
-                    checklistTypesData[key] = value;
-                }
-            }
+            checklistTypesData = doc.data().types || [];
         } else {
-            // Varsayılan türler - STATE.branches'dan dinamik
-            const defaultTypes = [
+            // Varsayılan türler
+            checklistTypesData = [
                 {id: 'acilis', name: 'Açılış', icon: 'sunrise'},
                 {id: 'kapanis', name: 'Kapanış', icon: 'sunset'},
                 {id: 'gunluk', name: 'Günlük Check', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
@@ -18226,29 +18211,41 @@ async function loadChecklistTypesConfig() {
                 {id: 'haftalik', name: 'Haftalık Görevler', icon: 'calendar-week'},
                 {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
             ];
-            checklistTypesData = {};
-            (STATE.branches || []).forEach(branch => {
-                checklistTypesData[branch] = [...defaultTypes];
-            });
+            // Varsayılanı kaydet
+            await db.collection('config').doc('checklistTypesGlobal').set({ types: checklistTypesData });
         }
         renderChecklistTypeBranchTabs();
         renderChecklistTypes();
     } catch (e) {
         console.error('Checklist türleri yüklenemedi:', e);
-        showToast('Checklist türleri yüklenemedi', 'error');
+        toast('Checklist türleri yüklenemedi', 'error');
     }
 }
 
-// Şube tab'larını render et (dinamik)
+// Şube tab'larını render et (dinamik + rol bazlı filtreleme)
 function renderChecklistTypeBranchTabs() {
     const container = document.getElementById('checklistTypeBranchTabs');
     if (!container) return;
     
-    const branches = STATE.branches || [];
-    if (branches.length === 0) return;
+    let branches = STATE.branches || [];
     
-    // İlk şubeyi seç (eğer seçili değilse)
-    if (!selectedChecklistTypeBranch) {
+    // Rol bazlı şube filtreleme
+    const isYonetici = currentUser?.role === 'yonetici';
+    const perms = window.userAdvancedPermissions;
+    const canViewAllBranches = isYonetici || (perms?.special?.view_all_branches === true);
+    
+    // Tüm şubeleri göremiyorsa sadece kendi şubesini göster
+    if (!canViewAllBranches && currentUser?.branch) {
+        branches = branches.filter(b => b === currentUser.branch);
+    }
+    
+    if (branches.length === 0) {
+        container.innerHTML = '<div style="color:var(--tx2);font-size:.9rem">Erişebileceğiniz şube yok</div>';
+        return;
+    }
+    
+    // İlk şubeyi seç (eğer seçili değilse veya seçili şubeye erişim yoksa)
+    if (!selectedChecklistTypeBranch || !branches.includes(selectedChecklistTypeBranch)) {
         selectedChecklistTypeBranch = branches[0];
     }
     
@@ -18281,12 +18278,12 @@ function selectChecklistTypeBranch(branch) {
     renderChecklistTypes();
 }
 
-// Checklist türlerini render et
+// Checklist türlerini render et (GLOBAL)
 function renderChecklistTypes() {
     const container = document.getElementById('checklistTypesContainer');
     if (!container) return;
     
-    const types = checklistTypesData[selectedChecklistTypeBranch] || [];
+    const types = checklistTypesData || []; // Global liste
     const brandColor = '#008c95'; // Moonberry teal
     
     const iconMap = {
@@ -18304,7 +18301,7 @@ function renderChecklistTypes() {
         container.innerHTML = `
             <div style="text-align:center;padding:40px;color:var(--tx3)">
                 <div style="font-size:2rem;margin-bottom:12px">📋</div>
-                <div>Bu şube için checklist türü tanımlanmamış</div>
+                <div>Checklist türü tanımlanmamış</div>
             </div>
         `;
         return;
@@ -18347,29 +18344,26 @@ function renderChecklistTypes() {
     `).join('');
 }
 
-// Checklist türü adını güncelle
+// Checklist türü adını güncelle (GLOBAL)
 function updateChecklistTypeName(typeId, newName) {
-    const types = checklistTypesData[selectedChecklistTypeBranch] || [];
-    const type = types.find(t => t.id === typeId);
+    const type = checklistTypesData.find(t => t.id === typeId);
     if (type) {
         type.name = newName;
     }
 }
 
-// Checklist türü ikonunu güncelle
+// Checklist türü ikonunu güncelle (GLOBAL)
 function updateChecklistTypeIcon(typeId, newIcon) {
-    const types = checklistTypesData[selectedChecklistTypeBranch] || [];
-    const type = types.find(t => t.id === typeId);
+    const type = checklistTypesData.find(t => t.id === typeId);
     if (type) {
         type.icon = newIcon;
         renderChecklistTypes();
     }
 }
 
-// Checklist türü yönetici özelliğini güncelle
+// Checklist türü yönetici özelliğini güncelle (GLOBAL)
 function updateChecklistTypeManager(typeId, isManager) {
-    const types = checklistTypesData[selectedChecklistTypeBranch] || [];
-    const type = types.find(t => t.id === typeId);
+    const type = checklistTypesData.find(t => t.id === typeId);
     if (type) {
         type.managerOnly = isManager;
     }
@@ -18386,13 +18380,9 @@ async function addNewChecklistType() {
         return;
     }
     
-    if (!checklistTypesData[selectedChecklistTypeBranch]) {
-        checklistTypesData[selectedChecklistTypeBranch] = [];
-    }
-    
-    // ID kontrolü
-    if (checklistTypesData[selectedChecklistTypeBranch].some(t => t.id === id)) {
-        showToast('Bu ID zaten kullanılıyor', 'warning');
+    // ID kontrolü (GLOBAL)
+    if (checklistTypesData.some(t => t.id === id)) {
+        toast('Bu ID zaten kullanılıyor', 'warning');
         return;
     }
     
@@ -18402,34 +18392,39 @@ async function addNewChecklistType() {
         icon: icon
     };
     
-    checklistTypesData[selectedChecklistTypeBranch].push(newType);
+    checklistTypesData.push(newType);
     
-    // Firebase'e hemen kaydet
+    // Firebase'e hemen kaydet (GLOBAL)
     try {
-        // 1. config/checklistTypes güncelle
-        await db.collection('config').doc('checklistTypes').set({
-            ...checklistTypesData,
+        // 1. config/checklistTypesGlobal güncelle
+        await db.collection('config').doc('checklistTypesGlobal').set({
+            types: checklistTypesData,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        // 2. checklists koleksiyonuna boş belge oluştur
-        const checklistDocId = `${selectedChecklistTypeBranch.replace(/[^a-zA-Z0-9]/g, '_')}_${id}`;
-        await db.collection('checklists').doc(checklistDocId).set({
-            branch: selectedChecklistTypeBranch,
-            type: id,
-            items: [], // Boş maddeler - sonra düzenleme modundan eklenecek
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        // 2. Tüm şubeler için checklists koleksiyonuna boş belge oluştur
+        const branches = STATE.branches || [];
+        for (const branch of branches) {
+            const checklistDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${id}`;
+            await db.collection('checklists').doc(checklistDocId).set({
+                branch: branch,
+                type: id,
+                items: [], // Boş maddeler - sonra düzenleme modundan eklenecek
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+        
+        // Global CHECKLIST_TYPES'ı güncelle (tüm şubeler için)
+        branches.forEach(branch => {
+            CHECKLIST_TYPES[branch] = [...checklistTypesData];
         });
         
-        // Global CHECKLIST_TYPES'ı güncelle
-        CHECKLIST_TYPES[selectedChecklistTypeBranch] = checklistTypesData[selectedChecklistTypeBranch];
-        
-        showToast(`"${name}" türü eklendi ve kaydedildi`, 'success');
+        toast(`"${name}" türü eklendi (tüm şubelere)`, 'success');
     } catch (e) {
         console.error('Yeni tür kaydedilemedi:', e);
-        showToast('Kaydetme hatası: ' + e.message, 'error');
+        toast('Kaydetme hatası: ' + e.message, 'error');
         // Hata durumunda geri al
-        checklistTypesData[selectedChecklistTypeBranch].pop();
+        checklistTypesData.pop();
         return;
     }
     
@@ -18440,31 +18435,31 @@ async function addNewChecklistType() {
     renderChecklistTypes();
 }
 
-// Checklist türü sil
+// Checklist türü sil (GLOBAL)
 function deleteChecklistType(typeId) {
-    if (!confirm('Bu checklist türünü silmek istediğinize emin misiniz?')) return;
+    if (!confirm('Bu checklist türünü TÜM ŞUBELERDEN silmek istediğinize emin misiniz?')) return;
     
-    const types = checklistTypesData[selectedChecklistTypeBranch] || [];
-    const idx = types.findIndex(t => t.id === typeId);
+    const idx = checklistTypesData.findIndex(t => t.id === typeId);
     if (idx > -1) {
-        types.splice(idx, 1);
+        checklistTypesData.splice(idx, 1);
         renderChecklistTypes();
-        showToast('Tür silindi', 'success');
+        toast('Tür silindi (tüm şubelerden)', 'success');
     }
 }
 
-// Checklist türlerini Firebase'e kaydet
+// Checklist türlerini Firebase'e kaydet (GLOBAL)
 async function saveChecklistTypesConfig() {
     try {
-        // 1. config/checklistTypes güncelle
-        await db.collection('config').doc('checklistTypes').set({
-            ...checklistTypesData,
+        // 1. config/checklistTypesGlobal güncelle
+        await db.collection('config').doc('checklistTypesGlobal').set({
+            types: checklistTypesData,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        // 2. Her tür için checklists koleksiyonunda belge var mı kontrol et, yoksa oluştur
-        for (const [branch, types] of Object.entries(checklistTypesData)) {
-            for (const type of types) {
+        // 2. Her tür için ve her şube için checklists koleksiyonunda belge var mı kontrol et
+        const branches = STATE.branches || [];
+        for (const branch of branches) {
+            for (const type of checklistTypesData) {
                 const checklistDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type.id}`;
                 try {
                     const doc = await db.collection('checklists').doc(checklistDocId).get();
@@ -18484,62 +18479,52 @@ async function saveChecklistTypesConfig() {
             }
         }
         
-        // 3. Global CHECKLIST_TYPES'ı da güncelle
-        for (const [branch, types] of Object.entries(checklistTypesData)) {
-            CHECKLIST_TYPES[branch] = types;
-        }
+        // 3. Global CHECKLIST_TYPES'ı da güncelle (tüm şubeler için aynı)
+        branches.forEach(branch => {
+            CHECKLIST_TYPES[branch] = [...checklistTypesData];
+        });
         
-        showToast('Checklist türleri kaydedildi', 'success');
+        toast('Checklist türleri kaydedildi (tüm şubelere)', 'success');
     } catch (e) {
         console.error('Checklist türleri kaydedilemedi:', e);
-        showToast('Kaydetme hatası: ' + e.message, 'error');
+        toast('Kaydetme hatası: ' + e.message, 'error');
     }
 }
 
-// Checklist türlerini seed.html orijinalleriyle sync et
+// Checklist türlerini orijinal değerlere sıfırla (GLOBAL)
 async function syncChecklistTypesWithSeed() {
-    if (!confirm('Checklist türleri seed.html orijinal değerlerine sıfırlanacak. Devam etmek istiyor musunuz?')) return;
+    if (!confirm('Checklist türleri orijinal değerlerine sıfırlanacak. Devam etmek istiyor musunuz?')) return;
     
-    // seed.html'deki orijinal CHECKLIST_TYPES
-    const SEED_CHECKLIST_TYPES = {
-        'Tuzla TRC': [
-            {id: 'acilis', name: 'Açılış Hazırlıkları', icon: 'sunrise'},
-            {id: 'kapanis', name: 'Kapanış Hazırlıkları', icon: 'sunset'},
-            {id: 'gunluk', name: 'Günlük Genel Check', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
-            {id: 'mudur', name: 'Müdür Kontrol', icon: 'user-check', managerOnly: true},
-            {id: 'platform', name: 'Platform Check', icon: 'smartphone', timeSlots: ['10:00','12:00','15:00','18:00','21:00','00:00']},
-            {id: 'haftalik', name: 'Haftalık Görevler', icon: 'calendar-week'},
-            {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
-        ],
-        'Şişli (Merkez)': [
-            {id: 'acilis', name: 'Açılış Hazırlıkları', icon: 'sunrise'},
-            {id: 'kapanis', name: 'Kapanış Hazırlıkları', icon: 'sunset'},
-            {id: 'gunluk', name: 'Günlük Genel Check', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
-            {id: 'mudur', name: 'Müdür Kontrol', icon: 'user-check', managerOnly: true},
-            {id: 'platform', name: 'Platform Check', icon: 'smartphone', timeSlots: ['10:00','12:00','15:00','18:00','21:00','00:00']},
-            {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
-        ]
-    };
+    // Orijinal CHECKLIST_TYPES (GLOBAL)
+    const SEED_TYPES = [
+        {id: 'acilis', name: 'Açılış Hazırlıkları', icon: 'sunrise'},
+        {id: 'kapanis', name: 'Kapanış Hazırlıkları', icon: 'sunset'},
+        {id: 'gunluk', name: 'Günlük Genel Check', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
+        {id: 'mudur', name: 'Müdür Kontrol', icon: 'user-check', managerOnly: true},
+        {id: 'platform', name: 'Platform Check', icon: 'smartphone', timeSlots: ['10:00','12:00','15:00','18:00','21:00','00:00']},
+        {id: 'haftalik', name: 'Haftalık Görevler', icon: 'calendar-week'},
+        {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
+    ];
     
     try {
-        await db.collection('config').doc('checklistTypes').set({
-            ...SEED_CHECKLIST_TYPES,
+        await db.collection('config').doc('checklistTypesGlobal').set({
+            types: SEED_TYPES,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        // Global CHECKLIST_TYPES'ı da güncelle
-        for (const [branch, types] of Object.entries(SEED_CHECKLIST_TYPES)) {
-            CHECKLIST_TYPES[branch] = types;
-        }
+        checklistTypesData = SEED_TYPES;
         
-        // UI'ı güncelle
-        checklistTypesData = { ...SEED_CHECKLIST_TYPES };
+        // Global CHECKLIST_TYPES'ı güncelle
+        const branches = STATE.branches || [];
+        branches.forEach(branch => {
+            CHECKLIST_TYPES[branch] = [...SEED_TYPES];
+        });
+        
         renderChecklistTypes();
-        
-        showToast('Checklist türleri orijinal değerlere sıfırlandı', 'success');
+        toast('Checklist türleri orijinal değerlere sıfırlandı', 'success');
     } catch (e) {
-        console.error('Sync hatası:', e);
-        showToast('Sync hatası: ' + e.message, 'error');
+        console.error('Sıfırlama hatası:', e);
+        toast('Sıfırlama hatası: ' + e.message, 'error');
     }
 }
 
