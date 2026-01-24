@@ -1647,7 +1647,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <div class="page-subtitle">Sistem ayarlarını yönetin</div>
                 </div>
                 <div class="admin-tabs">
-                    <button class="admin-tab active" onclick="showAdminTab('genel',this)">Genel</button>
+                    <button class="admin-tab active" id="tab-genel" onclick="showAdminTab('genel',this)">Genel</button>
                     <button class="admin-tab" onclick="showAdminTab('tumCheckler',this)">Tüm Checkler</button>
                     <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">Pozisyon Yetkileri</button>
                     <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">Oturumlar</button>
@@ -4389,10 +4389,10 @@ function applyUserPermissions() {
         userAvatarEl.textContent = currentUser.name.charAt(0).toUpperCase();
     }
     
-    // Ayarlar menüsü sadece yönetici görebilir
+    // Ayarlar menüsü herkese görünsün (erişim kontrolü openAdminWithPin'de)
     const navAdmin = document.getElementById('nav-admin');
     if (navAdmin) {
-        navAdmin.style.display = currentUser.role === 'yonetici' ? 'flex' : 'none';
+        navAdmin.style.display = 'flex';
     }
     
     // Yönetici her şeye erişebilir
@@ -4560,7 +4560,24 @@ function goTo(page) {
     }
     
     if (page === 'katalog') renderViolations();
-    if (page === 'admin') renderAdminLists();
+    if (page === 'admin') {
+        renderAdminLists();
+        // Genel sekmesi sadece yönetici görebilir
+        const tabGenel = document.getElementById('tab-genel');
+        if (tabGenel) {
+            if (currentUser && currentUser.role === 'yonetici') {
+                tabGenel.style.display = '';
+            } else {
+                tabGenel.style.display = 'none';
+                // Eğer Genel sekmesi aktifse, başka bir sekmeye geç
+                if (tabGenel.classList.contains('active')) {
+                    // İlk görünür sekmeyi bul ve aktif yap
+                    const visibleTab = document.querySelector('.admin-tab:not([style*="display: none"]):not(#tab-genel)');
+                    if (visibleTab) visibleTab.click();
+                }
+            }
+        }
+    }
     if (page === 'personel') loadPersonelList();
     if (page === 'puantaj') { 
         populateSubeSelect('puantajSube'); 
@@ -5632,13 +5649,20 @@ function openAdminWithPin() {
         return;
     }
     
-    // Sadece yönetici erişebilir
+    // Yönetici her zaman erişebilir
     if (currentUser.role === 'yonetici') {
         goTo('admin');
         return;
     }
     
-    // Diğer roller erişemez
+    // Diğer roller için ayarlar_erisim izni kontrolü
+    const perms = window.userAdvancedPermissions;
+    if (perms && perms.special && perms.special.ayarlar_erisim) {
+        goTo('admin');
+        return;
+    }
+    
+    // İzin yoksa mesaj ver
     toast('Bu sayfaya erişim yetkiniz yok', 'error');
 }
 
@@ -10279,6 +10303,7 @@ const PERMISSION_STRUCTURE = {
         { id: 'admin_oturumlar', label: 'Oturum Ayarları' }
     ],
     special: [
+        { id: 'ayarlar_erisim', label: 'Ayarlar sayfasına erişebilir' },
         { id: 'print_shift', label: 'Shift planını yazdırabilir' },
         { id: 'create_shift_week', label: 'Yeni shift haftası oluşturabilir' },
         { id: 'view_checklist_history', label: 'Geçmiş checklisti görebilir' },
@@ -10299,7 +10324,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: false, edit: false }, tutanak: { view: false, edit: false }, savunma: { view: false, edit: false }, fesih: { view: false, edit: false }, istifa: { view: false, edit: false }, ibraname: { view: false, edit: false } },
         forms: { borc: { view: false, edit: false }, avans: { view: false, edit: false }, zimmet: { view: false, edit: false } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: false, admin_sablonlar: false, admin_oturumlar: false },
-        special: { print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false },
+        special: { ayarlar_erisim: false, print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 1 }
     },
     magaza_mudur_yardimcisi: {
@@ -10307,7 +10332,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false },
-        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
+        special: { ayarlar_erisim: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 5 }
     },
     magaza_muduru: {
@@ -10315,7 +10340,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false },
-        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
+        special: { ayarlar_erisim: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 5 }
     },
     bolge_muduru: {
@@ -10323,7 +10348,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: true }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: true, admin_kullanicilar: false, admin_puantaj: true, admin_subeler: true, admin_pozisyonlar: true, admin_ihlaller: true, admin_sablonlar: true, admin_oturumlar: true },
-        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true },
+        special: { ayarlar_erisim: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true },
         limits: { shift_history_weeks: 999 }
     }
 };
