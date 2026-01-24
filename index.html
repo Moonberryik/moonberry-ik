@@ -587,8 +587,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <span class="icon"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span> İhlal Kataloğu
                 </div>
                 
-                <!-- Ayarlar (en altta) -->
-                <div class="nav-item" data-page="admin" onclick="openAdminWithPin()">
+                <!-- Ayarlar (en altta) - Sadece yönetici görür -->
+                <div class="nav-item" id="nav-admin" data-page="admin" onclick="openAdminWithPin()" style="display:none">
                     <span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Ayarlar
                 </div>
                 <!-- Kullanıcı Bilgisi ve Çıkış -->
@@ -1649,17 +1649,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <div class="admin-tabs">
                     <button class="admin-tab active" onclick="showAdminTab('genel',this)">Genel</button>
                     <button class="admin-tab" onclick="showAdminTab('tumCheckler',this)">Tüm Checkler</button>
-                    <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">Pozisyonlar ve Yetkiler</button>
-                    <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">Oturumlar & Aktiviteler</button>
+                    <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">Pozisyon Yetkileri</button>
+                    <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">Oturumlar</button>
                     <button class="admin-tab" onclick="showAdminTab('magazaSaatleri',this)">Mağaza Saatleri</button>
                     <button class="admin-tab" onclick="showAdminTab('checkKurallari',this)">Check & Puantaj Kuralları</button>
                     <button class="admin-tab" onclick="showAdminTab('checklistTurleri',this)">Checklist Türleri</button>
                     <button class="admin-tab" onclick="showAdminTab('subeler',this)">Şubeler</button>
-                    <!-- Pozisyonlar artık Yetkiler ile birleşti -->
+                    <button class="admin-tab" onclick="showAdminTab('pozisyonlar',this)">Pozisyonlar</button>
                     <button class="admin-tab" onclick="showAdminTab('ihlaller',this)">İhlaller</button>
                     <button class="admin-tab" onclick="showAdminTab('sablonlar',this)">Sözleşme Şablonları</button>
                     <button class="admin-tab" onclick="showAdminTab('belgeler',this)">Belge Şablonları</button>
-                    <!-- Aktiviteler artık Oturumlar ile birleşti -->
+                    <button class="admin-tab" id="tab-aktiviteler" onclick="showAdminTab('aktiviteler',this)">Aktiviteler</button>
                     <button class="admin-tab" id="tab-yedekler" onclick="showAdminTab('yedekler',this)">Yedekler</button>
                 </div>
                 
@@ -1694,19 +1694,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 
                 <!-- Genel -->
                 <div class="admin-section active" id="admin-genel">
-                    <!-- PROFİLİM - Tüm kullanıcılar görecek -->
-                    <div class="admin-card" id="myProfileCard" style="margin-bottom:20px">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
-                                <svg width="18" height="18" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                Profilim
-                            </div>
-                        </div>
-                        <div id="myProfileContainer">
-                            <div style="text-align:center;padding:20px;color:var(--tx2)">Yükleniyor...</div>
-                        </div>
-                    </div>
-                    
                     <div class="admin-card" id="companySettingsCard">
                         <div class="admin-card-header"><div class="admin-card-title">Şirket Bilgileri</div></div>
                         <div class="form-grid">
@@ -1726,19 +1713,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <div class="form-group"><label class="form-label">Şifre Tekrar</label><input type="password" id="admin_confirm_password" class="form-input" placeholder="Şifreyi tekrar girin"></div>
                         </div>
                         <div class="btn-group"><button class="btn btn-primary btn-sm" onclick="updateAdminCredentials()">🔑 Güncelle</button></div>
-                    </div>
-                    <!-- Admin Email Listesi - Sadece admin görecek -->
-                    <div class="admin-card" id="adminEmailsCard" style="margin-top:20px;display:none">
-                        <div class="admin-card-header"><div class="admin-card-title">👑 Yönetici E-posta Listesi</div></div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Bu listedeki e-postalar personel kaydı olmasa bile sisteme erişebilir.</p>
-                        <div class="form-group">
-                            <label class="form-label">Admin E-postalar (her satıra bir tane)</label>
-                            <textarea id="adminEmailsList" class="form-input" rows="5" placeholder="admin@moonberrycoffee.com&#10;tamer@moonberrycoffee.com" style="font-family:monospace;font-size:.85rem"></textarea>
-                        </div>
-                        <div class="btn-group">
-                            <button class="btn btn-ghost btn-sm" onclick="loadAdminEmailsToUI()">↻ Yenile</button>
-                            <button class="btn btn-primary btn-sm" onclick="saveAdminEmailsFromUI()">💾 Kaydet</button>
-                        </div>
                     </div>
                     <!-- Puan Sıfırlama - Sadece admin görecek -->
                     <div class="admin-card" id="dataCleanupCard" style="margin-top:20px;display:none">
@@ -1935,40 +1909,54 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                 </div>
 
-                <!-- Pozisyonlar ve Yetkiler (Birleşik) -->
+                <!-- Pozisyon Yetkileri -->
                 <div class="admin-section" id="admin-kullanicilar">
-                    <!-- BÖLÜM 1: Pozisyon Yönetimi -->
-                    <div class="admin-card" style="margin-bottom:20px">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
-                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-                                Pozisyonlar
-                            </div>
-                            <button class="btn btn-sm btn-primary" onclick="addPosition()">+ Yeni Pozisyon</button>
-                        </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">
-                            Pozisyonları yönetin ve her pozisyona sistem rolü atayın. Yeni pozisyon eklediğinizde otomatik olarak yetki kartı oluşturulur.
-                        </p>
-                        <div id="positionListCombined" class="admin-list"></div>
-                    </div>
-                    
-                    <!-- BÖLÜM 2: Yetki Matrisi -->
                     <div class="admin-card">
                         <div class="admin-card-header">
                             <div class="admin-card-title">🔐 Pozisyon Yetkileri</div>
                         </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:24px">
-                            Her pozisyon için hangi sayfaları görebileceğini ve hangi işlemleri yapabileceğini belirleyin. Bir pozisyona tıklayarak yetkilerini düzenleyin.
+                        <p style="color:var(--tx2);font-size:.9rem;margin-bottom:24px">
+                            Her pozisyon için hangi sayfaları görebileceğini ve hangi işlemleri yapabileceğini belirleyin.
                         </p>
                         
-                        <!-- Dinamik Pozisyon Kartları -->
-                        <div id="dynamicPositionCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:24px">
-                            <!-- JavaScript ile doldurulacak -->
+                        <!-- Pozisyon Kartları -->
+                        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
+                            <!-- Barista -->
+                            <div class="permission-card" onclick="selectRoleForPermissions('barista')" style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#3498db';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
+                                <div style="font-size:2rem;margin-bottom:8px">🧑‍🍳</div>
+                                <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:4px">Barista</div>
+                                <div style="font-size:.7rem;color:var(--tx2)">Günlük operasyon</div>
+                                <div style="margin-top:8px;padding:4px 8px;background:#3498db22;color:#3498db;border-radius:6px;font-size:.65rem;font-weight:500">Sınırlı</div>
+                            </div>
+                            
+                            <!-- Mağaza Müdür Yardımcısı -->
+                            <div class="permission-card" onclick="selectRoleForPermissions('magaza_mudur_yardimcisi')" style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#ff8674';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
+                                <div style="font-size:2rem;margin-bottom:8px">👔</div>
+                                <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:4px">Müdür Yrd.</div>
+                                <div style="font-size:.7rem;color:var(--tx2)">Yardımcı yönetim</div>
+                                <div style="margin-top:8px;padding:4px 8px;background:#ff867422;color:#ff8674;border-radius:6px;font-size:.65rem;font-weight:500">Orta</div>
+                            </div>
+                            
+                            <!-- Mağaza Müdürü -->
+                            <div class="permission-card" onclick="selectRoleForPermissions('magaza_muduru')" style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#008c95';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
+                                <div style="font-size:2rem;margin-bottom:8px">🏪</div>
+                                <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:4px">Mağaza Müdürü</div>
+                                <div style="font-size:.7rem;color:var(--tx2)">Şube yönetimi</div>
+                                <div style="margin-top:8px;padding:4px 8px;background:#008c9522;color:#008c95;border-radius:6px;font-size:.65rem;font-weight:500">Geniş</div>
+                            </div>
+                            
+                            <!-- Bölge Müdürü -->
+                            <div class="permission-card" onclick="selectRoleForPermissions('bolge_muduru')" style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#9b59b6';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
+                                <div style="font-size:2rem;margin-bottom:8px">🌍</div>
+                                <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:4px">Bölge Müdürü</div>
+                                <div style="font-size:.7rem;color:var(--tx2)">Çoklu şube</div>
+                                <div style="margin-top:8px;padding:4px 8px;background:#9b59b622;color:#9b59b6;border-radius:6px;font-size:.65rem;font-weight:500">Tam</div>
+                            </div>
                         </div>
                         
                         <!-- Seçili Rol İzinleri -->
                         <div id="selectedRolePermissions" style="display:none;background:var(--bg2);border:1px solid var(--cardBorder);border-radius:16px;padding:24px">
-                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+                            <div style="display:flex;align-items:center;justify-content:between;margin-bottom:20px">
                                 <div style="display:flex;align-items:center;gap:12px">
                                     <span id="selectedRoleIcon" style="font-size:2rem">🧑‍🍳</span>
                                     <div>
@@ -2130,38 +2118,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                                 <div style="font-size:2rem;margin-bottom:12px">📊</div>
                                 <div>Geçmiş yükleniyor...</div>
                             </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Kullanıcı Aktiviteleri (Oturumlar ile birleştirildi) -->
-                    <div class="admin-card" style="margin-top:16px">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
-                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
-                                Kullanıcı Aktiviteleri
-                            </div>
-                            <button class="btn btn-sm btn-ghost" onclick="loadActivityLogs()" style="display:flex;align-items:center;gap:4px">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-                                Yenile
-                            </button>
-                        </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Kullanıcıların sistem üzerindeki hareketlerini takip edin.</p>
-                        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-                            <select id="activityUserFilter" class="form-select" style="min-width:160px" onchange="loadActivityLogs()">
-                                <option value="">Tüm Kullanıcılar</option>
-                            </select>
-                            <select id="activityTypeFilter" class="form-select" style="min-width:140px" onchange="loadActivityLogs()">
-                                <option value="">Tüm Aktiviteler</option>
-                                <option value="login">Giriş</option>
-                                <option value="logout">Çıkış</option>
-                                <option value="page_view">Sayfa Görüntüleme</option>
-                                <option value="document_create">Belge Oluşturma</option>
-                                <option value="data_edit">Veri Düzenleme</option>
-                            </select>
-                            <input type="date" id="activityDateFilter" class="form-input" style="width:160px" onchange="loadActivityLogs()">
-                        </div>
-                        <div class="admin-list" id="activityLogList" style="max-height:400px;overflow-y:auto">
-                            <p style="color:var(--tx2);text-align:center;padding:20px">Aktiviteler yükleniyor...</p>
                         </div>
                     </div>
                 </div>
@@ -2380,7 +2336,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
 
                 <!-- Pozisyonlar -->
-                <!-- Pozisyonlar sekmesi artık Pozisyon Yetkileri ile birleştirildi - admin-kullanicilar içinde -->
+                <div class="admin-section" id="admin-pozisyonlar">
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">👔 Pozisyonlar</div>
+                            <button class="btn btn-sm btn-primary" onclick="addPosition()">+ Ekle</button>
+                        </div>
+                        <div class="admin-list" id="positionList"></div>
+                    </div>
+                </div>
 
                 <!-- İhlaller -->
                 <div class="admin-section" id="admin-ihlaller">
@@ -2494,7 +2458,39 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                 </div>
 
-                <!-- Aktiviteler artık Oturumlar ile birleştirildi - admin-oturumlar içinde -->
+                <!-- Aktiviteler (Sadece Yönetici) -->
+                <div class="admin-section" id="admin-aktiviteler">
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                                Kullanıcı Aktiviteleri
+                            </div>
+                            <button class="btn btn-sm btn-ghost" onclick="loadActivityLogs()" style="display:flex;align-items:center;gap:4px">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                                Yenile
+                            </button>
+                        </div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Kullanıcıların sistem üzerindeki hareketlerini takip edin.</p>
+                        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+                            <select id="activityUserFilter" class="form-select" style="min-width:160px" onchange="loadActivityLogs()">
+                                <option value="">Tüm Kullanıcılar</option>
+                            </select>
+                            <select id="activityTypeFilter" class="form-select" style="min-width:140px" onchange="loadActivityLogs()">
+                                <option value="">Tüm Aktiviteler</option>
+                                <option value="login">Giriş</option>
+                                <option value="logout">Çıkış</option>
+                                <option value="page_view">Sayfa Görüntüleme</option>
+                                <option value="document_create">Belge Oluşturma</option>
+                                <option value="data_edit">Veri Düzenleme</option>
+                            </select>
+                            <input type="date" id="activityDateFilter" class="form-input" style="width:160px" onchange="loadActivityLogs()">
+                        </div>
+                        <div class="admin-list" id="activityLogList" style="max-height:500px;overflow-y:auto">
+                            <p style="color:var(--tx2);text-align:center;padding:20px">Aktiviteler yükleniyor...</p>
+                        </div>
+                    </div>
+                </div>
                 
                 <!-- G15: Yedekler -->
                 <div class="admin-section" id="admin-yedekler">
@@ -2721,130 +2717,6 @@ function normalizeTurkishChars(str) {
         .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
         .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
         .replace(/i̇/g, 'i'); // combining dot varsa temizle
-}
-
-// ==================== ŞİFRE ENCODE/DECODE ====================
-// Base64 ile basit şifreleme (admin görebilsin diye)
-// ==================== GÜVENLİK: ŞİFRE SİSTEMİ ====================
-
-// Salt üret (4 karakter rastgele)
-function generateSalt() {
-    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    let salt = '';
-    for (let i = 0; i < 4; i++) {
-        salt += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return salt;
-}
-
-// Şifre encode (obfuscation + salt)
-function encodePassword(plainPassword) {
-    if (!plainPassword) return '';
-    try {
-        const salt = generateSalt();
-        const withSalt = plainPassword + salt;
-        const encoded = btoa(unescape(encodeURIComponent(withSalt)));
-        return { k: encoded, s: salt };
-    } catch (e) {
-        console.error('Şifre encode hatası:', e);
-        return '';
-    }
-}
-
-// Şifre decode (credentials formatından)
-function decodePassword(credentialData) {
-    if (!credentialData) return '';
-    
-    // Eski format (string) - geriye uyumluluk
-    if (typeof credentialData === 'string') {
-        try {
-            // Eski reversed base64 formatı dene
-            const reversed = decodeURIComponent(escape(atob(credentialData)));
-            return reversed.split('').reverse().join('');
-        } catch (e) {
-            return credentialData; // Plain text olabilir
-        }
-    }
-    
-    // Yeni format (object: {k, s})
-    if (credentialData.k) {
-        try {
-            const decoded = decodeURIComponent(escape(atob(credentialData.k)));
-            // Salt'ı kaldır
-            if (credentialData.s && decoded.endsWith(credentialData.s)) {
-                return decoded.slice(0, -credentialData.s.length);
-            }
-            return decoded;
-        } catch (e) {
-            console.error('Şifre decode hatası:', e);
-            return '';
-        }
-    }
-    
-    return '';
-}
-
-// Email'i güvenli doc ID'ye çevir
-function emailToDocId(email) {
-    return email.toLowerCase().replace(/[@.]/g, '_');
-}
-
-// Credentials koleksiyonuna şifre kaydet
-async function saveCredential(email, password, personelId = null) {
-    if (!email || !password) return false;
-    
-    try {
-        const docId = emailToDocId(email);
-        const encoded = encodePassword(password);
-        
-        await db.collection('credentials').doc(docId).set({
-            e: email,                    // Email (açık - arama için)
-            k: encoded.k,                // Encoded password
-            s: encoded.s,                // Salt
-            p: personelId,               // Personel ID (referans)
-            u: firebase.firestore.FieldValue.serverTimestamp(), // Güncelleme zamanı
-            v: 2                         // Versiyon
-        });
-        
-        console.log('Credential kaydedildi:', docId);
-        return true;
-    } catch (e) {
-        console.error('Credential kaydetme hatası:', e);
-        return false;
-    }
-}
-
-// Credentials'dan şifre oku (admin için)
-async function getCredential(email) {
-    if (!email) return null;
-    
-    try {
-        const docId = emailToDocId(email);
-        const doc = await db.collection('credentials').doc(docId).get();
-        
-        if (doc.exists) {
-            const data = doc.data();
-            return decodePassword({ k: data.k, s: data.s });
-        }
-        return null;
-    } catch (e) {
-        console.error('Credential okuma hatası:', e);
-        return null;
-    }
-}
-
-// Credentials koleksiyonundan sil
-async function deleteCredential(email) {
-    if (!email) return false;
-    
-    try {
-        const docId = emailToDocId(email);
-        await db.collection('credentials').doc(docId).delete();
-        return true;
-    } catch (e) {
-        console.error('Credential silme hatası:', e);
-        return false;
-    }
 }
 
 // Personel map oluştur: displayName/codeName → {uniqueId, fullName}
@@ -3772,10 +3644,10 @@ const DEFAULT_STATE = {
     branches: ['Tuzla TRC', 'Şişli (Merkez)'],
     branchCodes: {'Şişli (Merkez)': 'SIS', 'Tuzla TRC': 'TZL'},
     positions: [
-        {id: 'barista', name: 'Barista / Servis', type: 'Mavi Yaka', role: 'barista', icon: '🧑‍🍳'},
-        {id: 'mudur_yardimcisi', name: 'Müdür Yardımcısı', type: 'Gri Yaka', role: 'mudur_yardimcisi', icon: '👔'},
-        {id: 'magaza_muduru', name: 'Mağaza Müdürü', type: 'Beyaz Yaka', role: 'magaza_muduru', icon: '🏪'},
-        {id: 'bolge_muduru', name: 'Bölge Müdürü', type: 'Stratejik', role: 'bolge_muduru', icon: '🌍'}
+        {id: 'barista', name: 'Barista / Servis', type: 'Mavi Yaka'},
+        {id: 'mudur_yardimcisi', name: 'Müdür Yardımcısı', type: 'Gri Yaka'},
+        {id: 'magaza_muduru', name: 'Mağaza Müdürü', type: 'Beyaz Yaka'},
+        {id: 'bolge_muduru', name: 'Bölge Müdürü', type: 'Stratejik'}
     ],
     violations: [
         {id:'V01',title:'Telefon Kullanımı',risk:'low',legal:'İş K. 25/II-h',steps:['Sözlü uyarı','Yazılı uyarı','İhtar'],desc:'Mesai saatinde telefon kullanımı'},
@@ -4067,9 +3939,6 @@ function loadState() {
             // Deep merge for nested objects like company
             STATE = {...DEFAULT_STATE, ...parsed};
             STATE.company = {...DEFAULT_STATE.company, ...parsed.company};
-            
-            // Pozisyon migration - eksik role ve icon alanlarını ekle
-            migratePositions();
         } catch(e) {
             STATE = {...DEFAULT_STATE};
         }
@@ -4077,28 +3946,6 @@ function loadState() {
         STATE = {...DEFAULT_STATE};
     }
     saveState();
-}
-
-// Eski pozisyonlara role ve icon ekle
-function migratePositions() {
-    const defaultRoles = {
-        'barista': { role: 'barista', icon: '🧑‍🍳' },
-        'mudur_yardimcisi': { role: 'mudur_yardimcisi', icon: '👔' },
-        'magaza_muduru': { role: 'magaza_muduru', icon: '🏪' },
-        'bolge_muduru': { role: 'bolge_muduru', icon: '🌍' }
-    };
-    
-    STATE.positions = STATE.positions.map(p => {
-        // role yoksa ekle
-        if (!p.role) {
-            p.role = defaultRoles[p.id]?.role || 'barista';
-        }
-        // icon yoksa ekle
-        if (!p.icon) {
-            p.icon = defaultRoles[p.id]?.icon || '👤';
-        }
-        return p;
-    });
 }
 
 function saveState() {
@@ -4124,9 +3971,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Önce config'i yükle (email mapping için)
                     await loadSystemConfig();
                     
-                    // Admin kontrolü - Config'den dinamik liste
-                    const isAdmin = await checkAdminEmail(user.email);
-                    
                     // 1. ÖNCE PERSONEL koleksiyonundan email ile bul
                     let foundInPersonel = false;
                     const personelSnapshot = await db.collection('personel').where('email', '==', user.email).limit(1).get();
@@ -4150,25 +3994,26 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                     
-                    // 2. GÜVENLİK: Personel'de bulunamadı VE admin değilse → LOGOUT
-                    if (!foundInPersonel && !isAdmin) {
-                        console.log('🚫 Personel kaydı bulunamadı, erişim engellendi:', user.email);
-                        await firebase.auth().signOut();
-                        alert('Bu hesap artık aktif değil.');
-                        window.location.replace('login.html');
-                        return;
-                    }
-                    
-                    // 3. Admin ise özel ayar
-                    if (!foundInPersonel && isAdmin) {
-                        currentUser = {
-                            id: user.uid,
-                            email: user.email,
-                            name: 'Yönetici',
-                            role: 'yonetici',
-                            branch: 'all'
-                        };
-                        console.log('✅ Admin kullanıcı:', currentUser.email);
+                    // 2. Personel'de bulunamadıysa users koleksiyonuna bak
+                    if (!foundInPersonel) {
+                        const userDoc = await db.collection('users').doc(user.uid).get();
+                        if (userDoc.exists) {
+                            currentUser = { id: user.uid, email: user.email, ...userDoc.data() };
+                            console.log('✅ Users koleksiyonundan kullanıcı bulundu');
+                        } else {
+                            // 3. Email mapping'den bak
+                            const emailMatch = personnelMapping.find(p => p.email?.toLowerCase() === user.email?.toLowerCase());
+                            const isAdmin = user.email === 'admin@moonberrycoffee.com' || user.email === 'tamer@moonberrycoffee.com';
+                            
+                            currentUser = {
+                                id: user.uid,
+                                email: user.email,
+                                name: emailMatch?.name || (isAdmin ? 'Yönetici' : user.email.split('@')[0]),
+                                role: emailMatch?.role || (isAdmin ? 'yonetici' : 'barista'),
+                                branch: emailMatch?.branch || (isAdmin ? 'all' : '')
+                            };
+                            console.log('✅ Email mapping veya varsayılan kullanıcı:', currentUser.name, currentUser.role);
+                        }
                     }
                     
                     // Kullanıcı adını sidebar'da göster
@@ -4456,124 +4301,6 @@ function renderPositionCards() {
     `).join('');
 }
 
-// Birleşik sekmedeki pozisyon listesi
-function renderPositionListCombined() {
-    const container = document.getElementById('positionListCombined');
-    if (!container) return;
-    
-    if (STATE.positions.length === 0) {
-        container.innerHTML = '<p style="color:var(--tx2);text-align:center;padding:20px">Henüz pozisyon eklenmemiş.</p>';
-        return;
-    }
-    
-    const roleNames = {
-        'barista': 'Barista',
-        'mudur_yardimcisi': 'Müdür Yrd.',
-        'magaza_muduru': 'Mağaza Müdürü',
-        'bolge_muduru': 'Bölge Müdürü'
-    };
-    
-    const roleColors = {
-        'barista': '#3498db',
-        'mudur_yardimcisi': '#ff8674',
-        'magaza_muduru': '#008c95',
-        'bolge_muduru': '#9b59b6'
-    };
-    
-    container.innerHTML = STATE.positions.map((p, i) => `
-        <div class="admin-list-item" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border-radius:10px;margin-bottom:8px">
-            <div style="display:flex;align-items:center;gap:12px">
-                <span style="font-size:1.5rem">${p.icon || '👤'}</span>
-                <div>
-                    <div style="font-weight:600;color:var(--tx)">${p.name}</div>
-                    <div style="font-size:.75rem;color:var(--tx2)">${p.type} • <span style="color:${roleColors[p.role] || '#888'}">${roleNames[p.role] || 'Rol atanmamış'}</span></div>
-                </div>
-            </div>
-            <div style="display:flex;gap:8px">
-                <button class="btn btn-ghost btn-sm" onclick="editPosition(${i})" title="Düzenle">✏️</button>
-                <button class="btn btn-ghost btn-sm" onclick="deletePosition(${i})" title="Sil" style="color:var(--red)">🗑️</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-// Dinamik yetki kartları (pozisyonlara göre)
-function renderDynamicPositionCards() {
-    const container = document.getElementById('dynamicPositionCards');
-    if (!container) return;
-    
-    const roleColors = {
-        'barista': '#3498db',
-        'mudur_yardimcisi': '#ff8674',
-        'magaza_muduru': '#008c95',
-        'bolge_muduru': '#9b59b6'
-    };
-    
-    const roleLevels = {
-        'barista': 'Sınırlı',
-        'mudur_yardimcisi': 'Orta',
-        'magaza_muduru': 'Geniş',
-        'bolge_muduru': 'Tam'
-    };
-    
-    container.innerHTML = STATE.positions.map(p => {
-        const color = roleColors[p.role] || '#888';
-        const level = roleLevels[p.role] || 'Özel';
-        
-        return `
-            <div class="permission-card" onclick="selectRoleForPermissions('${p.id}')" 
-                 style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s" 
-                 onmouseover="this.style.borderColor='${color}';this.style.transform='translateY(-2px)'" 
-                 onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
-                <div style="font-size:2rem;margin-bottom:8px">${p.icon || '👤'}</div>
-                <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:4px">${p.name}</div>
-                <div style="font-size:.7rem;color:var(--tx2)">${p.type}</div>
-                <div style="margin-top:8px;padding:4px 8px;background:${color}22;color:${color};border-radius:6px;font-size:.65rem;font-weight:500">${level}</div>
-            </div>
-        `;
-    }).join('');
-}
-
-// Rol bazlı varsayılan yetkiler
-function getDefaultPermissions(role) {
-    const defaults = {
-        'barista': {
-            pages: { dashboard: true, shift: true, checklist: true, documents: false, personel: false, admin: false },
-            docs: { sozlesme: false, savunma: false, tutanak: false, ihtar: false, fesih: false },
-            forms: { checklist: true, izin: true, avans: true },
-            admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_ihlaller: false },
-            special: { canViewAllBranches: false, canEditShift: false, canDeletePersonel: false, canExportData: false, view_password: false, change_others_password: false },
-            limits: { maxAvans: 3000, maxIzin: 14 }
-        },
-        'mudur_yardimcisi': {
-            pages: { dashboard: true, shift: true, checklist: true, documents: true, personel: false, admin: false },
-            docs: { sozlesme: false, savunma: true, tutanak: true, ihtar: false, fesih: false },
-            forms: { checklist: true, izin: true, avans: true },
-            admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_ihlaller: true },
-            special: { canViewAllBranches: false, canEditShift: true, canDeletePersonel: false, canExportData: false, view_password: false, change_others_password: false },
-            limits: { maxAvans: 5000, maxIzin: 14 }
-        },
-        'magaza_muduru': {
-            pages: { dashboard: true, shift: true, checklist: true, documents: true, personel: true, admin: false },
-            docs: { sozlesme: true, savunma: true, tutanak: true, ihtar: true, fesih: false },
-            forms: { checklist: true, izin: true, avans: true },
-            admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_ihlaller: true },
-            special: { canViewAllBranches: false, canEditShift: true, canDeletePersonel: false, canExportData: true, view_password: false, change_others_password: false },
-            limits: { maxAvans: 10000, maxIzin: 21 }
-        },
-        'bolge_muduru': {
-            pages: { dashboard: true, shift: true, checklist: true, documents: true, personel: true, admin: true },
-            docs: { sozlesme: true, savunma: true, tutanak: true, ihtar: true, fesih: true },
-            forms: { checklist: true, izin: true, avans: true },
-            admin: { admin_genel: true, admin_kullanicilar: true, admin_puantaj: true, admin_subeler: true, admin_ihlaller: true },
-            special: { canViewAllBranches: true, canEditShift: true, canDeletePersonel: true, canExportData: true, view_password: true, change_others_password: true },
-            limits: { maxAvans: 50000, maxIzin: 30 }
-        }
-    };
-    
-    return defaults[role] || defaults['barista'];
-}
-
 // ==================== VARSAYILAN VERİLERİ KONTROL ET ====================
 function initDefaultData() {
     // Varsayılan verileri kontrol et ve oluştur
@@ -4660,6 +4387,12 @@ function applyUserPermissions() {
     }
     if (userAvatarEl && currentUser.name) {
         userAvatarEl.textContent = currentUser.name.charAt(0).toUpperCase();
+    }
+    
+    // Ayarlar menüsü sadece yönetici görebilir
+    const navAdmin = document.getElementById('nav-admin');
+    if (navAdmin) {
+        navAdmin.style.display = currentUser.role === 'yonetici' ? 'flex' : 'none';
     }
     
     // Yönetici her şeye erişebilir
@@ -4827,10 +4560,7 @@ function goTo(page) {
     }
     
     if (page === 'katalog') renderViolations();
-    if (page === 'admin') { 
-        renderAdminLists(); 
-        loadMyProfile(); // Profilim kartını yükle
-    }
+    if (page === 'admin') renderAdminLists();
     if (page === 'personel') loadPersonelList();
     if (page === 'puantaj') { 
         populateSubeSelect('puantajSube'); 
@@ -5902,18 +5632,14 @@ function openAdminWithPin() {
         return;
     }
     
-    // Yönetici her zaman erişebilir
+    // Sadece yönetici erişebilir
     if (currentUser.role === 'yonetici') {
         goTo('admin');
         return;
     }
     
-    // Diğer roller için gelişmiş izin kontrolü
-    if (checkPermission('admin', 'admin_genel', 'access')) {
-        goTo('admin');
-    } else {
-        toast('Bu sayfaya erişim yetkiniz yok', 'error');
-    }
+    // Diğer roller erişemez
+    toast('Bu sayfaya erişim yetkiniz yok', 'error');
 }
 
 function autoCheckAdminPin() {
@@ -5968,20 +5694,14 @@ function switchAdminTab(tab, btn) {
     btn.classList.add('active');
     document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
     document.getElementById('admin-' + tab).classList.add('active');
-    if (tab === 'genel') loadMyProfile();
-    if (tab === 'kullanicilar') {
-        renderPositionListCombined();
-        renderDynamicPositionCards();
-    }
     if (tab === 'sablonlar') loadTemplate();
     if (tab === 'belgeler') loadDocTemplate('tutanak', 'olay');
     if (tab === 'oturumlar') {
         loadSessionSettings();
         loadActiveSessions();
         loadSessionHistory();
-        loadActivityLogs(); // Aktiviteler de oturumlar sekmesinde
     }
-    // aktiviteler artık oturumlar ile birleştirildi
+    if (tab === 'aktiviteler') loadActivityLogs();
     if (tab === 'yedekler') loadBackupsList();
     if (tab === 'magazaSaatleri') renderBranchHoursSettings();
     if (tab === 'checkKurallari') renderCheckRulesSettings();
@@ -5998,202 +5718,10 @@ function loadAdminFields() {
     document.getElementById('admin_address').value = STATE.company.address;
 }
 
-// ==================== PROFİLİM ====================
-async function loadMyProfile() {
-    const container = document.getElementById('myProfileContainer');
-    if (!container) return;
-    
-    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tx2)">Yükleniyor...</div>';
-    
-    try {
-        // Mevcut kullanıcının personel kaydını bul
-        const email = currentUser?.email;
-        if (!email) {
-            container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tx3)">Kullanıcı bilgisi bulunamadı</div>';
-            return;
-        }
-        
-        const personelSnap = await db.collection('personel').where('email', '==', email).limit(1).get();
-        
-        if (personelSnap.empty) {
-            container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tx3)">Personel kaydı bulunamadı</div>';
-            return;
-        }
-        
-        const personelDoc = personelSnap.docs[0];
-        const p = personelDoc.data();
-        const docId = personelDoc.id;
-        
-        // Pozisyon bilgisi
-        const roleNames = {
-            'yonetici': 'Yönetici',
-            'bolge_muduru': 'Bölge Müdürü',
-            'magaza_muduru': 'Mağaza Müdürü',
-            'magaza_mudur_yardimcisi': 'Müdür Yardımcısı',
-            'barista': 'Barista'
-        };
-        
-        container.innerHTML = `
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-                <!-- Sol: Bilgiler -->
-                <div>
-                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--bg4)">
-                        <div style="width:60px;height:60px;background:linear-gradient(135deg,#008c95,#00a8a8);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem;font-weight:600">
-                            ${(p.name || 'U').charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                            <div style="font-size:1.2rem;font-weight:600;color:var(--tx)">${p.name || '-'}</div>
-                            <div style="font-size:.85rem;color:var(--tx2)">${p.position || roleNames[p.role] || 'Personel'}</div>
-                            <div style="font-size:.75rem;color:var(--tx3)">${p.branch || '-'}</div>
-                        </div>
-                    </div>
-                    
-                    <div style="display:grid;gap:10px;font-size:.85rem">
-                        <div style="display:flex;align-items:center;gap:8px">
-                            <span style="width:24px;color:var(--tx3)">📧</span>
-                            <span style="color:var(--tx2)">${p.email || '-'}</span>
-                        </div>
-                        <div style="display:flex;align-items:center;gap:8px">
-                            <span style="width:24px;color:var(--tx3)">📱</span>
-                            <input type="tel" id="myProfile_phone" value="${p.phone || ''}" class="form-input" style="flex:1" placeholder="Telefon">
-                        </div>
-                        <div style="display:flex;align-items:center;gap:8px">
-                            <span style="width:24px;color:var(--tx3)">📍</span>
-                            <input type="text" id="myProfile_address" value="${p.address || ''}" class="form-input" style="flex:1" placeholder="Adres">
-                        </div>
-                        <div style="display:flex;align-items:center;gap:8px">
-                            <span style="width:24px;color:var(--tx3)">🏦</span>
-                            <input type="text" id="myProfile_iban" value="${p.iban || ''}" class="form-input" style="flex:1" placeholder="IBAN">
-                        </div>
-                    </div>
-                    
-                    <button onclick="saveMyProfile('${docId}')" class="btn btn-primary btn-sm" style="margin-top:16px">
-                        💾 Bilgilerimi Kaydet
-                    </button>
-                </div>
-                
-                <!-- Sağ: Şifre Değiştirme -->
-                <div style="background:var(--bg3);padding:16px;border-radius:12px">
-                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                        Şifre Değiştir
-                    </div>
-                    
-                    <div style="display:grid;gap:10px">
-                        <div>
-                            <label style="font-size:.75rem;color:var(--tx3);display:block;margin-bottom:4px">Mevcut Şifre</label>
-                            <div style="display:flex;gap:8px">
-                                <input type="password" id="myProfile_currentPassword" class="form-input" style="flex:1" placeholder="••••••••">
-                            </div>
-                        </div>
-                        <div>
-                            <label style="font-size:.75rem;color:var(--tx3);display:block;margin-bottom:4px">Yeni Şifre</label>
-                            <input type="password" id="myProfile_newPassword" class="form-input" placeholder="En az 6 karakter">
-                        </div>
-                        <div>
-                            <label style="font-size:.75rem;color:var(--tx3);display:block;margin-bottom:4px">Yeni Şifre (Tekrar)</label>
-                            <input type="password" id="myProfile_confirmPassword" class="form-input" placeholder="Şifreyi tekrar girin">
-                        </div>
-                    </div>
-                    
-                    <button onclick="changeMyPassword('${docId}')" class="btn btn-sm" style="margin-top:12px;background:#e74c3c;color:#fff;border:none">
-                        🔑 Şifremi Değiştir
-                    </button>
-                </div>
-            </div>
-        `;
-        
-    } catch (error) {
-        console.error('Profil yükleme hatası:', error);
-        container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--red)">Yükleme hatası: ' + error.message + '</div>';
-    }
-}
-
-// Profil bilgilerini kaydet
-async function saveMyProfile(docId) {
-    const phone = document.getElementById('myProfile_phone')?.value?.trim() || '';
-    const address = document.getElementById('myProfile_address')?.value?.trim() || '';
-    const iban = document.getElementById('myProfile_iban')?.value?.trim() || '';
-    
-    try {
-        await db.collection('personel').doc(docId).update({
-            phone,
-            address,
-            iban,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        
-        toast('Bilgileriniz güncellendi', 'success');
-    } catch (error) {
-        console.error('Profil kaydetme hatası:', error);
-        toast('Kaydetme hatası: ' + error.message, 'error');
-    }
-}
-
-// Kendi şifremi değiştir
-async function changeMyPassword(docId) {
-    const currentPassword = document.getElementById('myProfile_currentPassword')?.value || '';
-    const newPassword = document.getElementById('myProfile_newPassword')?.value || '';
-    const confirmPassword = document.getElementById('myProfile_confirmPassword')?.value || '';
-    
-    if (!currentPassword) {
-        toast('Mevcut şifrenizi girin', 'error');
-        return;
-    }
-    
-    if (!newPassword || newPassword.length < 6) {
-        toast('Yeni şifre en az 6 karakter olmalı', 'error');
-        return;
-    }
-    
-    if (newPassword !== confirmPassword) {
-        toast('Yeni şifreler eşleşmiyor', 'error');
-        return;
-    }
-    
-    try {
-        const user = firebase.auth().currentUser;
-        if (!user) {
-            toast('Oturum bulunamadı', 'error');
-            return;
-        }
-        
-        // Önce mevcut şifre ile yeniden kimlik doğrula
-        const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
-        await user.reauthenticateWithCredential(credential);
-        
-        // Firebase Auth şifresini güncelle
-        await user.updatePassword(newPassword);
-        
-        // Firestore'da encoded şifreyi güncelle
-        await db.collection('personel').doc(docId).update({
-            password: encodePassword(newPassword),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        
-        toast('Şifreniz başarıyla değiştirildi', 'success');
-        
-        // Alanları temizle
-        document.getElementById('myProfile_currentPassword').value = '';
-        document.getElementById('myProfile_newPassword').value = '';
-        document.getElementById('myProfile_confirmPassword').value = '';
-        
-    } catch (error) {
-        console.error('Şifre değiştirme hatası:', error);
-        if (error.code === 'auth/wrong-password') {
-            toast('Mevcut şifre yanlış', 'error');
-        } else if (error.code === 'auth/requires-recent-login') {
-            toast('Güvenlik için yeniden giriş yapın', 'error');
-        } else {
-            toast('Şifre değiştirme hatası: ' + error.message, 'error');
-        }
-    }
-}
-
 function renderAdminLists() {
     // Yönetici-only tab'ları kontrol et
     const adminOnlyTabs = ['tab-kullanicilar', 'tab-oturumlar', 'tab-aktiviteler'];
-    const adminOnlySections = ['admin-kullanicilar', 'admin-oturumlar'];
+    const adminOnlySections = ['admin-kullanicilar', 'admin-oturumlar', 'admin-aktiviteler'];
     
     if (currentUser?.role !== 'yonetici') {
         // Tab butonlarını gizle
@@ -6220,15 +5748,10 @@ function renderAdminLists() {
     
     // Yönetici için özel kartları göster
     const adminPasswordCard = document.getElementById('adminPasswordCard');
-    const adminEmailsCard = document.getElementById('adminEmailsCard');
     const dataCleanupCard = document.getElementById('dataCleanupCard');
     const rolePreviewCard = document.getElementById('rolePreviewCard');
     if (currentUser?.role === 'yonetici') {
         if (adminPasswordCard) adminPasswordCard.style.display = 'block';
-        if (adminEmailsCard) {
-            adminEmailsCard.style.display = 'block';
-            loadAdminEmailsToUI(); // Listeyi yükle
-        }
         if (dataCleanupCard) dataCleanupCard.style.display = 'block';
         if (rolePreviewCard) rolePreviewCard.style.display = 'block';
     }
@@ -6850,7 +6373,6 @@ async function saveBranch() {
         const sourceSourceBranch = STATE.branches[0] || 'Tuzla Port';
         const sourceBranchKey = sourceSourceBranch.replace(/[^a-zA-Z0-9]/g, '_');
         const newBranchKey = name.replace(/[^a-zA-Z0-9]/g, '_');
-        const branchCreatedDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
         
         // 1. STATE.branches'a ekle (10%)
         setProgress(10, 'Şube listesine ekleniyor...');
@@ -6860,8 +6382,7 @@ async function saveBranch() {
         // 2. Firebase systemConfig/checkRules.branches güncelle (20%)
         setProgress(20, 'Firebase ayarları güncelleniyor...');
         await db.collection('systemConfig').doc('checkRules').update({
-            branches: firebase.firestore.FieldValue.arrayUnion(name),
-            [`branchCreatedAt.${name}`]: branchCreatedDate
+            branches: firebase.firestore.FieldValue.arrayUnion(name)
         });
         log(`✓ Firebase branches güncellendi`);
         
@@ -6915,212 +6436,20 @@ async function saveBranch() {
         });
         log(`✓ Checklist türleri ayarlandı (${CHECKLIST_TYPES[name].length} tür)`);
         
-        // 6. Test kullanıcıları oluştur (85-95%)
-        setProgress(85, 'Test kullanıcıları oluşturuluyor...');
-        const branchShortName = normalizeTurkishChars(name).replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
-        const testPassword = 'Test.123*';
-        
-        const testUsers = [
-            { role: 'magaza_muduru', suffix: 'mudur', displayName: `${name} Test Müdür`, position: 'Mağaza Müdürü' },
-            { role: 'mudur_yardimcisi', suffix: 'mudur_yrd', displayName: `${name} Test Md. Yrd.`, position: 'Mağaza Müdür Yardımcısı' },
-            { role: 'barista', suffix: 'barista1', displayName: `${name} Barista 1`, position: 'Barista' },
-            { role: 'barista', suffix: 'barista2', displayName: `${name} Barista 2`, position: 'Barista' },
-            { role: 'barista', suffix: 'barista3', displayName: `${name} Barista 3`, position: 'Barista' }
-        ];
-        
-        const createdPersonelIds = [];
-        
-        for (let i = 0; i < testUsers.length; i++) {
-            const user = testUsers[i];
-            const email = `${branchShortName}_${user.suffix}@moonberrycoffee.com`;
-            
-            try {
-                // Firebase Auth'a ekle (secondary app ile)
-                try {
-                    const secondaryApp = firebase.initializeApp(firebase.app().options, `Secondary_${Date.now()}_${i}`);
-                    const secondaryAuth = secondaryApp.auth();
-                    await secondaryAuth.createUserWithEmailAndPassword(email, testPassword);
-                    await secondaryApp.delete();
-                    log(`✓ Auth: ${email}`);
-                } catch (authErr) {
-                    if (authErr.code !== 'auth/email-already-in-use') {
-                        console.warn('Auth hatası:', authErr);
-                    }
-                }
-                
-                // Personel koleksiyonuna ekle (şifre encoded olarak)
-                const personelRef = await db.collection('personel').add({
-                    name: user.displayName,
-                    email: email,
-                    password: encodePassword(testPassword),
-                    role: user.role,
-                    position: user.position,
-                    branch: name,
-                    status: 'active',
-                    isTestUser: true,
-                    hasFirebaseAuth: true,
-                    hasPassword: true,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                createdPersonelIds.push({ id: personelRef.id, ...user, email });
-                
-                // Users koleksiyonuna ekle
-                await db.collection('users').doc(email).set({
-                    email: email,
-                    role: user.role,
-                    branch: name,
-                    name: user.displayName,
-                    personelId: personelRef.id,
-                    isTestUser: true,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                
-                log(`✓ Personel: ${user.displayName}`);
-            } catch (userErr) {
-                log(`⚠ Kullanıcı hatası: ${user.displayName} - ${userErr.message}`);
-            }
-            
-            setProgress(85 + Math.round((i + 1) / testUsers.length * 5), `Kullanıcılar oluşturuluyor... (${i + 1}/${testUsers.length})`);
-        }
-        
-        // 7. Bu hafta için shift planı oluştur (95%)
-        setProgress(95, 'Shift planı oluşturuluyor...');
-        
-        // Bu haftanın pazartesisini bul
-        const today = new Date();
-        const dayOfWeek = today.getDay(); // 0=Pazar, 1=Pazartesi...
-        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-        const weekStart = new Date(today);
-        weekStart.setDate(today.getDate() + mondayOffset);
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-        
-        const weekStartStr = weekStart.toISOString().split('T')[0];
-        const weekEndStr = weekEnd.toISOString().split('T')[0];
-        const weekLabel = `${weekStart.getDate()} ${weekStart.toLocaleDateString('tr-TR', {month: 'long'})} - ${weekEnd.getDate()} ${weekEnd.toLocaleDateString('tr-TR', {month: 'long'})}`;
-        
-        // Personel shift atamaları (açılış/kapanış dönüşümlü)
-        const personelShifts = {};
-        const personelOrder = [];
-        const personelNames = {};
-        const personelFullNames = {};
-        
-        createdPersonelIds.forEach((p, idx) => {
-            const odaId = normalizeTurkishChars(p.displayName).replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
-            personelOrder.push(odaId);
-            
-            // Kısa isim: Şube adını çıkar, kalan kısmı kullan
-            // "Ataşehir Marina Test Müdür" → "Test Müdür"
-            // "Ataşehir Marina Barista 1" → "Barista 1"
-            const shortName = p.displayName.replace(name, '').trim();
-            personelNames[odaId] = shortName || p.displayName;
-            personelFullNames[odaId] = p.displayName;
-            
-            // Haftalık shift ataması (0=Pazartesi, 6=Pazar)
-            const shifts = {};
-            for (let day = 0; day < 7; day++) {
-                if (p.role === 'magaza_muduru') {
-                    // Müdür: Ara vardiya + 1 gün OFF
-                    shifts[day] = day === 6 ? 'OFF' : '12:00/21:00';
-                } else if (p.role === 'mudur_yardimcisi') {
-                    // Müdür yardımcısı: Kapanış ağırlıklı + 1 gün OFF
-                    shifts[day] = day === 0 ? 'OFF' : (day % 2 === 0 ? 'AÇILIŞ' : 'KAPANIŞ');
-                } else {
-                    // Barista: Dönüşümlü açılış/kapanış + 1 gün OFF
-                    const offDay = (idx + 1) % 7; // Her barista farklı gün OFF
-                    if (day === offDay) {
-                        shifts[day] = 'OFF';
-                    } else {
-                        shifts[day] = (day + idx) % 2 === 0 ? 'AÇILIŞ' : 'KAPANIŞ';
-                    }
-                }
-            }
-            personelShifts[odaId] = shifts;
-        });
-        
-        // Haftalık shift dokümanı oluştur
-        const shiftDocData = {
-            branch: name,
-            weekStart: weekStartStr,
-            weekEnd: weekEndStr,
-            weekLabel: weekLabel,
-            personelShifts: personelShifts,
-            personelOrder: personelOrder,
-            personelNames: personelNames,
-            personelFullNames: personelFullNames,
-            customRules: [
-                { text: 'AÇILIŞ PERSONELİ İŞE GEÇ KALMAMALIDIR!', color: '#2E7D32', bg: '#C6EFCE' },
-                { text: 'İZİN GÜNÜ YOKSA; YEMEK VE MOLA SÜRESİ SEÇİMİ PERSONELİN KENDİ SEÇİMİNDEDİR.', color: '#2E7D32', bg: '#C6EFCE' },
-                { text: "SHIFT'E YILDIZ (*) SEMBOLÜ OLAN GÜNLER ÖZEL İSTEK GÜNLERİDİR.", color: '#9C5700', bg: '#FFEB9C' },
-                { text: 'SHIFT YÖNETİCİLERİNİZE BİLGİ VERİLMEDEN HABERSİZ DEĞİŞTİRİLEMEZ!', color: '#C00000', bg: '#FFC7CE' }
-            ],
-            createdBy: currentUser?.email || 'admin',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            isAutoGenerated: true
-        };
-        
-        await db.collection('shifts').add(shiftDocData);
-        log(`✓ Haftalık shift planı oluşturuldu: ${weekLabel}`);
-        log(`   • ${createdPersonelIds.length} personel atandı`);
-        
-        // 8. Local state kaydet (98%)
-        setProgress(98, 'Yerel ayarlar kaydediliyor...');
+        // 6. Local state kaydet (95%)
+        setProgress(95, 'Yerel ayarlar kaydediliyor...');
         saveState();
         
-        // 9. Tamamlandı (100%)
+        // 7. Tamamlandı (100%)
         setProgress(100, 'Tamamlandı!');
-        log(`\n✅ "${name}" şubesi oluşturuldu!`);
-        log(`   • ${copiedCount} checklist kopyalandı`);
-        log(`   • ${createdPersonelIds.length} test kullanıcı eklendi`);
-        log(`   • Haftalık shift planı oluşturuldu`);
-        log(`\n📧 Test kullanıcı şifresi: ${testPassword}`);
-        
-        // Yeni şube adını kaydet (shift sayfasında kullanılacak)
-        window._newBranchName = name;
+        log(`\n✅ "${name}" şubesi ${copiedCount} checklist ile oluşturuldu!`);
         
         setTimeout(() => {
             closeModal();
             populateSelects();
             renderAdminLists();
-            toast(`"${name}" şubesi oluşturuldu! Shift planına yönlendiriliyorsunuz...`, 'success');
-            
-            // Shift sayfasına git ve yeni şubeyi seç
-            setTimeout(() => {
-                goTo('shift');
-                // Şube seçimini ayarla (sayfa yüklenmesi için bekle)
-                setTimeout(async () => {
-                    const shiftBranchSelect = document.getElementById('shiftSube');
-                    if (shiftBranchSelect) {
-                        shiftBranchSelect.value = name;
-                        // Önce shift listesini yükle (hafta dropdown'ı dolsun)
-                        if (typeof loadShiftList === 'function') {
-                            await loadShiftList();
-                        }
-                        // Hafta dropdown'ı yüklendikten sonra "Bu hafta" seç
-                        setTimeout(() => {
-                            const weekSelect = document.getElementById('shiftHafta');
-                            if (weekSelect && weekSelect.options.length > 0) {
-                                // "Bu hafta" seçeneğini bul veya ilk seçeneği seç
-                                for (let i = 0; i < weekSelect.options.length; i++) {
-                                    if (weekSelect.options[i].text.includes('Bu hafta')) {
-                                        weekSelect.selectedIndex = i;
-                                        break;
-                                    }
-                                }
-                                // Hiç "Bu hafta" yoksa ilk seçeneği al
-                                if (weekSelect.selectedIndex < 0) {
-                                    weekSelect.selectedIndex = 0;
-                                }
-                            }
-                            if (typeof loadShiftWeek === 'function') {
-                                loadShiftWeek();
-                            }
-                        }, 1000);
-                    }
-                }, 800);
-            }, 1000);
-        }, 2000);
+            toast(`"${name}" şubesi oluşturuldu! (${copiedCount} checklist kopyalandı)`, 'success');
+        }, 1500);
         
     } catch (e) {
         console.error('Şube oluşturma hatası:', e);
@@ -7307,248 +6636,25 @@ async function migrateBranchName(oldName, newName) {
 }
 
 function deleteBranch(i) {
-    const branchName = STATE.branches[i];
-    confirmModal('Şube Sil', `
-        <div style="text-align:left">
-            <p><strong>"${branchName}"</strong> şubesini silmek istediğinize emin misiniz?</p>
-            <div style="margin-top:12px;padding:12px;background:rgba(231,76,60,.1);border-radius:8px;font-size:.85rem;color:#c0392b">
-                <strong>⚠️ DİKKAT:</strong> Bu işlem geri alınamaz!<br>
-                Silinecekler:
-                <ul style="margin:8px 0 0 16px;padding:0">
-                    <li>Tüm checklist tanımları</li>
-                    <li>Tüm checklist kayıtları</li>
-                    <li>Tüm personel kayıtları</li>
-                    <li>Tüm shift kayıtları</li>
-                    <li>Tüm puantaj notları</li>
-                    <li>Tüm haftalık atamalar</li>
-                </ul>
-            </div>
-        </div>
-    `, () => executeDeleteBranch(branchName, i), 'danger');
-}
-
-async function executeDeleteBranch(branchName, index) {
-    // Progress modal göster
-    showModal('Şube Siliniyor', `
-        <div style="text-align:center;padding:20px">
-            <div style="font-size:2rem;margin-bottom:16px">🗑️</div>
-            <div style="font-weight:600;margin-bottom:12px">"${branchName}" siliniyor...</div>
-            <div id="branchDeleteStatus" style="color:var(--tx2);font-size:0.9rem">Hazırlanıyor...</div>
-            <div style="margin-top:16px;background:var(--bg3);border-radius:8px;overflow:hidden;height:8px">
-                <div id="branchDeleteProgress" style="width:0%;height:100%;background:#e74c3c;transition:width .3s"></div>
-            </div>
-            <div id="branchDeleteLog" style="margin-top:16px;text-align:left;font-size:0.75rem;color:var(--tx3);max-height:200px;overflow-y:auto"></div>
-        </div>
-    `, '');
-    
-    const statusEl = document.getElementById('branchDeleteStatus');
-    const progressEl = document.getElementById('branchDeleteProgress');
-    const logEl = document.getElementById('branchDeleteLog');
-    
-    const log = (msg) => {
-        logEl.innerHTML += msg + '<br>';
-        logEl.scrollTop = logEl.scrollHeight;
-    };
-    
-    const setProgress = (pct, msg) => {
-        progressEl.style.width = pct + '%';
-        statusEl.textContent = msg;
-    };
-    
-    const branchKey = branchName.replace(/[^a-zA-Z0-9]/g, '_');
-    let totalDeleted = 0;
-    
-    try {
-        // 1. Checklist tanımlarını sil (10%)
-        setProgress(10, 'Checklist tanımları siliniyor...');
-        const checklistTypes = ['acilis', 'kapanis', 'gunluk', 'haftalik', 'mudur', 'platform', 'aylik'];
-        for (const type of checklistTypes) {
-            const docId = `${branchKey}_${type}`;
-            try {
-                await db.collection('checklists').doc(docId).delete();
-                totalDeleted++;
-            } catch (e) {}
-        }
-        log(`✓ Checklist tanımları silindi`);
-        
-        // 2. Checklist submissions sil (25%)
-        setProgress(25, 'Checklist kayıtları siliniyor...');
-        const submissionsSnap = await db.collection('checklistSubmissions')
-            .where('branch', '==', branchName).get();
-        for (const doc of submissionsSnap.docs) {
-            await doc.ref.delete();
-            totalDeleted++;
-        }
-        log(`✓ ${submissionsSnap.size} checklist kaydı silindi`);
-        
-        // 3. Personel sil (40%)
-        setProgress(40, 'Personel kayıtları siliniyor...');
-        const personelSnap = await db.collection('personel')
-            .where('branch', '==', branchName).get();
-        const deletedEmails = [];
-        for (const doc of personelSnap.docs) {
-            const data = doc.data();
-            if (data.email) deletedEmails.push(data.email);
-            await doc.ref.delete();
-            totalDeleted++;
-        }
-        log(`✓ ${personelSnap.size} personel silindi`);
-        
-        // 4. Users ve Credentials koleksiyonundan sil (50%)
-        setProgress(50, 'Kullanıcı kayıtları siliniyor...');
-        for (const email of deletedEmails) {
-            try {
-                await db.collection('users').doc(email).delete();
-                totalDeleted++;
-            } catch (e) {}
-            // Credentials'ı da sil
-            try {
-                const credDocId = email.toLowerCase().replace(/[@.]/g, '_');
-                await db.collection('credentials').doc(credDocId).delete();
-                totalDeleted++;
-            } catch (e) {}
-        }
-        log(`✓ ${deletedEmails.length} kullanıcı ve credentials kaydı silindi`);
-        
-        // 5. Shift'leri sil (60%)
-        setProgress(60, 'Shift kayıtları siliniyor...');
-        const shiftsSnap = await db.collection('shifts')
-            .where('branch', '==', branchName).get();
-        for (const doc of shiftsSnap.docs) {
-            await doc.ref.delete();
-            totalDeleted++;
-        }
-        log(`✓ ${shiftsSnap.size} shift silindi`);
-        
-        // 6. Weekly assignments sil (70%)
-        setProgress(70, 'Haftalık atamalar siliniyor...');
-        const weeklySnap = await db.collection('weeklyAssignments')
-            .where('branch', '==', branchName).get();
-        for (const doc of weeklySnap.docs) {
-            await doc.ref.delete();
-            totalDeleted++;
-        }
-        log(`✓ ${weeklySnap.size} haftalık atama silindi`);
-        
-        // 7. Puantaj notları sil (80%)
-        setProgress(80, 'Puantaj notları siliniyor...');
-        const puantajSnap = await db.collection('puantajNotes')
-            .where('branch', '==', branchName).get();
-        for (const doc of puantajSnap.docs) {
-            await doc.ref.delete();
-            totalDeleted++;
-        }
-        log(`✓ ${puantajSnap.size} puantaj notu silindi`);
-        
-        // 8. Manager notları sil (85%)
-        setProgress(85, 'Yönetici notları siliniyor...');
-        const managerSnap = await db.collection('managerNotes')
-            .where('branch', '==', branchName).get();
-        for (const doc of managerSnap.docs) {
-            await doc.ref.delete();
-            totalDeleted++;
-        }
-        log(`✓ ${managerSnap.size} yönetici notu silindi`);
-        
-        // 9. Firebase systemConfig güncelle (90%)
-        setProgress(90, 'Sistem ayarları güncelleniyor...');
-        await db.collection('systemConfig').doc('checkRules').update({
-            branches: firebase.firestore.FieldValue.arrayRemove(branchName),
-            [`branchHours.${branchName}`]: firebase.firestore.FieldValue.delete(),
-            [`branchCreatedAt.${branchName}`]: firebase.firestore.FieldValue.delete()
-        });
-        log(`✓ Sistem ayarları güncellendi`);
-        
-        // 10. CHECKLIST_TYPES güncelle (92%)
-        delete CHECKLIST_TYPES[branchName];
-        try {
-            await db.collection('config').doc('checklistTypes').update({
-                [branchName]: firebase.firestore.FieldValue.delete()
-            });
-        } catch (e) {}
-        log(`✓ Checklist türleri güncellendi`);
-        
-        // 11. BRANCH_HOURS güncelle (94%)
-        delete BRANCH_HOURS[branchName];
-        
-        // 12. STATE güncelle (96%)
-        setProgress(96, 'Yerel ayarlar güncelleniyor...');
-        STATE.branches.splice(index, 1);
+    confirmModal('Şube Sil', `"${STATE.branches[i]}" şubesini silmek istediğinize emin misiniz?`, () => {
+        STATE.branches.splice(i, 1);
         saveState();
-        log(`✓ Yerel ayarlar güncellendi`);
-        
-        // 13. Tamamlandı (100%)
-        setProgress(100, 'Tamamlandı!');
-        log(`\n✅ "${branchName}" şubesi tamamen silindi!`);
-        log(`   • Toplam ${totalDeleted} kayıt silindi`);
-        log(`\n⚠️ Not: Firebase Auth kullanıcıları manuel silinmeli`);
-        
-        setTimeout(() => {
-            closeModal();
-            populateSelects();
-            renderAdminLists();
-            toast(`"${branchName}" şubesi silindi (${totalDeleted} kayıt)`, 'success');
-        }, 2000);
-        
-    } catch (e) {
-        console.error('Şube silme hatası:', e);
-        log(`\n❌ Hata: ${e.message}`);
-        setProgress(100, 'Hata oluştu!');
-        
-        setTimeout(() => {
-            closeModal();
-            toast('Şube silme hatası: ' + e.message, 'error');
-        }, 2000);
-    }
+        populateSelects();
+        renderAdminLists();
+        toast('Şube silindi', 'success');
+    }, 'danger');
 }
 
 // ========== POSITIONS ==========
 function addPosition() {
-    // Mevcut roller
-    const roles = [
-        { id: 'barista', name: 'Barista (Sınırlı Yetki)' },
-        { id: 'mudur_yardimcisi', name: 'Müdür Yardımcısı (Orta Yetki)' },
-        { id: 'magaza_muduru', name: 'Mağaza Müdürü (Geniş Yetki)' },
-        { id: 'bolge_muduru', name: 'Bölge Müdürü (Tam Yetki)' }
-    ];
-    
-    showModal('Yeni Pozisyon Ekle', `
+    showModal('Pozisyon Ekle', `
         <div class="form-grid">
-            <div class="form-group">
-                <label class="form-label">Pozisyon ID *</label>
-                <input type="text" id="newPosId" class="form-input" placeholder="ornek_pozisyon">
-                <small style="color:var(--tx2);font-size:.7rem">Sistem tarafından kullanılır, Türkçe karakter kullanmayın</small>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Pozisyon Adı *</label>
-                <input type="text" id="newPosName" class="form-input" placeholder="Örnek Pozisyon">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Yaka Tipi</label>
+            <div class="form-group"><label class="form-label">ID</label><input type="text" id="newPosId" class="form-input" placeholder="ornek_pozisyon"></div>
+            <div class="form-group"><label class="form-label">Ad</label><input type="text" id="newPosName" class="form-input" placeholder="Örnek Pozisyon"></div>
+            <div class="form-group full"><label class="form-label">Yaka Tipi</label>
                 <select id="newPosType" class="form-select">
-                    <option value="Mavi Yaka">Mavi Yaka</option>
-                    <option value="Gri Yaka">Gri Yaka</option>
-                    <option value="Beyaz Yaka">Beyaz Yaka</option>
-                    <option value="Stratejik">Stratejik</option>
+                    <option>Mavi Yaka</option><option>Gri Yaka</option><option>Beyaz Yaka</option><option>Stratejik</option>
                 </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Sistem Rolü *</label>
-                <select id="newPosRole" class="form-select">
-                    ${roles.map(r => `<option value="${r.id}">${r.name}</option>`).join('')}
-                </select>
-                <small style="color:var(--tx2);font-size:.7rem">Bu rol, pozisyonun yetkilerini belirler</small>
-            </div>
-            <div class="form-group full">
-                <label class="form-label">İkon</label>
-                <div style="display:flex;align-items:center;gap:12px">
-                    <div id="newPosIconPreview" style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--bg3);border-radius:12px;cursor:pointer;color:var(--tx)" onclick="toggleEmojiPicker('newPosIcon')">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    </div>
-                    <input type="hidden" id="newPosIcon" value="user">
-                    <button type="button" class="btn btn-ghost btn-sm" onclick="toggleEmojiPicker('newPosIcon')">İkon Seç</button>
-                </div>
-                <div id="emojiPickerNewPosIcon" class="emoji-picker" style="display:none"></div>
             </div>
         </div>
     `, `
@@ -7557,223 +6663,35 @@ function addPosition() {
     `);
 }
 
-// SVG İkon Seti - Premium ve Minimalist
-const ICON_LIBRARY = {
-    'Pozisyon': [
-        { id: 'user', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>', label: 'Kullanıcı' },
-        { id: 'chef', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>', label: 'Barista' },
-        { id: 'briefcase', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>', label: 'İş' },
-        { id: 'store', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>', label: 'Mağaza' },
-        { id: 'globe', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>', label: 'Bölge' },
-        { id: 'users', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>', label: 'Ekip' },
-        { id: 'usercheck', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>', label: 'Onaylı' }
-    ],
-    'Yönetim': [
-        { id: 'star', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>', label: 'Yıldız' },
-        { id: 'award', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>', label: 'Ödül' },
-        { id: 'target', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>', label: 'Hedef' },
-        { id: 'shield', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>', label: 'Kalkan' },
-        { id: 'key', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>', label: 'Anahtar' },
-        { id: 'settings', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>', label: 'Ayarlar' },
-        { id: 'crown', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 18l3-10 5 5 2-9 2 9 5-5 3 10H2z"/><path d="M2 18h20v2H2z"/></svg>', label: 'Taç' }
-    ],
-    'Operasyon': [
-        { id: 'clipboard', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>', label: 'Checklist' },
-        { id: 'calendar', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>', label: 'Takvim' },
-        { id: 'clock', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', label: 'Saat' },
-        { id: 'bell', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>', label: 'Bildirim' },
-        { id: 'check', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>', label: 'Onay' },
-        { id: 'activity', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>', label: 'Aktivite' },
-        { id: 'layers', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>', label: 'Katman' }
-    ],
-    'Finans': [
-        { id: 'dollar', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>', label: 'Para' },
-        { id: 'creditcard', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>', label: 'Kart' },
-        { id: 'trending', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>', label: 'Trend' },
-        { id: 'piechart', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 118 2.83"/><path d="M22 12A10 10 0 0012 2v10z"/></svg>', label: 'Grafik' },
-        { id: 'percent', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>', label: 'Yüzde' }
-    ],
-    'Diğer': [
-        { id: 'coffee', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg>', label: 'Kahve' },
-        { id: 'heart', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>', label: 'Kalp' },
-        { id: 'zap', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', label: 'Enerji' },
-        { id: 'sun', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>', label: 'Güneş' },
-        { id: 'moon', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>', label: 'Ay' },
-        { id: 'flag', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>', label: 'Bayrak' }
-    ]
-};
-
-// Geriye uyumluluk için emoji mapping
-const EMOJI_TO_ICON = {
-    '👤': 'user', '🧑‍🍳': 'chef', '👔': 'briefcase', '🏪': 'store', '🌍': 'globe',
-    '⭐': 'star', '🎯': 'target', '🔑': 'key', '⚙️': 'settings', '📋': 'clipboard',
-    '📅': 'calendar', '⏰': 'clock', '🔔': 'bell', '✅': 'check', '💰': 'dollar',
-    '☕': 'coffee', '❤️': 'heart', '⚡': 'zap'
-};
-
-// Icon ID'den SVG al
-function getIconSvgById(iconId) {
-    if (!iconId) return null;
-    // Emoji ise ID'ye çevir
-    if (EMOJI_TO_ICON[iconId]) {
-        iconId = EMOJI_TO_ICON[iconId];
-    }
-    // ICON_LIBRARY'den bul
-    for (const icons of Object.values(ICON_LIBRARY)) {
-        const found = icons.find(i => i.id === iconId);
-        if (found) {
-            return `<span style="width:24px;height:24px">${found.svg}</span>`;
-        }
-    }
-    return null;
-}
-
-function toggleEmojiPicker(inputId) {
-    const pickerId = 'emojiPicker' + inputId.charAt(0).toUpperCase() + inputId.slice(1);
-    const picker = document.getElementById(pickerId);
-    if (!picker) return;
-    
-    if (picker.style.display === 'none') {
-        renderIconPicker(picker, inputId);
-        picker.style.display = 'block';
-    } else {
-        picker.style.display = 'none';
-    }
-}
-
-function renderIconPicker(container, inputId) {
-    let html = '<div style="background:var(--bg2);border:1px solid var(--cardBorder);border-radius:12px;padding:16px;margin-top:12px;max-height:320px;overflow-y:auto">';
-    
-    for (const [category, icons] of Object.entries(ICON_LIBRARY)) {
-        html += `<div style="margin-bottom:14px">
-            <div style="font-size:.7rem;color:var(--tx3);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">${category}</div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px">
-                ${icons.map(icon => `
-                    <button type="button" onclick="selectIcon('${inputId}', '${icon.id}')" 
-                        style="width:42px;height:42px;border:1px solid var(--cardBorder);background:var(--bg3);border-radius:8px;cursor:pointer;transition:all .12s;display:flex;align-items:center;justify-content:center;color:var(--tx2)"
-                        onmouseover="this.style.background='var(--bg4)';this.style.borderColor='#008c95';this.style.color='#008c95'"
-                        onmouseout="this.style.background='var(--bg3)';this.style.borderColor='var(--cardBorder)';this.style.color='var(--tx2)'"
-                        title="${icon.label}">
-                        <span style="width:20px;height:20px">${icon.svg}</span>
-                    </button>
-                `).join('')}
-            </div>
-        </div>`;
-    }
-    
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-function selectIcon(inputId, iconId) {
-    // Hidden input'u güncelle
-    const input = document.getElementById(inputId);
-    if (input) input.value = iconId;
-    
-    // Preview'ı güncelle
-    const preview = document.getElementById(inputId + 'Preview');
-    if (preview) {
-        const icon = Object.values(ICON_LIBRARY).flat().find(i => i.id === iconId);
-        if (icon) {
-            preview.innerHTML = `<span style="width:24px;height:24px;color:var(--tx)">${icon.svg}</span>`;
-        }
-    }
-    
-    // Picker'ı kapat
-    const pickerId = 'emojiPicker' + inputId.charAt(0).toUpperCase() + inputId.slice(1);
-    const picker = document.getElementById(pickerId);
-    if (picker) picker.style.display = 'none';
-}
-
-// Eski emoji seçimi için geriye uyumluluk
-function selectEmoji(inputId, emoji) {
-    const iconId = EMOJI_TO_ICON[emoji] || 'user';
-    selectIcon(inputId, iconId);
-}
-
 function savePosition() {
     const id = getVal('newPosId');
     const name = getVal('newPosName');
     const type = getVal('newPosType');
-    const role = getVal('newPosRole');
-    const icon = getVal('newPosIcon') || '👤';
-    
-    if (!id || !name) {
-        toast('ID ve Ad zorunludur', 'error');
-        return;
+    if (id && name) {
+        STATE.positions.push({id, name, type});
+        if (!STATE.templates[id]) STATE.templates[id] = '';
+        saveState();
+        populateSelects();
+        renderPositionCards();
+        renderAdminLists();
+        closeModal();
+        toast('Pozisyon eklendi', 'success');
     }
-    
-    // ID kontrolü - mevcut mu?
-    if (STATE.positions.find(p => p.id === id)) {
-        toast('Bu ID zaten kullanılıyor', 'error');
-        return;
-    }
-    
-    STATE.positions.push({ id, name, type, role, icon });
-    if (!STATE.templates[id]) STATE.templates[id] = '';
-    
-    // Yetki varsayılanlarını oluştur (rol bazlı)
-    if (!STATE.rolePermissions) STATE.rolePermissions = {};
-    if (!STATE.rolePermissions[id]) {
-        // Seçilen rolün varsayılan yetkilerini kopyala
-        const basePerms = STATE.rolePermissions[role] || getDefaultPermissions(role);
-        STATE.rolePermissions[id] = JSON.parse(JSON.stringify(basePerms));
-    }
-    
-    saveState();
-    populateSelects();
-    renderPositionCards();
-    renderPositionListCombined();
-    renderDynamicPositionCards();
-    renderAdminLists();
-    closeModal();
-    toast('Pozisyon eklendi', 'success');
 }
 
 function editPosition(i) {
     const p = STATE.positions[i];
-    const roles = [
-        { id: 'barista', name: 'Barista (Sınırlı Yetki)' },
-        { id: 'mudur_yardimcisi', name: 'Müdür Yardımcısı (Orta Yetki)' },
-        { id: 'magaza_muduru', name: 'Mağaza Müdürü (Geniş Yetki)' },
-        { id: 'bolge_muduru', name: 'Bölge Müdürü (Tam Yetki)' }
-    ];
-    
     showModal('Pozisyon Düzenle', `
         <div class="form-grid">
-            <div class="form-group">
-                <label class="form-label">Pozisyon ID</label>
-                <input type="text" id="editPosId" class="form-input" value="${p.id}">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Pozisyon Adı</label>
-                <input type="text" id="editPosName" class="form-input" value="${p.name}">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Yaka Tipi</label>
+            <div class="form-group"><label class="form-label">ID</label><input type="text" id="editPosId" class="form-input" value="${p.id}"></div>
+            <div class="form-group"><label class="form-label">Ad</label><input type="text" id="editPosName" class="form-input" value="${p.name}"></div>
+            <div class="form-group full"><label class="form-label">Yaka Tipi</label>
                 <select id="editPosType" class="form-select">
-                    <option value="Mavi Yaka" ${p.type==='Mavi Yaka'?'selected':''}>Mavi Yaka</option>
-                    <option value="Gri Yaka" ${p.type==='Gri Yaka'?'selected':''}>Gri Yaka</option>
-                    <option value="Beyaz Yaka" ${p.type==='Beyaz Yaka'?'selected':''}>Beyaz Yaka</option>
-                    <option value="Stratejik" ${p.type==='Stratejik'?'selected':''}>Stratejik</option>
+                    <option ${p.type==='Mavi Yaka'?'selected':''}>Mavi Yaka</option>
+                    <option ${p.type==='Gri Yaka'?'selected':''}>Gri Yaka</option>
+                    <option ${p.type==='Beyaz Yaka'?'selected':''}>Beyaz Yaka</option>
+                    <option ${p.type==='Stratejik'?'selected':''}>Stratejik</option>
                 </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Sistem Rolü</label>
-                <select id="editPosRole" class="form-select">
-                    ${roles.map(r => `<option value="${r.id}" ${p.role===r.id?'selected':''}>${r.name}</option>`).join('')}
-                </select>
-            </div>
-            <div class="form-group full">
-                <label class="form-label">İkon</label>
-                <div style="display:flex;align-items:center;gap:12px">
-                    <div id="editPosIconPreview" style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--bg3);border-radius:12px;cursor:pointer;color:var(--tx)" onclick="toggleEmojiPicker('editPosIcon')">
-                        ${getIconSvgById(p.icon) || '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'}
-                    </div>
-                    <input type="hidden" id="editPosIcon" value="${p.icon || 'user'}">
-                    <button type="button" class="btn btn-ghost btn-sm" onclick="toggleEmojiPicker('editPosIcon')">İkon Seç</button>
-                </div>
-                <div id="emojiPickerEditPosIcon" class="emoji-picker" style="display:none"></div>
             </div>
         </div>
     `, `
@@ -7785,34 +6703,18 @@ function editPosition(i) {
 function updatePosition(i) {
     const oldId = STATE.positions[i].id;
     const newId = getVal('editPosId');
-    const role = getVal('editPosRole');
-    const icon = getVal('editPosIcon') || '👤';
-    
     STATE.positions[i] = {
         id: newId,
         name: getVal('editPosName'),
-        type: getVal('editPosType'),
-        role: role,
-        icon: icon
+        type: getVal('editPosType')
     };
-    
-    // Template'i taşı
     if (oldId !== newId && STATE.templates[oldId]) {
         STATE.templates[newId] = STATE.templates[oldId];
         delete STATE.templates[oldId];
     }
-    
-    // Yetkileri taşı
-    if (oldId !== newId && STATE.rolePermissions && STATE.rolePermissions[oldId]) {
-        STATE.rolePermissions[newId] = STATE.rolePermissions[oldId];
-        delete STATE.rolePermissions[oldId];
-    }
-    
     saveState();
     populateSelects();
     renderPositionCards();
-    renderPositionListCombined();
-    renderDynamicPositionCards();
     renderAdminLists();
     closeModal();
     toast('Güncellendi', 'success');
@@ -8336,26 +7238,12 @@ async function loadPersonelList() {
     container.innerHTML = '<p style="color:var(--tx2);text-align:center;padding:20px">Yükleniyor...</p>';
     
     try {
-        // Mağaza müdürü için şube filtresi
-        const isFullAdmin = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
-        const isYonetici = currentUser?.role === 'yonetici'; // Sadece yönetici şifre görebilir
-        const userBranch = currentUser?.branch;
-        
-        let query = db.collection('personel').orderBy('name');
-        // Mağaza müdürü sadece kendi şubesinin personelini görebilir
-        if (!isFullAdmin && userBranch && userBranch !== 'all') {
-            query = db.collection('personel').where('branch', '==', userBranch);
-        }
-        
-        const snapshot = await query.get();
+        const snapshot = await db.collection('personel').orderBy('name').get();
         
         if (snapshot.empty) {
             container.innerHTML = '<p style="color:var(--tx2);text-align:center;padding:40px">Henüz personel kaydı yok. "Yeni Personel" butonuna tıklayarak ekleyin.</p>';
             return;
         }
-        
-        // Şifre göster/gizle state
-        window._showPasswords = window._showPasswords || false;
         
         // Pozisyondan rol belirleme
         const positionToRole = {
@@ -8388,10 +7276,7 @@ async function loadPersonelList() {
             trash: '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>'
         };
         
-        // Şifre gösterimi kaldırıldı - sadece edit modalda görünecek
-        let headerHtml = '';
-        
-        let html = headerHtml + '<div id="personelGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">';
+        let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">';
         snapshot.forEach(doc => {
             const p = doc.data();
             const docId = doc.id;
@@ -8406,11 +7291,8 @@ async function loadPersonelList() {
             const isMoonberry = (p.branch || '').includes('Şişli') || (p.branch || '').includes('Merkez');
             const branchColor = isMoonberry ? '#008c95' : '#ff8674';
             
-            // Arama için data attribute'lar
-            const searchData = `${p.name || ''} ${p.branch || ''} ${p.tc || ''} ${p.email || ''} ${p.position || ''}`.toLowerCase();
-            
             html += `
-                <div class="personel-card" data-search="${searchData}" data-branch="${p.branch || ''}" style="background:var(--bg2);border:1px solid var(--cardBorder);border-left:3px solid ${branchColor};border-radius:10px;padding:14px;transition:all .15s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                <div style="background:var(--bg2);border:1px solid var(--cardBorder);border-left:3px solid ${branchColor};border-radius:10px;padding:14px;transition:all .15s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
                     <!-- Header -->
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
                         <div style="width:40px;height:40px;background:linear-gradient(135deg,${roleInfo.color},${roleInfo.color}88);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff">
@@ -8462,16 +7344,16 @@ async function loadPersonelList() {
         
         const statsHtml = `
             <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
-                <div onclick="filterPersonelByBranch('')" style="background:linear-gradient(135deg,#008c95,#00a8a8);padding:12px 20px;border-radius:10px;color:#fff;display:flex;align-items:center;gap:10px;cursor:pointer;transition:transform .15s" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='none'">
+                <div style="background:linear-gradient(135deg,#008c95,#00a8a8);padding:12px 20px;border-radius:10px;color:#fff;display:flex;align-items:center;gap:10px">
                     <span style="font-size:1.5rem">👥</span>
                     <div><div style="font-size:1.4rem;font-weight:700">${total}</div><div style="font-size:.75rem;opacity:.8">Toplam Personel</div></div>
                 </div>
-                <div onclick="filterPersonelByBranch('')" style="background:linear-gradient(135deg,#27ae60,#2ecc71);padding:12px 20px;border-radius:10px;color:#fff;display:flex;align-items:center;gap:10px;cursor:pointer;transition:transform .15s" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='none'">
+                <div style="background:linear-gradient(135deg,#27ae60,#2ecc71);padding:12px 20px;border-radius:10px;color:#fff;display:flex;align-items:center;gap:10px">
                     <span style="font-size:1.5rem">🔓</span>
                     <div><div style="font-size:1.4rem;font-weight:700">${withAccess}</div><div style="font-size:.75rem;opacity:.8">Giriş Yapabilen</div></div>
                 </div>
                 ${Object.entries(byBranch).map(([branch, count]) => `
-                    <div onclick="filterPersonelByBranch('${branch}')" style="background:var(--bg3);padding:12px 20px;border-radius:10px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--bg4)';this.style.transform='scale(1.02)'" onmouseout="this.style.background='var(--bg3)';this.style.transform='none'">
+                    <div style="background:var(--bg3);padding:12px 20px;border-radius:10px;display:flex;align-items:center;gap:10px">
                         <span style="font-size:1.2rem">📍</span>
                         <div><div style="font-size:1.1rem;font-weight:600;color:var(--tx)">${count}</div><div style="font-size:.7rem;color:var(--tx2)">${branch}</div></div>
                     </div>
@@ -8511,35 +7393,24 @@ function showAddPersonelModal(editId = null) {
             ${salaryField}
         </div>
         
-        <!-- SİSTEM GİRİŞİ - Kompakt -->
-        <div style="margin-top:16px;padding:12px 16px;background:linear-gradient(135deg,rgba(0,140,149,.06),rgba(255,134,116,.06));border-radius:10px;border:1px solid var(--cardBorder)">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-                <svg width="16" height="16" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                <span style="font-weight:600;color:var(--tx);font-size:.9rem">Sistem Girişi</span>
-                <span style="font-size:.7rem;color:var(--tx3);margin-left:auto">Rol pozisyona göre belirlenir</span>
+        <!-- SİSTEM GİRİŞİ -->
+        <div style="margin-top:20px;padding:16px;background:linear-gradient(135deg,rgba(0,140,149,.08),rgba(255,134,116,.08));border-radius:12px;border:1px solid var(--cardBorder)">
+            <div style="font-weight:600;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                <svg width="18" height="18" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                Sistem Girişi
             </div>
-            <div style="display:flex;gap:12px;align-items:flex-start">
-                <div style="flex:1">
-                    <label style="font-size:.75rem;color:var(--tx2);margin-bottom:4px;display:block">E-posta</label>
-                    <input type="email" id="personelEmail" class="form-input" style="font-size:.85rem" placeholder="ornek@moonberrycoffee.com">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">E-posta</label>
+                    <input type="email" id="personelEmail" class="form-input" placeholder="ornek@moonberrycoffee.com">
                 </div>
-                <div style="flex:1">
-                    <label style="font-size:.75rem;color:var(--tx2);margin-bottom:4px;display:block">Şifre ${isEdit ? '<span style="color:var(--tx3)">(değiştirmek için girin)</span>' : ''}</label>
-                    <div style="position:relative">
-                        <input type="password" id="personelPassword" class="form-input" style="font-size:.85rem;padding-right:${isEdit && currentUser?.role === 'yonetici' ? '36px' : '12px'}" minlength="6" placeholder="${isEdit ? '••••••••' : 'En az 6 karakter'}">
-                        ${isEdit && currentUser?.role === 'yonetici' ? `
-                            <button type="button" onclick="togglePersonelPasswordView()" id="btnTogglePassword" 
-                                style="position:absolute;right:2px;top:50%;transform:translateY(-50%);width:30px;height:30px;background:transparent;border:none;cursor:pointer;color:var(--tx3);display:flex;align-items:center;justify-content:center;border-radius:4px;transition:all .12s"
-                                onmouseover="this.style.color='var(--tx)'"
-                                onmouseout="this.style.color='var(--tx3)'"
-                                title="Mevcut Şifreyi Göster/Gizle">
-                                <svg id="pwEyeIcon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-                                </svg>
-                            </button>
-                        ` : ''}
-                    </div>
+                <div class="form-group">
+                    <label class="form-label">Şifre ${isEdit ? '(değiştirmek için girin)' : ''}</label>
+                    <input type="password" id="personelPassword" class="form-input" minlength="6" placeholder="${isEdit ? 'Boş bırakılırsa değişmez' : 'En az 6 karakter'}">
                 </div>
+            </div>
+            <div style="font-size:.75rem;color:var(--tx2);margin-top:8px">
+                ⓘ E-posta ve şifre girilirse personel sisteme giriş yapabilir. Rol pozisyona göre otomatik belirlenir.
             </div>
         </div>
     `;
@@ -8573,56 +7444,9 @@ async function loadPersonelForEdit(id) {
             document.getElementById('personelStartDate').value = p.startDate || '';
             document.getElementById('personelSalary').value = p.salary || '';
             // Şifre alanı - düzenleme modunda boş bırakılır (değişmeyecekse)
-            
-            // Admin için mevcut şifreyi credentials'dan al
-            if (currentUser?.role === 'yonetici' && p.email) {
-                // Credentials koleksiyonundan şifre çek
-                const credPassword = await getCredential(p.email);
-                window._currentPersonelPassword = credPassword;
-                window._currentPersonelEmail = p.email;
-            } else {
-                window._currentPersonelPassword = null;
-                window._currentPersonelEmail = null;
-            }
         }
     } catch (error) {
         console.error('Personel yükleme hatası:', error);
-    }
-}
-
-// Admin için şifre göster/gizle (minimalist toggle)
-function togglePersonelPasswordView() {
-    if (currentUser?.role !== 'yonetici') return;
-    
-    const pwInput = document.getElementById('personelPassword');
-    const eyeIcon = document.getElementById('pwEyeIcon');
-    
-    if (!pwInput) return;
-    
-    // Şifre yoksa veya yüklenmediyse
-    if (!window._currentPersonelPassword) {
-        toast('Kayıtlı şifre bulunamadı', 'error');
-        return;
-    }
-    
-    const isShown = pwInput.type === 'text';
-    
-    if (isShown) {
-        // Gizle - placeholder'a geri dön
-        pwInput.type = 'password';
-        pwInput.value = '';
-        pwInput.placeholder = '••••••••';
-        if (eyeIcon) {
-            eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
-        }
-    } else {
-        // Göster - credentials'dan alınan şifre zaten decoded
-        pwInput.type = 'text';
-        pwInput.value = window._currentPersonelPassword || '';
-        pwInput.placeholder = '';
-        if (eyeIcon) {
-            eyeIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
-        }
     }
 }
 
@@ -8698,21 +7522,15 @@ async function savePersonel() {
         }
     }
     
-    // Şifre girilmişse credentials koleksiyonuna kaydet (personel'e DEĞİL)
+    // Şifre girilmişse kaydet
     if (password) {
+        data.password = password;
         data.hasPassword = true;
-        // NOT: data.password artık YOK - güvenlik için credentials'da
     }
     
     try {
-        // Email ve şifre varsa işlem yap
+        // Email ve şifre varsa Firebase Auth'ta kullanıcı oluştur
         if (email && password) {
-            // 1. Credentials koleksiyonuna kaydet
-            const personelDocId = editId || 'new_' + Date.now();
-            await saveCredential(email, password, personelDocId);
-            console.log('Credentials kaydedildi:', email);
-            
-            // 2. Firebase Auth'ta kullanıcı oluştur/güncelle
             try {
                 // Secondary app ile kullanıcı oluştur (mevcut oturumu bozmaz)
                 const secondaryApp = firebase.initializeApp(firebase.app().options, 'Secondary');
@@ -8724,25 +7542,24 @@ async function savePersonel() {
                 // Secondary app'i temizle
                 await secondaryApp.delete();
                 
+                // Şifreyi Firestore'dan kaldır (artık Auth'ta)
+                delete data.password;
                 data.hasFirebaseAuth = true;
+                
                 toast('Kullanıcı hesabı oluşturuldu ✓', 'success');
             } catch (authError) {
                 if (authError.code === 'auth/email-already-in-use') {
-                    console.log('Kullanıcı zaten mevcut, credentials güncellendi:', email);
-                    // Credentials zaten güncellendi, Firebase Auth senkronize olacak (login anında)
-                    toast('Şifre güncellendi. Kullanıcı yeni giriş yaptığında aktif olacak.', 'info');
+                    console.log('Kullanıcı zaten mevcut:', email);
+                    // Şifreyi Firestore'da tut (login'de migrate edilecek)
                 } else if (authError.code === 'auth/app/duplicate-app') {
                     // Secondary app zaten var, devam et
                     console.log('Secondary app zaten mevcut');
                 } else {
                     console.error('Auth hatası:', authError);
-                    // Credentials kaydedildi, Auth olmasa da giriş yapabilir
+                    // Şifreyi Firestore'da sakla, login'de migrate edilir
                 }
             }
         }
-        
-        // passwordPlain kaldı ise temizle
-        delete data.passwordPlain;
         
         // Email varsa users koleksiyonunu da güncelle
         if (email) {
@@ -8886,17 +7703,6 @@ async function savePersonel() {
     }
 }
 
-// Şifreleri göster/gizle toggle (sadece yönetici)
-function toggleShowPasswords() {
-    if (currentUser?.role !== 'yonetici') {
-        toast('Bu işlem için yetkiniz yok', 'error');
-        return;
-    }
-    window._showPasswords = !window._showPasswords;
-    loadPersonelList(); // Listeyi yeniden yükle
-    toast(window._showPasswords ? 'Şifreler gösteriliyor' : 'Şifreler gizlendi', 'info');
-}
-
 function editPersonel(id) {
     if (!id || id === 'undefined' || id === '') {
         toast('Geçersiz personel ID!', 'error');
@@ -8915,27 +7721,7 @@ async function deletePersonel(id) {
     
     confirmModal('Personel Sil', 'Bu personeli silmek istediğinize emin misiniz?', async () => {
         try {
-            // Önce personel verisini al (email için)
-            const personelDoc = await db.collection('personel').doc(id).get();
-            const personelData = personelDoc.exists ? personelDoc.data() : null;
-            const email = personelData?.email;
-            
-            // 1. Personel'i sil
             await db.collection('personel').doc(id).delete();
-            
-            // 2. Credentials'ı sil (varsa)
-            if (email) {
-                await deleteCredential(email);
-                console.log('Credentials silindi:', email);
-            }
-            
-            // 3. Users koleksiyonundan sil (varsa)
-            if (email) {
-                try {
-                    await db.collection('users').doc(email).delete();
-                } catch (e) { /* Users'ta yoksa sorun değil */ }
-            }
-            
             toast('Personel silindi ✓', 'success');
             refreshPersonelCache();
             loadPersonelList();
@@ -8947,37 +7733,12 @@ async function deletePersonel(id) {
 }
 
 function filterPersonel() {
-    const search = document.getElementById('personelSearch').value.toLowerCase().trim();
-    const cards = document.querySelectorAll('.personel-card');
-    
-    cards.forEach(card => {
-        const searchData = card.dataset.search || '';
-        const match = !search || searchData.includes(search);
-        card.style.display = match ? 'block' : 'none';
+    const search = document.getElementById('personelSearch').value.toLowerCase();
+    const items = document.querySelectorAll('#personelListContainer .admin-list-item');
+    items.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(search) ? 'flex' : 'none';
     });
-}
-
-// Şubeye göre filtrele
-function filterPersonelByBranch(branch) {
-    const searchInput = document.getElementById('personelSearch');
-    const cards = document.querySelectorAll('.personel-card');
-    
-    // Arama alanını güncelle
-    if (searchInput) {
-        searchInput.value = branch;
-    }
-    
-    cards.forEach(card => {
-        const cardBranch = card.dataset.branch || '';
-        const match = !branch || cardBranch === branch;
-        card.style.display = match ? 'block' : 'none';
-    });
-    
-    if (branch) {
-        toast(`${branch} personeli gösteriliyor`, 'info');
-    } else {
-        toast('Tüm personel gösteriliyor', 'info');
-    }
 }
 
 // ==================== PUANTAJ SİSTEMİ ====================
@@ -11525,9 +10286,7 @@ const PERMISSION_STRUCTURE = {
         { id: 'view_salary', label: 'Maaş bilgilerini görebilir' },
         { id: 'export_data', label: 'Veri dışa aktarabilir' },
         { id: 'delete_records', label: 'Kayıt silebilir' },
-        { id: 'assign_password', label: 'Şifre atayabilir' },
-        { id: 'view_password', label: 'Personel şifrelerini görebilir' },
-        { id: 'change_others_password', label: 'Başkasının şifresini değiştirebilir' }
+        { id: 'assign_password', label: 'Şifre atayabilir' }
     ],
     limits: [
         { id: 'shift_history_weeks', label: 'Shift geçmiş limiti (hafta)', type: 'number', options: [1, 5, 52, 999] }
@@ -11540,7 +10299,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: false, edit: false }, tutanak: { view: false, edit: false }, savunma: { view: false, edit: false }, fesih: { view: false, edit: false }, istifa: { view: false, edit: false }, ibraname: { view: false, edit: false } },
         forms: { borc: { view: false, edit: false }, avans: { view: false, edit: false }, zimmet: { view: false, edit: false } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: false, admin_sablonlar: false, admin_oturumlar: false },
-        special: { print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false, view_password: false, change_others_password: false },
+        special: { print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 1 }
     },
     magaza_mudur_yardimcisi: {
@@ -11548,7 +10307,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false },
-        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false, view_password: false, change_others_password: false },
+        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 5 }
     },
     magaza_muduru: {
@@ -11556,7 +10315,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false },
-        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false, view_password: false, change_others_password: false },
+        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 5 }
     },
     bolge_muduru: {
@@ -11564,7 +10323,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: true }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: true, admin_kullanicilar: false, admin_puantaj: true, admin_subeler: true, admin_pozisyonlar: true, admin_ihlaller: true, admin_sablonlar: true, admin_oturumlar: true },
-        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true, view_password: true, change_others_password: true },
+        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true },
         limits: { shift_history_weeks: 999 }
     }
 };
@@ -11572,26 +10331,30 @@ const DEFAULT_ROLE_PERMISSIONS = {
 // Pozisyon seçimi için yeni fonksiyonlar
 let selectedRoleForPerm = null;
 
-function selectRoleForPermissions(positionId) {
-    selectedRoleForPerm = positionId;
+function selectRoleForPermissions(role) {
+    selectedRoleForPerm = role;
     
-    // Pozisyonu STATE.positions'dan bul
-    const position = STATE.positions.find(p => p.id === positionId);
+    const roleInfo = {
+        barista: { icon: '🧑‍🍳', name: 'Barista / Servis', desc: 'Günlük operasyon yetkileri' },
+        magaza_mudur_yardimcisi: { icon: '👔', name: 'Mağaza Müdür Yardımcısı', desc: 'Yardımcı yönetim yetkileri' },
+        magaza_muduru: { icon: '🏪', name: 'Mağaza Müdürü', desc: 'Şube yönetimi yetkileri' },
+        bolge_muduru: { icon: '🌍', name: 'Bölge Müdürü', desc: 'Çoklu şube yönetimi yetkileri' }
+    };
     
-    if (!position) {
-        toast('Bilinmeyen pozisyon: ' + positionId, 'error');
+    const info = roleInfo[role];
+    if (!info) {
+        toast('Bilinmeyen rol: ' + role, 'error');
         return;
     }
-    
-    document.getElementById('selectedRoleIcon').textContent = position.icon || '👤';
-    document.getElementById('selectedRoleName').textContent = position.name;
-    document.getElementById('selectedRoleDesc').textContent = position.type + ' yetkileri';
+    document.getElementById('selectedRoleIcon').textContent = info.icon;
+    document.getElementById('selectedRoleName').textContent = info.name;
+    document.getElementById('selectedRoleDesc').textContent = info.desc;
     
     document.getElementById('selectedRolePermissions').style.display = 'block';
     document.getElementById('permissionsInfo').style.display = 'none';
     
-    // İzinleri yükle - pozisyon rolüne göre
-    loadRolePermissions(positionId, position.role);
+    // İzinleri yükle
+    loadRolePermissions(role);
 }
 
 function hideRolePermissions() {
@@ -11600,18 +10363,13 @@ function hideRolePermissions() {
     selectedRoleForPerm = null;
 }
 
-async function loadRolePermissions(positionId, baseRole) {
-    // Önce pozisyona özel izinleri kontrol et, yoksa rol varsayılanlarını kullan
-    let perms = getDefaultPermissions(baseRole || positionId);
-    
+async function loadRolePermissions(role) {
+    // Firebase'den izinleri al veya varsayılanı kullan
+    let perms = DEFAULT_ROLE_PERMISSIONS[role];
     try {
-        // Önce pozisyona özel izinleri dene
-        const posDoc = await db.collection('advancedPermissions').doc(positionId).get();
-        if (posDoc.exists) {
-            perms = { ...perms, ...posDoc.data() };
-        } else if (baseRole && DEFAULT_ROLE_PERMISSIONS[baseRole]) {
-            // Pozisyona özel yoksa rol varsayılanlarını kullan
-            perms = { ...perms, ...DEFAULT_ROLE_PERMISSIONS[baseRole] };
+        const doc = await db.collection('advancedPermissions').doc(role).get();
+        if (doc.exists) {
+            perms = { ...perms, ...doc.data() };
         }
     } catch (error) {
         console.error('İzin yükleme hatası:', error);
@@ -13490,39 +12248,6 @@ async function updateAdminCredentials() {
             toast('Güncelleme hatası: ' + e.message, 'error'); 
         }
     }
-}
-
-// ==================== ADMIN EMAIL YÖNETİMİ ====================
-// Admin email listesini UI'a yükle
-async function loadAdminEmailsToUI() {
-    try {
-        await loadAdminEmails(); // Firebase'den çek
-        const textarea = document.getElementById('adminEmailsList');
-        if (textarea) {
-            textarea.value = _adminEmails.join('\n');
-        }
-    } catch (e) {
-        console.error('Admin emails yüklenemedi:', e);
-        toast('Yükleme hatası', 'error');
-    }
-}
-
-// UI'dan admin email listesini kaydet
-async function saveAdminEmailsFromUI() {
-    const textarea = document.getElementById('adminEmailsList');
-    if (!textarea) return;
-    
-    const emails = textarea.value
-        .split('\n')
-        .map(e => e.trim().toLowerCase())
-        .filter(e => e && e.includes('@'));
-    
-    if (emails.length === 0) {
-        toast('En az bir admin email gerekli', 'error');
-        return;
-    }
-    
-    await saveAdminEmails(emails);
 }
 
 // ==================== SHIFT SİSTEMİ ====================
@@ -16305,28 +15030,8 @@ async function checkAndProcessMissedChecks() {
     const userBranch = currentUser?.branch;
     const branchesToCheck = (userBranch && userBranch !== 'all') ? [userBranch] : branches;
     
-    // Şube oluşturma tarihlerini al
-    let branchCreatedAt = {};
-    try {
-        const configDoc = await db.collection('systemConfig').doc('checkRules').get();
-        if (configDoc.exists) {
-            branchCreatedAt = configDoc.data().branchCreatedAt || {};
-        }
-    } catch (e) {
-        console.warn('[AutoPuan] branchCreatedAt alınamadı:', e);
-    }
-    
     for (const branch of branchesToCheck) {
-        // Şubenin oluşturulma tarihi
-        const branchCreatedDate = branchCreatedAt[branch];
-        
         for (const date of datesToCheck) {
-            // Eğer kontrol edilen tarih şubenin oluşturulma tarihinden ÖNCE ise atla
-            if (branchCreatedDate && date < branchCreatedDate) {
-                console.log(`[AutoPuan] ${branch} - ${date} atlandı (şube ${branchCreatedDate} tarihinde oluşturuldu)`);
-                continue;
-            }
-            
             // Shift personelini al
             let shiftPersonnel = [];
             try {
@@ -16601,15 +15306,14 @@ async function loadTodayChecks() {
     }
     
     const todayStr = formatDateLocal(today);
-    const isFullAdmin = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
-    const isStoreManager = currentUser?.role === 'magaza_muduru';
+    const isAdmin = ['yonetici', 'bolge_muduru', 'magaza_muduru', 'mudur', 'admin'].includes(currentUser?.role);
     const userName = currentUser?.name || 'Personel';
     const currentHour = now.getHours();
     const currentMinutes = now.getMinutes();
     
-    // Yönetici/bölge müdürü için tüm şubeler, mağaza müdürü ve diğerleri için kendi şubesi
+    // Yönetici için tüm şubeler, diğerleri için kendi şubesi
     let branches = [];
-    if (isFullAdmin || currentUser?.branch === 'all') {
+    if (isAdmin || currentUser?.branch === 'all') {
         branches = STATE.branches || [];
     } else {
         branches = [currentUser?.branch || STATE.branches?.[0] || 'Tuzla TRC'];
@@ -16674,16 +15378,16 @@ async function loadTodayChecks() {
         
         document.getElementById('welcomeDate').textContent = dateStr;
         document.getElementById('welcomeMessage').textContent = `${greeting}, ${userName.split(' ')[0]}! 👋`;
-        document.getElementById('welcomeBranch').innerHTML = `<span>📍</span> <span>${isFullAdmin ? 'Tüm Şubeler' : primaryBranch}</span>`;
+        document.getElementById('welcomeBranch').innerHTML = `<span>📍</span> <span>${isAdmin ? 'Tüm Şubeler' : primaryBranch}</span>`;
         
         // Shift bilgisi
-        let shiftInfo = isFullAdmin ? 'Yönetici' : '-';
+        let shiftInfo = isAdmin ? 'Yönetici' : '-';
         welcomeCard.style.display = 'block';
         document.getElementById('welcomeShift').innerHTML = `<span>⏰</span> <span>${shiftInfo}</span>`;
     }
     
     // Aylık puan kartı (sadece personel için)
-    if (monthlyCard && !isFullAdmin) {
+    if (monthlyCard && !isAdmin) {
         monthlyCard.style.display = 'block';
         loadMonthlyPoints(); // Puan verilerini yükle
     } else if (monthlyCard) {
@@ -16691,7 +15395,7 @@ async function loadTodayChecks() {
     }
     
     // Leaderboard ve KPI Dashboard (sadece yöneticiler için)
-    if (isFullAdmin) {
+    if (isAdmin) {
         loadLeaderboard();
         loadKPIDashboard();
         
@@ -17538,7 +16242,7 @@ async function loadTodayChecks() {
         }
         
         // 6. Müdür Kontrol (sadece müdürler için)
-        if (isFullAdmin || isStoreManager) {
+        if (isAdmin) {
             const mudurSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_mudur_${todayStr}`;
             let mudurCompleted = false;
             try {
@@ -18280,17 +16984,12 @@ async function loadLeaderboard() {
     
     if (!section || !container) return;
     
-    const isFullAdmin = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
-    const isStoreManager = currentUser?.role === 'magaza_muduru';
+    const isAdmin = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
     
-    // Sadece yöneticiler ve mağaza müdürleri görebilir
-    if (!isFullAdmin && !isStoreManager) {
+    if (!isAdmin) {
         section.style.display = 'none';
         return;
     }
-    
-    // Mağaza müdürü için şube filtresi
-    const userBranch = currentUser?.branch;
     
     section.style.display = 'block';
     container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tx3)">Yükleniyor...</div>';
@@ -18305,12 +17004,8 @@ async function loadLeaderboard() {
         const periodKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         const monthName = now.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
         
-        // 1. Aktif personel listesini çek (mağaza müdürü için şube filtreli)
-        let personelQuery = db.collection('personel');
-        if (isStoreManager && userBranch && userBranch !== 'all') {
-            personelQuery = personelQuery.where('branch', '==', userBranch);
-        }
-        const personelSnapshot = await personelQuery.get();
+        // 1. Aktif personel listesini çek
+        const personelSnapshot = await db.collection('personel').get();
         const activePersonel = {};
         const personelByDocId = {};
         
@@ -20653,73 +19348,8 @@ let checklistExpectedDuration = 0; // saniye cinsinden
 let personnelMapping = [];
 
 // Tüm config'i Firebase'den yükle
-// ==================== ADMIN EMAIL KONTROLÜ ====================
-// Config'den dinamik admin listesi - varsayılan fallback
-let _adminEmails = ['admin@moonberrycoffee.com', 'tamer@moonberrycoffee.com'];
-
-async function checkAdminEmail(email) {
-    if (!email) return false;
-    const emailLower = email.toLowerCase();
-    
-    // Önce cache'den kontrol (hızlı)
-    if (_adminEmails.includes(emailLower)) return true;
-    
-    // Firebase'den güncel listeyi çek
-    try {
-        const securityDoc = await db.collection('systemConfig').doc('security').get();
-        if (securityDoc.exists && securityDoc.data().adminEmails) {
-            _adminEmails = securityDoc.data().adminEmails.map(e => e.toLowerCase());
-        }
-    } catch (e) {
-        console.log('Admin email listesi yüklenemedi, varsayılan kullanılıyor');
-    }
-    
-    return _adminEmails.includes(emailLower);
-}
-
-// Admin email listesini yükle (sadece oku - yazma işlemi yok)
-async function loadAdminEmails() {
-    try {
-        const securityDoc = await db.collection('systemConfig').doc('security').get();
-        if (securityDoc.exists && securityDoc.data().adminEmails) {
-            _adminEmails = securityDoc.data().adminEmails.map(e => e.toLowerCase());
-            console.log('[Config] Admin emails yüklendi:', _adminEmails.length);
-        } else {
-            // Doküman yok - varsayılan listeyi kullan (yazma yapmıyoruz)
-            console.log('[Config] Admin emails dokümanı yok, varsayılan kullanılıyor');
-        }
-    } catch (e) {
-        console.log('[Config] Admin emails yüklenemedi, varsayılan kullanılıyor');
-    }
-}
-
-// Admin email ekle/sil (sadece yönetici çağırabilir)
-async function saveAdminEmails(emails) {
-    try {
-        const cleanEmails = emails
-            .map(e => e.trim().toLowerCase())
-            .filter(e => e && e.includes('@'));
-        
-        await db.collection('systemConfig').doc('security').set({
-            adminEmails: cleanEmails,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-        
-        _adminEmails = cleanEmails;
-        toast('Admin listesi güncellendi ✓', 'success');
-        return true;
-    } catch (e) {
-        console.error('Admin emails kaydedilemedi:', e);
-        toast('Kaydetme hatası', 'error');
-        return false;
-    }
-}
-
 async function loadSystemConfig() {
     try {
-        // Admin emails yükle
-        await loadAdminEmails();
-        
         // Sistem ayarları
         const sysDoc = await db.collection('config').doc('system').get();
         if (sysDoc.exists) {
@@ -22638,34 +21268,14 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                     </div>
                 </div>
                 
-                <!-- Checklist Başlat Butonu -->
-                <div id="checklistStartOverlay" style="margin-bottom:20px;padding:24px;background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(0,140,149,.03));border:2px dashed rgba(0,140,149,.4);border-radius:16px;text-align:center">
-                    <div style="width:60px;height:60px;margin:0 auto 16px;background:linear-gradient(135deg,#008c95,#00b4a0);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,140,149,.3)">
-                        <svg width="28" height="28" fill="none" stroke="#fff" stroke-width="2.5" viewBox="0 0 24 24">
-                            <polygon points="5 3 19 12 5 21 5 3"/>
-                        </svg>
-                    </div>
-                    <div style="font-size:1.1rem;font-weight:700;color:var(--tx);margin-bottom:8px">Checklist'i Başlatmaya Hazır</div>
-                    <div style="font-size:.85rem;color:var(--tx2);margin-bottom:20px">Başlat butonuna tıklayınca süre sayacı başlayacak</div>
-                    <button onclick="startChecklistTimer()" style="padding:14px 48px;background:linear-gradient(135deg,#008c95,#00a89d);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(0,140,149,.4);transition:all .2s">
-                        <span style="display:flex;align-items:center;gap:8px;justify-content:center">
-                            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10"/>
-                                <path d="M12 6v6l4 2"/>
-                            </svg>
-                            Checklist'i Başlat
-                        </span>
-                    </button>
-                </div>
-                
-                <!-- Başlangıç Zamanı Banner (Başlatınca görünür) -->
+                <!-- Başlangıç Zamanı Banner -->
                 <div id="checklistTimerBanner" style="display:none;margin-bottom:16px;padding:16px 20px;background:linear-gradient(135deg,rgba(0,140,149,.15),rgba(0,140,149,.05));border:1px solid rgba(0,140,149,.3);border-radius:14px">
                     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
                         <div style="display:flex;align-items:center;gap:10px">
                             <div style="width:10px;height:10px;background:#27ae60;border-radius:50%;animation:pulse 1.5s infinite"></div>
                             <span style="font-weight:600;color:var(--tx)">Checklist Aktif</span>
                             <span style="font-size:.8rem;color:var(--tx3)">|</span>
-                            <span style="font-size:.85rem;color:var(--tx2)">🕐 <span id="checklistLiveTime">--:--:--</span></span>
+                            <span style="font-size:.85rem;color:var(--tx2)">Başlangıç: <span id="checklistStartTimeDisplay">--:--:--</span></span>
                         </div>
                         <div style="display:flex;align-items:center;gap:8px;background:rgba(0,140,149,.2);padding:8px 16px;border-radius:10px">
                             <svg width="18" height="18" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24">
@@ -22678,9 +21288,12 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                 </div>
                 
                 <style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}</style>
+                
+                <div style="margin-bottom:16px;padding:12px;background:rgba(255,134,116,.1);border-radius:10px;font-size:.85rem;color:var(--tx2)">
+                    ⚠️ <strong>Önemli:</strong> İlk maddeyi işaretlediğinizde süre başlar. Tüm maddeleri dikkatlice kontrol edin.
+                </div>
             ` : ''}
             
-            <div id="checklistItemsWrapper" style="${!isSubmitted ? 'filter:blur(4px);opacity:0.6;pointer-events:none;transition:all .3s ease' : ''}">
             <div id="checklistItems">
     `;
     
@@ -22971,7 +21584,6 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
     });
     
     html += `
-            </div>
             </div>
             
             ${!checklistEditMode && !isSubmitted && canFillForm ? `
@@ -24352,70 +22964,63 @@ function selectCheckOption(btn, itemId, value) {
 // Checklist Timer Interval
 let checklistTimerInterval = null;
 
-// Checklist timer'ı başlat - butona basınca çalışır
+// Checklist'i başlat butonu
 function startChecklistTimer() {
     const overlay = document.getElementById('checklistStartOverlay');
-    const wrapper = document.getElementById('checklistItemsWrapper');
     const banner = document.getElementById('checklistTimerBanner');
-    const liveTimeEl = document.getElementById('checklistLiveTime');
+    const wrapper = document.getElementById('checklistItemsWrapper');
+    const startTimeEl = document.getElementById('checklistStartTimeDisplay');
     const elapsedEl = document.getElementById('checklistElapsedTime');
-    
-    // Elementler yoksa çık
-    if (!banner || !liveTimeEl || !elapsedEl) {
-        console.log('[Timer] Elementler bulunamadı, timer başlatılamadı');
-        return;
-    }
     
     // Zamanı kaydet
     const now = new Date();
     checklistStartTime = now;
     checklistFirstItemTime = now;
     
-    // 1. Overlay'ı gizle
+    // Başlangıç saatini göster
+    if (startTimeEl) {
+        startTimeEl.textContent = now.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+    }
+    
+    // Overlay'ı gizle
     if (overlay) {
         overlay.style.display = 'none';
     }
     
-    // 2. Blur'u kaldır
-    if (wrapper) {
-        wrapper.style.filter = 'none';
-        wrapper.style.opacity = '1';
-        wrapper.style.pointerEvents = 'auto';
+    // Banner'ı göster
+    if (banner) {
+        banner.style.display = 'block';
     }
     
-    // 3. Banner'ı göster
-    banner.style.display = 'block';
-    
-    // İlk güncelleme
-    liveTimeEl.textContent = now.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
-    elapsedEl.textContent = '00:00:00';
+    // Blur'u kaldır
+    if (wrapper) {
+        wrapper.style.filter = 'none';
+        wrapper.style.pointerEvents = 'auto';
+        wrapper.style.opacity = '1';
+    }
     
     // Önceki interval'ı temizle
     if (checklistTimerInterval) {
         clearInterval(checklistTimerInterval);
-        checklistTimerInterval = null;
     }
     
-    // Canlı timer başlat - her saniye güncelle
+    // Canlı kronometre başlat
     checklistTimerInterval = setInterval(() => {
-        const currentTime = new Date();
+        if (!checklistStartTime) return;
         
-        // 1. Canlı saat güncelle
-        if (liveTimeEl) {
-            liveTimeEl.textContent = currentTime.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
-        }
+        const elapsed = Math.floor((new Date() - checklistStartTime) / 1000);
+        const hours = Math.floor(elapsed / 3600);
+        const minutes = Math.floor((elapsed % 3600) / 60);
+        const seconds = elapsed % 60;
         
-        // 2. Geçen süre güncelle
-        if (elapsedEl && checklistStartTime) {
-            const elapsed = Math.floor((currentTime - checklistStartTime) / 1000);
-            const hours = Math.floor(elapsed / 3600);
-            const minutes = Math.floor((elapsed % 3600) / 60);
-            const seconds = elapsed % 60;
-            elapsedEl.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        
+        if (elapsedEl) {
+            elapsedEl.textContent = timeStr;
         }
     }, 1000);
     
-    console.log('[Timer] Başladı:', now.toLocaleTimeString('tr-TR'));
+    console.log('[Checklist] Timer başladı:', now.toLocaleTimeString('tr-TR'));
 }
 
 // Sayfa değişince interval'ı temizle
@@ -24431,8 +23036,15 @@ function confirmChecklistStart() {
         checklistFirstItemTime = window.pendingChecklistStartTime;
         checklistStartTime = window.pendingChecklistStartTime;
         
-        // Banner'ı göster ve timer'ı başlat
-        startChecklistTimer();
+        // Banner'ı göster
+        const banner = document.getElementById('checklistTimerBanner');
+        if (banner) {
+            banner.style.display = 'block';
+            const timeDisplay = document.getElementById('checklistStartTimeDisplay');
+            if (timeDisplay) {
+                timeDisplay.textContent = checklistStartTime.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+            }
+        }
         
         delete window.pendingChecklistStartTime;
     }
