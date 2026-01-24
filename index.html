@@ -2712,26 +2712,125 @@ function normalizeTurkishChars(str) {
 
 // ==================== ŞİFRE ENCODE/DECODE ====================
 // Base64 ile basit şifreleme (admin görebilsin diye)
+// ==================== GÜVENLİK: ŞİFRE SİSTEMİ ====================
+
+// Salt üret (4 karakter rastgele)
+function generateSalt() {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let salt = '';
+    for (let i = 0; i < 4; i++) {
+        salt += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return salt;
+}
+
+// Şifre encode (obfuscation + salt)
 function encodePassword(plainPassword) {
     if (!plainPassword) return '';
     try {
-        // Basit obfuscation: reverse + base64
-        const reversed = plainPassword.split('').reverse().join('');
-        return btoa(unescape(encodeURIComponent(reversed)));
+        const salt = generateSalt();
+        const withSalt = plainPassword + salt;
+        const encoded = btoa(unescape(encodeURIComponent(withSalt)));
+        return { k: encoded, s: salt };
     } catch (e) {
         console.error('Şifre encode hatası:', e);
         return '';
     }
 }
 
-function decodePassword(encodedPassword) {
-    if (!encodedPassword) return '';
+// Şifre decode (credentials formatından)
+function decodePassword(credentialData) {
+    if (!credentialData) return '';
+    
+    // Eski format (string) - geriye uyumluluk
+    if (typeof credentialData === 'string') {
+        try {
+            // Eski reversed base64 formatı dene
+            const reversed = decodeURIComponent(escape(atob(credentialData)));
+            return reversed.split('').reverse().join('');
+        } catch (e) {
+            return credentialData; // Plain text olabilir
+        }
+    }
+    
+    // Yeni format (object: {k, s})
+    if (credentialData.k) {
+        try {
+            const decoded = decodeURIComponent(escape(atob(credentialData.k)));
+            // Salt'ı kaldır
+            if (credentialData.s && decoded.endsWith(credentialData.s)) {
+                return decoded.slice(0, -credentialData.s.length);
+            }
+            return decoded;
+        } catch (e) {
+            console.error('Şifre decode hatası:', e);
+            return '';
+        }
+    }
+    
+    return '';
+}
+
+// Email'i güvenli doc ID'ye çevir
+function emailToDocId(email) {
+    return email.toLowerCase().replace(/[@.]/g, '_');
+}
+
+// Credentials koleksiyonuna şifre kaydet
+async function saveCredential(email, password, personelId = null) {
+    if (!email || !password) return false;
+    
     try {
-        const reversed = decodeURIComponent(escape(atob(encodedPassword)));
-        return reversed.split('').reverse().join('');
+        const docId = emailToDocId(email);
+        const encoded = encodePassword(password);
+        
+        await db.collection('credentials').doc(docId).set({
+            e: email,                    // Email (açık - arama için)
+            k: encoded.k,                // Encoded password
+            s: encoded.s,                // Salt
+            p: personelId,               // Personel ID (referans)
+            u: firebase.firestore.FieldValue.serverTimestamp(), // Güncelleme zamanı
+            v: 2                         // Versiyon
+        });
+        
+        console.log('Credential kaydedildi:', docId);
+        return true;
     } catch (e) {
-        console.error('Şifre decode hatası:', e);
-        return '';
+        console.error('Credential kaydetme hatası:', e);
+        return false;
+    }
+}
+
+// Credentials'dan şifre oku (admin için)
+async function getCredential(email) {
+    if (!email) return null;
+    
+    try {
+        const docId = emailToDocId(email);
+        const doc = await db.collection('credentials').doc(docId).get();
+        
+        if (doc.exists) {
+            const data = doc.data();
+            return decodePassword({ k: data.k, s: data.s });
+        }
+        return null;
+    } catch (e) {
+        console.error('Credential okuma hatası:', e);
+        return null;
+    }
+}
+
+// Credentials koleksiyonundan sil
+async function deleteCredential(email) {
+    if (!email) return false;
+    
+    try {
+        const docId = emailToDocId(email);
+        await db.collection('credentials').doc(docId).delete();
+        return true;
+    } catch (e) {
+        console.error('Credential silme hatası:', e);
+        return false;
     }
 }
 
@@ -8449,11 +8548,15 @@ async function loadPersonelForEdit(id) {
             document.getElementById('personelSalary').value = p.salary || '';
             // Şifre alanı - düzenleme modunda boş bırakılır (değişmeyecekse)
             
-            // Admin için mevcut şifreyi kaydet (göster/gizle için)
-            if (currentUser?.role === 'yonetici' && p.password) {
-                window._currentPersonelPassword = p.password; // encoded
+            // Admin için mevcut şifreyi credentials'dan al
+            if (currentUser?.role === 'yonetici' && p.email) {
+                // Credentials koleksiyonundan şifre çek
+                const credPassword = await getCredential(p.email);
+                window._currentPersonelPassword = credPassword;
+                window._currentPersonelEmail = p.email;
             } else {
                 window._currentPersonelPassword = null;
+                window._currentPersonelEmail = null;
             }
         }
     } catch (error) {
@@ -8468,7 +8571,10 @@ function togglePersonelPasswordView() {
     const pwInput = document.getElementById('personelPassword');
     const eyeIcon = document.getElementById('pwEyeIcon');
     
-    if (!pwInput || !window._currentPersonelPassword) {
+    if (!pwInput) return;
+    
+    // Şifre yoksa veya yüklenmediyse
+    if (!window._currentPersonelPassword) {
         toast('Kayıtlı şifre bulunamadı', 'error');
         return;
     }
@@ -8484,10 +8590,9 @@ function togglePersonelPasswordView() {
             eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
         }
     } else {
-        // Göster (decode et) - input içinde
-        const decoded = decodePassword(window._currentPersonelPassword);
+        // Göster - credentials'dan alınan şifre zaten decoded
         pwInput.type = 'text';
-        pwInput.value = decoded || '';
+        pwInput.value = window._currentPersonelPassword || '';
         pwInput.placeholder = '';
         if (eyeIcon) {
             eyeIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
@@ -8567,54 +8672,45 @@ async function savePersonel() {
         }
     }
     
-    // Şifre girilmişse encode ederek kaydet
+    // Şifre girilmişse credentials koleksiyonuna kaydet (personel'e DEĞİL)
     if (password) {
-        data.password = encodePassword(password);
-        data.passwordPlain = password; // Geçici - Auth için
         data.hasPassword = true;
+        // NOT: data.password artık YOK - güvenlik için credentials'da
     }
     
     try {
-        // Email ve şifre varsa Firebase Auth'ta kullanıcı oluştur
+        // Email ve şifre varsa işlem yap
         if (email && password) {
+            // 1. Credentials koleksiyonuna kaydet
+            const personelDocId = editId || 'new_' + Date.now();
+            await saveCredential(email, password, personelDocId);
+            console.log('Credentials kaydedildi:', email);
+            
+            // 2. Firebase Auth'ta kullanıcı oluştur/güncelle
             try {
                 // Secondary app ile kullanıcı oluştur (mevcut oturumu bozmaz)
                 const secondaryApp = firebase.initializeApp(firebase.app().options, 'Secondary');
                 const secondaryAuth = secondaryApp.auth();
                 
-                await secondaryAuth.createUserWithEmailAndPassword(email, data.passwordPlain);
+                await secondaryAuth.createUserWithEmailAndPassword(email, password);
                 console.log('Firebase Auth kullanıcısı oluşturuldu:', email);
                 
                 // Secondary app'i temizle
                 await secondaryApp.delete();
                 
-                // Şifre Auth'ta, Firestore'da encoded olarak tut (admin görebilsin)
-                // passwordPlain'i temizle
-                delete data.passwordPlain;
                 data.hasFirebaseAuth = true;
-                
                 toast('Kullanıcı hesabı oluşturuldu ✓', 'success');
             } catch (authError) {
                 if (authError.code === 'auth/email-already-in-use') {
-                    console.log('Kullanıcı zaten mevcut, şifre güncelleniyor:', email);
-                    // Firestore'da şifreyi güncelle (encoded)
-                    delete data.passwordPlain;
-                    
-                    // Firebase Auth şifresini değiştirmek için şifre sıfırlama e-postası gönder
-                    try {
-                        await firebase.auth().sendPasswordResetEmail(email);
-                        toast('Kullanıcıya şifre sıfırlama e-postası gönderildi', 'info');
-                    } catch (resetError) {
-                        console.error('Şifre sıfırlama e-postası gönderilemedi:', resetError);
-                    }
+                    console.log('Kullanıcı zaten mevcut, credentials güncellendi:', email);
+                    // Credentials zaten güncellendi, Firebase Auth senkronize olacak (login anında)
+                    toast('Şifre güncellendi. Kullanıcı yeni giriş yaptığında aktif olacak.', 'info');
                 } else if (authError.code === 'auth/app/duplicate-app') {
                     // Secondary app zaten var, devam et
                     console.log('Secondary app zaten mevcut');
-                    delete data.passwordPlain;
                 } else {
                     console.error('Auth hatası:', authError);
-                    // Şifreyi Firestore'da sakla (encoded)
-                    delete data.passwordPlain;
+                    // Credentials kaydedildi, Auth olmasa da giriş yapabilir
                 }
             }
         }
