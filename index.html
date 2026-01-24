@@ -6371,6 +6371,7 @@ async function saveBranch() {
         const sourceSourceBranch = STATE.branches[0] || 'Tuzla Port';
         const sourceBranchKey = sourceSourceBranch.replace(/[^a-zA-Z0-9]/g, '_');
         const newBranchKey = name.replace(/[^a-zA-Z0-9]/g, '_');
+        const branchCreatedDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
         
         // 1. STATE.branches'a ekle (10%)
         setProgress(10, 'Şube listesine ekleniyor...');
@@ -6380,7 +6381,8 @@ async function saveBranch() {
         // 2. Firebase systemConfig/checkRules.branches güncelle (20%)
         setProgress(20, 'Firebase ayarları güncelleniyor...');
         await db.collection('systemConfig').doc('checkRules').update({
-            branches: firebase.firestore.FieldValue.arrayUnion(name)
+            branches: firebase.firestore.FieldValue.arrayUnion(name),
+            [`branchCreatedAt.${name}`]: branchCreatedDate
         });
         log(`✓ Firebase branches güncellendi`);
         
@@ -6601,18 +6603,23 @@ async function saveBranch() {
                 goTo('shift');
                 // Şube seçimini ayarla
                 setTimeout(() => {
-                    const shiftBranchSelect = document.getElementById('shiftBranch');
+                    const shiftBranchSelect = document.getElementById('shiftSube');
                     if (shiftBranchSelect) {
                         shiftBranchSelect.value = name;
-                        // Bu hafta seçili olsun
-                        const weekSelect = document.getElementById('shiftWeekSelect');
-                        if (weekSelect && weekSelect.options.length > 0) {
-                            weekSelect.selectedIndex = 0; // En güncel hafta
+                        // Önce shift listesini yükle (hafta dropdown'ı dolsun)
+                        if (typeof loadShiftList === 'function') {
+                            loadShiftList();
                         }
-                        // Shift'i yükle
-                        if (typeof loadShiftForWeek === 'function') {
-                            loadShiftForWeek();
-                        }
+                        // Hafta dropdown'ı yüklendikten sonra shift'i göster
+                        setTimeout(() => {
+                            const weekSelect = document.getElementById('shiftHafta');
+                            if (weekSelect && weekSelect.options.length > 0) {
+                                weekSelect.selectedIndex = 0; // En güncel hafta
+                            }
+                            if (typeof loadShiftWeek === 'function') {
+                                loadShiftWeek();
+                            }
+                        }, 500);
                     }
                 }, 500);
             }, 1000);
@@ -6944,7 +6951,8 @@ async function executeDeleteBranch(branchName, index) {
         setProgress(90, 'Sistem ayarları güncelleniyor...');
         await db.collection('systemConfig').doc('checkRules').update({
             branches: firebase.firestore.FieldValue.arrayRemove(branchName),
-            [`branchHours.${branchName}`]: firebase.firestore.FieldValue.delete()
+            [`branchHours.${branchName}`]: firebase.firestore.FieldValue.delete(),
+            [`branchCreatedAt.${branchName}`]: firebase.firestore.FieldValue.delete()
         });
         log(`✓ Sistem ayarları güncellendi`);
         
@@ -15386,8 +15394,28 @@ async function checkAndProcessMissedChecks() {
     const userBranch = currentUser?.branch;
     const branchesToCheck = (userBranch && userBranch !== 'all') ? [userBranch] : branches;
     
+    // Şube oluşturma tarihlerini al
+    let branchCreatedAt = {};
+    try {
+        const configDoc = await db.collection('systemConfig').doc('checkRules').get();
+        if (configDoc.exists) {
+            branchCreatedAt = configDoc.data().branchCreatedAt || {};
+        }
+    } catch (e) {
+        console.warn('[AutoPuan] branchCreatedAt alınamadı:', e);
+    }
+    
     for (const branch of branchesToCheck) {
+        // Şubenin oluşturulma tarihi
+        const branchCreatedDate = branchCreatedAt[branch];
+        
         for (const date of datesToCheck) {
+            // Eğer kontrol edilen tarih şubenin oluşturulma tarihinden ÖNCE ise atla
+            if (branchCreatedDate && date < branchCreatedDate) {
+                console.log(`[AutoPuan] ${branch} - ${date} atlandı (şube ${branchCreatedDate} tarihinde oluşturuldu)`);
+                continue;
+            }
+            
             // Shift personelini al
             let shiftPersonnel = [];
             try {
