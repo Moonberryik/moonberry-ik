@@ -1649,13 +1649,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <div class="admin-tabs">
                     <button class="admin-tab active" onclick="showAdminTab('genel',this)">Genel</button>
                     <button class="admin-tab" onclick="showAdminTab('tumCheckler',this)">Tüm Checkler</button>
-                    <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">Pozisyon Yetkileri</button>
+                    <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">Pozisyonlar ve Yetkiler</button>
                     <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">Oturumlar</button>
                     <button class="admin-tab" onclick="showAdminTab('magazaSaatleri',this)">Mağaza Saatleri</button>
                     <button class="admin-tab" onclick="showAdminTab('checkKurallari',this)">Check & Puantaj Kuralları</button>
                     <button class="admin-tab" onclick="showAdminTab('checklistTurleri',this)">Checklist Türleri</button>
                     <button class="admin-tab" onclick="showAdminTab('subeler',this)">Şubeler</button>
-                    <button class="admin-tab" onclick="showAdminTab('pozisyonlar',this)">Pozisyonlar</button>
+                    <!-- Pozisyonlar artık Yetkiler ile birleşti -->
                     <button class="admin-tab" onclick="showAdminTab('ihlaller',this)">İhlaller</button>
                     <button class="admin-tab" onclick="showAdminTab('sablonlar',this)">Sözleşme Şablonları</button>
                     <button class="admin-tab" onclick="showAdminTab('belgeler',this)">Belge Şablonları</button>
@@ -1922,54 +1922,40 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                 </div>
 
-                <!-- Pozisyon Yetkileri -->
+                <!-- Pozisyonlar ve Yetkiler (Birleşik) -->
                 <div class="admin-section" id="admin-kullanicilar">
+                    <!-- BÖLÜM 1: Pozisyon Yönetimi -->
+                    <div class="admin-card" style="margin-bottom:20px">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                                Pozisyonlar
+                            </div>
+                            <button class="btn btn-sm btn-primary" onclick="addPosition()">+ Yeni Pozisyon</button>
+                        </div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">
+                            Pozisyonları yönetin ve her pozisyona sistem rolü atayın. Yeni pozisyon eklediğinizde otomatik olarak yetki kartı oluşturulur.
+                        </p>
+                        <div id="positionListCombined" class="admin-list"></div>
+                    </div>
+                    
+                    <!-- BÖLÜM 2: Yetki Matrisi -->
                     <div class="admin-card">
                         <div class="admin-card-header">
                             <div class="admin-card-title">🔐 Pozisyon Yetkileri</div>
                         </div>
-                        <p style="color:var(--tx2);font-size:.9rem;margin-bottom:24px">
-                            Her pozisyon için hangi sayfaları görebileceğini ve hangi işlemleri yapabileceğini belirleyin.
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:24px">
+                            Her pozisyon için hangi sayfaları görebileceğini ve hangi işlemleri yapabileceğini belirleyin. Bir pozisyona tıklayarak yetkilerini düzenleyin.
                         </p>
                         
-                        <!-- Pozisyon Kartları -->
-                        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
-                            <!-- Barista -->
-                            <div class="permission-card" onclick="selectRoleForPermissions('barista')" style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#3498db';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
-                                <div style="font-size:2rem;margin-bottom:8px">🧑‍🍳</div>
-                                <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:4px">Barista</div>
-                                <div style="font-size:.7rem;color:var(--tx2)">Günlük operasyon</div>
-                                <div style="margin-top:8px;padding:4px 8px;background:#3498db22;color:#3498db;border-radius:6px;font-size:.65rem;font-weight:500">Sınırlı</div>
-                            </div>
-                            
-                            <!-- Mağaza Müdür Yardımcısı -->
-                            <div class="permission-card" onclick="selectRoleForPermissions('magaza_mudur_yardimcisi')" style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#ff8674';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
-                                <div style="font-size:2rem;margin-bottom:8px">👔</div>
-                                <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:4px">Müdür Yrd.</div>
-                                <div style="font-size:.7rem;color:var(--tx2)">Yardımcı yönetim</div>
-                                <div style="margin-top:8px;padding:4px 8px;background:#ff867422;color:#ff8674;border-radius:6px;font-size:.65rem;font-weight:500">Orta</div>
-                            </div>
-                            
-                            <!-- Mağaza Müdürü -->
-                            <div class="permission-card" onclick="selectRoleForPermissions('magaza_muduru')" style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#008c95';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
-                                <div style="font-size:2rem;margin-bottom:8px">🏪</div>
-                                <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:4px">Mağaza Müdürü</div>
-                                <div style="font-size:.7rem;color:var(--tx2)">Şube yönetimi</div>
-                                <div style="margin-top:8px;padding:4px 8px;background:#008c9522;color:#008c95;border-radius:6px;font-size:.65rem;font-weight:500">Geniş</div>
-                            </div>
-                            
-                            <!-- Bölge Müdürü -->
-                            <div class="permission-card" onclick="selectRoleForPermissions('bolge_muduru')" style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#9b59b6';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
-                                <div style="font-size:2rem;margin-bottom:8px">🌍</div>
-                                <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:4px">Bölge Müdürü</div>
-                                <div style="font-size:.7rem;color:var(--tx2)">Çoklu şube</div>
-                                <div style="margin-top:8px;padding:4px 8px;background:#9b59b622;color:#9b59b6;border-radius:6px;font-size:.65rem;font-weight:500">Tam</div>
-                            </div>
+                        <!-- Dinamik Pozisyon Kartları -->
+                        <div id="dynamicPositionCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:24px">
+                            <!-- JavaScript ile doldurulacak -->
                         </div>
                         
                         <!-- Seçili Rol İzinleri -->
                         <div id="selectedRolePermissions" style="display:none;background:var(--bg2);border:1px solid var(--cardBorder);border-radius:16px;padding:24px">
-                            <div style="display:flex;align-items:center;justify-content:between;margin-bottom:20px">
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
                                 <div style="display:flex;align-items:center;gap:12px">
                                     <span id="selectedRoleIcon" style="font-size:2rem">🧑‍🍳</span>
                                     <div>
@@ -2349,15 +2335,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
 
                 <!-- Pozisyonlar -->
-                <div class="admin-section" id="admin-pozisyonlar">
-                    <div class="admin-card">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title">👔 Pozisyonlar</div>
-                            <button class="btn btn-sm btn-primary" onclick="addPosition()">+ Ekle</button>
-                        </div>
-                        <div class="admin-list" id="positionList"></div>
-                    </div>
-                </div>
+                <!-- Pozisyonlar sekmesi artık Pozisyon Yetkileri ile birleştirildi - admin-kullanicilar içinde -->
 
                 <!-- İhlaller -->
                 <div class="admin-section" id="admin-ihlaller">
@@ -3682,10 +3660,10 @@ const DEFAULT_STATE = {
     branches: ['Tuzla TRC', 'Şişli (Merkez)'],
     branchCodes: {'Şişli (Merkez)': 'SIS', 'Tuzla TRC': 'TZL'},
     positions: [
-        {id: 'barista', name: 'Barista / Servis', type: 'Mavi Yaka'},
-        {id: 'mudur_yardimcisi', name: 'Müdür Yardımcısı', type: 'Gri Yaka'},
-        {id: 'magaza_muduru', name: 'Mağaza Müdürü', type: 'Beyaz Yaka'},
-        {id: 'bolge_muduru', name: 'Bölge Müdürü', type: 'Stratejik'}
+        {id: 'barista', name: 'Barista / Servis', type: 'Mavi Yaka', role: 'barista', icon: '🧑‍🍳'},
+        {id: 'mudur_yardimcisi', name: 'Müdür Yardımcısı', type: 'Gri Yaka', role: 'mudur_yardimcisi', icon: '👔'},
+        {id: 'magaza_muduru', name: 'Mağaza Müdürü', type: 'Beyaz Yaka', role: 'magaza_muduru', icon: '🏪'},
+        {id: 'bolge_muduru', name: 'Bölge Müdürü', type: 'Stratejik', role: 'bolge_muduru', icon: '🌍'}
     ],
     violations: [
         {id:'V01',title:'Telefon Kullanımı',risk:'low',legal:'İş K. 25/II-h',steps:['Sözlü uyarı','Yazılı uyarı','İhtar'],desc:'Mesai saatinde telefon kullanımı'},
@@ -4337,6 +4315,124 @@ function renderPositionCards() {
             <div class="type-card-sub">${p.type}</div>
         </div>
     `).join('');
+}
+
+// Birleşik sekmedeki pozisyon listesi
+function renderPositionListCombined() {
+    const container = document.getElementById('positionListCombined');
+    if (!container) return;
+    
+    if (STATE.positions.length === 0) {
+        container.innerHTML = '<p style="color:var(--tx2);text-align:center;padding:20px">Henüz pozisyon eklenmemiş.</p>';
+        return;
+    }
+    
+    const roleNames = {
+        'barista': 'Barista',
+        'mudur_yardimcisi': 'Müdür Yrd.',
+        'magaza_muduru': 'Mağaza Müdürü',
+        'bolge_muduru': 'Bölge Müdürü'
+    };
+    
+    const roleColors = {
+        'barista': '#3498db',
+        'mudur_yardimcisi': '#ff8674',
+        'magaza_muduru': '#008c95',
+        'bolge_muduru': '#9b59b6'
+    };
+    
+    container.innerHTML = STATE.positions.map((p, i) => `
+        <div class="admin-list-item" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border-radius:10px;margin-bottom:8px">
+            <div style="display:flex;align-items:center;gap:12px">
+                <span style="font-size:1.5rem">${p.icon || '👤'}</span>
+                <div>
+                    <div style="font-weight:600;color:var(--tx)">${p.name}</div>
+                    <div style="font-size:.75rem;color:var(--tx2)">${p.type} • <span style="color:${roleColors[p.role] || '#888'}">${roleNames[p.role] || 'Rol atanmamış'}</span></div>
+                </div>
+            </div>
+            <div style="display:flex;gap:8px">
+                <button class="btn btn-ghost btn-sm" onclick="editPosition(${i})" title="Düzenle">✏️</button>
+                <button class="btn btn-ghost btn-sm" onclick="deletePosition(${i})" title="Sil" style="color:var(--red)">🗑️</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Dinamik yetki kartları (pozisyonlara göre)
+function renderDynamicPositionCards() {
+    const container = document.getElementById('dynamicPositionCards');
+    if (!container) return;
+    
+    const roleColors = {
+        'barista': '#3498db',
+        'mudur_yardimcisi': '#ff8674',
+        'magaza_muduru': '#008c95',
+        'bolge_muduru': '#9b59b6'
+    };
+    
+    const roleLevels = {
+        'barista': 'Sınırlı',
+        'mudur_yardimcisi': 'Orta',
+        'magaza_muduru': 'Geniş',
+        'bolge_muduru': 'Tam'
+    };
+    
+    container.innerHTML = STATE.positions.map(p => {
+        const color = roleColors[p.role] || '#888';
+        const level = roleLevels[p.role] || 'Özel';
+        
+        return `
+            <div class="permission-card" onclick="selectRoleForPermissions('${p.id}')" 
+                 style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s" 
+                 onmouseover="this.style.borderColor='${color}';this.style.transform='translateY(-2px)'" 
+                 onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
+                <div style="font-size:2rem;margin-bottom:8px">${p.icon || '👤'}</div>
+                <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:4px">${p.name}</div>
+                <div style="font-size:.7rem;color:var(--tx2)">${p.type}</div>
+                <div style="margin-top:8px;padding:4px 8px;background:${color}22;color:${color};border-radius:6px;font-size:.65rem;font-weight:500">${level}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Rol bazlı varsayılan yetkiler
+function getDefaultPermissions(role) {
+    const defaults = {
+        'barista': {
+            pages: { dashboard: true, shift: true, checklist: true, documents: false, personel: false, admin: false },
+            docs: { sozlesme: false, savunma: false, tutanak: false, ihtar: false, fesih: false },
+            forms: { checklist: true, izin: true, avans: true },
+            admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_ihlaller: false },
+            special: { canViewAllBranches: false, canEditShift: false, canDeletePersonel: false, canExportData: false },
+            limits: { maxAvans: 3000, maxIzin: 14 }
+        },
+        'mudur_yardimcisi': {
+            pages: { dashboard: true, shift: true, checklist: true, documents: true, personel: false, admin: false },
+            docs: { sozlesme: false, savunma: true, tutanak: true, ihtar: false, fesih: false },
+            forms: { checklist: true, izin: true, avans: true },
+            admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_ihlaller: true },
+            special: { canViewAllBranches: false, canEditShift: true, canDeletePersonel: false, canExportData: false },
+            limits: { maxAvans: 5000, maxIzin: 14 }
+        },
+        'magaza_muduru': {
+            pages: { dashboard: true, shift: true, checklist: true, documents: true, personel: true, admin: false },
+            docs: { sozlesme: true, savunma: true, tutanak: true, ihtar: true, fesih: false },
+            forms: { checklist: true, izin: true, avans: true },
+            admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_ihlaller: true },
+            special: { canViewAllBranches: false, canEditShift: true, canDeletePersonel: false, canExportData: true },
+            limits: { maxAvans: 10000, maxIzin: 21 }
+        },
+        'bolge_muduru': {
+            pages: { dashboard: true, shift: true, checklist: true, documents: true, personel: true, admin: true },
+            docs: { sozlesme: true, savunma: true, tutanak: true, ihtar: true, fesih: true },
+            forms: { checklist: true, izin: true, avans: true },
+            admin: { admin_genel: true, admin_kullanicilar: true, admin_puantaj: true, admin_subeler: true, admin_ihlaller: true },
+            special: { canViewAllBranches: true, canEditShift: true, canDeletePersonel: true, canExportData: true },
+            limits: { maxAvans: 50000, maxIzin: 30 }
+        }
+    };
+    
+    return defaults[role] || defaults['barista'];
 }
 
 // ==================== VARSAYILAN VERİLERİ KONTROL ET ====================
@@ -5734,6 +5830,10 @@ function switchAdminTab(tab, btn) {
     document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
     document.getElementById('admin-' + tab).classList.add('active');
     if (tab === 'genel') loadMyProfile();
+    if (tab === 'kullanicilar') {
+        renderPositionListCombined();
+        renderDynamicPositionCards();
+    }
     if (tab === 'sablonlar') loadTemplate();
     if (tab === 'belgeler') loadDocTemplate('tutanak', 'olay');
     if (tab === 'oturumlar') {
@@ -6676,11 +6776,11 @@ async function saveBranch() {
         const testPassword = 'Test.123*';
         
         const testUsers = [
-            { role: 'magaza_muduru', suffix: 'mudur', displayName: `${name} Test Müdür` },
-            { role: 'mudur_yardimcisi', suffix: 'mudur_yrd', displayName: `${name} Test Md. Yrd.` },
-            { role: 'barista', suffix: 'barista1', displayName: `${name} Barista 1` },
-            { role: 'barista', suffix: 'barista2', displayName: `${name} Barista 2` },
-            { role: 'barista', suffix: 'barista3', displayName: `${name} Barista 3` }
+            { role: 'magaza_muduru', suffix: 'mudur', displayName: `${name} Test Müdür`, position: 'Mağaza Müdürü' },
+            { role: 'mudur_yardimcisi', suffix: 'mudur_yrd', displayName: `${name} Test Md. Yrd.`, position: 'Mağaza Müdür Yardımcısı' },
+            { role: 'barista', suffix: 'barista1', displayName: `${name} Barista 1`, position: 'Barista' },
+            { role: 'barista', suffix: 'barista2', displayName: `${name} Barista 2`, position: 'Barista' },
+            { role: 'barista', suffix: 'barista3', displayName: `${name} Barista 3`, position: 'Barista' }
         ];
         
         const createdPersonelIds = [];
@@ -6709,6 +6809,7 @@ async function saveBranch() {
                     email: email,
                     password: encodePassword(testPassword),
                     role: user.role,
+                    position: user.position,
                     branch: name,
                     status: 'active',
                     isTestUser: true,
@@ -7252,14 +7353,45 @@ async function executeDeleteBranch(branchName, index) {
 
 // ========== POSITIONS ==========
 function addPosition() {
-    showModal('Pozisyon Ekle', `
+    // Mevcut roller
+    const roles = [
+        { id: 'barista', name: 'Barista (Sınırlı Yetki)' },
+        { id: 'mudur_yardimcisi', name: 'Müdür Yardımcısı (Orta Yetki)' },
+        { id: 'magaza_muduru', name: 'Mağaza Müdürü (Geniş Yetki)' },
+        { id: 'bolge_muduru', name: 'Bölge Müdürü (Tam Yetki)' }
+    ];
+    
+    showModal('Yeni Pozisyon Ekle', `
         <div class="form-grid">
-            <div class="form-group"><label class="form-label">ID</label><input type="text" id="newPosId" class="form-input" placeholder="ornek_pozisyon"></div>
-            <div class="form-group"><label class="form-label">Ad</label><input type="text" id="newPosName" class="form-input" placeholder="Örnek Pozisyon"></div>
-            <div class="form-group full"><label class="form-label">Yaka Tipi</label>
+            <div class="form-group">
+                <label class="form-label">Pozisyon ID *</label>
+                <input type="text" id="newPosId" class="form-input" placeholder="ornek_pozisyon">
+                <small style="color:var(--tx2);font-size:.7rem">Sistem tarafından kullanılır, Türkçe karakter kullanmayın</small>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Pozisyon Adı *</label>
+                <input type="text" id="newPosName" class="form-input" placeholder="Örnek Pozisyon">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Yaka Tipi</label>
                 <select id="newPosType" class="form-select">
-                    <option>Mavi Yaka</option><option>Gri Yaka</option><option>Beyaz Yaka</option><option>Stratejik</option>
+                    <option value="Mavi Yaka">Mavi Yaka</option>
+                    <option value="Gri Yaka">Gri Yaka</option>
+                    <option value="Beyaz Yaka">Beyaz Yaka</option>
+                    <option value="Stratejik">Stratejik</option>
                 </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Sistem Rolü *</label>
+                <select id="newPosRole" class="form-select">
+                    ${roles.map(r => `<option value="${r.id}">${r.name}</option>`).join('')}
+                </select>
+                <small style="color:var(--tx2);font-size:.7rem">Bu rol, pozisyonun yetkilerini belirler</small>
+            </div>
+            <div class="form-group full">
+                <label class="form-label">Emoji İkonu</label>
+                <input type="text" id="newPosIcon" class="form-input" placeholder="🧑‍🍳" maxlength="4" style="width:80px">
+                <small style="color:var(--tx2);font-size:.7rem">Yetki kartında gösterilecek emoji</small>
             </div>
         </div>
     `, `
@@ -7272,31 +7404,78 @@ function savePosition() {
     const id = getVal('newPosId');
     const name = getVal('newPosName');
     const type = getVal('newPosType');
-    if (id && name) {
-        STATE.positions.push({id, name, type});
-        if (!STATE.templates[id]) STATE.templates[id] = '';
-        saveState();
-        populateSelects();
-        renderPositionCards();
-        renderAdminLists();
-        closeModal();
-        toast('Pozisyon eklendi', 'success');
+    const role = getVal('newPosRole');
+    const icon = getVal('newPosIcon') || '👤';
+    
+    if (!id || !name) {
+        toast('ID ve Ad zorunludur', 'error');
+        return;
     }
+    
+    // ID kontrolü - mevcut mu?
+    if (STATE.positions.find(p => p.id === id)) {
+        toast('Bu ID zaten kullanılıyor', 'error');
+        return;
+    }
+    
+    STATE.positions.push({ id, name, type, role, icon });
+    if (!STATE.templates[id]) STATE.templates[id] = '';
+    
+    // Yetki varsayılanlarını oluştur (rol bazlı)
+    if (!STATE.rolePermissions) STATE.rolePermissions = {};
+    if (!STATE.rolePermissions[id]) {
+        // Seçilen rolün varsayılan yetkilerini kopyala
+        const basePerms = STATE.rolePermissions[role] || getDefaultPermissions(role);
+        STATE.rolePermissions[id] = JSON.parse(JSON.stringify(basePerms));
+    }
+    
+    saveState();
+    populateSelects();
+    renderPositionCards();
+    renderPositionListCombined();
+    renderDynamicPositionCards();
+    renderAdminLists();
+    closeModal();
+    toast('Pozisyon eklendi', 'success');
 }
 
 function editPosition(i) {
     const p = STATE.positions[i];
+    const roles = [
+        { id: 'barista', name: 'Barista (Sınırlı Yetki)' },
+        { id: 'mudur_yardimcisi', name: 'Müdür Yardımcısı (Orta Yetki)' },
+        { id: 'magaza_muduru', name: 'Mağaza Müdürü (Geniş Yetki)' },
+        { id: 'bolge_muduru', name: 'Bölge Müdürü (Tam Yetki)' }
+    ];
+    
     showModal('Pozisyon Düzenle', `
         <div class="form-grid">
-            <div class="form-group"><label class="form-label">ID</label><input type="text" id="editPosId" class="form-input" value="${p.id}"></div>
-            <div class="form-group"><label class="form-label">Ad</label><input type="text" id="editPosName" class="form-input" value="${p.name}"></div>
-            <div class="form-group full"><label class="form-label">Yaka Tipi</label>
+            <div class="form-group">
+                <label class="form-label">Pozisyon ID</label>
+                <input type="text" id="editPosId" class="form-input" value="${p.id}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Pozisyon Adı</label>
+                <input type="text" id="editPosName" class="form-input" value="${p.name}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Yaka Tipi</label>
                 <select id="editPosType" class="form-select">
-                    <option ${p.type==='Mavi Yaka'?'selected':''}>Mavi Yaka</option>
-                    <option ${p.type==='Gri Yaka'?'selected':''}>Gri Yaka</option>
-                    <option ${p.type==='Beyaz Yaka'?'selected':''}>Beyaz Yaka</option>
-                    <option ${p.type==='Stratejik'?'selected':''}>Stratejik</option>
+                    <option value="Mavi Yaka" ${p.type==='Mavi Yaka'?'selected':''}>Mavi Yaka</option>
+                    <option value="Gri Yaka" ${p.type==='Gri Yaka'?'selected':''}>Gri Yaka</option>
+                    <option value="Beyaz Yaka" ${p.type==='Beyaz Yaka'?'selected':''}>Beyaz Yaka</option>
+                    <option value="Stratejik" ${p.type==='Stratejik'?'selected':''}>Stratejik</option>
                 </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Sistem Rolü</label>
+                <select id="editPosRole" class="form-select">
+                    ${roles.map(r => `<option value="${r.id}" ${p.role===r.id?'selected':''}>${r.name}</option>`).join('')}
+                </select>
+            </div>
+            <div class="form-group full">
+                <label class="form-label">Emoji İkonu</label>
+                <input type="text" id="editPosIcon" class="form-input" value="${p.icon || '👤'}" maxlength="4" style="width:80px">
             </div>
         </div>
     `, `
@@ -7308,18 +7487,34 @@ function editPosition(i) {
 function updatePosition(i) {
     const oldId = STATE.positions[i].id;
     const newId = getVal('editPosId');
+    const role = getVal('editPosRole');
+    const icon = getVal('editPosIcon') || '👤';
+    
     STATE.positions[i] = {
         id: newId,
         name: getVal('editPosName'),
-        type: getVal('editPosType')
+        type: getVal('editPosType'),
+        role: role,
+        icon: icon
     };
+    
+    // Template'i taşı
     if (oldId !== newId && STATE.templates[oldId]) {
         STATE.templates[newId] = STATE.templates[oldId];
         delete STATE.templates[oldId];
     }
+    
+    // Yetkileri taşı
+    if (oldId !== newId && STATE.rolePermissions && STATE.rolePermissions[oldId]) {
+        STATE.rolePermissions[newId] = STATE.rolePermissions[oldId];
+        delete STATE.rolePermissions[oldId];
+    }
+    
     saveState();
     populateSelects();
     renderPositionCards();
+    renderPositionListCombined();
+    renderDynamicPositionCards();
     renderAdminLists();
     closeModal();
     toast('Güncellendi', 'success');
@@ -7907,7 +8102,7 @@ async function loadPersonelList() {
             `;
         }
         
-        let html = headerHtml + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">';
+        let html = headerHtml + '<div id="personelGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">';
         snapshot.forEach(doc => {
             const p = doc.data();
             const docId = doc.id;
@@ -7922,8 +8117,11 @@ async function loadPersonelList() {
             const isMoonberry = (p.branch || '').includes('Şişli') || (p.branch || '').includes('Merkez');
             const branchColor = isMoonberry ? '#008c95' : '#ff8674';
             
+            // Arama için data attribute'lar
+            const searchData = `${p.name || ''} ${p.branch || ''} ${p.tc || ''} ${p.email || ''} ${p.position || ''}`.toLowerCase();
+            
             html += `
-                <div style="background:var(--bg2);border:1px solid var(--cardBorder);border-left:3px solid ${branchColor};border-radius:10px;padding:14px;transition:all .15s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                <div class="personel-card" data-search="${searchData}" data-branch="${p.branch || ''}" style="background:var(--bg2);border:1px solid var(--cardBorder);border-left:3px solid ${branchColor};border-radius:10px;padding:14px;transition:all .15s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
                     <!-- Header -->
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
                         <div style="width:40px;height:40px;background:linear-gradient(135deg,${roleInfo.color},${roleInfo.color}88);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff">
@@ -7980,16 +8178,16 @@ async function loadPersonelList() {
         
         const statsHtml = `
             <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
-                <div style="background:linear-gradient(135deg,#008c95,#00a8a8);padding:12px 20px;border-radius:10px;color:#fff;display:flex;align-items:center;gap:10px">
+                <div onclick="filterPersonelByBranch('')" style="background:linear-gradient(135deg,#008c95,#00a8a8);padding:12px 20px;border-radius:10px;color:#fff;display:flex;align-items:center;gap:10px;cursor:pointer;transition:transform .15s" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='none'">
                     <span style="font-size:1.5rem">👥</span>
                     <div><div style="font-size:1.4rem;font-weight:700">${total}</div><div style="font-size:.75rem;opacity:.8">Toplam Personel</div></div>
                 </div>
-                <div style="background:linear-gradient(135deg,#27ae60,#2ecc71);padding:12px 20px;border-radius:10px;color:#fff;display:flex;align-items:center;gap:10px">
+                <div onclick="filterPersonelByBranch('')" style="background:linear-gradient(135deg,#27ae60,#2ecc71);padding:12px 20px;border-radius:10px;color:#fff;display:flex;align-items:center;gap:10px;cursor:pointer;transition:transform .15s" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='none'">
                     <span style="font-size:1.5rem">🔓</span>
                     <div><div style="font-size:1.4rem;font-weight:700">${withAccess}</div><div style="font-size:.75rem;opacity:.8">Giriş Yapabilen</div></div>
                 </div>
                 ${Object.entries(byBranch).map(([branch, count]) => `
-                    <div style="background:var(--bg3);padding:12px 20px;border-radius:10px;display:flex;align-items:center;gap:10px">
+                    <div onclick="filterPersonelByBranch('${branch}')" style="background:var(--bg3);padding:12px 20px;border-radius:10px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--bg4)';this.style.transform='scale(1.02)'" onmouseout="this.style.background='var(--bg3)';this.style.transform='none'">
                         <span style="font-size:1.2rem">📍</span>
                         <div><div style="font-size:1.1rem;font-weight:600;color:var(--tx)">${count}</div><div style="font-size:.7rem;color:var(--tx2)">${branch}</div></div>
                     </div>
@@ -8042,7 +8240,11 @@ function showAddPersonelModal(editId = null) {
                 </div>
                 <div class="form-group">
                     <label class="form-label">Şifre ${isEdit ? '(değiştirmek için girin)' : ''}</label>
-                    <input type="password" id="personelPassword" class="form-input" minlength="6" placeholder="${isEdit ? 'Boş bırakılırsa değişmez' : 'En az 6 karakter'}">
+                    <div style="display:flex;gap:8px">
+                        <input type="password" id="personelPassword" class="form-input" style="flex:1" minlength="6" placeholder="${isEdit ? 'Boş bırakılırsa değişmez' : 'En az 6 karakter'}">
+                        ${currentUser?.role === 'yonetici' ? '<button type="button" onclick="togglePersonelPasswordView()" id="btnTogglePassword" style="padding:8px 12px;background:var(--bg3);border:1px solid var(--cardBorder);border-radius:6px;cursor:pointer;font-size:.8rem" title="Şifreyi Göster/Gizle">👁</button>' : ''}
+                    </div>
+                    ${isEdit && currentUser?.role === 'yonetici' ? '<div id="currentPasswordDisplay" style="font-size:.75rem;color:var(--tx3);margin-top:4px">Mevcut: <span id="currentPasswordValue">•••••••</span></div>' : ''}
                 </div>
             </div>
             <div style="font-size:.75rem;color:var(--tx2);margin-top:8px">
@@ -8080,9 +8282,47 @@ async function loadPersonelForEdit(id) {
             document.getElementById('personelStartDate').value = p.startDate || '';
             document.getElementById('personelSalary').value = p.salary || '';
             // Şifre alanı - düzenleme modunda boş bırakılır (değişmeyecekse)
+            
+            // Admin için mevcut şifreyi kaydet (göster/gizle için)
+            if (currentUser?.role === 'yonetici' && p.password) {
+                window._currentPersonelPassword = p.password; // encoded
+                const pwSpan = document.getElementById('currentPasswordValue');
+                if (pwSpan) {
+                    pwSpan.textContent = '•••••••';
+                    pwSpan.dataset.shown = 'false';
+                }
+            }
         }
     } catch (error) {
         console.error('Personel yükleme hatası:', error);
+    }
+}
+
+// Admin için şifre göster/gizle
+function togglePersonelPasswordView() {
+    if (currentUser?.role !== 'yonetici') return;
+    
+    const pwSpan = document.getElementById('currentPasswordValue');
+    const btn = document.getElementById('btnTogglePassword');
+    
+    if (!pwSpan || !window._currentPersonelPassword) {
+        toast('Kayıtlı şifre bulunamadı', 'error');
+        return;
+    }
+    
+    const isShown = pwSpan.dataset.shown === 'true';
+    
+    if (isShown) {
+        // Gizle
+        pwSpan.textContent = '•••••••';
+        pwSpan.dataset.shown = 'false';
+        if (btn) btn.style.background = 'var(--bg3)';
+    } else {
+        // Göster (decode et)
+        const decoded = decodePassword(window._currentPersonelPassword);
+        pwSpan.textContent = decoded || '(şifre yok)';
+        pwSpan.dataset.shown = 'true';
+        if (btn) btn.style.background = 'rgba(231,76,60,.2)';
     }
 }
 
@@ -8388,12 +8628,37 @@ async function deletePersonel(id) {
 }
 
 function filterPersonel() {
-    const search = document.getElementById('personelSearch').value.toLowerCase();
-    const items = document.querySelectorAll('#personelListContainer .admin-list-item');
-    items.forEach(item => {
-        const text = item.textContent.toLowerCase();
-        item.style.display = text.includes(search) ? 'flex' : 'none';
+    const search = document.getElementById('personelSearch').value.toLowerCase().trim();
+    const cards = document.querySelectorAll('.personel-card');
+    
+    cards.forEach(card => {
+        const searchData = card.dataset.search || '';
+        const match = !search || searchData.includes(search);
+        card.style.display = match ? 'block' : 'none';
     });
+}
+
+// Şubeye göre filtrele
+function filterPersonelByBranch(branch) {
+    const searchInput = document.getElementById('personelSearch');
+    const cards = document.querySelectorAll('.personel-card');
+    
+    // Arama alanını güncelle
+    if (searchInput) {
+        searchInput.value = branch;
+    }
+    
+    cards.forEach(card => {
+        const cardBranch = card.dataset.branch || '';
+        const match = !branch || cardBranch === branch;
+        card.style.display = match ? 'block' : 'none';
+    });
+    
+    if (branch) {
+        toast(`${branch} personeli gösteriliyor`, 'info');
+    } else {
+        toast('Tüm personel gösteriliyor', 'info');
+    }
 }
 
 // ==================== PUANTAJ SİSTEMİ ====================
@@ -10986,30 +11251,26 @@ const DEFAULT_ROLE_PERMISSIONS = {
 // Pozisyon seçimi için yeni fonksiyonlar
 let selectedRoleForPerm = null;
 
-function selectRoleForPermissions(role) {
-    selectedRoleForPerm = role;
+function selectRoleForPermissions(positionId) {
+    selectedRoleForPerm = positionId;
     
-    const roleInfo = {
-        barista: { icon: '🧑‍🍳', name: 'Barista / Servis', desc: 'Günlük operasyon yetkileri' },
-        magaza_mudur_yardimcisi: { icon: '👔', name: 'Mağaza Müdür Yardımcısı', desc: 'Yardımcı yönetim yetkileri' },
-        magaza_muduru: { icon: '🏪', name: 'Mağaza Müdürü', desc: 'Şube yönetimi yetkileri' },
-        bolge_muduru: { icon: '🌍', name: 'Bölge Müdürü', desc: 'Çoklu şube yönetimi yetkileri' }
-    };
+    // Pozisyonu STATE.positions'dan bul
+    const position = STATE.positions.find(p => p.id === positionId);
     
-    const info = roleInfo[role];
-    if (!info) {
-        toast('Bilinmeyen rol: ' + role, 'error');
+    if (!position) {
+        toast('Bilinmeyen pozisyon: ' + positionId, 'error');
         return;
     }
-    document.getElementById('selectedRoleIcon').textContent = info.icon;
-    document.getElementById('selectedRoleName').textContent = info.name;
-    document.getElementById('selectedRoleDesc').textContent = info.desc;
+    
+    document.getElementById('selectedRoleIcon').textContent = position.icon || '👤';
+    document.getElementById('selectedRoleName').textContent = position.name;
+    document.getElementById('selectedRoleDesc').textContent = position.type + ' yetkileri';
     
     document.getElementById('selectedRolePermissions').style.display = 'block';
     document.getElementById('permissionsInfo').style.display = 'none';
     
-    // İzinleri yükle
-    loadRolePermissions(role);
+    // İzinleri yükle - pozisyon rolüne göre
+    loadRolePermissions(positionId, position.role);
 }
 
 function hideRolePermissions() {
@@ -11018,13 +11279,18 @@ function hideRolePermissions() {
     selectedRoleForPerm = null;
 }
 
-async function loadRolePermissions(role) {
-    // Firebase'den izinleri al veya varsayılanı kullan
-    let perms = DEFAULT_ROLE_PERMISSIONS[role];
+async function loadRolePermissions(positionId, baseRole) {
+    // Önce pozisyona özel izinleri kontrol et, yoksa rol varsayılanlarını kullan
+    let perms = getDefaultPermissions(baseRole || positionId);
+    
     try {
-        const doc = await db.collection('advancedPermissions').doc(role).get();
-        if (doc.exists) {
-            perms = { ...perms, ...doc.data() };
+        // Önce pozisyona özel izinleri dene
+        const posDoc = await db.collection('advancedPermissions').doc(positionId).get();
+        if (posDoc.exists) {
+            perms = { ...perms, ...posDoc.data() };
+        } else if (baseRole && DEFAULT_ROLE_PERMISSIONS[baseRole]) {
+            // Pozisyona özel yoksa rol varsayılanlarını kullan
+            perms = { ...perms, ...DEFAULT_ROLE_PERMISSIONS[baseRole] };
         }
     } catch (error) {
         console.error('İzin yükleme hatası:', error);
