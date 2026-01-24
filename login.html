@@ -712,6 +712,22 @@ body::before {
                 // 1. Önce Firebase Auth ile dene
                 await auth.signInWithEmailAndPassword(email, password);
                 
+                // 2. GÜVENLİK: Personel koleksiyonunda var mı kontrol et
+                const personelCheck = await db.collection('personel')
+                    .where('email', '==', email)
+                    .limit(1)
+                    .get();
+                
+                if (personelCheck.empty) {
+                    // Personel'de yok = SİLİNMİŞ veya YETKİSİZ
+                    await auth.signOut(); // Logout yap
+                    await logLoginAttempt(email, false, 'personel_not_found');
+                    showError('Bu hesap artık aktif değil.');
+                    btn.classList.remove('loading');
+                    btn.disabled = false;
+                    return;
+                }
+                
                 // Başarılı giriş - Log
                 await logLoginAttempt(email, true, 'auth');
                 clearLockout();
@@ -724,9 +740,23 @@ body::before {
             } catch (authError) {
                 console.log('Firebase Auth hatası:', authError.code);
                 
-                // 2. Kullanıcı bulunamadıysa credentials koleksiyonundan kontrol et
+                // 3. Kullanıcı bulunamadıysa credentials koleksiyonundan kontrol et
                 if (authError.code === 'auth/user-not-found' || authError.code === 'auth/invalid-credential') {
                     try {
+                        // Önce personel'de var mı kontrol et
+                        const personelCheck = await db.collection('personel')
+                            .where('email', '==', email)
+                            .limit(1)
+                            .get();
+                        
+                        if (personelCheck.empty) {
+                            await logLoginAttempt(email, false, 'personel_not_found');
+                            showError('Bu e-posta ile kayıtlı kullanıcı bulunamadı.');
+                            btn.classList.remove('loading');
+                            btn.disabled = false;
+                            return;
+                        }
+                        
                         // Email'i doc ID formatına çevir (güvenlik için hash-like)
                         const emailDocId = email.replace(/[@.]/g, '_');
                         
@@ -773,9 +803,9 @@ body::before {
                                 showError('Şifre hatalı.');
                             }
                         } else {
-                            // Kullanıcı yok
-                            await logLoginAttempt(email, false, 'user_not_found');
-                            showError('Bu e-posta ile kayıtlı kullanıcı bulunamadı.');
+                            // Credentials yok
+                            await logLoginAttempt(email, false, 'no_credentials');
+                            showError('Bu hesap için şifre tanımlanmamış.');
                         }
                         
                     } catch (firestoreError) {
