@@ -4313,10 +4313,6 @@ function applyUserPermissions() {
     const navNotlar = document.getElementById('nav-notlar');
     if (navNotlar) navNotlar.style.display = 'none';
     
-    // G15: Yedekler sekmesi sadece yönetici görebilir
-    const tabYedekler = document.getElementById('tab-yedekler');
-    if (tabYedekler) tabYedekler.style.display = 'none';
-    
     // Gelişmiş izin sistemini yükle ve uygula
     loadUserAdvancedPermissions();
 }
@@ -5664,22 +5660,36 @@ function switchAdminTab(tab, btn) {
     btn.classList.add('active');
     document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
     document.getElementById('admin-' + tab).classList.add('active');
-    if (tab === 'kullanicilar') renderPermissionsTable();
-    if (tab === 'sablonlar') loadTemplate();
-    if (tab === 'belgeler') loadDocTemplate('tutanak', 'olay');
+    
+    // Sekme yükleme işlemleri
+    if (tab === 'genel') {
+        loadBackupsList(); // Yedekler Genel içinde
+    }
+    if (tab === 'kullanicilar') {
+        renderPermissionsTable();
+    }
     if (tab === 'oturumlar') {
         loadSessionSettings();
         loadActiveSessions();
         loadSessionHistory();
+        loadActivityLogs(); // Aktiviteler Oturumlar içinde
     }
-    if (tab === 'aktiviteler') loadActivityLogs();
-    if (tab === 'yedekler') loadBackupsList();
-    if (tab === 'magazaSaatleri') renderBranchHoursSettings();
-    if (tab === 'checkKurallari') renderCheckRulesSettings();
-    if (tab === 'checklistTurleri') loadChecklistTypesConfig();
+    if (tab === 'subelerSaatler') {
+        renderBranchHoursSettings(); // Saatler
+        // Şube listesi renderAdminLists() ile render ediliyor
+    }
+    if (tab === 'checkKurallari') {
+        renderCheckRulesSettings();
+    }
+    if (tab === 'checklistTurleri') {
+        loadChecklistTypesConfig();
+    }
     if (tab === 'tumCheckler') {
         populateSubeSelect('allChecksBranchFilter', true);
         loadAllChecksOverview();
+    }
+    if (tab === 'sablonlar') {
+        loadTemplate(); // Sözleşme şablonları varsayılan
     }
 }
 
@@ -15597,22 +15607,14 @@ async function loadTodayChecks() {
     }
     
     const todayStr = formatDateLocal(today);
-    
-    // Tüm şubeleri görebilen roller (dinamik yetkiden veya rol bazlı)
-    const canSeeAllBranches = ['yonetici', 'bolge_muduru'].includes(currentUser?.role) 
-        || currentUser?.branch === 'all'
-        || window.userAdvancedPermissions?.special?.view_all_branches === true;
-    
-    // Yönetim yetkisi olan roller (leaderboard, KPI, müdür kontrol vs.)
-    const isManager = ['yonetici', 'bolge_muduru', 'magaza_muduru', 'magaza_mudur_yardimcisi'].includes(currentUser?.role);
-    
+    const isAdmin = ['yonetici', 'bolge_muduru', 'magaza_muduru', 'mudur', 'admin'].includes(currentUser?.role);
     const userName = currentUser?.name || 'Personel';
     const currentHour = now.getHours();
     const currentMinutes = now.getMinutes();
     
-    // Tüm şubeleri görebilen kullanıcılar için tüm şubeler, diğerleri için kendi şubesi
+    // Yönetici için tüm şubeler, diğerleri için kendi şubesi
     let branches = [];
-    if (canSeeAllBranches) {
+    if (isAdmin || currentUser?.branch === 'all') {
         branches = STATE.branches || [];
     } else {
         branches = [currentUser?.branch || STATE.branches?.[0] || 'Tuzla TRC'];
@@ -15677,24 +15679,24 @@ async function loadTodayChecks() {
         
         document.getElementById('welcomeDate').textContent = dateStr;
         document.getElementById('welcomeMessage').textContent = `${greeting}, ${userName.split(' ')[0]}! 👋`;
-        document.getElementById('welcomeBranch').innerHTML = `<span>📍</span> <span>${canSeeAllBranches ? 'Tüm Şubeler' : primaryBranch}</span>`;
+        document.getElementById('welcomeBranch').innerHTML = `<span>📍</span> <span>${isAdmin ? 'Tüm Şubeler' : primaryBranch}</span>`;
         
         // Shift bilgisi
-        let shiftInfo = canSeeAllBranches ? 'Yönetici' : '-';
+        let shiftInfo = isAdmin ? 'Yönetici' : '-';
         welcomeCard.style.display = 'block';
         document.getElementById('welcomeShift').innerHTML = `<span>⏰</span> <span>${shiftInfo}</span>`;
     }
     
     // Aylık puan kartı (sadece personel için)
-    if (monthlyCard && !isManager) {
+    if (monthlyCard && !isAdmin) {
         monthlyCard.style.display = 'block';
         loadMonthlyPoints(); // Puan verilerini yükle
     } else if (monthlyCard) {
         monthlyCard.style.display = 'none';
     }
     
-    // Leaderboard ve KPI Dashboard (yöneticiler için)
-    if (isManager) {
+    // Leaderboard ve KPI Dashboard (sadece yöneticiler için)
+    if (isAdmin) {
         loadLeaderboard();
         loadKPIDashboard();
         
@@ -16541,7 +16543,7 @@ async function loadTodayChecks() {
         }
         
         // 6. Müdür Kontrol (sadece müdürler için)
-        if (isManager) {
+        if (isAdmin) {
             const mudurSubmissionId = `${normalizeBranchId(branch)}_mudur_${todayStr}`;
             let mudurCompleted = false;
             try {
