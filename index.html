@@ -11083,8 +11083,8 @@ function applyAdvancedPermissions() {
         });
     }
     
-    // Admin paneli erişimini kontrol et
-    const hasAnyAdminAccess = Object.values(perms.admin || {}).some(a => a);
+    // Admin paneli erişimini kontrol et (ayarlar_erisim veya adminTabs yetkisi)
+    const hasAnyAdminAccess = perms.special?.ayarlar_erisim === true || Object.values(perms.adminTabs || {}).some(a => a);
     if (!hasAnyAdminAccess) {
         // Ayarlar menüsünü gizle
         const navAdmin = document.querySelector('.nav-item[data-page="admin"]');
@@ -15679,8 +15679,8 @@ async function loadTodayChecks() {
         document.getElementById('welcomeMessage').textContent = `${greeting}, ${userName.split(' ')[0]}! 👋`;
         document.getElementById('welcomeBranch').innerHTML = `<span>📍</span> <span>${canSeeAllBranches ? 'Tüm Şubeler' : primaryBranch}</span>`;
         
-        // Shift bilgisi
-        let shiftInfo = canSeeAllBranches ? 'Yönetici' : '-';
+        // Shift bilgisi (yüklenene kadar bekliyor göster)
+        let shiftInfo = canSeeAllBranches ? 'Yönetici' : '...';
         welcomeCard.style.display = 'block';
         document.getElementById('welcomeShift').innerHTML = `<span>⏰</span> <span>${shiftInfo}</span>`;
     }
@@ -15775,6 +15775,37 @@ async function loadTodayChecks() {
             shiftData[r.branch] = r.data; 
             rawShiftData[r.branch] = r.raw;
         });
+        
+        // Kullanıcının bugünkü vardiyasını bul ve göster
+        if (!canSeeAllBranches && currentUser?.name) {
+            const userBranch = currentUser.branch;
+            const raw = rawShiftData[userBranch];
+            if (raw && raw.personelShifts) {
+                const userName = currentUser.name;
+                const userCodeName = currentUser.codeName;
+                const userUniqueId = normalizePersonelId(userName);
+                
+                // Kullanıcıyı shift verisinde bul
+                let userShift = null;
+                for (const [key, days] of Object.entries(raw.personelShifts)) {
+                    const keyNorm = normalizePersonelId(key);
+                    if (key === userName || key === userCodeName || key === userUniqueId || keyNorm === userUniqueId) {
+                        userShift = days?.[raw.dayIndex] || null;
+                        break;
+                    }
+                }
+                
+                // Shift bilgisini güncelle
+                const welcomeShiftEl = document.getElementById('welcomeShift');
+                if (welcomeShiftEl && userShift && userShift !== '-' && userShift !== 'OFF' && userShift !== 'İ') {
+                    welcomeShiftEl.innerHTML = `<span>⏰</span> <span>${userShift}</span>`;
+                } else if (welcomeShiftEl && userShift === 'OFF') {
+                    welcomeShiftEl.innerHTML = `<span>🌴</span> <span>İzinli</span>`;
+                } else if (welcomeShiftEl && userShift === 'İ') {
+                    welcomeShiftEl.innerHTML = `<span>🌴</span> <span>İzinli</span>`;
+                }
+            }
+        }
     } catch (e) {
         console.warn('Shift yükleme hatası:', e);
     }
@@ -16871,8 +16902,8 @@ async function loadTodayChecks() {
             return (a.priority || 50) - (b.priority || 50);
         });
         
-        // Şube HTML'i oluştur
-        if (sortedBranches.length > 1) {
+        // Şube HTML'i oluştur (tek şube olsa bile başlık göster)
+        if (sortedBranches.length >= 1) {
             html += `
                 <div class="branch-group">
                     <div class="branch-header">
@@ -17119,7 +17150,7 @@ async function loadTodayChecks() {
         }
         
         // Şube grubunu kapat
-        if (sortedBranches.length > 1) {
+        if (sortedBranches.length >= 1) {
             html += `</div></div>`;
         }
     }
