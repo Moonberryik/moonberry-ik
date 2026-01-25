@@ -73,12 +73,6 @@
                         <div class="logo-sub">Yönetim Paneli</div>
                     </div>
                 </div>
-                <button class="sidebar-toggle" onclick="event.stopPropagation(); toggleSidebar()" title="Menüyü Daralt">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                        <line x1="9" y1="3" x2="9" y2="21"/>
-                    </svg>
-                </button>
             </div>
             <nav class="nav">
                 <!-- Ana Sayfa -->
@@ -165,8 +159,8 @@
                     <span class="icon"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span> İhlal Kataloğu
                 </div>
                 
-                <!-- Ayarlar (en altta) - Sadece yönetici görür -->
-                <div class="nav-item" id="nav-admin" data-page="admin" onclick="openAdminWithPin()" style="display:none">
+                <!-- Ayarlar (en altta) -->
+                <div class="nav-item" data-page="admin" onclick="openAdminWithPin()">
                     <span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Ayarlar
                 </div>
                 <!-- Kullanıcı Bilgisi ve Çıkış -->
@@ -178,10 +172,14 @@
                             <div id="userRole" style="color:var(--sidebarTx2);font-size:.7rem">-</div>
                         </div>
                     </div>
-                    <button class="logout-btn" onclick="logout()">
+                    <button class="logout-btn" onclick="logout()" style="width:100%;padding:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--sidebarTx2);font-size:.8rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.background='rgba(231,76,60,.2)';this.style.borderColor='rgba(231,76,60,.4)';this.style.color='#e74c3c'" onmouseout="this.style.background='rgba(255,255,255,.1)';this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--sidebarTx2)'">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                        <span class="logout-text">Çıkış Yap</span>
+                        Çıkış Yap
                     </button>
+                    <div class="sidebar-toggle-inner" onclick="toggleSidebar()" title="Menüyü Daralt/Genişlet" style="margin-top:12px">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 19l-7-7 7-7"/><path d="M18 19l-7-7 7-7"/></svg>
+                        <span>Daralt</span>
+                    </div>
                 </div>
             </nav>
         </aside>
@@ -1221,15 +1219,20 @@
                     <div class="page-subtitle">Sistem ayarlarını yönetin</div>
                 </div>
                 <div class="admin-tabs">
-                    <button class="admin-tab active" id="tab-genel" onclick="showAdminTab('genel',this)">Genel</button>
-                    <button class="admin-tab" id="tab-tumCheckler" onclick="showAdminTab('tumCheckler',this)">Tüm Checkler</button>
+                    <button class="admin-tab active" onclick="showAdminTab('genel',this)">Genel</button>
+                    <button class="admin-tab" onclick="showAdminTab('tumCheckler',this)">Tüm Checkler</button>
                     <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">Pozisyon Yetkileri</button>
-                    <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">Oturumlar & Aktiviteler</button>
-                    <button class="admin-tab" id="tab-subelerSaatler" onclick="showAdminTab('subelerSaatler',this)">Şubeler & Saatler</button>
-                    <button class="admin-tab" id="tab-checkKurallari" onclick="showAdminTab('checkKurallari',this)">Check & Puantaj Kuralları</button>
-                    <button class="admin-tab" id="tab-checklistTurleri" onclick="showAdminTab('checklistTurleri',this)">Checklist Türleri</button>
-                    <button class="admin-tab" id="tab-ihlaller" onclick="showAdminTab('ihlaller',this)">İhlaller</button>
-                    <button class="admin-tab" id="tab-sablonlar" onclick="showAdminTab('sablonlar',this)">Şablonlar</button>
+                    <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">Oturumlar</button>
+                    <button class="admin-tab" onclick="showAdminTab('magazaSaatleri',this)">Mağaza Saatleri</button>
+                    <button class="admin-tab" onclick="showAdminTab('checkKurallari',this)">Check & Puantaj Kuralları</button>
+                    <button class="admin-tab" onclick="showAdminTab('checklistTurleri',this)">Checklist Türleri</button>
+                    <button class="admin-tab" onclick="showAdminTab('subeler',this)">Şubeler</button>
+                    <button class="admin-tab" onclick="showAdminTab('pozisyonlar',this)">Pozisyonlar</button>
+                    <button class="admin-tab" onclick="showAdminTab('ihlaller',this)">İhlaller</button>
+                    <button class="admin-tab" onclick="showAdminTab('sablonlar',this)">Sözleşme Şablonları</button>
+                    <button class="admin-tab" onclick="showAdminTab('belgeler',this)">Belge Şablonları</button>
+                    <button class="admin-tab" id="tab-aktiviteler" onclick="showAdminTab('aktiviteler',this)">Aktiviteler</button>
+                    <button class="admin-tab" id="tab-yedekler" onclick="showAdminTab('yedekler',this)">Yedekler</button>
                 </div>
                 
                 <!-- Tüm Checkler Özet -->
@@ -1295,39 +1298,13 @@
                         </div>
                         <div id="cleanupResults" style="margin-top:12px;padding:12px;background:var(--bg3);border-radius:8px;display:none"></div>
                     </div>
-                    
-                    <!-- Yedekler - Genel içinde -->
-                    <div class="admin-card" style="margin-top:20px">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
-                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                Otomatik Yedekler
-                            </div>
-                            <button class="btn btn-sm" style="background:#008c95;color:#fff" onclick="manualBackupNow()">+ Manuel Yedek Al</button>
-                        </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Her 3 saatte otomatik yedek • 30 günden eski silinir • Tarih+saat seç ve indir</p>
-                        <div id="backupsListContainer">
-                            <p style="color:var(--tx2);text-align:center;padding:40px">Yedekler yükleniyor...</p>
-                        </div>
-                    </div>
                 </div>
 
-                <!-- Şubeler & Saatler (Birleştirilmiş) -->
-                <div class="admin-section" id="admin-subelerSaatler">
-                    <!-- Şube Yönetimi -->
+                <!-- Mağaza Saatleri -->
+                <div class="admin-section" id="admin-magazaSaatleri">
                     <div class="admin-card">
                         <div class="admin-card-header">
-                            <div class="admin-card-title">📍 Şube Yönetimi</div>
-                            <button class="btn btn-sm btn-primary" onclick="addBranch()">+ Yeni Şube</button>
-                        </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Sistemdeki şubeleri yönetin. Şube eklemek/silmek tüm sistemleri etkiler.</p>
-                        <div class="admin-list" id="branchList"></div>
-                    </div>
-                    
-                    <!-- Çalışma Saatleri -->
-                    <div class="admin-card" style="margin-top:16px">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title">🕐 Çalışma Saatleri</div>
+                            <div class="admin-card-title">🕐 Mağaza Çalışma Saatleri</div>
                             <button class="btn btn-sm btn-primary" onclick="saveBranchHours()">💾 Kaydet</button>
                         </div>
                         <p style="color:var(--tx2);font-size:.85rem;margin-bottom:20px">Her mağazanın açılış ve kapanış saatlerini belirleyin. Kapanış saati shift hesaplamalarında kullanılır.</p>
@@ -1458,17 +1435,14 @@
                         
                         <div style="background:linear-gradient(135deg,rgba(0,140,149,.08),rgba(0,140,149,.02));border:1px solid rgba(0,140,149,.15);border-radius:12px;padding:16px;margin-bottom:24px">
                             <div style="font-size:.85rem;color:var(--tx2);line-height:1.5">
-                                <strong>Global checklist türleri</strong> - Burada yaptığınız değişiklikler <strong>tüm şubelerde</strong> geçerli olur. 
-                                Türlerin <strong>isimlerini</strong>, <strong>ikonlarını</strong> değiştirebilir, yeni tür ekleyebilirsiniz.
+                                Her şube için checklist türlerini düzenleyebilirsiniz. Türlerin <strong>isimlerini</strong>, <strong>ikonlarını</strong> ve <strong>sıralamalarını</strong> değiştirebilirsiniz. 
+                                Bu değişiklikler dashboard ve checklist sayfalarında görünür.
                             </div>
                         </div>
                         
-                        <!-- Şube Önizleme Seçimi (sadece önizleme için - türler global) -->
-                        <div style="margin-bottom:16px">
-                            <div style="font-size:.8rem;color:var(--tx2);margin-bottom:8px">📍 Şube Önizleme (erişim izninize göre):</div>
-                            <div id="checklistTypeBranchTabs" style="display:flex;gap:12px">
-                                <!-- JavaScript ile STATE.branches'dan doldurulacak -->
-                            </div>
+                        <!-- Şube Seçimi - Dinamik -->
+                        <div id="checklistTypeBranchTabs" style="display:flex;gap:12px;margin-bottom:20px">
+                            <!-- JavaScript ile STATE.branches'dan doldurulacak -->
                         </div>
                         
                         <!-- Checklist Türleri Listesi -->
@@ -1512,30 +1486,125 @@
                     <div class="admin-card">
                         <div class="admin-card-header">
                             <div class="admin-card-title">🔐 Pozisyon Yetkileri</div>
-                            <button class="btn btn-primary" onclick="saveAllRolePermissions()">💾 Tümünü Kaydet</button>
                         </div>
-                        
-                        <!-- Pozisyonlar - Kompakt Liste -->
-                        <div style="background:var(--bg2);border:1px solid var(--cardBorder);border-radius:12px;padding:16px;margin-bottom:20px">
-                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-                                <div style="font-weight:600;color:var(--tx);font-size:.9rem;display:flex;align-items:center;gap:8px">
-                                    👔 Pozisyonlar
-                                    <span style="font-size:.75rem;color:var(--tx2);font-weight:400">(Mavi/Gri/Beyaz Yaka)</span>
-                                </div>
-                                <button class="btn btn-sm btn-ghost" onclick="addPosition()" style="padding:4px 12px;font-size:.8rem">+ Ekle</button>
-                            </div>
-                            <div id="positionListCompact" style="display:flex;flex-wrap:wrap;gap:8px">
-                                <!-- JavaScript ile doldurulacak -->
-                            </div>
-                        </div>
-                        
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">
-                            Aşağıdaki tabloda tüm pozisyonların yetkilerini düzenleyin. <strong>G</strong>=Görüntüle, <strong>D</strong>=Düzenle
+                        <p style="color:var(--tx2);font-size:.9rem;margin-bottom:24px">
+                            Her pozisyon için hangi sayfaları görebileceğini ve hangi işlemleri yapabileceğini belirleyin.
                         </p>
                         
-                        <!-- Yetki Tablosu -->
-                        <div id="permissionsTableContainer" style="overflow-x:auto">
-                            <!-- JavaScript ile doldurulacak -->
+                        <!-- Pozisyon Kartları -->
+                        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
+                            <!-- Barista -->
+                            <div class="permission-card" onclick="selectRoleForPermissions('barista')" style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#3498db';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
+                                <div style="font-size:2rem;margin-bottom:8px">🧑‍🍳</div>
+                                <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:4px">Barista</div>
+                                <div style="font-size:.7rem;color:var(--tx2)">Günlük operasyon</div>
+                                <div style="margin-top:8px;padding:4px 8px;background:#3498db22;color:#3498db;border-radius:6px;font-size:.65rem;font-weight:500">Sınırlı</div>
+                            </div>
+                            
+                            <!-- Mağaza Müdür Yardımcısı -->
+                            <div class="permission-card" onclick="selectRoleForPermissions('magaza_mudur_yardimcisi')" style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#ff8674';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
+                                <div style="font-size:2rem;margin-bottom:8px">👔</div>
+                                <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:4px">Müdür Yrd.</div>
+                                <div style="font-size:.7rem;color:var(--tx2)">Yardımcı yönetim</div>
+                                <div style="margin-top:8px;padding:4px 8px;background:#ff867422;color:#ff8674;border-radius:6px;font-size:.65rem;font-weight:500">Orta</div>
+                            </div>
+                            
+                            <!-- Mağaza Müdürü -->
+                            <div class="permission-card" onclick="selectRoleForPermissions('magaza_muduru')" style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#008c95';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
+                                <div style="font-size:2rem;margin-bottom:8px">🏪</div>
+                                <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:4px">Mağaza Müdürü</div>
+                                <div style="font-size:.7rem;color:var(--tx2)">Şube yönetimi</div>
+                                <div style="margin-top:8px;padding:4px 8px;background:#008c9522;color:#008c95;border-radius:6px;font-size:.65rem;font-weight:500">Geniş</div>
+                            </div>
+                            
+                            <!-- Bölge Müdürü -->
+                            <div class="permission-card" onclick="selectRoleForPermissions('bolge_muduru')" style="background:var(--bg3);border:2px solid var(--bg4);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#9b59b6';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--bg4)';this.style.transform='none'">
+                                <div style="font-size:2rem;margin-bottom:8px">🌍</div>
+                                <div style="font-weight:600;color:var(--tx);font-size:.95rem;margin-bottom:4px">Bölge Müdürü</div>
+                                <div style="font-size:.7rem;color:var(--tx2)">Çoklu şube</div>
+                                <div style="margin-top:8px;padding:4px 8px;background:#9b59b622;color:#9b59b6;border-radius:6px;font-size:.65rem;font-weight:500">Tam</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Seçili Rol İzinleri -->
+                        <div id="selectedRolePermissions" style="display:none;background:var(--bg2);border:1px solid var(--cardBorder);border-radius:16px;padding:24px">
+                            <div style="display:flex;align-items:center;justify-content:between;margin-bottom:20px">
+                                <div style="display:flex;align-items:center;gap:12px">
+                                    <span id="selectedRoleIcon" style="font-size:2rem">🧑‍🍳</span>
+                                    <div>
+                                        <div id="selectedRoleName" style="font-weight:600;color:var(--tx);font-size:1.2rem">Barista</div>
+                                        <div id="selectedRoleDesc" style="font-size:.8rem;color:var(--tx2)">Yetkileri düzenle</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+                                <!-- Sayfalar -->
+                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
+                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem;display:flex;align-items:center;gap:8px">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>
+                                        Sayfalar
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;gap:8px" id="pagePermissions"></div>
+                                </div>
+                                
+                                <!-- Belgeler -->
+                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
+                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem;display:flex;align-items:center;gap:8px">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                        Belgeler
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;gap:8px" id="docPermissions"></div>
+                                </div>
+                                
+                                <!-- Formlar -->
+                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
+                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem;display:flex;align-items:center;gap:8px">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                                        Formlar
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;gap:8px" id="formPermissions"></div>
+                                </div>
+                                
+                                <!-- Yönetim -->
+                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
+                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem;display:flex;align-items:center;gap:8px">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                                        Yönetim
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;gap:8px" id="adminPermissions"></div>
+                                </div>
+                                
+                                <!-- Özel Yetkiler -->
+                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
+                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem;display:flex;align-items:center;gap:8px">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                        Özel Yetkiler
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;gap:8px" id="specialPermissions"></div>
+                                </div>
+                                
+                                <!-- Limitler -->
+                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
+                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem;display:flex;align-items:center;gap:8px">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                        Limitler
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;gap:8px" id="limitsPermissions"></div>
+                                </div>
+                            </div>
+                            
+                            <div style="display:flex;gap:12px;margin-top:20px;justify-content:flex-end">
+                                <button class="btn btn-ghost" onclick="hideRolePermissions()">İptal</button>
+                                <button class="btn btn-primary" onclick="saveAdvancedPermissions()">Yetkileri Kaydet</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Bilgi -->
+                        <div id="permissionsInfo" style="text-align:center;padding:40px;color:var(--tx2)">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:.5;margin-bottom:12px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><circle cx="12" cy="16" r="1"/></svg>
+                            <div style="font-size:1rem;font-weight:500;color:var(--tx);margin-bottom:8px">Bir pozisyon seçin</div>
+                            <div style="font-size:.85rem">Yukarıdaki kartlardan düzenlemek istediğiniz pozisyona tıklayın</div>
                         </div>
                     </div>
                 </div>
@@ -1621,39 +1690,6 @@
                                 <div style="font-size:2rem;margin-bottom:12px">📊</div>
                                 <div>Geçmiş yükleniyor...</div>
                             </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Canlı Aktiviteler -->
-                    <div class="admin-card" style="margin-top:16px">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
-                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
-                                Canlı Aktiviteler
-                                <span id="liveActivityIndicator" style="width:8px;height:8px;background:#27ae60;border-radius:50%;animation:pulse 2s infinite"></span>
-                            </div>
-                            <button class="btn btn-sm btn-ghost" onclick="loadActivityLogs()" style="display:flex;align-items:center;gap:4px">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-                                Yenile
-                            </button>
-                        </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Kullanıcıların sistem üzerindeki tüm hareketlerini canlı takip edin.</p>
-                        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-                            <select id="activityUserFilter" class="form-select" style="min-width:160px" onchange="loadActivityLogs()">
-                                <option value="">Tüm Kullanıcılar</option>
-                            </select>
-                            <select id="activityTypeFilter" class="form-select" style="min-width:140px" onchange="loadActivityLogs()">
-                                <option value="">Tüm Aktiviteler</option>
-                                <option value="login">Giriş</option>
-                                <option value="logout">Çıkış</option>
-                                <option value="page_view">Sayfa Görüntüleme</option>
-                                <option value="document_create">Belge Oluşturma</option>
-                                <option value="data_edit">Veri Düzenleme</option>
-                            </select>
-                            <input type="date" id="activityDateFilter" class="form-input" style="width:160px" onchange="loadActivityLogs()">
-                        </div>
-                        <div class="admin-list" id="activityLogList" style="max-height:400px;overflow-y:auto">
-                            <p style="color:var(--tx2);text-align:center;padding:20px">Aktiviteler yükleniyor...</p>
                         </div>
                     </div>
                 </div>
@@ -1860,6 +1896,28 @@
                     </div>
                 </div>
 
+                <!-- Şubeler -->
+                <div class="admin-section" id="admin-subeler">
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">📍 Şubeler</div>
+                            <button class="btn btn-sm btn-primary" onclick="addBranch()">+ Ekle</button>
+                        </div>
+                        <div class="admin-list" id="branchList"></div>
+                    </div>
+                </div>
+
+                <!-- Pozisyonlar -->
+                <div class="admin-section" id="admin-pozisyonlar">
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">👔 Pozisyonlar</div>
+                            <button class="btn btn-sm btn-primary" onclick="addPosition()">+ Ekle</button>
+                        </div>
+                        <div class="admin-list" id="positionList"></div>
+                    </div>
+                </div>
+
                 <!-- İhlaller -->
                 <div class="admin-section" id="admin-ihlaller">
                     <div class="admin-card">
@@ -1874,23 +1932,16 @@
                     </div>
                 </div>
 
-                <!-- Şablonlar (Birleştirilmiş) -->
+                <!-- Şablonlar -->
                 <div class="admin-section" id="admin-sablonlar">
-                    <!-- Alt Tab'lar -->
-                    <div style="display:flex;gap:8px;margin-bottom:16px">
-                        <button class="btn btn-primary" id="sablonTab-sozlesme" onclick="switchSablonTab('sozlesme')">📄 Sözleşme Şablonları</button>
-                        <button class="btn btn-ghost" id="sablonTab-belgeler" onclick="switchSablonTab('belgeler')">📝 Belge Şablonları</button>
-                    </div>
-                    
-                    <!-- Sözleşme Şablonları Panel -->
-                    <div id="sablonPanel-sozlesme" class="admin-card">
+                    <div class="admin-card">
                         <div class="admin-card-header">
                             <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
                                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                                 Sözleşme Şablonları
                             </div>
                         </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Her pozisyon için HTML şablon düzenleyin. Placeholder'lar: <code style="background:var(--bg3);padding:2px 6px;border-radius:4px">{{AD_SOYAD}}</code>, <code style="background:var(--bg3);padding:2px 6px;border-radius:4px">{{TC}}</code>, <code style="background:var(--bg3);padding:2px 6px;border-radius:4px">{{ADRES}}</code>, <code style="background:var(--bg3);padding:2px 6px;border-radius:4px">{{IBAN}}</code>, <code style="background:var(--bg3);padding:2px 6px;border-radius:4px">{{UCRET}}</code>, <code style="background:var(--bg3);padding:2px 6px;border-radius:4px">{{BASLAMA}}</code>, <code style="background:var(--bg3);padding:2px 6px;border-radius:4px">{{SUBE}}</code></p>
+                        <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:16px">Her pozisyon için HTML şablon düzenleyin. Placeholder'lar: <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{AD_SOYAD}}</code>, <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{TC}}</code>, <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{ADRES}}</code>, <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{IBAN}}</code>, <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{UCRET}}</code>, <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{BASLAMA}}</code>, <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{SUBE}}</code></p>
                         <div class="form-group">
                             <label class="form-label">Pozisyon Seç</label>
                             <select id="template_pozisyon" class="form-select" onchange="loadTemplate()"></select>
@@ -1901,9 +1952,11 @@
                         </div>
                         <div class="btn-group"><button class="btn btn-primary btn-sm" onclick="saveTemplate()">Şablonu Kaydet</button></div>
                     </div>
-                    
-                    <!-- Belge Şablonları Panel -->
-                    <div id="sablonPanel-belgeler" class="admin-card" style="display:none">
+                </div>
+
+                <!-- Belge Şablonları -->
+                <div class="admin-section" id="admin-belgeler">
+                    <div class="admin-card">
                         <div class="admin-card-header">
                             <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
                                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -1911,7 +1964,7 @@
                             </div>
                             <div id="docTemplateUnsaved" style="display:none;color:var(--yellow);font-size:.8rem;font-weight:500">Kaydedilmemiş değişiklikler</div>
                         </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Tutanak, savunma, fesih ve borç ikrar belgelerinin içeriklerini düzenleyin.</p>
+                        <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:16px">Tutanak, savunma, fesih ve borç ikrar belgelerinin içeriklerini düzenleyin. Değişiklikler kaydedilmezse varsayılan şablonlar kullanılır.</p>
                         
                         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
                             <button class="btn btn-sm btn-primary" onclick="selectDocTemplateCategory('tutanak')">📋 Tutanak</button>
@@ -1935,7 +1988,7 @@
                         
                         <!-- Savunma -->
                         <div id="docTemplate-savunma" class="doc-template-panel" style="display:none">
-                            <p style="color:var(--tx2);font-size:.85rem">Savunma isteme yazısı şablonu</p>
+                            <p style="color:var(--txdark2);font-size:.85rem">Savunma isteme yazısı şablonu</p>
                         </div>
                         
                         <!-- Fesih Alt Türleri -->
@@ -1952,11 +2005,11 @@
                         
                         <!-- Borç İkrar -->
                         <div id="docTemplate-borc" class="doc-template-panel" style="display:none">
-                            <p style="color:var(--tx2);font-size:.85rem">Borç ikrar ve mahsup muvafakatnamesi şablonu</p>
+                            <p style="color:var(--txdark2);font-size:.85rem">Borç ikrar ve mahsup muvafakatnamesi şablonu</p>
                         </div>
                         
                         <div class="form-group" style="margin-top:16px">
-                            <label class="form-label">Şablon Açıklaması <span style="color:var(--tx2);font-size:.75rem">(Yer tutucular: {{PERSONEL}}, {{TC}}, {{SUBE}}, {{TARIH}}, {{SAAT}}, {{ACIKLAMA}}, {{DAYANAK}})</span></label>
+                            <label class="form-label">Şablon Açıklaması <span style="color:var(--txdark2);font-size:.75rem">(Yer tutucular: {{PERSONEL}}, {{TC}}, {{SUBE}}, {{TARIH}}, {{SAAT}}, {{ACIKLAMA}}, {{DAYANAK}})</span></label>
                             <textarea id="doc_template_content" class="form-textarea" style="min-height:250px;font-family:var(--mono);font-size:.8rem" oninput="trackDocTemplateChanges()"></textarea>
                         </div>
                         
@@ -1973,6 +2026,57 @@
                                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
                                 Varsayılana Dön
                             </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aktiviteler (Sadece Yönetici) -->
+                <div class="admin-section" id="admin-aktiviteler">
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                                Kullanıcı Aktiviteleri
+                            </div>
+                            <button class="btn btn-sm btn-ghost" onclick="loadActivityLogs()" style="display:flex;align-items:center;gap:4px">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                                Yenile
+                            </button>
+                        </div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Kullanıcıların sistem üzerindeki hareketlerini takip edin.</p>
+                        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+                            <select id="activityUserFilter" class="form-select" style="min-width:160px" onchange="loadActivityLogs()">
+                                <option value="">Tüm Kullanıcılar</option>
+                            </select>
+                            <select id="activityTypeFilter" class="form-select" style="min-width:140px" onchange="loadActivityLogs()">
+                                <option value="">Tüm Aktiviteler</option>
+                                <option value="login">Giriş</option>
+                                <option value="logout">Çıkış</option>
+                                <option value="page_view">Sayfa Görüntüleme</option>
+                                <option value="document_create">Belge Oluşturma</option>
+                                <option value="data_edit">Veri Düzenleme</option>
+                            </select>
+                            <input type="date" id="activityDateFilter" class="form-input" style="width:160px" onchange="loadActivityLogs()">
+                        </div>
+                        <div class="admin-list" id="activityLogList" style="max-height:500px;overflow-y:auto">
+                            <p style="color:var(--tx2);text-align:center;padding:20px">Aktiviteler yükleniyor...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- G15: Yedekler -->
+                <div class="admin-section" id="admin-yedekler">
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                Otomatik Yedekler
+                            </div>
+                            <button class="btn btn-sm" style="background:#008c95;color:#fff" onclick="manualBackupNow()">+ Manuel Yedek Al</button>
+                        </div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Her 3 saatte otomatik yedek • 30 günden eski silinir • Tarih+saat seç ve indir</p>
+                        <div id="backupsListContainer">
+                            <p style="color:var(--tx2);text-align:center;padding:40px">Yedekler yükleniyor...</p>
                         </div>
                     </div>
                 </div>
@@ -2004,21 +2108,6 @@ function normalizePersonelId(name) {
         .replace(/Ğ/g, 'g').replace(/Ü/g, 'u').replace(/Ş/g, 's')
         .replace(/İ/g, 'i').replace(/Ö/g, 'o').replace(/Ç/g, 'c')
         .replace(/[^a-z0-9]/g, '_')
-        .replace(/_+/g, '_')
-        .replace(/^_|_$/g, '');
-}
-
-// Şube adını Firebase-uyumlu ID'ye çevir: "Şişli (Bomonti)" → "Sisli_Bomonti"
-function normalizeBranchId(branch) {
-    if (!branch) return '';
-    return branch
-        .replace(/ğ/g, 'g').replace(/Ğ/g, 'G')
-        .replace(/ü/g, 'u').replace(/Ü/g, 'U')
-        .replace(/ş/g, 's').replace(/Ş/g, 'S')
-        .replace(/ı/g, 'i').replace(/İ/g, 'I')
-        .replace(/ö/g, 'o').replace(/Ö/g, 'O')
-        .replace(/ç/g, 'c').replace(/Ç/g, 'C')
-        .replace(/[^a-zA-Z0-9]/g, '_')
         .replace(/_+/g, '_')
         .replace(/^_|_$/g, '');
 }
@@ -2055,6 +2144,131 @@ function getPersonelDisplayName(personelData) {
     return formatDisplayName(personelData);
 }
 
+// Personel listesinden isim getir (cache kullanarak)
+let _personelDisplayCache = null;
+async function getPersonelDisplayNameFromList(searchKey, branch) {
+    if (!searchKey) return searchKey;
+    
+    // Cache'i kontrol et
+    if (!_personelDisplayCache) {
+        try {
+            const snapshot = await db.collection('personel').get();
+            _personelDisplayCache = new Map();
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const displayName = getPersonelDisplayName(data);
+                const uniqueId = data.uniqueId || normalizePersonelId(data.name);
+                
+                // Underscore formatı oluştur (örn: "baran_akdemir")
+                const underscoreName = data.name?.toLowerCase().replace(/\s+/g, '_').replace(/[ğ]/g, 'g').replace(/[ü]/g, 'u').replace(/[ş]/g, 's').replace(/[ı]/g, 'i').replace(/[ö]/g, 'o').replace(/[ç]/g, 'c');
+                const underscoreCodeName = data.codeName?.toLowerCase().replace(/\s+/g, '_').replace(/[ğ]/g, 'g').replace(/[ü]/g, 'u').replace(/[ş]/g, 's').replace(/[ı]/g, 'i').replace(/[ö]/g, 'o').replace(/[ç]/g, 'c');
+                
+                // İsmin ilk harfini al (örn: "Baran" -> "baran", "BARAN" -> "baran")
+                const firstName = data.name?.split(' ')[0];
+                const firstNameLower = firstName?.toLowerCase();
+                const firstNameNorm = normalizeTurkishChars(firstName);
+                
+                const codeFirst = data.codeName?.split(' ')[0];
+                const codeFirstLower = codeFirst?.toLowerCase();
+                const codeFirstNorm = normalizeTurkishChars(codeFirst);
+                
+                const keys = [
+                    data.name,
+                    data.name?.toLowerCase(),
+                    data.name?.toUpperCase(),
+                    data.codeName,
+                    data.codeName?.toLowerCase(),
+                    data.codeName?.toUpperCase(),
+                    firstName,
+                    firstNameLower,
+                    firstNameNorm,
+                    codeFirst,
+                    codeFirstLower,
+                    codeFirstNorm,
+                    uniqueId,
+                    normalizePersonelId(data.name),
+                    normalizePersonelId(data.codeName),
+                    normalizeTurkishChars(data.name),
+                    normalizeTurkishChars(data.codeName),
+                    // Underscore formatları (shift'ten gelen)
+                    underscoreName,
+                    underscoreCodeName,
+                    // Karışık format denemeleri
+                    underscoreName?.replace(/_/g, ' '),
+                    underscoreCodeName?.replace(/_/g, ' '),
+                    // İlk isim underscore (örn: "tuana" veya "busra")
+                    underscoreName?.split('_')[0],
+                    underscoreCodeName?.split('_')[0],
+                    // EK: Normalize edilmiş tüm varyasyonlar (Türkçe İ sorunu için)
+                    normalizeTurkishChars(data.name?.toLowerCase()),
+                    normalizeTurkishChars(underscoreName),
+                    normalizeTurkishChars(underscoreName?.replace(/_/g, ' ')),
+                    // displayName formatı (Ad S.)
+                    formatDisplayName(data.name),
+                    formatDisplayName(data.name)?.toLowerCase(),
+                    normalizeTurkishChars(formatDisplayName(data.name)),
+                ].filter(k => k);
+                
+                // Tüm keyleri kaydet
+                keys.forEach(key => {
+                    if (key && !_personelDisplayCache.has(key)) {
+                        _personelDisplayCache.set(key, { 
+                            displayName, 
+                            fullName: data.name,
+                            codeName: data.codeName,
+                            uniqueId,
+                            branch: data.branch
+                        });
+                    }
+                });
+            });
+            console.log('[Cache] Personel cache oluşturuldu:', _personelDisplayCache.size, 'kayıt');
+        } catch (e) {
+            console.error('Personel cache hatası:', e);
+            return searchKey;
+        }
+    }
+    
+    // Arama varyasyonları oluştur
+    const underscoreSearch = searchKey?.toLowerCase().replace(/\s+/g, '_').replace(/[ğ]/g, 'g').replace(/[ü]/g, 'u').replace(/[ş]/g, 's').replace(/[ı]/g, 'i').replace(/[ö]/g, 'o').replace(/[ç]/g, 'c');
+    const spaceSearch = searchKey?.replace(/_/g, ' ');
+    const firstWord = searchKey?.split(/[_\s]/)[0];
+    const normalizedSearch = normalizeTurkishChars(searchKey);
+    const displayFormatSearch = formatDisplayName(searchKey?.replace(/_/g, ' '));
+    
+    // Cache'ten ara - çoklu deneme (GÜÇLENDIRILDI)
+    const result = _personelDisplayCache.get(searchKey) || 
+                   _personelDisplayCache.get(searchKey?.toLowerCase()) ||
+                   _personelDisplayCache.get(searchKey?.toUpperCase()) ||
+                   _personelDisplayCache.get(normalizedSearch) ||
+                   _personelDisplayCache.get(normalizePersonelId(searchKey)) ||
+                   _personelDisplayCache.get(underscoreSearch) ||
+                   _personelDisplayCache.get(spaceSearch) ||
+                   _personelDisplayCache.get(spaceSearch?.toLowerCase()) ||
+                   _personelDisplayCache.get(normalizeTurkishChars(spaceSearch)) ||
+                   _personelDisplayCache.get(firstWord) ||
+                   _personelDisplayCache.get(firstWord?.toLowerCase()) ||
+                   _personelDisplayCache.get(normalizeTurkishChars(firstWord)) ||
+                   _personelDisplayCache.get(displayFormatSearch) ||
+                   _personelDisplayCache.get(displayFormatSearch?.toLowerCase()) ||
+                   _personelDisplayCache.get(normalizeTurkishChars(displayFormatSearch));
+    
+    if (result) {
+        // Branch kontrolü - branch null/"all" ise veya eşleşiyorsa döndür
+        if (!branch || branch === 'all' || !result.branch || result.branch === branch || result.branch === 'all') {
+            return result.displayName;
+        }
+    }
+    
+    console.warn('[Cache] Personel bulunamadı:', searchKey, '-> orijinal değer kullanılıyor');
+    return searchKey; // Bulunamadı, gelen değeri döndür
+}
+
+// Cache'i temizle (yeni personel eklendiğinde)
+function clearPersonelDisplayCache() {
+    _personelDisplayCache = null;
+}
+
 // ==================== MİGRASYON FONKSİYONLARI ====================
 
 // Personel cache for migration
@@ -2082,9 +2296,8 @@ function normalizeTurkishChars(str) {
 async function buildPersonelMap() {
     if (_migrationPersonelMap) return _migrationPersonelMap;
     
-    try {
-        const snapshot = await db.collection('personel').get();
-        _migrationPersonelMap = new Map();
+    const snapshot = await db.collection('personel').get();
+    _migrationPersonelMap = new Map();
     
     // Önce tüm personeli topla ve ilk isim sayılarını hesapla
     const allPersonel = [];
@@ -2177,10 +2390,6 @@ async function buildPersonelMap() {
     
     console.log(`[Migration] Personel map oluşturuldu: ${_migrationPersonelMap.size} key`);
     return _migrationPersonelMap;
-    } catch (e) {
-        console.error('[Migration] Personel map oluşturma hatası:', e);
-        return new Map();
-    }
 }
 
 // 1. Mevcut personellere uniqueId ekle
@@ -2559,6 +2768,25 @@ window.cleanOldPuantajNotes = cleanOldPuantajNotes;
 window.fixShiftOrdering = fixShiftOrdering;
 window.fullSystemMigration = fullSystemMigration;
 window.syncAllShiftPersonelNames = syncAllShiftPersonelNames; // Manuel senkronizasyon için
+
+// İsim kısaltma: "BÜŞRA SÖĞÜT" → "Büşra S."
+function formatShortName(fullName) {
+    if (!fullName) return '';
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length === 0) return '';
+    
+    // İlk harf büyük, geri kalan küçük
+    const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+    
+    if (parts.length === 1) {
+        return capitalize(parts[0]);
+    }
+    
+    // "İsim S." formatı
+    const firstName = capitalize(parts[0]);
+    const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
+    return `${firstName} ${lastInitial}.`;
+}
 
 // ==================== AUTH & SESSION ====================
 let currentUser = null;
@@ -3347,16 +3575,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         } else {
                             // 3. Email mapping'den bak
                             const emailMatch = personnelMapping.find(p => p.email?.toLowerCase() === user.email?.toLowerCase());
-                            
-                            // Admin email kontrolü - dinamik (systemConfig/security'den yüklenir)
-                            let isAdmin = false;
-                            try {
-                                const securityDoc = await db.collection('systemConfig').doc('security').get();
-                                const adminEmail = securityDoc.exists ? securityDoc.data().adminEmail : null;
-                                isAdmin = adminEmail && user.email?.toLowerCase() === adminEmail.toLowerCase();
-                            } catch (e) {
-                                console.warn('Admin email kontrolü yapılamadı:', e);
-                            }
+                            const isAdmin = user.email === 'admin@moonberrycoffee.com' || user.email === 'tamer@moonberrycoffee.com';
                             
                             currentUser = {
                                 id: user.uid,
@@ -3497,18 +3716,27 @@ function initSidebarState() {
         item.setAttribute('data-tooltip', text);
     });
     
-    // Sidebar boşluklarına tıklayınca toggle
+    // Collapsed sidebar'a tıklayınca aç (toggle butonu ve nav-item hariç)
     if (sidebar) {
         sidebar.addEventListener('click', (e) => {
-            // Bu elementlere tıklanmadıysa toggle yap
-            const isNavItem = e.target.closest('.nav-item');
-            const isLogout = e.target.closest('.logout-btn');
-            const isToggle = e.target.closest('.sidebar-toggle');
-            const isLogo = e.target.closest('.logo');
-            const isNavLabel = e.target.closest('.nav-label');
-            
-            if (!isNavItem && !isLogout && !isToggle && !isLogo && !isNavLabel) {
-                toggleSidebar();
+            if (sidebar.classList.contains('collapsed')) {
+                // Toggle butonu veya nav-item'a tıklanmadıysa aç
+                const isToggle = e.target.closest('.sidebar-toggle-inner');
+                const isNavItem = e.target.closest('.nav-item');
+                const isLogout = e.target.closest('.logout-btn');
+                if (!isToggle && !isNavItem && !isLogout) {
+                    toggleSidebar();
+                }
+            }
+        });
+    }
+    
+    // Main alana tıklayınca sidebar'ı kapat (açıksa)
+    if (main) {
+        main.addEventListener('click', () => {
+            if (sidebar && !sidebar.classList.contains('collapsed')) {
+                // Sadece mobilde veya kullanıcı isterse - şimdilik pasif
+                // toggleSidebar();
             }
         });
     }
@@ -3610,24 +3838,22 @@ function populateSubeSelect(selectId) {
     if (!sel) return;
     
     const userBranch = currentUser?.branch;
-    const isYonetici = currentUser?.role === 'yonetici';
-    const perms = window.userAdvancedPermissions;
-    const canViewAllBranches = isYonetici || (perms?.special?.view_all_branches === true);
+    const isAdmin = currentUser?.role === 'yonetici' || currentUser?.role === 'bolge_muduru';
     
     let branches = STATE.branches || [];
     
-    // Tüm şubeleri göremiyorsa sadece kendi şubesini göster
-    if (!canViewAllBranches && userBranch) {
+    // Mağaza müdürü sadece kendi şubesini görsün
+    if (!isAdmin && userBranch) {
         branches = branches.filter(b => b === userBranch);
     }
     
     sel.innerHTML = branches.map(b => `<option value="${b}">${b}</option>`).join('');
     
-    // Kendi şubesini seç (varsa)
-    if (!canViewAllBranches && userBranch) {
+    // Mağaza müdürü ise kendi şubesini seç
+    if (!isAdmin && userBranch) {
         sel.value = userBranch;
-    } else if (branches.length > 0) {
-        // Admin/tüm şubeleri görebilenler için default: ilk şube veya Tuzla
+    } else {
+        // Admin/Bölge Müdürü için default: Tuzla Port
         const tuzlaOption = Array.from(sel.options).find(o => o.value.toLowerCase().includes('tuzla'));
         if (tuzlaOption) {
             sel.value = tuzlaOption.value;
@@ -3735,18 +3961,16 @@ function applyUserPermissions() {
         userAvatarEl.textContent = currentUser.name.charAt(0).toUpperCase();
     }
     
-    // Ayarlar menüsü herkese görünsün (erişim kontrolü openAdminWithPin'de)
-    const navAdmin = document.getElementById('nav-admin');
-    if (navAdmin) {
-        navAdmin.style.display = 'flex';
-    }
-    
     // Yönetici her şeye erişebilir
     if (currentUser.role === 'yonetici') return;
     
     // Müdür Notları sadece yönetici görebilir
     const navNotlar = document.getElementById('nav-notlar');
     if (navNotlar) navNotlar.style.display = 'none';
+    
+    // G15: Yedekler sekmesi sadece yönetici görebilir
+    const tabYedekler = document.getElementById('tab-yedekler');
+    if (tabYedekler) tabYedekler.style.display = 'none';
     
     // Gelişmiş izin sistemini yükle ve uygula
     loadUserAdvancedPermissions();
@@ -3902,10 +4126,7 @@ function goTo(page) {
     }
     
     if (page === 'katalog') renderViolations();
-    if (page === 'admin') {
-        renderAdminLists();
-        applyAdminTabPermissions();
-    }
+    if (page === 'admin') renderAdminLists();
     if (page === 'personel') loadPersonelList();
     if (page === 'puantaj') { 
         populateSubeSelect('puantajSube'); 
@@ -3920,6 +4141,11 @@ function goTo(page) {
     if (page === 'shift') { 
         populateSubeSelect('shiftSube'); 
         loadShiftList();
+        // Yönetici için Excel yükleme butonunu göster
+        const adminExcel = document.getElementById('adminExcelUpload');
+        if (adminExcel) {
+            adminExcel.style.display = currentUser?.role === 'yonetici' ? 'block' : 'none';
+        }
     }
     // Yeni sayfalar için dropdown'ları doldur
     if (page === 'istifa') { 
@@ -4978,15 +5204,12 @@ function openAdminWithPin() {
         return;
     }
     
-    // Diğer roller için ayarlar_erisim izni kontrolü
-    const perms = window.userAdvancedPermissions;
-    if (perms && perms.special && perms.special.ayarlar_erisim) {
+    // Diğer roller için gelişmiş izin kontrolü
+    if (checkPermission('admin', 'admin_genel', 'access')) {
         goTo('admin');
-        return;
+    } else {
+        toast('Bu sayfaya erişim yetkiniz yok', 'error');
     }
-    
-    // İzin yoksa mesaj ver
-    toast('Bu sayfaya erişim yetkiniz yok', 'error');
 }
 
 function autoCheckAdminPin() {
@@ -5020,55 +5243,6 @@ function checkAdminPin() {
     }
 }
 
-// Admin sekme izinlerini uygula
-function applyAdminTabPermissions() {
-    const isYonetici = currentUser?.role === 'yonetici';
-    const perms = window.userAdvancedPermissions;
-    
-    // Sadece yönetici görebilir sekmeler
-    const yoneticiOnlyTabs = ['genel', 'kullanicilar', 'oturumlar'];
-    
-    // Rol atanabilir sekmeler (PERMISSION_STRUCTURE.adminTabs'dan)
-    const rolAtanabilirTabs = ['tumCheckler', 'subelerSaatler', 'checkKurallari', 'checklistTurleri', 'ihlaller', 'sablonlar'];
-    
-    let firstVisibleTab = null;
-    let currentActiveHidden = false;
-    
-    // Tüm sekmeleri kontrol et
-    document.querySelectorAll('.admin-tab').forEach(tab => {
-        const tabId = tab.id?.replace('tab-', '');
-        if (!tabId) return;
-        
-        let canView = false;
-        
-        if (isYonetici) {
-            // Yönetici her şeyi görebilir
-            canView = true;
-        } else if (yoneticiOnlyTabs.includes(tabId)) {
-            // Yönetici only sekme - diğerleri göremez
-            canView = false;
-        } else if (rolAtanabilirTabs.includes(tabId)) {
-            // Rol atanabilir sekme - izne bak
-            canView = perms?.adminTabs?.[tabId] === true;
-        }
-        
-        tab.style.display = canView ? '' : 'none';
-        
-        if (canView && !firstVisibleTab) {
-            firstVisibleTab = tab;
-        }
-        
-        if (!canView && tab.classList.contains('active')) {
-            currentActiveHidden = true;
-        }
-    });
-    
-    // Aktif sekme gizlendiyse ilk görünür sekmeye geç
-    if (currentActiveHidden && firstVisibleTab) {
-        firstVisibleTab.click();
-    }
-}
-
 function showAdminTab(tab, btn) {
     // Kaydedilmemiş belge şablonu değişikliği kontrolü
     if (hasUnsavedDocChanges && currentPage === 'admin') {
@@ -5090,36 +5264,21 @@ function switchAdminTab(tab, btn) {
     btn.classList.add('active');
     document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
     document.getElementById('admin-' + tab).classList.add('active');
-    
-    // Sekme yükleme işlemleri
-    if (tab === 'genel') {
-        loadBackupsList(); // Yedekler Genel içinde
-    }
-    if (tab === 'kullanicilar') {
-        renderPermissionsTable();
-    }
+    if (tab === 'sablonlar') loadTemplate();
+    if (tab === 'belgeler') loadDocTemplate('tutanak', 'olay');
     if (tab === 'oturumlar') {
         loadSessionSettings();
         loadActiveSessions();
         loadSessionHistory();
-        loadActivityLogs(); // Aktiviteler Oturumlar içinde
     }
-    if (tab === 'subelerSaatler') {
-        renderBranchHoursSettings(); // Saatler
-        // Şube listesi renderAdminLists() ile render ediliyor
-    }
-    if (tab === 'checkKurallari') {
-        renderCheckRulesSettings();
-    }
-    if (tab === 'checklistTurleri') {
-        loadChecklistTypesConfig();
-    }
+    if (tab === 'aktiviteler') loadActivityLogs();
+    if (tab === 'yedekler') loadBackupsList();
+    if (tab === 'magazaSaatleri') renderBranchHoursSettings();
+    if (tab === 'checkKurallari') renderCheckRulesSettings();
+    if (tab === 'checklistTurleri') loadChecklistTypesConfig();
     if (tab === 'tumCheckler') {
         populateSubeSelect('allChecksBranchFilter', true);
         loadAllChecksOverview();
-    }
-    if (tab === 'sablonlar') {
-        loadTemplate(); // Sözleşme şablonları varsayılan
     }
 }
 
@@ -5130,7 +5289,32 @@ function loadAdminFields() {
 }
 
 function renderAdminLists() {
-    // Sekme izinleri applyAdminTabPermissions() ile yönetiliyor
+    // Yönetici-only tab'ları kontrol et
+    const adminOnlyTabs = ['tab-kullanicilar', 'tab-oturumlar', 'tab-aktiviteler'];
+    const adminOnlySections = ['admin-kullanicilar', 'admin-oturumlar', 'admin-aktiviteler'];
+    
+    if (currentUser?.role !== 'yonetici') {
+        // Tab butonlarını gizle
+        adminOnlyTabs.forEach(tabId => {
+            const tab = document.getElementById(tabId);
+            if (tab) tab.style.display = 'none';
+        });
+        // Bölümleri de gizle (güvenlik)
+        adminOnlySections.forEach(sectionId => {
+            const section = document.getElementById(sectionId);
+            if (section) section.style.display = 'none';
+        });
+    } else {
+        // Yönetici için göster
+        adminOnlyTabs.forEach(tabId => {
+            const tab = document.getElementById(tabId);
+            if (tab) tab.style.display = '';
+        });
+        adminOnlySections.forEach(sectionId => {
+            const section = document.getElementById(sectionId);
+            if (section) section.style.display = '';
+        });
+    }
     
     // Yönetici için özel kartları göster
     const adminPasswordCard = document.getElementById('adminPasswordCard');
@@ -5168,27 +5352,6 @@ function renderAdminLists() {
                 </div>
             </div>
         `).join('');
-    }
-    
-    // Positions Compact (Pozisyon Yetkileri içinde)
-    const posListCompact = document.getElementById('positionListCompact');
-    if (posListCompact) {
-        const typeColors = {
-            'Mavi Yaka': { bg: '#3498db22', color: '#3498db', icon: '☕' },
-            'Gri Yaka': { bg: '#ff867422', color: '#ff8674', icon: '📋' },
-            'Beyaz Yaka': { bg: '#008c9522', color: '#008c95', icon: '🏪' },
-            'Üst Yönetim': { bg: '#9b59b622', color: '#9b59b6', icon: '🌍' }
-        };
-        posListCompact.innerHTML = STATE.positions.map((p, i) => {
-            const tc = typeColors[p.type] || { bg: 'var(--bg3)', color: 'var(--tx2)', icon: '👤' };
-            return `
-                <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:${tc.bg};border-radius:8px;cursor:pointer" onclick="editPosition(${i})" title="Düzenle: ${p.name}">
-                    <span style="font-size:1rem">${tc.icon}</span>
-                    <span style="font-weight:500;color:${tc.color};font-size:.85rem">${p.name}</span>
-                    <span style="font-size:.7rem;color:var(--tx2)">${p.type}</span>
-                </div>
-            `;
-        }).join('');
     }
     
     // Violations
@@ -5778,8 +5941,8 @@ async function saveBranch() {
     try {
         // Kaynak şube - ilk mevcut şube (genelde Tuzla Port)
         const sourceSourceBranch = STATE.branches[0] || 'Tuzla Port';
-        const sourceBranchKey = normalizeBranchId(sourceSourceBranch);
-        const newBranchKey = normalizeBranchId(name);
+        const sourceBranchKey = sourceSourceBranch.replace(/[^a-zA-Z0-9]/g, '_');
+        const newBranchKey = name.replace(/[^a-zA-Z0-9]/g, '_');
         
         // 1. STATE.branches'a ekle (10%)
         setProgress(10, 'Şube listesine ekleniyor...');
@@ -5951,63 +6114,28 @@ async function migrateBranchName(oldName, newName) {
         log(`✓ Vardiyalar: ${shiftsSnap.size} kayıt`);
         setProgress(35, 'Checklist kayıtları güncelleniyor...');
         
-        // 3. CHECKLIST SUBMISSIONS - branch alanı + doc ID güncelle (50%)
-        const oldSubPrefix = normalizeBranchId(oldName);
-        const newSubPrefix = normalizeBranchId(newName);
-        const subSnap = await db.collection('checklistSubmissions').get();
-        let subUpdated = 0;
+        // 3. CHECKLIST SUBMISSIONS (50%)
+        const subSnap = await db.collection('checklistSubmissions').where('branch', '==', oldName).get();
         for (const doc of subSnap.docs) {
-            const data = doc.data();
-            const oldId = doc.id;
-            
-            // Hem branch alanı hem de doc ID prefix kontrol et
-            if (data.branch === oldName || oldId.startsWith(oldSubPrefix + '_')) {
-                const newId = oldId.startsWith(oldSubPrefix + '_') 
-                    ? oldId.replace(oldSubPrefix + '_', newSubPrefix + '_') 
-                    : oldId;
-                
-                // Yeni doc oluştur (branch güncellenmiş)
-                await db.collection('checklistSubmissions').doc(newId).set({
-                    ...data,
-                    branch: newName
-                });
-                
-                // Eski doc'u sil (eğer ID değiştiyse)
-                if (oldId !== newId) {
-                    await db.collection('checklistSubmissions').doc(oldId).delete();
-                }
-                
-                subUpdated++;
-                totalUpdated++;
-            }
+            await doc.ref.update({ branch: newName });
+            totalUpdated++;
         }
-        log(`✓ Checklist Submissions: ${subUpdated} kayıt`);
+        log(`✓ Checklist Submissions: ${subSnap.size} kayıt`);
         setProgress(55, 'Checklist maddeleri taşınıyor...');
         
-        // 4. CHECKLISTS - Doc ID değişmeli + branch alanı güncellenmeli (70%)
-        const oldPrefix = normalizeBranchId(oldName);
-        const newPrefix = normalizeBranchId(newName);
+        // 4. CHECKLISTS - Doc ID değişmeli (70%)
+        const oldPrefix = oldName.replace(/\s+/g, '_').replace(/[()]/g, '');
+        const newPrefix = newName.replace(/\s+/g, '_').replace(/[()]/g, '');
         const checkSnap = await db.collection('checklists').get();
         const toMigrate = [];
         checkSnap.forEach(doc => {
-            const data = doc.data();
-            // Hem doc ID prefix'i hem de branch alanı kontrol et
-            if (doc.id.startsWith(oldPrefix) || data.branch === oldName) {
-                const newId = doc.id.startsWith(oldPrefix) 
-                    ? doc.id.replace(oldPrefix, newPrefix) 
-                    : doc.id;
-                toMigrate.push({ 
-                    oldId: doc.id, 
-                    newId: newId, 
-                    data: { ...data, branch: newName } // branch alanını güncelle
-                });
+            if (doc.id.startsWith(oldPrefix)) {
+                toMigrate.push({ oldId: doc.id, newId: doc.id.replace(oldPrefix, newPrefix), data: doc.data() });
             }
         });
         for (const m of toMigrate) {
             await db.collection('checklists').doc(m.newId).set(m.data);
-            if (m.oldId !== m.newId) {
-                await db.collection('checklists').doc(m.oldId).delete();
-            }
+            await db.collection('checklists').doc(m.oldId).delete();
             totalUpdated++;
         }
         log(`✓ Checklist Maddeleri: ${toMigrate.length} döküman`);
@@ -6035,82 +6163,17 @@ async function migrateBranchName(oldName, newName) {
             await typesDoc.ref.set(data);
             log(`✓ config/checklistTypes`);
         }
-        setProgress(70, 'Görev atamaları güncelleniyor...');
         
-        // 7. WEEKLY ASSIGNMENTS - Doc ID güncelle (75%)
-        const weeklySnap = await db.collection('weeklyAssignments').get();
-        let weeklyUpdated = 0;
-        for (const doc of weeklySnap.docs) {
-            const data = doc.data();
-            const oldId = doc.id;
-            
-            if (data.branch === oldName || oldId.startsWith(oldPrefix + '_')) {
-                const newId = oldId.startsWith(oldPrefix + '_') 
-                    ? oldId.replace(oldPrefix + '_', newPrefix + '_') 
-                    : oldId;
-                
-                await db.collection('weeklyAssignments').doc(newId).set({
-                    ...data,
-                    branch: newName
-                });
-                
-                if (oldId !== newId) {
-                    await db.collection('weeklyAssignments').doc(oldId).delete();
-                }
-                weeklyUpdated++;
-                totalUpdated++;
-            }
-        }
-        if (weeklyUpdated > 0) log(`✓ Weekly Assignments: ${weeklyUpdated} kayıt`);
-        
-        // 8. DAILY TASK ASSIGNMENTS - Doc ID güncelle (80%)
-        const dailySnap = await db.collection('dailyTaskAssignments').get();
-        let dailyUpdated = 0;
-        for (const doc of dailySnap.docs) {
-            const data = doc.data();
-            const oldId = doc.id;
-            
-            if (data.branch === oldName || oldId.startsWith(oldPrefix + '_')) {
-                const newId = oldId.startsWith(oldPrefix + '_') 
-                    ? oldId.replace(oldPrefix + '_', newPrefix + '_') 
-                    : oldId;
-                
-                await db.collection('dailyTaskAssignments').doc(newId).set({
-                    ...data,
-                    branch: newName
-                });
-                
-                if (oldId !== newId) {
-                    await db.collection('dailyTaskAssignments').doc(oldId).delete();
-                }
-                dailyUpdated++;
-                totalUpdated++;
-            }
-        }
-        if (dailyUpdated > 0) log(`✓ Daily Task Assignments: ${dailyUpdated} kayıt`);
-        setProgress(85, 'Son ayarlar güncelleniyor...');
-        
-        // 9. STATE.branches (local)
+        // 7. STATE.branches (local)
         const stateIdx = STATE.branches.indexOf(oldName);
         if (stateIdx !== -1) {
             STATE.branches[stateIdx] = newName;
         }
         
-        // 10. BRANCH_HOURS güncelle (local + Firebase)
+        // 8. BRANCH_HOURS güncelle
         if (BRANCH_HOURS && BRANCH_HOURS[oldName]) {
             BRANCH_HOURS[newName] = BRANCH_HOURS[oldName];
             delete BRANCH_HOURS[oldName];
-            
-            // Firebase'de de güncelle
-            try {
-                await db.collection('systemConfig').doc('checkRules').update({
-                    [`branchHours.${oldName}`]: firebase.firestore.FieldValue.delete(),
-                    [`branchHours.${newName}`]: BRANCH_HOURS[newName]
-                });
-                log(`✓ branchHours Firebase güncellendi`);
-            } catch (e) {
-                console.warn('branchHours Firebase güncellenemedi:', e);
-            }
         }
         
         setProgress(100, 'Tamamlandı!');
@@ -6328,17 +6391,6 @@ function deleteViolation(i) {
 }
 
 // ========== TEMPLATES ==========
-// Şablon tab geçişi
-function switchSablonTab(tab) {
-    // Tab butonlarını güncelle
-    document.getElementById('sablonTab-sozlesme').className = tab === 'sozlesme' ? 'btn btn-primary' : 'btn btn-ghost';
-    document.getElementById('sablonTab-belgeler').className = tab === 'belgeler' ? 'btn btn-primary' : 'btn btn-ghost';
-    
-    // Panelleri göster/gizle
-    document.getElementById('sablonPanel-sozlesme').style.display = tab === 'sozlesme' ? 'block' : 'none';
-    document.getElementById('sablonPanel-belgeler').style.display = tab === 'belgeler' ? 'block' : 'none';
-}
-
 function loadTemplate() {
     const sel = document.getElementById('template_pozisyon');
     const content = document.getElementById('template_content');
@@ -6356,7 +6408,84 @@ function saveTemplate() {
     toast('Şablon kaydedildi', 'success');
 }
 
+// ========== SYNC ==========
+function generateExportCode() {
+    try {
+        const json = JSON.stringify(STATE);
+        const compressed = LZString.compressToBase64(json);
+        document.getElementById('exportCode').value = compressed;
+        toast('Kod oluşturuldu', 'success');
+    } catch(e) {
+        toast('Kod oluşturulamadı', 'error');
+    }
+}
+
+function copyExportCode() {
+    const code = document.getElementById('exportCode').value;
+    if (code) {
+        navigator.clipboard.writeText(code).then(() => {
+            toast('Kopyalandı!', 'success');
+        }).catch(() => {
+            // Fallback
+            const ta = document.createElement('textarea');
+            ta.value = code;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            toast('Kopyalandı!', 'success');
+        });
+    }
+}
+
+function importCode() {
+    const code = document.getElementById('importCode').value.trim();
+    if (!code) {
+        toast('Kod boş', 'error');
+        return;
+    }
+    
+    confirmModal('İçe Aktar', 'Mevcut tüm ayarlarınız değiştirilecek. Emin misiniz?', () => {
+        try {
+            const json = LZString.decompressFromBase64(code);
+            if (!json) throw new Error('Invalid');
+            const data = JSON.parse(json);
+            
+            // Validate basic structure
+            if (!data.pin || !data.company || !data.branches) {
+                throw new Error('Invalid structure');
+            }
+            
+            STATE = {...DEFAULT_STATE, ...data};
+            saveState();
+            initUI();
+            document.getElementById('importCode').value = '';
+            successModal('Veriler başarıyla içe aktarıldı!');
+        } catch(e) {
+            toast('Geçersiz kod!', 'error');
+        }
+    }, 'danger');
+}
+
 // ========== DOSYA YEDEKLEMESİ ==========
+function downloadBackup() {
+    try {
+        const data = JSON.stringify(STATE, null, 2);
+        const blob = new Blob([data], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const date = new Date().toISOString().split('T')[0];
+        a.href = url;
+        a.download = `moonberry-ik-yedek-${date}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast('Yedek dosyası indirildi', 'success');
+    } catch(e) {
+        toast('Yedek oluşturulamadı', 'error');
+    }
+}
 
 function uploadBackup(event) {
     const file = event.target.files[0];
@@ -6454,7 +6583,7 @@ function switchDocTemplateCategory(category) {
     currentDocTemplateCategory = category;
     
     // Butonları güncelle
-    document.querySelectorAll('#sablonPanel-belgeler .btn-sm').forEach(btn => {
+    document.querySelectorAll('#admin-belgeler .btn-group .btn').forEach(btn => {
         btn.classList.remove('btn-primary');
         btn.classList.add('btn-ghost');
     });
@@ -9709,20 +9838,17 @@ const PERMISSION_STRUCTURE = {
         { id: 'avans', label: 'Avans Talebi' },
         { id: 'zimmet', label: 'Zimmet Formu' }
     ],
-    adminTabs: [
-        // Rol atanabilir sekmeler (UI'da gösterilir)
-        { id: 'tumCheckler', label: 'Tüm Checkler' },
-        { id: 'subelerSaatler', label: 'Şubeler & Saatler' },
-        { id: 'checkKurallari', label: 'Check & Puantaj Kuralları' },
-        { id: 'checklistTurleri', label: 'Checklist Türleri' },
-        { id: 'ihlaller', label: 'İhlaller' },
-        { id: 'sablonlar', label: 'Şablonlar' }
+    admin: [
+        { id: 'admin_genel', label: 'Genel Ayarlar' },
+        { id: 'admin_kullanicilar', label: 'Pozisyon Yetkileri' },
+        { id: 'admin_puantaj', label: 'Puantaj Kuralları' },
+        { id: 'admin_subeler', label: 'Şube Yönetimi' },
+        { id: 'admin_pozisyonlar', label: 'Pozisyonlar' },
+        { id: 'admin_ihlaller', label: 'İhlal Düzenleme' },
+        { id: 'admin_sablonlar', label: 'Şablonlar' },
+        { id: 'admin_oturumlar', label: 'Oturum Ayarları' }
     ],
-    // Sadece yönetici görebilir - UI'da rol atama yapılmaz
-    adminTabsYoneticiOnly: ['genel', 'kullanicilar', 'oturumlar'],
     special: [
-        { id: 'ayarlar_erisim', label: 'Ayarlar sayfasına erişebilir' },
-        { id: 'view_all_branches', label: 'Tüm şubeleri görebilir' },
         { id: 'print_shift', label: 'Shift planını yazdırabilir' },
         { id: 'create_shift_week', label: 'Yeni shift haftası oluşturabilir' },
         { id: 'view_checklist_history', label: 'Geçmiş checklisti görebilir' },
@@ -9742,247 +9868,37 @@ const DEFAULT_ROLE_PERMISSIONS = {
         pages: { dashboard: { view: true, edit: false }, personel: { view: false, edit: false }, puantaj: { view: true, edit: false }, shift: { view: true, edit: false }, checklist: { view: true, edit: true }, katalog: { view: false, edit: false } },
         documents: { sozlesme: { view: false, edit: false }, tutanak: { view: false, edit: false }, savunma: { view: false, edit: false }, fesih: { view: false, edit: false }, istifa: { view: false, edit: false }, ibraname: { view: false, edit: false } },
         forms: { borc: { view: false, edit: false }, avans: { view: false, edit: false }, zimmet: { view: false, edit: false } },
-        adminTabs: { tumCheckler: false, subelerSaatler: false, checkKurallari: false, checklistTurleri: false, ihlaller: false, sablonlar: false },
-        special: { ayarlar_erisim: false, view_all_branches: false, print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false },
+        admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: false, admin_sablonlar: false, admin_oturumlar: false },
+        special: { print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 1 }
     },
     magaza_mudur_yardimcisi: {
         pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
-        adminTabs: { tumCheckler: false, subelerSaatler: false, checkKurallari: false, checklistTurleri: false, ihlaller: true, sablonlar: false },
-        special: { ayarlar_erisim: true, view_all_branches: false, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
+        admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false },
+        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 5 }
     },
     magaza_muduru: {
         pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
-        adminTabs: { tumCheckler: true, subelerSaatler: true, checkKurallari: false, checklistTurleri: false, ihlaller: true, sablonlar: false },
-        special: { ayarlar_erisim: true, view_all_branches: false, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
+        admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false },
+        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 5 }
     },
     bolge_muduru: {
         pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: true }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
-        adminTabs: { tumCheckler: true, subelerSaatler: true, checkKurallari: true, checklistTurleri: true, ihlaller: true, sablonlar: true },
-        special: { ayarlar_erisim: true, view_all_branches: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true },
+        admin: { admin_genel: true, admin_kullanicilar: false, admin_puantaj: true, admin_subeler: true, admin_pozisyonlar: true, admin_ihlaller: true, admin_sablonlar: true, admin_oturumlar: true },
+        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true },
         limits: { shift_history_weeks: 999 }
     }
 };
 
-// Rol bilgileri
-const ROLE_INFO = {
-    barista: { icon: '🧑‍🍳', name: 'Barista', color: '#3498db' },
-    magaza_mudur_yardimcisi: { icon: '👔', name: 'Müdür Yrd.', color: '#ff8674' },
-    magaza_muduru: { icon: '🏪', name: 'Mağaza Müd.', color: '#008c95' },
-    bolge_muduru: { icon: '🌍', name: 'Bölge Müd.', color: '#9b59b6' }
-};
-
-// Tüm rollerin izinleri (bellek)
-let allRolePermissions = {};
-
-// Yetki tablosunu oluştur
-async function renderPermissionsTable() {
-    const container = document.getElementById('permissionsTableContainer');
-    if (!container) return;
-    
-    // Tüm rollerin izinlerini yükle
-    await loadAllRolePermissions();
-    
-    const roles = ['barista', 'magaza_mudur_yardimcisi', 'magaza_muduru', 'bolge_muduru'];
-    
-    let html = `
-        <table style="width:100%;border-collapse:collapse;font-size:.85rem">
-            <thead>
-                <tr style="background:var(--bg3)">
-                    <th style="text-align:left;padding:12px 16px;border-bottom:2px solid var(--cardBorder);min-width:200px">İzin</th>
-                    ${roles.map(r => `
-                        <th style="text-align:center;padding:12px 8px;border-bottom:2px solid var(--cardBorder);min-width:100px">
-                            <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-                                <span style="font-size:1.2rem">${ROLE_INFO[r].icon}</span>
-                                <span style="font-weight:600;color:${ROLE_INFO[r].color}">${ROLE_INFO[r].name}</span>
-                            </div>
-                        </th>
-                    `).join('')}
-                </tr>
-            </thead>
-            <tbody>
-    `;
-    
-    // SAYFALAR
-    html += renderPermissionSection('📄 SAYFALAR', PERMISSION_STRUCTURE.pages, roles, 'pages', true);
-    
-    // BELGELER
-    html += renderPermissionSection('📑 BELGELER', PERMISSION_STRUCTURE.documents, roles, 'documents', true);
-    
-    // FORMLAR
-    html += renderPermissionSection('📋 FORMLAR', PERMISSION_STRUCTURE.forms, roles, 'forms', true);
-    
-    // ADMIN SEKMELERİ
-    html += renderPermissionSection('⚙️ AYARLAR SEKMELERİ', PERMISSION_STRUCTURE.adminTabs, roles, 'adminTabs', false);
-    
-    // ÖZEL İZİNLER
-    html += renderPermissionSection('🔑 ÖZEL İZİNLER', PERMISSION_STRUCTURE.special, roles, 'special', false);
-    
-    html += `
-            </tbody>
-        </table>
-    `;
-    
-    container.innerHTML = html;
-}
-
-// Yetki bölümü oluştur
-function renderPermissionSection(title, items, roles, category, hasViewEdit) {
-    let html = `
-        <tr>
-            <td colspan="${roles.length + 1}" style="padding:16px 16px 8px;font-weight:700;color:var(--tx);background:var(--bg2);border-bottom:1px solid var(--cardBorder)">
-                ${title}
-            </td>
-        </tr>
-    `;
-    
-    items.forEach((item, index) => {
-        const bgColor = index % 2 === 0 ? 'var(--bg)' : 'var(--bg2)';
-        html += `
-            <tr style="background:${bgColor}">
-                <td style="padding:10px 16px;border-bottom:1px solid var(--cardBorder);color:var(--tx)">
-                    ${item.label}
-                </td>
-                ${roles.map(role => {
-                    const perms = allRolePermissions[role]?.[category]?.[item.id];
-                    if (hasViewEdit) {
-                        const viewChecked = perms?.view ? 'checked' : '';
-                        const editChecked = perms?.edit ? 'checked' : '';
-                        return `
-                            <td style="text-align:center;padding:8px;border-bottom:1px solid var(--cardBorder)">
-                                <div style="display:flex;justify-content:center;gap:8px">
-                                    <label style="display:flex;align-items:center;gap:2px;cursor:pointer" title="Görüntüle">
-                                        <input type="checkbox" data-role="${role}" data-cat="${category}" data-id="${item.id}" data-type="view" ${viewChecked} style="width:16px;height:16px;accent-color:#27ae60">
-                                        <span style="font-size:.65rem;color:var(--tx2)">G</span>
-                                    </label>
-                                    <label style="display:flex;align-items:center;gap:2px;cursor:pointer" title="Düzenle">
-                                        <input type="checkbox" data-role="${role}" data-cat="${category}" data-id="${item.id}" data-type="edit" ${editChecked} style="width:16px;height:16px;accent-color:#3498db">
-                                        <span style="font-size:.65rem;color:var(--tx2)">D</span>
-                                    </label>
-                                </div>
-                            </td>
-                        `;
-                    } else {
-                        const checked = perms === true ? 'checked' : '';
-                        return `
-                            <td style="text-align:center;padding:8px;border-bottom:1px solid var(--cardBorder)">
-                                <input type="checkbox" data-role="${role}" data-cat="${category}" data-id="${item.id}" data-type="access" ${checked} style="width:18px;height:18px;accent-color:#ff8674;cursor:pointer">
-                            </td>
-                        `;
-                    }
-                }).join('')}
-            </tr>
-        `;
-    });
-    
-    return html;
-}
-
-// Tüm rollerin izinlerini yükle
-async function loadAllRolePermissions() {
-    const roles = ['barista', 'magaza_mudur_yardimcisi', 'magaza_muduru', 'bolge_muduru'];
-    
-    for (const role of roles) {
-        // Varsayılan izinlerle başla
-        allRolePermissions[role] = JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS[role]));
-        
-        try {
-            const doc = await db.collection('advancedPermissions').doc(role).get();
-            if (doc.exists) {
-                const fbPerms = doc.data();
-                // Firebase izinlerini birleştir
-                allRolePermissions[role] = mergePermissions(allRolePermissions[role], fbPerms);
-            }
-        } catch (error) {
-            console.error(`${role} izin yükleme hatası:`, error);
-        }
-    }
-}
-
-// İzinleri birleştir
-function mergePermissions(defaults, firebase) {
-    const merged = JSON.parse(JSON.stringify(defaults));
-    
-    if (firebase.pages) merged.pages = { ...merged.pages, ...firebase.pages };
-    if (firebase.documents) merged.documents = { ...merged.documents, ...firebase.documents };
-    if (firebase.forms) merged.forms = { ...merged.forms, ...firebase.forms };
-    if (firebase.adminTabs) merged.adminTabs = { ...merged.adminTabs, ...firebase.adminTabs };
-    if (firebase.special) merged.special = { ...merged.special, ...firebase.special };
-    if (firebase.limits) merged.limits = { ...merged.limits, ...firebase.limits };
-    
-    return merged;
-}
-
-// Tüm rollerin izinlerini kaydet
-async function saveAllRolePermissions() {
-    const roles = ['barista', 'magaza_mudur_yardimcisi', 'magaza_muduru', 'bolge_muduru'];
-    const container = document.getElementById('permissionsTableContainer');
-    if (!container) return;
-    
-    // Checkbox'lardan izinleri oku
-    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
-    
-    // Önce mevcut yapıları kopyala
-    const newPerms = {};
-    roles.forEach(role => {
-        newPerms[role] = JSON.parse(JSON.stringify(allRolePermissions[role] || DEFAULT_ROLE_PERMISSIONS[role]));
-    });
-    
-    // Checkbox'ları oku
-    checkboxes.forEach(cb => {
-        const role = cb.dataset.role;
-        const cat = cb.dataset.cat;
-        const id = cb.dataset.id;
-        const type = cb.dataset.type;
-        
-        if (!role || !cat || !id) return;
-        
-        if (type === 'view' || type === 'edit') {
-            if (!newPerms[role][cat]) newPerms[role][cat] = {};
-            if (!newPerms[role][cat][id]) newPerms[role][cat][id] = { view: false, edit: false };
-            newPerms[role][cat][id][type] = cb.checked;
-        } else {
-            // access type (adminTabs, special)
-            if (!newPerms[role][cat]) newPerms[role][cat] = {};
-            newPerms[role][cat][id] = cb.checked;
-        }
-    });
-    
-    // Firebase'e kaydet
-    try {
-        const batch = db.batch();
-        
-        for (const role of roles) {
-            const ref = db.collection('advancedPermissions').doc(role);
-            batch.set(ref, newPerms[role]);
-        }
-        
-        await batch.commit();
-        
-        // Bellekteki kopyayı güncelle
-        allRolePermissions = newPerms;
-        
-        toast('Tüm yetkiler kaydedildi', 'success');
-        
-        // Mevcut kullanıcının izinlerini yeniden yükle
-        if (currentUser && currentUser.role !== 'yonetici') {
-            await loadUserAdvancedPermissions();
-        }
-    } catch (error) {
-        console.error('Yetki kaydetme hatası:', error);
-        toast('Kaydetme hatası: ' + error.message, 'error');
-    }
-}
-
-// Pozisyon seçimi için yeni fonksiyonlar (eski uyumluluk için)
+// Pozisyon seçimi için yeni fonksiyonlar
 let selectedRoleForPerm = null;
 
 function selectRoleForPermissions(role) {
@@ -12490,6 +12406,13 @@ function getShiftColorExcel(val) {
     return SHIFT_COLORS.default;
 }
 
+// Shift değerini görüntüleme formatına çevir (**** -> OFF)
+function formatShiftValue(val) {
+    if (!val) return '';
+    if (/^\*+$/.test(val.trim())) return 'OFF';
+    return val;
+}
+
 async function updateShiftCell(docId, name, dayIdx, value, keepStar = false) {
     if (value === 'parttime') { 
         // Part-time saat seçici modal
@@ -13515,6 +13438,88 @@ async function printShift() {
     printWindow.document.close();
 }
 
+const EXCEL_PERSONEL = {
+    'Şişli': ["ESİN", "ESMA", "ECE"],
+    'Tuzla': ["BÜŞRA", "ESİN", "BALRA", "TUANA", "BARAN", "ELİF"]
+};
+
+// Firebase'e yükle
+async function uploadExcelToFirebase() {
+    if (currentUser?.role !== 'yonetici') {
+        toast('Sadece yönetici yapabilir', 'error');
+        return;
+    }
+    
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Yükleniyor...';
+    
+    // Branch isim dönüşümü
+    const branchMap = {
+        'Şişli': 'Şişli (Merkez)',
+        'Tuzla': 'Tuzla TRC'
+    };
+    
+    try {
+        // 1. Personel ekle (son 2 hafta kadrosu)
+        let pAdded = 0;
+        for (const [excelBranch, names] of Object.entries(EXCEL_PERSONEL)) {
+            const dbBranch = branchMap[excelBranch] || excelBranch;
+            for (const name of names) {
+                const existing = await db.collection('personel').where('name', '==', name).where('branch', '==', dbBranch).get();
+                if (existing.empty) {
+                    await db.collection('personel').add({
+                        name: name,
+                        branch: dbBranch,
+                        position: 'Barista',
+                        status: 'aktif',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    pAdded++;
+                }
+            }
+        }
+        
+        // 2. Shiftleri ekle
+        let sAdded = 0, sSkipped = 0;
+        for (const shift of EXCEL_SHIFTS) {
+            if (!shift.weekStart) { sSkipped++; continue; }
+            
+            const dbBranch = branchMap[shift.branch] || shift.branch;
+            
+            const existing = await db.collection('shifts')
+                .where('branch', '==', dbBranch)
+                .where('weekStart', '==', shift.weekStart)
+                .get();
+            
+            if (existing.empty) {
+                await db.collection('shifts').add({
+                    branch: dbBranch,
+                    weekStart: shift.weekStart,
+                    weekEnd: shift.weekEnd,
+                    weekLabel: shift.weekLabel,
+                    personelShifts: shift.personelShifts,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    source: 'excel'
+                });
+                sAdded++;
+            } else {
+                sSkipped++;
+            }
+        }
+        
+        toast(`✓ ${pAdded} personel, ${sAdded} shift eklendi`, 'success');
+        loadShiftList();
+        
+    } catch (e) {
+        console.error(e);
+        toast('Hata: ' + e.message, 'error');
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = '📥 Excel Verilerini Yükle';
+}
+
 // ==================== AKTİVİTE LOGLAMA ====================
 
 // Aktivite logla
@@ -13643,6 +13648,22 @@ async function loadActivityLogs() {
             </div>
         `;
     }
+}
+
+// getWeekOptions fonksiyonu (hafta listesi için)// getWeekOptions fonksiyonu (hafta listesi için)
+function getWeekOptions() {
+    const options = [];
+    const today = new Date();
+    for (let i = -12; i <= 2; i++) {
+        const monday = new Date(today);
+        monday.setDate(today.getDate() - today.getDay() + 1 + (i * 7));
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        const label = `${monday.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} - ${sunday.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}`;
+        const value = formatDateLocal(monday);  // Timezone-safe
+        options.push({ value, label, monday, sunday, isCurrent: i === 0 });
+    }
+    return options;
 }
 
 // ==================== CHECKLIST MODULE ====================
@@ -14685,7 +14706,7 @@ async function checkSingleTimeSlot(branch, checkType, timeSlot, date, shiftPerso
     if (now < deadline) return;
     
     // Bu check doldurulmuş mu?
-    const submissionId = `${normalizeBranchId(branch)}_${checkType}_${date}_${timeStr.replace(':', '')}`;
+    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType}_${date}_${timeStr.replace(':', '')}`;
     
     try {
         const existing = await db.collection('checklistSubmissions').doc(submissionId).get();
@@ -14742,7 +14763,7 @@ async function checkDeadlineBasedCheck(branch, checkType, date, shiftPersonnel, 
     if (now < deadline) return;
     
     // Bu check doldurulmuş mu?
-    const submissionId = `${normalizeBranchId(branch)}_${checkType}_${date}`;
+    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType}_${date}`;
     
     try {
         const existing = await db.collection('checklistSubmissions').doc(submissionId).get();
@@ -15168,7 +15189,7 @@ async function loadTodayChecks() {
         const nextPlatformTime = nextPlatformSlot?.start || null;
         
         if (activePlatformTime || nextPlatformTime) {
-            const platformSubmissionId = `${normalizeBranchId(branch)}_platform_${todayStr}_${(activePlatformTime || '').replace(':', '')}`;
+            const platformSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_platform_${todayStr}_${(activePlatformTime || '').replace(':', '')}`;
             let platformCompleted = false;
             try {
                 if (activePlatformTime) {
@@ -15337,7 +15358,7 @@ async function loadTodayChecks() {
                 }
             }
             
-            const temizlikSubmissionId = `${normalizeBranchId(branch)}_aylik_${todayStr}_${currentShiftType}`;
+            const temizlikSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_aylik_${todayStr}_${currentShiftType}`;
             let temizlikCompleted = false;
             
             try {
@@ -15430,7 +15451,7 @@ async function loadTodayChecks() {
             const acilisDeadline = acilisRules.deadline || '11:00';
             const acilisLateWindow = acilisRules.lateWindow || 30;
             
-            const acilisSubmissionId = `${normalizeBranchId(branch)}_acilis_${todayStr}`;
+            const acilisSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_acilis_${todayStr}`;
             let acilisCompleted = false;
             try {
                 const doc = await db.collection('checklistSubmissions').doc(acilisSubmissionId).get();
@@ -15501,7 +15522,7 @@ async function loadTodayChecks() {
             const kapanisDeadline = kapanisRules.deadline || '02:00';
             const kapanisLateWindow = kapanisRules.lateWindow || 30;
             
-            const kapanisSubmissionId = `${normalizeBranchId(branch)}_kapanis_${todayStr}`;
+            const kapanisSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_kapanis_${todayStr}`;
             let kapanisCompleted = false;
             try {
                 const doc = await db.collection('checklistSubmissions').doc(kapanisSubmissionId).get();
@@ -15691,7 +15712,7 @@ async function loadTodayChecks() {
         const displayGunlukEnd = displayGunlukSlot?.end || displayGunlukTime;
         
         {
-            const gunlukSubmissionId = `${normalizeBranchId(branch)}_guncel_${todayStr}_${displayGunlukTime.replace(':', '')}`;
+            const gunlukSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_guncel_${todayStr}_${displayGunlukTime.replace(':', '')}`;
             let gunlukCompleted = false;
             try {
                 const doc = await db.collection('checklistSubmissions').doc(gunlukSubmissionId).get();
@@ -15792,7 +15813,7 @@ async function loadTodayChecks() {
         
         // 6. Müdür Kontrol (sadece müdürler için)
         if (isAdmin) {
-            const mudurSubmissionId = `${normalizeBranchId(branch)}_mudur_${todayStr}`;
+            const mudurSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_mudur_${todayStr}`;
             let mudurCompleted = false;
             try {
                 const doc = await db.collection('checklistSubmissions').doc(mudurSubmissionId).get();
@@ -17077,7 +17098,7 @@ async function loadAllChecksOverview() {
                                 typeName: checkType.name,
                                 timeSlot,
                                 date: dateStr,
-                                submissionId: `${normalizeBranchId(branch)}_${checkType.id}_${dateStr}_${timeSlot.replace(':', '')}`
+                                submissionId: `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType.id}_${dateStr}_${timeSlot.replace(':', '')}`
                             });
                             currentDate.setDate(currentDate.getDate() + 1);
                         }
@@ -17342,7 +17363,7 @@ async function saveManualCheck(branch, type, timeSlot, date) {
     }
     
     try {
-        const submissionId = `${normalizeBranchId(branch)}_${type}_${date}_${timeSlot.replace(':', '')}`;
+        const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}_${date}_${timeSlot.replace(':', '')}`;
         const rules = CHECK_RULES[type];
         let points = 0;
         
@@ -17572,17 +17593,23 @@ async function saveBranchHours() {
 // ==================== ADMIN - CHECKLIST TÜRLERİ YÖNETİMİ ====================
 
 let selectedChecklistTypeBranch = null; // STATE.branches[0] ile init edilecek
-let checklistTypesData = []; // Global liste (artık şube bazlı değil)
+let checklistTypesData = {};
 
-// Checklist türlerini Firebase'den yükle (GLOBAL)
+// Checklist türlerini Firebase'den yükle
 async function loadChecklistTypesConfig() {
     try {
-        const doc = await db.collection('config').doc('checklistTypesGlobal').get();
+        const doc = await db.collection('config').doc('checklistTypes').get();
         if (doc.exists) {
-            checklistTypesData = doc.data().types || [];
+            const data = doc.data();
+            checklistTypesData = {};
+            for (const [key, value] of Object.entries(data)) {
+                if (Array.isArray(value)) {
+                    checklistTypesData[key] = value;
+                }
+            }
         } else {
-            // Varsayılan türler
-            checklistTypesData = [
+            // Varsayılan türler - STATE.branches'dan dinamik
+            const defaultTypes = [
                 {id: 'acilis', name: 'Açılış', icon: 'sunrise'},
                 {id: 'kapanis', name: 'Kapanış', icon: 'sunset'},
                 {id: 'gunluk', name: 'Günlük Check', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
@@ -17591,41 +17618,29 @@ async function loadChecklistTypesConfig() {
                 {id: 'haftalik', name: 'Haftalık Görevler', icon: 'calendar-week'},
                 {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
             ];
-            // Varsayılanı kaydet
-            await db.collection('config').doc('checklistTypesGlobal').set({ types: checklistTypesData });
+            checklistTypesData = {};
+            (STATE.branches || []).forEach(branch => {
+                checklistTypesData[branch] = [...defaultTypes];
+            });
         }
         renderChecklistTypeBranchTabs();
         renderChecklistTypes();
     } catch (e) {
         console.error('Checklist türleri yüklenemedi:', e);
-        toast('Checklist türleri yüklenemedi', 'error');
+        showToast('Checklist türleri yüklenemedi', 'error');
     }
 }
 
-// Şube tab'larını render et (dinamik + rol bazlı filtreleme)
+// Şube tab'larını render et (dinamik)
 function renderChecklistTypeBranchTabs() {
     const container = document.getElementById('checklistTypeBranchTabs');
     if (!container) return;
     
-    let branches = STATE.branches || [];
+    const branches = STATE.branches || [];
+    if (branches.length === 0) return;
     
-    // Rol bazlı şube filtreleme
-    const isYonetici = currentUser?.role === 'yonetici';
-    const perms = window.userAdvancedPermissions;
-    const canViewAllBranches = isYonetici || (perms?.special?.view_all_branches === true);
-    
-    // Tüm şubeleri göremiyorsa sadece kendi şubesini göster
-    if (!canViewAllBranches && currentUser?.branch) {
-        branches = branches.filter(b => b === currentUser.branch);
-    }
-    
-    if (branches.length === 0) {
-        container.innerHTML = '<div style="color:var(--tx2);font-size:.9rem">Erişebileceğiniz şube yok</div>';
-        return;
-    }
-    
-    // İlk şubeyi seç (eğer seçili değilse veya seçili şubeye erişim yoksa)
-    if (!selectedChecklistTypeBranch || !branches.includes(selectedChecklistTypeBranch)) {
+    // İlk şubeyi seç (eğer seçili değilse)
+    if (!selectedChecklistTypeBranch) {
         selectedChecklistTypeBranch = branches[0];
     }
     
@@ -17658,12 +17673,12 @@ function selectChecklistTypeBranch(branch) {
     renderChecklistTypes();
 }
 
-// Checklist türlerini render et (GLOBAL)
+// Checklist türlerini render et
 function renderChecklistTypes() {
     const container = document.getElementById('checklistTypesContainer');
     if (!container) return;
     
-    const types = checklistTypesData || []; // Global liste
+    const types = checklistTypesData[selectedChecklistTypeBranch] || [];
     const brandColor = '#008c95'; // Moonberry teal
     
     const iconMap = {
@@ -17681,7 +17696,7 @@ function renderChecklistTypes() {
         container.innerHTML = `
             <div style="text-align:center;padding:40px;color:var(--tx3)">
                 <div style="font-size:2rem;margin-bottom:12px">📋</div>
-                <div>Checklist türü tanımlanmamış</div>
+                <div>Bu şube için checklist türü tanımlanmamış</div>
             </div>
         `;
         return;
@@ -17724,26 +17739,29 @@ function renderChecklistTypes() {
     `).join('');
 }
 
-// Checklist türü adını güncelle (GLOBAL)
+// Checklist türü adını güncelle
 function updateChecklistTypeName(typeId, newName) {
-    const type = checklistTypesData.find(t => t.id === typeId);
+    const types = checklistTypesData[selectedChecklistTypeBranch] || [];
+    const type = types.find(t => t.id === typeId);
     if (type) {
         type.name = newName;
     }
 }
 
-// Checklist türü ikonunu güncelle (GLOBAL)
+// Checklist türü ikonunu güncelle
 function updateChecklistTypeIcon(typeId, newIcon) {
-    const type = checklistTypesData.find(t => t.id === typeId);
+    const types = checklistTypesData[selectedChecklistTypeBranch] || [];
+    const type = types.find(t => t.id === typeId);
     if (type) {
         type.icon = newIcon;
         renderChecklistTypes();
     }
 }
 
-// Checklist türü yönetici özelliğini güncelle (GLOBAL)
+// Checklist türü yönetici özelliğini güncelle
 function updateChecklistTypeManager(typeId, isManager) {
-    const type = checklistTypesData.find(t => t.id === typeId);
+    const types = checklistTypesData[selectedChecklistTypeBranch] || [];
+    const type = types.find(t => t.id === typeId);
     if (type) {
         type.managerOnly = isManager;
     }
@@ -17760,9 +17778,13 @@ async function addNewChecklistType() {
         return;
     }
     
-    // ID kontrolü (GLOBAL)
-    if (checklistTypesData.some(t => t.id === id)) {
-        toast('Bu ID zaten kullanılıyor', 'warning');
+    if (!checklistTypesData[selectedChecklistTypeBranch]) {
+        checklistTypesData[selectedChecklistTypeBranch] = [];
+    }
+    
+    // ID kontrolü
+    if (checklistTypesData[selectedChecklistTypeBranch].some(t => t.id === id)) {
+        showToast('Bu ID zaten kullanılıyor', 'warning');
         return;
     }
     
@@ -17772,39 +17794,34 @@ async function addNewChecklistType() {
         icon: icon
     };
     
-    checklistTypesData.push(newType);
+    checklistTypesData[selectedChecklistTypeBranch].push(newType);
     
-    // Firebase'e hemen kaydet (GLOBAL)
+    // Firebase'e hemen kaydet
     try {
-        // 1. config/checklistTypesGlobal güncelle
-        await db.collection('config').doc('checklistTypesGlobal').set({
-            types: checklistTypesData,
+        // 1. config/checklistTypes güncelle
+        await db.collection('config').doc('checklistTypes').set({
+            ...checklistTypesData,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        // 2. Tüm şubeler için checklists koleksiyonuna boş belge oluştur
-        const branches = STATE.branches || [];
-        for (const branch of branches) {
-            const checklistDocId = `${normalizeBranchId(branch)}_${id}`;
-            await db.collection('checklists').doc(checklistDocId).set({
-                branch: branch,
-                type: id,
-                items: [], // Boş maddeler - sonra düzenleme modundan eklenecek
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        }
-        
-        // Global CHECKLIST_TYPES'ı güncelle (tüm şubeler için)
-        branches.forEach(branch => {
-            CHECKLIST_TYPES[branch] = [...checklistTypesData];
+        // 2. checklists koleksiyonuna boş belge oluştur
+        const checklistDocId = `${selectedChecklistTypeBranch.replace(/[^a-zA-Z0-9]/g, '_')}_${id}`;
+        await db.collection('checklists').doc(checklistDocId).set({
+            branch: selectedChecklistTypeBranch,
+            type: id,
+            items: [], // Boş maddeler - sonra düzenleme modundan eklenecek
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        toast(`"${name}" türü eklendi (tüm şubelere)`, 'success');
+        // Global CHECKLIST_TYPES'ı güncelle
+        CHECKLIST_TYPES[selectedChecklistTypeBranch] = checklistTypesData[selectedChecklistTypeBranch];
+        
+        showToast(`"${name}" türü eklendi ve kaydedildi`, 'success');
     } catch (e) {
         console.error('Yeni tür kaydedilemedi:', e);
-        toast('Kaydetme hatası: ' + e.message, 'error');
+        showToast('Kaydetme hatası: ' + e.message, 'error');
         // Hata durumunda geri al
-        checklistTypesData.pop();
+        checklistTypesData[selectedChecklistTypeBranch].pop();
         return;
     }
     
@@ -17815,32 +17832,32 @@ async function addNewChecklistType() {
     renderChecklistTypes();
 }
 
-// Checklist türü sil (GLOBAL)
+// Checklist türü sil
 function deleteChecklistType(typeId) {
-    if (!confirm('Bu checklist türünü TÜM ŞUBELERDEN silmek istediğinize emin misiniz?')) return;
+    if (!confirm('Bu checklist türünü silmek istediğinize emin misiniz?')) return;
     
-    const idx = checklistTypesData.findIndex(t => t.id === typeId);
+    const types = checklistTypesData[selectedChecklistTypeBranch] || [];
+    const idx = types.findIndex(t => t.id === typeId);
     if (idx > -1) {
-        checklistTypesData.splice(idx, 1);
+        types.splice(idx, 1);
         renderChecklistTypes();
-        toast('Tür silindi (tüm şubelerden)', 'success');
+        showToast('Tür silindi', 'success');
     }
 }
 
-// Checklist türlerini Firebase'e kaydet (GLOBAL)
+// Checklist türlerini Firebase'e kaydet
 async function saveChecklistTypesConfig() {
     try {
-        // 1. config/checklistTypesGlobal güncelle
-        await db.collection('config').doc('checklistTypesGlobal').set({
-            types: checklistTypesData,
+        // 1. config/checklistTypes güncelle
+        await db.collection('config').doc('checklistTypes').set({
+            ...checklistTypesData,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        // 2. Her tür için ve her şube için checklists koleksiyonunda belge var mı kontrol et
-        const branches = STATE.branches || [];
-        for (const branch of branches) {
-            for (const type of checklistTypesData) {
-                const checklistDocId = `${normalizeBranchId(branch)}_${type.id}`;
+        // 2. Her tür için checklists koleksiyonunda belge var mı kontrol et, yoksa oluştur
+        for (const [branch, types] of Object.entries(checklistTypesData)) {
+            for (const type of types) {
+                const checklistDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type.id}`;
                 try {
                     const doc = await db.collection('checklists').doc(checklistDocId).get();
                     if (!doc.exists) {
@@ -17859,52 +17876,62 @@ async function saveChecklistTypesConfig() {
             }
         }
         
-        // 3. Global CHECKLIST_TYPES'ı da güncelle (tüm şubeler için aynı)
-        branches.forEach(branch => {
-            CHECKLIST_TYPES[branch] = [...checklistTypesData];
-        });
+        // 3. Global CHECKLIST_TYPES'ı da güncelle
+        for (const [branch, types] of Object.entries(checklistTypesData)) {
+            CHECKLIST_TYPES[branch] = types;
+        }
         
-        toast('Checklist türleri kaydedildi (tüm şubelere)', 'success');
+        showToast('Checklist türleri kaydedildi', 'success');
     } catch (e) {
         console.error('Checklist türleri kaydedilemedi:', e);
-        toast('Kaydetme hatası: ' + e.message, 'error');
+        showToast('Kaydetme hatası: ' + e.message, 'error');
     }
 }
 
-// Checklist türlerini orijinal değerlere sıfırla (GLOBAL)
+// Checklist türlerini seed.html orijinalleriyle sync et
 async function syncChecklistTypesWithSeed() {
-    if (!confirm('Checklist türleri orijinal değerlerine sıfırlanacak. Devam etmek istiyor musunuz?')) return;
+    if (!confirm('Checklist türleri seed.html orijinal değerlerine sıfırlanacak. Devam etmek istiyor musunuz?')) return;
     
-    // Orijinal CHECKLIST_TYPES (GLOBAL)
-    const SEED_TYPES = [
-        {id: 'acilis', name: 'Açılış Hazırlıkları', icon: 'sunrise'},
-        {id: 'kapanis', name: 'Kapanış Hazırlıkları', icon: 'sunset'},
-        {id: 'gunluk', name: 'Günlük Genel Check', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
-        {id: 'mudur', name: 'Müdür Kontrol', icon: 'user-check', managerOnly: true},
-        {id: 'platform', name: 'Platform Check', icon: 'smartphone', timeSlots: ['10:00','12:00','15:00','18:00','21:00','00:00']},
-        {id: 'haftalik', name: 'Haftalık Görevler', icon: 'calendar-week'},
-        {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
-    ];
+    // seed.html'deki orijinal CHECKLIST_TYPES
+    const SEED_CHECKLIST_TYPES = {
+        'Tuzla TRC': [
+            {id: 'acilis', name: 'Açılış Hazırlıkları', icon: 'sunrise'},
+            {id: 'kapanis', name: 'Kapanış Hazırlıkları', icon: 'sunset'},
+            {id: 'gunluk', name: 'Günlük Genel Check', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
+            {id: 'mudur', name: 'Müdür Kontrol', icon: 'user-check', managerOnly: true},
+            {id: 'platform', name: 'Platform Check', icon: 'smartphone', timeSlots: ['10:00','12:00','15:00','18:00','21:00','00:00']},
+            {id: 'haftalik', name: 'Haftalık Görevler', icon: 'calendar-week'},
+            {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
+        ],
+        'Şişli (Merkez)': [
+            {id: 'acilis', name: 'Açılış Hazırlıkları', icon: 'sunrise'},
+            {id: 'kapanis', name: 'Kapanış Hazırlıkları', icon: 'sunset'},
+            {id: 'gunluk', name: 'Günlük Genel Check', icon: 'clipboard-check', timeSlots: ['14:00','18:00','22:00']},
+            {id: 'mudur', name: 'Müdür Kontrol', icon: 'user-check', managerOnly: true},
+            {id: 'platform', name: 'Platform Check', icon: 'smartphone', timeSlots: ['10:00','12:00','15:00','18:00','21:00','00:00']},
+            {id: 'aylik', name: 'Temizlik ve Bakım', icon: 'calendar'}
+        ]
+    };
     
     try {
-        await db.collection('config').doc('checklistTypesGlobal').set({
-            types: SEED_TYPES,
+        await db.collection('config').doc('checklistTypes').set({
+            ...SEED_CHECKLIST_TYPES,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        checklistTypesData = SEED_TYPES;
+        // Global CHECKLIST_TYPES'ı da güncelle
+        for (const [branch, types] of Object.entries(SEED_CHECKLIST_TYPES)) {
+            CHECKLIST_TYPES[branch] = types;
+        }
         
-        // Global CHECKLIST_TYPES'ı güncelle
-        const branches = STATE.branches || [];
-        branches.forEach(branch => {
-            CHECKLIST_TYPES[branch] = [...SEED_TYPES];
-        });
-        
+        // UI'ı güncelle
+        checklistTypesData = { ...SEED_CHECKLIST_TYPES };
         renderChecklistTypes();
-        toast('Checklist türleri orijinal değerlere sıfırlandı', 'success');
+        
+        showToast('Checklist türleri orijinal değerlere sıfırlandı', 'success');
     } catch (e) {
-        console.error('Sıfırlama hatası:', e);
-        toast('Sıfırlama hatası: ' + e.message, 'error');
+        console.error('Sync hatası:', e);
+        showToast('Sync hatası: ' + e.message, 'error');
     }
 }
 
@@ -19339,7 +19366,7 @@ async function loadChecklistTodayPanel() {
                     if (!window) continue;
                     if (!isAdmin && (window.isMissed || window.isBeforeWindow)) continue;
                     
-                    const submissionId = `${normalizeBranchId(branch)}_${checkType.id}_${todayStr}_${timeSlot.replace(':', '')}`;
+                    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType.id}_${todayStr}_${timeSlot.replace(':', '')}`;
                     let isCompleted = false;
                     
                     try {
@@ -19420,7 +19447,7 @@ async function loadChecklistTodayPanel() {
                 const currentMinutes = now.getHours() * 60 + now.getMinutes();
                 const deadlineMinutes = 11 * 60; // 11:00
                 if (currentMinutes <= deadlineMinutes || isAdmin) {
-                    const submissionId = `${normalizeBranchId(branch)}_acilis_${todayStr}`;
+                    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_acilis_${todayStr}`;
                     let isCompleted = false;
                     try {
                         const doc = await db.collection('checklistSubmissions').doc(submissionId).get();
@@ -19457,7 +19484,7 @@ async function loadChecklistTodayPanel() {
                 const now = new Date();
                 const currentHour = now.getHours();
                 if (currentHour >= 18 || isAdmin) {
-                    const submissionId = `${normalizeBranchId(branch)}_kapanis_${todayStr}`;
+                    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_kapanis_${todayStr}`;
                     let isCompleted = false;
                     try {
                         const doc = await db.collection('checklistSubmissions').doc(submissionId).get();
@@ -21203,7 +21230,7 @@ async function saveAllChecklistItemEdits(branch, type) {
         'aylik_temizlik': 'aylik', 'temizlik': 'aylik'
     };
     const mappedType = TYPE_ID_MAP[type] || type;
-    const checklistId = `${normalizeBranchId(branch)}_${mappedType}`;
+    const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${mappedType}`;
     
     // Mevcut dokümanı çek
     try {
@@ -21395,7 +21422,7 @@ async function runDataMigration() {
         toast(`Migrasyon tamamlandı! ${personelMap.size} personel, ${shiftFixCount} shift düzeltildi.`, 'success');
         
         // Cache'i temizle
-        PERSONEL_DISPLAY_CACHE.clear();
+        clearPersonelDisplayCache();
         _migrationPersonelMap = null;
         
         // Sayfayı yenile
@@ -21886,7 +21913,7 @@ function renderBadges(badges) {
 // ==================== GÖREV ATAMALARINI TEMİZLE (Shift değişiminde) ====================
 async function clearTaskAssignmentsForBranch(branch, weekStart) {
     try {
-        const branchKey = normalizeBranchId(branch);
+        const branchKey = branch.replace(/[^a-zA-Z0-9]/g, '_');
         
         // Haftalık atamaları sil
         const weeklyDocId = `${branchKey}_${weekStart}`;
@@ -21963,7 +21990,7 @@ async function getWeeklyTaskAssignments(branch, weekStart) {
  * shiftPersonnel listesi varsa ve birden fazla kişi varsa aktif
  */
 async function getDailyTaskAssignments(branch, type, date, items = [], personnel = []) {
-    const assignmentDocId = `${normalizeBranchId(branch)}_${type}_${date}`;
+    const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}_${date}`;
     
     try {
         const existingDoc = await db.collection('dailyTaskAssignments').doc(assignmentDocId).get();
@@ -22016,7 +22043,7 @@ async function distributeDailyTasks(branch, type, date, items, personnel) {
         return null;
     }
     
-    const assignmentDocId = `${normalizeBranchId(branch)}_${type}_${date}`;
+    const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}_${date}`;
     
     try {
         // Görevleri eşit dağıt
@@ -22055,7 +22082,7 @@ async function distributeDailyTasks(branch, type, date, items, personnel) {
  * Günlük görev atamasını temizle (paylaşımı kaldır)
  */
 async function clearDailyTaskAssignments(branch, type, date) {
-    const assignmentDocId = `${normalizeBranchId(branch)}_${type}_${date}`;
+    const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}_${date}`;
     
     try {
         await db.collection('dailyTaskAssignments').doc(assignmentDocId).delete();
@@ -22071,7 +22098,7 @@ async function clearDailyTaskAssignments(branch, type, date) {
  * Tek bir günlük görevi başka personele ata
  */
 async function reassignDailyTask(branch, type, date, taskId, newPersonel) {
-    const assignmentDocId = `${normalizeBranchId(branch)}_${type}_${date}`;
+    const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}_${date}`;
     
     try {
         await db.collection('dailyTaskAssignments').doc(assignmentDocId).update({
@@ -22089,11 +22116,11 @@ async function reassignDailyTask(branch, type, date, taskId, newPersonel) {
 }
 
 async function generateWeeklyTaskAssignments(branch, weekStart) {
-    const assignmentDocId = `${normalizeBranchId(branch)}_${weekStart}`;
+    const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekStart}`;
     
     try {
         // 1. Haftalık görevleri al
-        const checklistId = `${normalizeBranchId(branch)}_haftalik`;
+        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_haftalik`;
         const checklistDoc = await db.collection('checklists').doc(checklistId).get();
         
         if (!checklistDoc.exists) {
@@ -22151,7 +22178,7 @@ async function generateWeeklyTaskAssignments(branch, weekStart) {
         try {
             const prevWeekStart = new Date(weekStart);
             prevWeekStart.setDate(prevWeekStart.getDate() - 7);
-            const prevDocId = `${normalizeBranchId(branch)}_${formatDateLocal(prevWeekStart)}`;
+            const prevDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${formatDateLocal(prevWeekStart)}`;
             const prevDoc = await db.collection('weeklyTaskAssignments').doc(prevDocId).get();
             if (prevDoc.exists) {
                 rotationIndex = ((prevDoc.data().rotationIndex || 0) + 1) % activePersonnel.length;
@@ -22191,7 +22218,7 @@ async function generateWeeklyTaskAssignments(branch, weekStart) {
  * Tek bir görevi başka personele ata (müdür yetkisi)
  */
 async function reassignWeeklyTask(branch, weekStart, taskId, newPersonel) {
-    const assignmentDocId = `${normalizeBranchId(branch)}_${weekStart}`;
+    const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekStart}`;
     
     try {
         await db.collection('weeklyTaskAssignments').doc(assignmentDocId).update({
@@ -22392,7 +22419,7 @@ async function updateChecklistOrder() {
     
     if (!branch || !type) return;
     
-    const checklistId = `${normalizeBranchId(branch)}_${type}`;
+    const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
     
     try {
         const checklistRef = db.collection('checklists').doc(checklistId);
@@ -22445,7 +22472,7 @@ async function deleteSelectedChecklistItems(branch, type) {
     if (!confirm(`${selected.length} madde silinecek. Emin misiniz?`)) return;
     
     try {
-        const checklistId = `${normalizeBranchId(branch)}_${type}`;
+        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
         const checklistRef = db.collection('checklists').doc(checklistId);
         const doc = await checklistRef.get();
         
@@ -22702,7 +22729,7 @@ async function renderPlatformChecklistWithStatus(container, branch, date, active
     }
     
     // Saat bazlı submission ID
-    const submissionId = `${normalizeBranchId(branch)}_platform_${date}_${selectedTimeSlot.replace(':', '')}`;
+    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_platform_${date}_${selectedTimeSlot.replace(':', '')}`;
     
     // Önce mevcut submission'ı kontrol et
     let submittedData = null;
@@ -23234,7 +23261,7 @@ async function confirmAndSaveChecklist(branch, type, date, timeSlot, personName,
 // Checklist'i kaydet ve paylaş
 async function saveChecklistAndShare(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, totalCount, skippedItems = []) {
     try {
-        const checklistId = `${normalizeBranchId(branch)}_${type}`;
+        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
         const submissionId = `${checklistId}_${date}${timeSlot ? '_' + timeSlot.replace(':', '') : ''}`;
         
         // Puan hesaplama
@@ -23860,7 +23887,7 @@ async function addChecklistItem(branch, type) {
     const penalty = document.getElementById('newChecklistItemPenalty')?.value?.trim();
     
     try {
-        const checklistId = `${normalizeBranchId(branch)}_${type}`;
+        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
         const checklistRef = db.collection('checklists').doc(checklistId);
         const doc = await checklistRef.get();
         
@@ -23910,7 +23937,7 @@ async function deleteChecklistItem(itemId) {
     const type = document.getElementById('checklistType')?.value;
     
     try {
-        const checklistId = `${normalizeBranchId(branch)}_${type}`;
+        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
         const checklistRef = db.collection('checklists').doc(checklistId);
         const doc = await checklistRef.get();
         
@@ -23942,7 +23969,7 @@ async function showEditChecklistItemModal(itemId) {
     }
     
     try {
-        const checklistId = `${normalizeBranchId(branch)}_${type}`;
+        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
         const checklistRef = db.collection('checklists').doc(checklistId);
         const doc = await checklistRef.get();
         
@@ -24074,7 +24101,7 @@ async function editChecklistItem(itemId, branch, type) {
     }
     
     try {
-        const checklistId = `${normalizeBranchId(branch)}_${type}`;
+        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
         const checklistRef = db.collection('checklists').doc(checklistId);
         const doc = await checklistRef.get();
         
@@ -24722,7 +24749,7 @@ async function handleTemizlikItemClick(branch, itemId, itemText, personId, perso
 // Temizlik maddesini tamamla
 async function completeTemizlikItem(branch, itemId, itemText, personId, personName) {
     const now = new Date();
-    const docId = `${normalizeBranchId(branch)}_${itemId}_${formatDateLocal(now)}_${Date.now()}`;
+    const docId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${itemId}_${formatDateLocal(now)}_${Date.now()}`;
     
     try {
         // Cooldown kontrolü
@@ -24894,7 +24921,7 @@ async function getAssignmentPool(branch) {
 // Haftalık atama oluştur veya mevcut atamayı al
 async function getOrCreateWeeklyAssignments(branch) {
     const weekId = getWeekId();
-    const docId = `${normalizeBranchId(branch)}_${weekId}`;
+    const docId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekId}`;
     
     try {
         // Mevcut atamayı kontrol et
@@ -24917,7 +24944,7 @@ async function getOrCreateWeeklyAssignments(branch) {
 
 // Yeni haftalık atama oluştur (round-robin)
 async function createWeeklyAssignments(branch, weekId) {
-    const branchKey = normalizeBranchId(branch);
+    const branchKey = branch.replace(/[^a-zA-Z0-9]/g, '_');
     const docId = `${branchKey}_${weekId}`;
     
     try {
@@ -25027,7 +25054,7 @@ async function createWeeklyAssignments(branch, weekId) {
 // Bir maddeyi tamamla
 async function completeWeeklyItem(branch, itemId, personnelId) {
     const weekId = getWeekId();
-    const docId = `${normalizeBranchId(branch)}_${weekId}`;
+    const docId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekId}`;
     
     try {
         const doc = await db.collection('weeklyAssignments').doc(docId).get();
