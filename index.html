@@ -1650,12 +1650,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <button class="admin-tab active" id="tab-genel" onclick="showAdminTab('genel',this)">Genel</button>
                     <button class="admin-tab" id="tab-tumCheckler" onclick="showAdminTab('tumCheckler',this)">Tüm Checkler</button>
                     <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">Pozisyon Yetkileri</button>
-                    <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">Oturumlar & Aktiviteler</button>
-                    <button class="admin-tab" id="tab-subelerSaatler" onclick="showAdminTab('subelerSaatler',this)">Şubeler & Saatler</button>
+                    <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">Oturumlar</button>
+                    <button class="admin-tab" id="tab-magazaSaatleri" onclick="showAdminTab('magazaSaatleri',this)">Mağaza Saatleri</button>
                     <button class="admin-tab" id="tab-checkKurallari" onclick="showAdminTab('checkKurallari',this)">Check & Puantaj Kuralları</button>
                     <button class="admin-tab" id="tab-checklistTurleri" onclick="showAdminTab('checklistTurleri',this)">Checklist Türleri</button>
+                    <button class="admin-tab" id="tab-subeler" onclick="showAdminTab('subeler',this)">Şubeler</button>
                     <button class="admin-tab" id="tab-ihlaller" onclick="showAdminTab('ihlaller',this)">İhlaller</button>
-                    <button class="admin-tab" id="tab-sablonlar" onclick="showAdminTab('sablonlar',this)">Şablonlar</button>
+                    <button class="admin-tab" id="tab-sablonlar" onclick="showAdminTab('sablonlar',this)">Sözleşme Şablonları</button>
+                    <button class="admin-tab" id="tab-belgeler" onclick="showAdminTab('belgeler',this)">Belge Şablonları</button>
+                    <button class="admin-tab" id="tab-aktiviteler" onclick="showAdminTab('aktiviteler',this)">Aktiviteler</button>
+                    <button class="admin-tab" id="tab-yedekler" onclick="showAdminTab('yedekler',this)">Yedekler</button>
                 </div>
                 
                 <!-- Tüm Checkler Özet -->
@@ -1721,39 +1725,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                         <div id="cleanupResults" style="margin-top:12px;padding:12px;background:var(--bg3);border-radius:8px;display:none"></div>
                     </div>
-                    
-                    <!-- Yedekler - Genel içinde -->
-                    <div class="admin-card" style="margin-top:20px">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
-                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                Otomatik Yedekler
-                            </div>
-                            <button class="btn btn-sm" style="background:#008c95;color:#fff" onclick="manualBackupNow()">+ Manuel Yedek Al</button>
-                        </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Her 3 saatte otomatik yedek • 30 günden eski silinir • Tarih+saat seç ve indir</p>
-                        <div id="backupsListContainer">
-                            <p style="color:var(--tx2);text-align:center;padding:40px">Yedekler yükleniyor...</p>
-                        </div>
-                    </div>
                 </div>
 
-                <!-- Şubeler & Saatler (Birleştirilmiş) -->
-                <div class="admin-section" id="admin-subelerSaatler">
-                    <!-- Şube Yönetimi -->
+                <!-- Mağaza Saatleri -->
+                <div class="admin-section" id="admin-magazaSaatleri">
                     <div class="admin-card">
                         <div class="admin-card-header">
-                            <div class="admin-card-title">📍 Şube Yönetimi</div>
-                            <button class="btn btn-sm btn-primary" onclick="addBranch()">+ Yeni Şube</button>
-                        </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Sistemdeki şubeleri yönetin. Şube eklemek/silmek tüm sistemleri etkiler.</p>
-                        <div class="admin-list" id="branchList"></div>
-                    </div>
-                    
-                    <!-- Çalışma Saatleri -->
-                    <div class="admin-card" style="margin-top:16px">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title">🕐 Çalışma Saatleri</div>
+                            <div class="admin-card-title">🕐 Mağaza Çalışma Saatleri</div>
                             <button class="btn btn-sm btn-primary" onclick="saveBranchHours()">💾 Kaydet</button>
                         </div>
                         <p style="color:var(--tx2);font-size:.85rem;margin-bottom:20px">Her mağazanın açılış ve kapanış saatlerini belirleyin. Kapanış saati shift hesaplamalarında kullanılır.</p>
@@ -2049,39 +2027,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Canlı Aktiviteler -->
-                    <div class="admin-card" style="margin-top:16px">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
-                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
-                                Canlı Aktiviteler
-                                <span id="liveActivityIndicator" style="width:8px;height:8px;background:#27ae60;border-radius:50%;animation:pulse 2s infinite"></span>
-                            </div>
-                            <button class="btn btn-sm btn-ghost" onclick="loadActivityLogs()" style="display:flex;align-items:center;gap:4px">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-                                Yenile
-                            </button>
-                        </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Kullanıcıların sistem üzerindeki tüm hareketlerini canlı takip edin.</p>
-                        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-                            <select id="activityUserFilter" class="form-select" style="min-width:160px" onchange="loadActivityLogs()">
-                                <option value="">Tüm Kullanıcılar</option>
-                            </select>
-                            <select id="activityTypeFilter" class="form-select" style="min-width:140px" onchange="loadActivityLogs()">
-                                <option value="">Tüm Aktiviteler</option>
-                                <option value="login">Giriş</option>
-                                <option value="logout">Çıkış</option>
-                                <option value="page_view">Sayfa Görüntüleme</option>
-                                <option value="document_create">Belge Oluşturma</option>
-                                <option value="data_edit">Veri Düzenleme</option>
-                            </select>
-                            <input type="date" id="activityDateFilter" class="form-input" style="width:160px" onchange="loadActivityLogs()">
-                        </div>
-                        <div class="admin-list" id="activityLogList" style="max-height:400px;overflow-y:auto">
-                            <p style="color:var(--tx2);text-align:center;padding:20px">Aktiviteler yükleniyor...</p>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Puantaj Kuralları -->
@@ -2286,6 +2231,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                 </div>
 
+                <!-- Şubeler -->
+                <div class="admin-section" id="admin-subeler">
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">📍 Şubeler</div>
+                            <button class="btn btn-sm btn-primary" onclick="addBranch()">+ Ekle</button>
+                        </div>
+                        <div class="admin-list" id="branchList"></div>
+                    </div>
+                </div>
+
                 <!-- İhlaller -->
                 <div class="admin-section" id="admin-ihlaller">
                     <div class="admin-card">
@@ -2300,23 +2256,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                 </div>
 
-                <!-- Şablonlar (Birleştirilmiş) -->
+                <!-- Şablonlar -->
                 <div class="admin-section" id="admin-sablonlar">
-                    <!-- Alt Tab'lar -->
-                    <div style="display:flex;gap:8px;margin-bottom:16px">
-                        <button class="btn btn-primary" id="sablonTab-sozlesme" onclick="switchSablonTab('sozlesme')">📄 Sözleşme Şablonları</button>
-                        <button class="btn btn-ghost" id="sablonTab-belgeler" onclick="switchSablonTab('belgeler')">📝 Belge Şablonları</button>
-                    </div>
-                    
-                    <!-- Sözleşme Şablonları Panel -->
-                    <div id="sablonPanel-sozlesme" class="admin-card">
+                    <div class="admin-card">
                         <div class="admin-card-header">
                             <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
                                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                                 Sözleşme Şablonları
                             </div>
                         </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Her pozisyon için HTML şablon düzenleyin. Placeholder'lar: <code style="background:var(--bg3);padding:2px 6px;border-radius:4px">{{AD_SOYAD}}</code>, <code style="background:var(--bg3);padding:2px 6px;border-radius:4px">{{TC}}</code>, <code style="background:var(--bg3);padding:2px 6px;border-radius:4px">{{ADRES}}</code>, <code style="background:var(--bg3);padding:2px 6px;border-radius:4px">{{IBAN}}</code>, <code style="background:var(--bg3);padding:2px 6px;border-radius:4px">{{UCRET}}</code>, <code style="background:var(--bg3);padding:2px 6px;border-radius:4px">{{BASLAMA}}</code>, <code style="background:var(--bg3);padding:2px 6px;border-radius:4px">{{SUBE}}</code></p>
+                        <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:16px">Her pozisyon için HTML şablon düzenleyin. Placeholder'lar: <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{AD_SOYAD}}</code>, <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{TC}}</code>, <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{ADRES}}</code>, <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{IBAN}}</code>, <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{UCRET}}</code>, <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{BASLAMA}}</code>, <code style="background:var(--surface3);padding:2px 6px;border-radius:4px">{{SUBE}}</code></p>
                         <div class="form-group">
                             <label class="form-label">Pozisyon Seç</label>
                             <select id="template_pozisyon" class="form-select" onchange="loadTemplate()"></select>
@@ -2327,9 +2276,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                         <div class="btn-group"><button class="btn btn-primary btn-sm" onclick="saveTemplate()">Şablonu Kaydet</button></div>
                     </div>
-                    
-                    <!-- Belge Şablonları Panel -->
-                    <div id="sablonPanel-belgeler" class="admin-card" style="display:none">
+                </div>
+
+                <!-- Belge Şablonları -->
+                <div class="admin-section" id="admin-belgeler">
+                    <div class="admin-card">
                         <div class="admin-card-header">
                             <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
                                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -2337,7 +2288,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             </div>
                             <div id="docTemplateUnsaved" style="display:none;color:var(--yellow);font-size:.8rem;font-weight:500">Kaydedilmemiş değişiklikler</div>
                         </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Tutanak, savunma, fesih ve borç ikrar belgelerinin içeriklerini düzenleyin.</p>
+                        <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:16px">Tutanak, savunma, fesih ve borç ikrar belgelerinin içeriklerini düzenleyin. Değişiklikler kaydedilmezse varsayılan şablonlar kullanılır.</p>
                         
                         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
                             <button class="btn btn-sm btn-primary" onclick="selectDocTemplateCategory('tutanak')">📋 Tutanak</button>
@@ -2361,7 +2312,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         
                         <!-- Savunma -->
                         <div id="docTemplate-savunma" class="doc-template-panel" style="display:none">
-                            <p style="color:var(--tx2);font-size:.85rem">Savunma isteme yazısı şablonu</p>
+                            <p style="color:var(--txdark2);font-size:.85rem">Savunma isteme yazısı şablonu</p>
                         </div>
                         
                         <!-- Fesih Alt Türleri -->
@@ -2378,11 +2329,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         
                         <!-- Borç İkrar -->
                         <div id="docTemplate-borc" class="doc-template-panel" style="display:none">
-                            <p style="color:var(--tx2);font-size:.85rem">Borç ikrar ve mahsup muvafakatnamesi şablonu</p>
+                            <p style="color:var(--txdark2);font-size:.85rem">Borç ikrar ve mahsup muvafakatnamesi şablonu</p>
                         </div>
                         
                         <div class="form-group" style="margin-top:16px">
-                            <label class="form-label">Şablon Açıklaması <span style="color:var(--tx2);font-size:.75rem">(Yer tutucular: {{PERSONEL}}, {{TC}}, {{SUBE}}, {{TARIH}}, {{SAAT}}, {{ACIKLAMA}}, {{DAYANAK}})</span></label>
+                            <label class="form-label">Şablon Açıklaması <span style="color:var(--txdark2);font-size:.75rem">(Yer tutucular: {{PERSONEL}}, {{TC}}, {{SUBE}}, {{TARIH}}, {{SAAT}}, {{ACIKLAMA}}, {{DAYANAK}})</span></label>
                             <textarea id="doc_template_content" class="form-textarea" style="min-height:250px;font-family:var(--mono);font-size:.8rem" oninput="trackDocTemplateChanges()"></textarea>
                         </div>
                         
@@ -2399,6 +2350,57 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
                                 Varsayılana Dön
                             </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aktiviteler (Sadece Yönetici) -->
+                <div class="admin-section" id="admin-aktiviteler">
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                                Kullanıcı Aktiviteleri
+                            </div>
+                            <button class="btn btn-sm btn-ghost" onclick="loadActivityLogs()" style="display:flex;align-items:center;gap:4px">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                                Yenile
+                            </button>
+                        </div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Kullanıcıların sistem üzerindeki hareketlerini takip edin.</p>
+                        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+                            <select id="activityUserFilter" class="form-select" style="min-width:160px" onchange="loadActivityLogs()">
+                                <option value="">Tüm Kullanıcılar</option>
+                            </select>
+                            <select id="activityTypeFilter" class="form-select" style="min-width:140px" onchange="loadActivityLogs()">
+                                <option value="">Tüm Aktiviteler</option>
+                                <option value="login">Giriş</option>
+                                <option value="logout">Çıkış</option>
+                                <option value="page_view">Sayfa Görüntüleme</option>
+                                <option value="document_create">Belge Oluşturma</option>
+                                <option value="data_edit">Veri Düzenleme</option>
+                            </select>
+                            <input type="date" id="activityDateFilter" class="form-input" style="width:160px" onchange="loadActivityLogs()">
+                        </div>
+                        <div class="admin-list" id="activityLogList" style="max-height:500px;overflow-y:auto">
+                            <p style="color:var(--tx2);text-align:center;padding:20px">Aktiviteler yükleniyor...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- G15: Yedekler -->
+                <div class="admin-section" id="admin-yedekler">
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                Otomatik Yedekler
+                            </div>
+                            <button class="btn btn-sm" style="background:#008c95;color:#fff" onclick="manualBackupNow()">+ Manuel Yedek Al</button>
+                        </div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Her 3 saatte otomatik yedek • 30 günden eski silinir • Tarih+saat seç ve indir</p>
+                        <div id="backupsListContainer">
+                            <p style="color:var(--tx2);text-align:center;padding:40px">Yedekler yükleniyor...</p>
                         </div>
                     </div>
                 </div>
@@ -5585,10 +5587,10 @@ function applyAdminTabPermissions() {
     const perms = window.userAdvancedPermissions;
     
     // Sadece yönetici görebilir sekmeler
-    const yoneticiOnlyTabs = ['genel', 'kullanicilar', 'oturumlar'];
+    const yoneticiOnlyTabs = ['genel', 'kullanicilar', 'oturumlar', 'aktiviteler', 'yedekler'];
     
     // Rol atanabilir sekmeler (PERMISSION_STRUCTURE.adminTabs'dan)
-    const rolAtanabilirTabs = ['tumCheckler', 'subelerSaatler', 'checkKurallari', 'checklistTurleri', 'ihlaller', 'sablonlar'];
+    const rolAtanabilirTabs = ['tumCheckler', 'magazaSaatleri', 'checkKurallari', 'checklistTurleri', 'subeler', 'pozisyonlar', 'ihlaller', 'sablonlar', 'belgeler'];
     
     let firstVisibleTab = null;
     let currentActiveHidden = false;
@@ -6773,17 +6775,6 @@ function deleteViolation(i) {
 }
 
 // ========== TEMPLATES ==========
-// Şablon tab geçişi
-function switchSablonTab(tab) {
-    // Tab butonlarını güncelle
-    document.getElementById('sablonTab-sozlesme').className = tab === 'sozlesme' ? 'btn btn-primary' : 'btn btn-ghost';
-    document.getElementById('sablonTab-belgeler').className = tab === 'belgeler' ? 'btn btn-primary' : 'btn btn-ghost';
-    
-    // Panelleri göster/gizle
-    document.getElementById('sablonPanel-sozlesme').style.display = tab === 'sozlesme' ? 'block' : 'none';
-    document.getElementById('sablonPanel-belgeler').style.display = tab === 'belgeler' ? 'block' : 'none';
-}
-
 function loadTemplate() {
     const sel = document.getElementById('template_pozisyon');
     const content = document.getElementById('template_content');
@@ -6976,7 +6967,7 @@ function switchDocTemplateCategory(category) {
     currentDocTemplateCategory = category;
     
     // Butonları güncelle
-    document.querySelectorAll('#sablonPanel-belgeler .btn-sm').forEach(btn => {
+    document.querySelectorAll('#admin-belgeler .btn-group .btn').forEach(btn => {
         btn.classList.remove('btn-primary');
         btn.classList.add('btn-ghost');
     });
@@ -10234,14 +10225,16 @@ const PERMISSION_STRUCTURE = {
     adminTabs: [
         // Rol atanabilir sekmeler (UI'da gösterilir)
         { id: 'tumCheckler', label: 'Tüm Checkler' },
-        { id: 'subelerSaatler', label: 'Şubeler & Saatler' },
+        { id: 'magazaSaatleri', label: 'Mağaza Saatleri' },
         { id: 'checkKurallari', label: 'Check & Puantaj Kuralları' },
         { id: 'checklistTurleri', label: 'Checklist Türleri' },
+        { id: 'subeler', label: 'Şubeler' },
         { id: 'ihlaller', label: 'İhlaller' },
-        { id: 'sablonlar', label: 'Şablonlar' }
+        { id: 'sablonlar', label: 'Sözleşme Şablonları' },
+        { id: 'belgeler', label: 'Belge Şablonları' }
     ],
     // Sadece yönetici görebilir - UI'da rol atama yapılmaz
-    adminTabsYoneticiOnly: ['genel', 'kullanicilar', 'oturumlar'],
+    adminTabsYoneticiOnly: ['genel', 'kullanicilar', 'oturumlar', 'aktiviteler', 'yedekler'],
     special: [
         { id: 'ayarlar_erisim', label: 'Ayarlar sayfasına erişebilir' },
         { id: 'view_all_branches', label: 'Tüm şubeleri görebilir' },
@@ -10264,7 +10257,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         pages: { dashboard: { view: true, edit: false }, personel: { view: false, edit: false }, puantaj: { view: true, edit: false }, shift: { view: true, edit: false }, checklist: { view: true, edit: true }, katalog: { view: false, edit: false } },
         documents: { sozlesme: { view: false, edit: false }, tutanak: { view: false, edit: false }, savunma: { view: false, edit: false }, fesih: { view: false, edit: false }, istifa: { view: false, edit: false }, ibraname: { view: false, edit: false } },
         forms: { borc: { view: false, edit: false }, avans: { view: false, edit: false }, zimmet: { view: false, edit: false } },
-        adminTabs: { tumCheckler: false, subelerSaatler: false, checkKurallari: false, checklistTurleri: false, ihlaller: false, sablonlar: false },
+        adminTabs: { tumCheckler: false, magazaSaatleri: false, checkKurallari: false, checklistTurleri: false, subeler: false, ihlaller: false, sablonlar: false, belgeler: false },
         special: { ayarlar_erisim: false, view_all_branches: false, print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 1 }
     },
@@ -10272,7 +10265,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
-        adminTabs: { tumCheckler: false, subelerSaatler: false, checkKurallari: false, checklistTurleri: false, ihlaller: true, sablonlar: false },
+        adminTabs: { tumCheckler: false, magazaSaatleri: false, checkKurallari: false, checklistTurleri: false, subeler: false, ihlaller: true, sablonlar: false, belgeler: false },
         special: { ayarlar_erisim: true, view_all_branches: false, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 5 }
     },
@@ -10280,7 +10273,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
-        adminTabs: { tumCheckler: true, subelerSaatler: true, checkKurallari: false, checklistTurleri: false, ihlaller: true, sablonlar: false },
+        adminTabs: { tumCheckler: true, magazaSaatleri: true, checkKurallari: false, checklistTurleri: false, subeler: false, ihlaller: true, sablonlar: false, belgeler: false },
         special: { ayarlar_erisim: true, view_all_branches: false, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 5 }
     },
@@ -10288,7 +10281,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: true }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
-        adminTabs: { tumCheckler: true, subelerSaatler: true, checkKurallari: true, checklistTurleri: true, ihlaller: true, sablonlar: true },
+        adminTabs: { tumCheckler: true, magazaSaatleri: true, checkKurallari: true, checklistTurleri: true, subeler: true, ihlaller: true, sablonlar: true, belgeler: true },
         special: { ayarlar_erisim: true, view_all_branches: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true },
         limits: { shift_history_weeks: 999 }
     }
