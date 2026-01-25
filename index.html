@@ -2481,131 +2481,6 @@ function getPersonelDisplayName(personelData) {
     return formatDisplayName(personelData);
 }
 
-// Personel listesinden isim getir (cache kullanarak)
-let _personelDisplayCache = null;
-async function getPersonelDisplayNameFromList(searchKey, branch) {
-    if (!searchKey) return searchKey;
-    
-    // Cache'i kontrol et
-    if (!_personelDisplayCache) {
-        try {
-            const snapshot = await db.collection('personel').get();
-            _personelDisplayCache = new Map();
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                const displayName = getPersonelDisplayName(data);
-                const uniqueId = data.uniqueId || normalizePersonelId(data.name);
-                
-                // Underscore formatı oluştur (örn: "baran_akdemir")
-                const underscoreName = data.name?.toLowerCase().replace(/\s+/g, '_').replace(/[ğ]/g, 'g').replace(/[ü]/g, 'u').replace(/[ş]/g, 's').replace(/[ı]/g, 'i').replace(/[ö]/g, 'o').replace(/[ç]/g, 'c');
-                const underscoreCodeName = data.codeName?.toLowerCase().replace(/\s+/g, '_').replace(/[ğ]/g, 'g').replace(/[ü]/g, 'u').replace(/[ş]/g, 's').replace(/[ı]/g, 'i').replace(/[ö]/g, 'o').replace(/[ç]/g, 'c');
-                
-                // İsmin ilk harfini al (örn: "Baran" -> "baran", "BARAN" -> "baran")
-                const firstName = data.name?.split(' ')[0];
-                const firstNameLower = firstName?.toLowerCase();
-                const firstNameNorm = normalizeTurkishChars(firstName);
-                
-                const codeFirst = data.codeName?.split(' ')[0];
-                const codeFirstLower = codeFirst?.toLowerCase();
-                const codeFirstNorm = normalizeTurkishChars(codeFirst);
-                
-                const keys = [
-                    data.name,
-                    data.name?.toLowerCase(),
-                    data.name?.toUpperCase(),
-                    data.codeName,
-                    data.codeName?.toLowerCase(),
-                    data.codeName?.toUpperCase(),
-                    firstName,
-                    firstNameLower,
-                    firstNameNorm,
-                    codeFirst,
-                    codeFirstLower,
-                    codeFirstNorm,
-                    uniqueId,
-                    normalizePersonelId(data.name),
-                    normalizePersonelId(data.codeName),
-                    normalizeTurkishChars(data.name),
-                    normalizeTurkishChars(data.codeName),
-                    // Underscore formatları (shift'ten gelen)
-                    underscoreName,
-                    underscoreCodeName,
-                    // Karışık format denemeleri
-                    underscoreName?.replace(/_/g, ' '),
-                    underscoreCodeName?.replace(/_/g, ' '),
-                    // İlk isim underscore (örn: "tuana" veya "busra")
-                    underscoreName?.split('_')[0],
-                    underscoreCodeName?.split('_')[0],
-                    // EK: Normalize edilmiş tüm varyasyonlar (Türkçe İ sorunu için)
-                    normalizeTurkishChars(data.name?.toLowerCase()),
-                    normalizeTurkishChars(underscoreName),
-                    normalizeTurkishChars(underscoreName?.replace(/_/g, ' ')),
-                    // displayName formatı (Ad S.)
-                    formatDisplayName(data.name),
-                    formatDisplayName(data.name)?.toLowerCase(),
-                    normalizeTurkishChars(formatDisplayName(data.name)),
-                ].filter(k => k);
-                
-                // Tüm keyleri kaydet
-                keys.forEach(key => {
-                    if (key && !_personelDisplayCache.has(key)) {
-                        _personelDisplayCache.set(key, { 
-                            displayName, 
-                            fullName: data.name,
-                            codeName: data.codeName,
-                            uniqueId,
-                            branch: data.branch
-                        });
-                    }
-                });
-            });
-            console.log('[Cache] Personel cache oluşturuldu:', _personelDisplayCache.size, 'kayıt');
-        } catch (e) {
-            console.error('Personel cache hatası:', e);
-            return searchKey;
-        }
-    }
-    
-    // Arama varyasyonları oluştur
-    const underscoreSearch = searchKey?.toLowerCase().replace(/\s+/g, '_').replace(/[ğ]/g, 'g').replace(/[ü]/g, 'u').replace(/[ş]/g, 's').replace(/[ı]/g, 'i').replace(/[ö]/g, 'o').replace(/[ç]/g, 'c');
-    const spaceSearch = searchKey?.replace(/_/g, ' ');
-    const firstWord = searchKey?.split(/[_\s]/)[0];
-    const normalizedSearch = normalizeTurkishChars(searchKey);
-    const displayFormatSearch = formatDisplayName(searchKey?.replace(/_/g, ' '));
-    
-    // Cache'ten ara - çoklu deneme (GÜÇLENDIRILDI)
-    const result = _personelDisplayCache.get(searchKey) || 
-                   _personelDisplayCache.get(searchKey?.toLowerCase()) ||
-                   _personelDisplayCache.get(searchKey?.toUpperCase()) ||
-                   _personelDisplayCache.get(normalizedSearch) ||
-                   _personelDisplayCache.get(normalizePersonelId(searchKey)) ||
-                   _personelDisplayCache.get(underscoreSearch) ||
-                   _personelDisplayCache.get(spaceSearch) ||
-                   _personelDisplayCache.get(spaceSearch?.toLowerCase()) ||
-                   _personelDisplayCache.get(normalizeTurkishChars(spaceSearch)) ||
-                   _personelDisplayCache.get(firstWord) ||
-                   _personelDisplayCache.get(firstWord?.toLowerCase()) ||
-                   _personelDisplayCache.get(normalizeTurkishChars(firstWord)) ||
-                   _personelDisplayCache.get(displayFormatSearch) ||
-                   _personelDisplayCache.get(displayFormatSearch?.toLowerCase()) ||
-                   _personelDisplayCache.get(normalizeTurkishChars(displayFormatSearch));
-    
-    if (result) {
-        // Branch kontrolü - branch null/"all" ise veya eşleşiyorsa döndür
-        if (!branch || branch === 'all' || !result.branch || result.branch === branch || result.branch === 'all') {
-            return result.displayName;
-        }
-    }
-    
-    console.warn('[Cache] Personel bulunamadı:', searchKey, '-> orijinal değer kullanılıyor');
-    return searchKey; // Bulunamadı, gelen değeri döndür
-}
-
-// Cache'i temizle (yeni personel eklendiğinde)
-function clearPersonelDisplayCache() {
-    _personelDisplayCache = null;
-}
-
 // ==================== MİGRASYON FONKSİYONLARI ====================
 
 // Personel cache for migration
@@ -3105,25 +2980,6 @@ window.cleanOldPuantajNotes = cleanOldPuantajNotes;
 window.fixShiftOrdering = fixShiftOrdering;
 window.fullSystemMigration = fullSystemMigration;
 window.syncAllShiftPersonelNames = syncAllShiftPersonelNames; // Manuel senkronizasyon için
-
-// İsim kısaltma: "BÜŞRA SÖĞÜT" → "Büşra S."
-function formatShortName(fullName) {
-    if (!fullName) return '';
-    const parts = fullName.trim().split(/\s+/);
-    if (parts.length === 0) return '';
-    
-    // İlk harf büyük, geri kalan küçük
-    const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
-    
-    if (parts.length === 1) {
-        return capitalize(parts[0]);
-    }
-    
-    // "İsim S." formatı
-    const firstName = capitalize(parts[0]);
-    const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
-    return `${firstName} ${lastInitial}.`;
-}
 
 // ==================== AUTH & SESSION ====================
 let currentUser = null;
@@ -3912,7 +3768,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         } else {
                             // 3. Email mapping'den bak
                             const emailMatch = personnelMapping.find(p => p.email?.toLowerCase() === user.email?.toLowerCase());
-                            const isAdmin = user.email === 'admin@moonberrycoffee.com' || user.email === 'tamer@moonberrycoffee.com';
+                            
+                            // Admin email kontrolü - dinamik (systemConfig/security'den yüklenir)
+                            let isAdmin = false;
+                            try {
+                                const securityDoc = await db.collection('systemConfig').doc('security').get();
+                                const adminEmail = securityDoc.exists ? securityDoc.data().adminEmail : null;
+                                isAdmin = adminEmail && user.email?.toLowerCase() === adminEmail.toLowerCase();
+                            } catch (e) {
+                                console.warn('Admin email kontrolü yapılamadı:', e);
+                            }
                             
                             currentUser = {
                                 id: user.uid,
@@ -4485,11 +4350,6 @@ function goTo(page) {
     if (page === 'shift') { 
         populateSubeSelect('shiftSube'); 
         loadShiftList();
-        // Yönetici için Excel yükleme butonunu göster
-        const adminExcel = document.getElementById('adminExcelUpload');
-        if (adminExcel) {
-            adminExcel.style.display = currentUser?.role === 'yonetici' ? 'block' : 'none';
-        }
     }
     // Yeni sayfalar için dropdown'ları doldur
     if (page === 'istifa') { 
@@ -6926,84 +6786,7 @@ function saveTemplate() {
     toast('Şablon kaydedildi', 'success');
 }
 
-// ========== SYNC ==========
-function generateExportCode() {
-    try {
-        const json = JSON.stringify(STATE);
-        const compressed = LZString.compressToBase64(json);
-        document.getElementById('exportCode').value = compressed;
-        toast('Kod oluşturuldu', 'success');
-    } catch(e) {
-        toast('Kod oluşturulamadı', 'error');
-    }
-}
-
-function copyExportCode() {
-    const code = document.getElementById('exportCode').value;
-    if (code) {
-        navigator.clipboard.writeText(code).then(() => {
-            toast('Kopyalandı!', 'success');
-        }).catch(() => {
-            // Fallback
-            const ta = document.createElement('textarea');
-            ta.value = code;
-            document.body.appendChild(ta);
-            ta.select();
-            document.execCommand('copy');
-            document.body.removeChild(ta);
-            toast('Kopyalandı!', 'success');
-        });
-    }
-}
-
-function importCode() {
-    const code = document.getElementById('importCode').value.trim();
-    if (!code) {
-        toast('Kod boş', 'error');
-        return;
-    }
-    
-    confirmModal('İçe Aktar', 'Mevcut tüm ayarlarınız değiştirilecek. Emin misiniz?', () => {
-        try {
-            const json = LZString.decompressFromBase64(code);
-            if (!json) throw new Error('Invalid');
-            const data = JSON.parse(json);
-            
-            // Validate basic structure
-            if (!data.pin || !data.company || !data.branches) {
-                throw new Error('Invalid structure');
-            }
-            
-            STATE = {...DEFAULT_STATE, ...data};
-            saveState();
-            initUI();
-            document.getElementById('importCode').value = '';
-            successModal('Veriler başarıyla içe aktarıldı!');
-        } catch(e) {
-            toast('Geçersiz kod!', 'error');
-        }
-    }, 'danger');
-}
-
 // ========== DOSYA YEDEKLEMESİ ==========
-function downloadBackup() {
-    try {
-        const data = JSON.stringify(STATE, null, 2);
-        const blob = new Blob([data], {type: 'application/json'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        const date = new Date().toISOString().split('T')[0];
-        a.href = url;
-        a.download = `moonberry-ik-yedek-${date}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        toast('Yedek dosyası indirildi', 'success');
-    } catch(e) {
-        toast('Yedek oluşturulamadı', 'error');
-    }
-}
 
 function uploadBackup(event) {
     const file = event.target.files[0];
@@ -13137,13 +12920,6 @@ function getShiftColorExcel(val) {
     return SHIFT_COLORS.default;
 }
 
-// Shift değerini görüntüleme formatına çevir (**** -> OFF)
-function formatShiftValue(val) {
-    if (!val) return '';
-    if (/^\*+$/.test(val.trim())) return 'OFF';
-    return val;
-}
-
 async function updateShiftCell(docId, name, dayIdx, value, keepStar = false) {
     if (value === 'parttime') { 
         // Part-time saat seçici modal
@@ -14169,88 +13945,6 @@ async function printShift() {
     printWindow.document.close();
 }
 
-const EXCEL_PERSONEL = {
-    'Şişli': ["ESİN", "ESMA", "ECE"],
-    'Tuzla': ["BÜŞRA", "ESİN", "BALRA", "TUANA", "BARAN", "ELİF"]
-};
-
-// Firebase'e yükle
-async function uploadExcelToFirebase() {
-    if (currentUser?.role !== 'yonetici') {
-        toast('Sadece yönetici yapabilir', 'error');
-        return;
-    }
-    
-    const btn = event.target;
-    btn.disabled = true;
-    btn.innerHTML = '⏳ Yükleniyor...';
-    
-    // Branch isim dönüşümü
-    const branchMap = {
-        'Şişli': 'Şişli (Merkez)',
-        'Tuzla': 'Tuzla TRC'
-    };
-    
-    try {
-        // 1. Personel ekle (son 2 hafta kadrosu)
-        let pAdded = 0;
-        for (const [excelBranch, names] of Object.entries(EXCEL_PERSONEL)) {
-            const dbBranch = branchMap[excelBranch] || excelBranch;
-            for (const name of names) {
-                const existing = await db.collection('personel').where('name', '==', name).where('branch', '==', dbBranch).get();
-                if (existing.empty) {
-                    await db.collection('personel').add({
-                        name: name,
-                        branch: dbBranch,
-                        position: 'Barista',
-                        status: 'aktif',
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    pAdded++;
-                }
-            }
-        }
-        
-        // 2. Shiftleri ekle
-        let sAdded = 0, sSkipped = 0;
-        for (const shift of EXCEL_SHIFTS) {
-            if (!shift.weekStart) { sSkipped++; continue; }
-            
-            const dbBranch = branchMap[shift.branch] || shift.branch;
-            
-            const existing = await db.collection('shifts')
-                .where('branch', '==', dbBranch)
-                .where('weekStart', '==', shift.weekStart)
-                .get();
-            
-            if (existing.empty) {
-                await db.collection('shifts').add({
-                    branch: dbBranch,
-                    weekStart: shift.weekStart,
-                    weekEnd: shift.weekEnd,
-                    weekLabel: shift.weekLabel,
-                    personelShifts: shift.personelShifts,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    source: 'excel'
-                });
-                sAdded++;
-            } else {
-                sSkipped++;
-            }
-        }
-        
-        toast(`✓ ${pAdded} personel, ${sAdded} shift eklendi`, 'success');
-        loadShiftList();
-        
-    } catch (e) {
-        console.error(e);
-        toast('Hata: ' + e.message, 'error');
-    }
-    
-    btn.disabled = false;
-    btn.innerHTML = '📥 Excel Verilerini Yükle';
-}
-
 // ==================== AKTİVİTE LOGLAMA ====================
 
 // Aktivite logla
@@ -14379,22 +14073,6 @@ async function loadActivityLogs() {
             </div>
         `;
     }
-}
-
-// getWeekOptions fonksiyonu (hafta listesi için)// getWeekOptions fonksiyonu (hafta listesi için)
-function getWeekOptions() {
-    const options = [];
-    const today = new Date();
-    for (let i = -12; i <= 2; i++) {
-        const monday = new Date(today);
-        monday.setDate(today.getDate() - today.getDay() + 1 + (i * 7));
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        const label = `${monday.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} - ${sunday.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}`;
-        const value = formatDateLocal(monday);  // Timezone-safe
-        options.push({ value, label, monday, sunday, isCurrent: i === 0 });
-    }
-    return options;
 }
 
 // ==================== CHECKLIST MODULE ====================
@@ -22147,7 +21825,7 @@ async function runDataMigration() {
         toast(`Migrasyon tamamlandı! ${personelMap.size} personel, ${shiftFixCount} shift düzeltildi.`, 'success');
         
         // Cache'i temizle
-        clearPersonelDisplayCache();
+        PERSONEL_DISPLAY_CACHE.clear();
         _migrationPersonelMap = null;
         
         // Sayfayı yenile
