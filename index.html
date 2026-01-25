@@ -20654,14 +20654,14 @@ let personnelMapping = [];
 
 // Tüm config'i Firebase'den yükle
 // ==================== ADMIN EMAIL KONTROLÜ ====================
-// Config'den dinamik admin listesi
-let _adminEmails = ['admin@moonberrycoffee.com']; // Varsayılan (fallback)
+// Config'den dinamik admin listesi - varsayılan fallback
+let _adminEmails = ['admin@moonberrycoffee.com', 'tamer@moonberrycoffee.com'];
 
 async function checkAdminEmail(email) {
     if (!email) return false;
     const emailLower = email.toLowerCase();
     
-    // Önce cache'den kontrol
+    // Önce cache'den kontrol (hızlı)
     if (_adminEmails.includes(emailLower)) return true;
     
     // Firebase'den güncel listeyi çek
@@ -20677,7 +20677,7 @@ async function checkAdminEmail(email) {
     return _adminEmails.includes(emailLower);
 }
 
-// Admin email listesini yükle
+// Admin email listesini yükle (sadece oku - yazma işlemi yok)
 async function loadAdminEmails() {
     try {
         const securityDoc = await db.collection('systemConfig').doc('security').get();
@@ -20685,20 +20685,15 @@ async function loadAdminEmails() {
             _adminEmails = securityDoc.data().adminEmails.map(e => e.toLowerCase());
             console.log('[Config] Admin emails yüklendi:', _adminEmails.length);
         } else {
-            // İlk kullanım - varsayılan admin oluştur
-            await db.collection('systemConfig').doc('security').set({
-                adminEmails: ['admin@moonberrycoffee.com', 'tamer@moonberrycoffee.com'],
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            _adminEmails = ['admin@moonberrycoffee.com', 'tamer@moonberrycoffee.com'];
-            console.log('[Config] Varsayılan admin emails oluşturuldu');
+            // Doküman yok - varsayılan listeyi kullan (yazma yapmıyoruz)
+            console.log('[Config] Admin emails dokümanı yok, varsayılan kullanılıyor');
         }
     } catch (e) {
-        console.error('Admin emails yüklenemedi:', e);
+        console.log('[Config] Admin emails yüklenemedi, varsayılan kullanılıyor');
     }
 }
 
-// Admin email ekle/sil
+// Admin email ekle/sil (sadece yönetici çağırabilir)
 async function saveAdminEmails(emails) {
     try {
         const cleanEmails = emails
