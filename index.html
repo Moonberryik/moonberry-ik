@@ -15285,14 +15285,17 @@ async function loadTodayChecks() {
     }
     
     const todayStr = formatDateLocal(today);
-    const isAdmin = ['yonetici', 'bolge_muduru', 'magaza_muduru', 'mudur', 'admin'].includes(currentUser?.role);
+    const isYonetici = currentUser?.role === 'yonetici';
+    const canViewAllBranches = isYonetici || 
+        window.userAdvancedPermissions?.special?.view_all_branches === true ||
+        currentUser?.branch === 'all';
     const userName = currentUser?.name || 'Personel';
     const currentHour = now.getHours();
     const currentMinutes = now.getMinutes();
     
-    // Yönetici için tüm şubeler, diğerleri için kendi şubesi
+    // view_all_branches izni olanlar tüm şubeleri görür, diğerleri sadece kendi şubesini
     let branches = [];
-    if (isAdmin || currentUser?.branch === 'all') {
+    if (canViewAllBranches) {
         branches = STATE.branches || [];
     } else {
         branches = [currentUser?.branch || STATE.branches?.[0] || 'Tuzla TRC'];
@@ -16963,12 +16966,18 @@ async function loadLeaderboard() {
     
     if (!section || !container) return;
     
-    const isAdmin = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
+    // Leaderboard'u yönetici, bölge müdürü ve mağaza müdürü görebilir
+    const canSeeLeaderboard = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
     
-    if (!isAdmin) {
+    if (!canSeeLeaderboard) {
         section.style.display = 'none';
         return;
     }
+    
+    // Şube filtresi için view_all_branches iznini kontrol et
+    const canViewAllBranches = currentUser?.role === 'yonetici' || 
+        window.userAdvancedPermissions?.special?.view_all_branches === true;
+    const userBranch = currentUser?.branch;
     
     section.style.display = 'block';
     container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tx3)">Yükleniyor...</div>';
@@ -16991,6 +17000,11 @@ async function loadLeaderboard() {
         personelSnapshot.forEach(doc => {
             const d = doc.data();
             if (d.status !== 'inactive' && d.status !== 'deleted') {
+                // Şube filtresi: view_all_branches izni yoksa sadece kendi şubesini göster
+                if (!canViewAllBranches && d.branch !== userBranch) {
+                    return; // Bu personeli atla
+                }
+                
                 const normalizedId = normalizePersonelId(d.name);
                 activePersonel[normalizedId] = {
                     docId: doc.id,
