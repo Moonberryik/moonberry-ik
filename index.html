@@ -2481,6 +2481,131 @@ function getPersonelDisplayName(personelData) {
     return formatDisplayName(personelData);
 }
 
+// Personel listesinden isim getir (cache kullanarak)
+let _personelDisplayCache = null;
+async function getPersonelDisplayNameFromList(searchKey, branch) {
+    if (!searchKey) return searchKey;
+    
+    // Cache'i kontrol et
+    if (!_personelDisplayCache) {
+        try {
+            const snapshot = await db.collection('personel').get();
+            _personelDisplayCache = new Map();
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const displayName = getPersonelDisplayName(data);
+                const uniqueId = data.uniqueId || normalizePersonelId(data.name);
+                
+                // Underscore formatı oluştur (örn: "baran_akdemir")
+                const underscoreName = data.name?.toLowerCase().replace(/\s+/g, '_').replace(/[ğ]/g, 'g').replace(/[ü]/g, 'u').replace(/[ş]/g, 's').replace(/[ı]/g, 'i').replace(/[ö]/g, 'o').replace(/[ç]/g, 'c');
+                const underscoreCodeName = data.codeName?.toLowerCase().replace(/\s+/g, '_').replace(/[ğ]/g, 'g').replace(/[ü]/g, 'u').replace(/[ş]/g, 's').replace(/[ı]/g, 'i').replace(/[ö]/g, 'o').replace(/[ç]/g, 'c');
+                
+                // İsmin ilk harfini al (örn: "Baran" -> "baran", "BARAN" -> "baran")
+                const firstName = data.name?.split(' ')[0];
+                const firstNameLower = firstName?.toLowerCase();
+                const firstNameNorm = normalizeTurkishChars(firstName);
+                
+                const codeFirst = data.codeName?.split(' ')[0];
+                const codeFirstLower = codeFirst?.toLowerCase();
+                const codeFirstNorm = normalizeTurkishChars(codeFirst);
+                
+                const keys = [
+                    data.name,
+                    data.name?.toLowerCase(),
+                    data.name?.toUpperCase(),
+                    data.codeName,
+                    data.codeName?.toLowerCase(),
+                    data.codeName?.toUpperCase(),
+                    firstName,
+                    firstNameLower,
+                    firstNameNorm,
+                    codeFirst,
+                    codeFirstLower,
+                    codeFirstNorm,
+                    uniqueId,
+                    normalizePersonelId(data.name),
+                    normalizePersonelId(data.codeName),
+                    normalizeTurkishChars(data.name),
+                    normalizeTurkishChars(data.codeName),
+                    // Underscore formatları (shift'ten gelen)
+                    underscoreName,
+                    underscoreCodeName,
+                    // Karışık format denemeleri
+                    underscoreName?.replace(/_/g, ' '),
+                    underscoreCodeName?.replace(/_/g, ' '),
+                    // İlk isim underscore (örn: "tuana" veya "busra")
+                    underscoreName?.split('_')[0],
+                    underscoreCodeName?.split('_')[0],
+                    // EK: Normalize edilmiş tüm varyasyonlar (Türkçe İ sorunu için)
+                    normalizeTurkishChars(data.name?.toLowerCase()),
+                    normalizeTurkishChars(underscoreName),
+                    normalizeTurkishChars(underscoreName?.replace(/_/g, ' ')),
+                    // displayName formatı (Ad S.)
+                    formatDisplayName(data.name),
+                    formatDisplayName(data.name)?.toLowerCase(),
+                    normalizeTurkishChars(formatDisplayName(data.name)),
+                ].filter(k => k);
+                
+                // Tüm keyleri kaydet
+                keys.forEach(key => {
+                    if (key && !_personelDisplayCache.has(key)) {
+                        _personelDisplayCache.set(key, { 
+                            displayName, 
+                            fullName: data.name,
+                            codeName: data.codeName,
+                            uniqueId,
+                            branch: data.branch
+                        });
+                    }
+                });
+            });
+            console.log('[Cache] Personel cache oluşturuldu:', _personelDisplayCache.size, 'kayıt');
+        } catch (e) {
+            console.error('Personel cache hatası:', e);
+            return searchKey;
+        }
+    }
+    
+    // Arama varyasyonları oluştur
+    const underscoreSearch = searchKey?.toLowerCase().replace(/\s+/g, '_').replace(/[ğ]/g, 'g').replace(/[ü]/g, 'u').replace(/[ş]/g, 's').replace(/[ı]/g, 'i').replace(/[ö]/g, 'o').replace(/[ç]/g, 'c');
+    const spaceSearch = searchKey?.replace(/_/g, ' ');
+    const firstWord = searchKey?.split(/[_\s]/)[0];
+    const normalizedSearch = normalizeTurkishChars(searchKey);
+    const displayFormatSearch = formatDisplayName(searchKey?.replace(/_/g, ' '));
+    
+    // Cache'ten ara - çoklu deneme (GÜÇLENDIRILDI)
+    const result = _personelDisplayCache.get(searchKey) || 
+                   _personelDisplayCache.get(searchKey?.toLowerCase()) ||
+                   _personelDisplayCache.get(searchKey?.toUpperCase()) ||
+                   _personelDisplayCache.get(normalizedSearch) ||
+                   _personelDisplayCache.get(normalizePersonelId(searchKey)) ||
+                   _personelDisplayCache.get(underscoreSearch) ||
+                   _personelDisplayCache.get(spaceSearch) ||
+                   _personelDisplayCache.get(spaceSearch?.toLowerCase()) ||
+                   _personelDisplayCache.get(normalizeTurkishChars(spaceSearch)) ||
+                   _personelDisplayCache.get(firstWord) ||
+                   _personelDisplayCache.get(firstWord?.toLowerCase()) ||
+                   _personelDisplayCache.get(normalizeTurkishChars(firstWord)) ||
+                   _personelDisplayCache.get(displayFormatSearch) ||
+                   _personelDisplayCache.get(displayFormatSearch?.toLowerCase()) ||
+                   _personelDisplayCache.get(normalizeTurkishChars(displayFormatSearch));
+    
+    if (result) {
+        // Branch kontrolü - branch null/"all" ise veya eşleşiyorsa döndür
+        if (!branch || branch === 'all' || !result.branch || result.branch === branch || result.branch === 'all') {
+            return result.displayName;
+        }
+    }
+    
+    console.warn('[Cache] Personel bulunamadı:', searchKey, '-> orijinal değer kullanılıyor');
+    return searchKey; // Bulunamadı, gelen değeri döndür
+}
+
+// Cache'i temizle (yeni personel eklendiğinde)
+function clearPersonelDisplayCache() {
+    _personelDisplayCache = null;
+}
+
 // ==================== MİGRASYON FONKSİYONLARI ====================
 
 // Personel cache for migration
@@ -2980,6 +3105,25 @@ window.cleanOldPuantajNotes = cleanOldPuantajNotes;
 window.fixShiftOrdering = fixShiftOrdering;
 window.fullSystemMigration = fullSystemMigration;
 window.syncAllShiftPersonelNames = syncAllShiftPersonelNames; // Manuel senkronizasyon için
+
+// İsim kısaltma: "BÜŞRA SÖĞÜT" → "Büşra S."
+function formatShortName(fullName) {
+    if (!fullName) return '';
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length === 0) return '';
+    
+    // İlk harf büyük, geri kalan küçük
+    const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+    
+    if (parts.length === 1) {
+        return capitalize(parts[0]);
+    }
+    
+    // "İsim S." formatı
+    const firstName = capitalize(parts[0]);
+    const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
+    return `${firstName} ${lastInitial}.`;
+}
 
 // ==================== AUTH & SESSION ====================
 let currentUser = null;
@@ -3768,16 +3912,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         } else {
                             // 3. Email mapping'den bak
                             const emailMatch = personnelMapping.find(p => p.email?.toLowerCase() === user.email?.toLowerCase());
-                            
-                            // Admin email kontrolü - dinamik (systemConfig/security'den yüklenir)
-                            let isAdmin = false;
-                            try {
-                                const securityDoc = await db.collection('systemConfig').doc('security').get();
-                                const adminEmail = securityDoc.exists ? securityDoc.data().adminEmail : null;
-                                isAdmin = adminEmail && user.email?.toLowerCase() === adminEmail.toLowerCase();
-                            } catch (e) {
-                                console.warn('Admin email kontrolü yapılamadı:', e);
-                            }
+                            const isAdmin = user.email === 'admin@moonberrycoffee.com' || user.email === 'tamer@moonberrycoffee.com';
                             
                             currentUser = {
                                 id: user.uid,
@@ -4178,6 +4313,10 @@ function applyUserPermissions() {
     const navNotlar = document.getElementById('nav-notlar');
     if (navNotlar) navNotlar.style.display = 'none';
     
+    // G15: Yedekler sekmesi sadece yönetici görebilir
+    const tabYedekler = document.getElementById('tab-yedekler');
+    if (tabYedekler) tabYedekler.style.display = 'none';
+    
     // Gelişmiş izin sistemini yükle ve uygula
     loadUserAdvancedPermissions();
 }
@@ -4350,6 +4489,11 @@ function goTo(page) {
     if (page === 'shift') { 
         populateSubeSelect('shiftSube'); 
         loadShiftList();
+        // Yönetici için Excel yükleme butonunu göster
+        const adminExcel = document.getElementById('adminExcelUpload');
+        if (adminExcel) {
+            adminExcel.style.display = currentUser?.role === 'yonetici' ? 'block' : 'none';
+        }
     }
     // Yeni sayfalar için dropdown'ları doldur
     if (page === 'istifa') { 
@@ -5520,36 +5664,22 @@ function switchAdminTab(tab, btn) {
     btn.classList.add('active');
     document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
     document.getElementById('admin-' + tab).classList.add('active');
-    
-    // Sekme yükleme işlemleri
-    if (tab === 'genel') {
-        loadBackupsList(); // Yedekler Genel içinde
-    }
-    if (tab === 'kullanicilar') {
-        renderPermissionsTable();
-    }
+    if (tab === 'kullanicilar') renderPermissionsTable();
+    if (tab === 'sablonlar') loadTemplate();
+    if (tab === 'belgeler') loadDocTemplate('tutanak', 'olay');
     if (tab === 'oturumlar') {
         loadSessionSettings();
         loadActiveSessions();
         loadSessionHistory();
-        loadActivityLogs(); // Aktiviteler Oturumlar içinde
     }
-    if (tab === 'subelerSaatler') {
-        renderBranchHoursSettings(); // Saatler
-        // Şube listesi renderAdminLists() ile render ediliyor
-    }
-    if (tab === 'checkKurallari') {
-        renderCheckRulesSettings();
-    }
-    if (tab === 'checklistTurleri') {
-        loadChecklistTypesConfig();
-    }
+    if (tab === 'aktiviteler') loadActivityLogs();
+    if (tab === 'yedekler') loadBackupsList();
+    if (tab === 'magazaSaatleri') renderBranchHoursSettings();
+    if (tab === 'checkKurallari') renderCheckRulesSettings();
+    if (tab === 'checklistTurleri') loadChecklistTypesConfig();
     if (tab === 'tumCheckler') {
         populateSubeSelect('allChecksBranchFilter', true);
         loadAllChecksOverview();
-    }
-    if (tab === 'sablonlar') {
-        loadTemplate(); // Sözleşme şablonları varsayılan
     }
 }
 
@@ -6786,7 +6916,84 @@ function saveTemplate() {
     toast('Şablon kaydedildi', 'success');
 }
 
+// ========== SYNC ==========
+function generateExportCode() {
+    try {
+        const json = JSON.stringify(STATE);
+        const compressed = LZString.compressToBase64(json);
+        document.getElementById('exportCode').value = compressed;
+        toast('Kod oluşturuldu', 'success');
+    } catch(e) {
+        toast('Kod oluşturulamadı', 'error');
+    }
+}
+
+function copyExportCode() {
+    const code = document.getElementById('exportCode').value;
+    if (code) {
+        navigator.clipboard.writeText(code).then(() => {
+            toast('Kopyalandı!', 'success');
+        }).catch(() => {
+            // Fallback
+            const ta = document.createElement('textarea');
+            ta.value = code;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            toast('Kopyalandı!', 'success');
+        });
+    }
+}
+
+function importCode() {
+    const code = document.getElementById('importCode').value.trim();
+    if (!code) {
+        toast('Kod boş', 'error');
+        return;
+    }
+    
+    confirmModal('İçe Aktar', 'Mevcut tüm ayarlarınız değiştirilecek. Emin misiniz?', () => {
+        try {
+            const json = LZString.decompressFromBase64(code);
+            if (!json) throw new Error('Invalid');
+            const data = JSON.parse(json);
+            
+            // Validate basic structure
+            if (!data.pin || !data.company || !data.branches) {
+                throw new Error('Invalid structure');
+            }
+            
+            STATE = {...DEFAULT_STATE, ...data};
+            saveState();
+            initUI();
+            document.getElementById('importCode').value = '';
+            successModal('Veriler başarıyla içe aktarıldı!');
+        } catch(e) {
+            toast('Geçersiz kod!', 'error');
+        }
+    }, 'danger');
+}
+
 // ========== DOSYA YEDEKLEMESİ ==========
+function downloadBackup() {
+    try {
+        const data = JSON.stringify(STATE, null, 2);
+        const blob = new Blob([data], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const date = new Date().toISOString().split('T')[0];
+        a.href = url;
+        a.download = `moonberry-ik-yedek-${date}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast('Yedek dosyası indirildi', 'success');
+    } catch(e) {
+        toast('Yedek oluşturulamadı', 'error');
+    }
+}
 
 function uploadBackup(event) {
     const file = event.target.files[0];
@@ -10153,9 +10360,6 @@ const PERMISSION_STRUCTURE = {
     special: [
         { id: 'ayarlar_erisim', label: 'Ayarlar sayfasına erişebilir' },
         { id: 'view_all_branches', label: 'Tüm şubeleri görebilir' },
-        { id: 'view_leaderboard', label: 'Puan sıralamasını görebilir' },
-        { id: 'view_kpi_dashboard', label: 'KPI Dashboard görebilir' },
-        { id: 'view_monthly_points', label: 'Aylık puan kartını görebilir' },
         { id: 'print_shift', label: 'Shift planını yazdırabilir' },
         { id: 'create_shift_week', label: 'Yeni shift haftası oluşturabilir' },
         { id: 'view_checklist_history', label: 'Geçmiş checklisti görebilir' },
@@ -10176,7 +10380,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: false, edit: false }, tutanak: { view: false, edit: false }, savunma: { view: false, edit: false }, fesih: { view: false, edit: false }, istifa: { view: false, edit: false }, ibraname: { view: false, edit: false } },
         forms: { borc: { view: false, edit: false }, avans: { view: false, edit: false }, zimmet: { view: false, edit: false } },
         adminTabs: { tumCheckler: false, subelerSaatler: false, checkKurallari: false, checklistTurleri: false, ihlaller: false, sablonlar: false },
-        special: { ayarlar_erisim: false, view_all_branches: false, view_leaderboard: false, view_kpi_dashboard: false, view_monthly_points: true, print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false },
+        special: { ayarlar_erisim: false, view_all_branches: false, print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 1 }
     },
     magaza_mudur_yardimcisi: {
@@ -10184,7 +10388,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         adminTabs: { tumCheckler: false, subelerSaatler: false, checkKurallari: false, checklistTurleri: false, ihlaller: true, sablonlar: false },
-        special: { ayarlar_erisim: true, view_all_branches: false, view_leaderboard: true, view_kpi_dashboard: false, view_monthly_points: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
+        special: { ayarlar_erisim: true, view_all_branches: false, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 5 }
     },
     magaza_muduru: {
@@ -10192,7 +10396,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         adminTabs: { tumCheckler: true, subelerSaatler: true, checkKurallari: false, checklistTurleri: false, ihlaller: true, sablonlar: false },
-        special: { ayarlar_erisim: true, view_all_branches: false, view_leaderboard: true, view_kpi_dashboard: true, view_monthly_points: false, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
+        special: { ayarlar_erisim: true, view_all_branches: false, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 5 }
     },
     bolge_muduru: {
@@ -10200,7 +10404,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: true }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         adminTabs: { tumCheckler: true, subelerSaatler: true, checkKurallari: true, checklistTurleri: true, ihlaller: true, sablonlar: true },
-        special: { ayarlar_erisim: true, view_all_branches: true, view_leaderboard: true, view_kpi_dashboard: true, view_monthly_points: false, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true },
+        special: { ayarlar_erisim: true, view_all_branches: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true },
         limits: { shift_history_weeks: 999 }
     }
 };
@@ -10879,9 +11083,9 @@ function applyAdvancedPermissions() {
         });
     }
     
-    // Admin paneli erişimini kontrol et (special.ayarlar_erisim)
-    const hasAyarlarAccess = perms.special?.ayarlar_erisim === true;
-    if (!hasAyarlarAccess) {
+    // Admin paneli erişimini kontrol et
+    const hasAnyAdminAccess = Object.values(perms.admin || {}).some(a => a);
+    if (!hasAnyAdminAccess) {
         // Ayarlar menüsünü gizle
         const navAdmin = document.querySelector('.nav-item[data-page="admin"]');
         if (navAdmin) navAdmin.style.display = 'none';
@@ -12923,6 +13127,13 @@ function getShiftColorExcel(val) {
     return SHIFT_COLORS.default;
 }
 
+// Shift değerini görüntüleme formatına çevir (**** -> OFF)
+function formatShiftValue(val) {
+    if (!val) return '';
+    if (/^\*+$/.test(val.trim())) return 'OFF';
+    return val;
+}
+
 async function updateShiftCell(docId, name, dayIdx, value, keepStar = false) {
     if (value === 'parttime') { 
         // Part-time saat seçici modal
@@ -13948,6 +14159,88 @@ async function printShift() {
     printWindow.document.close();
 }
 
+const EXCEL_PERSONEL = {
+    'Şişli': ["ESİN", "ESMA", "ECE"],
+    'Tuzla': ["BÜŞRA", "ESİN", "BALRA", "TUANA", "BARAN", "ELİF"]
+};
+
+// Firebase'e yükle
+async function uploadExcelToFirebase() {
+    if (currentUser?.role !== 'yonetici') {
+        toast('Sadece yönetici yapabilir', 'error');
+        return;
+    }
+    
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Yükleniyor...';
+    
+    // Branch isim dönüşümü
+    const branchMap = {
+        'Şişli': 'Şişli (Merkez)',
+        'Tuzla': 'Tuzla TRC'
+    };
+    
+    try {
+        // 1. Personel ekle (son 2 hafta kadrosu)
+        let pAdded = 0;
+        for (const [excelBranch, names] of Object.entries(EXCEL_PERSONEL)) {
+            const dbBranch = branchMap[excelBranch] || excelBranch;
+            for (const name of names) {
+                const existing = await db.collection('personel').where('name', '==', name).where('branch', '==', dbBranch).get();
+                if (existing.empty) {
+                    await db.collection('personel').add({
+                        name: name,
+                        branch: dbBranch,
+                        position: 'Barista',
+                        status: 'aktif',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    pAdded++;
+                }
+            }
+        }
+        
+        // 2. Shiftleri ekle
+        let sAdded = 0, sSkipped = 0;
+        for (const shift of EXCEL_SHIFTS) {
+            if (!shift.weekStart) { sSkipped++; continue; }
+            
+            const dbBranch = branchMap[shift.branch] || shift.branch;
+            
+            const existing = await db.collection('shifts')
+                .where('branch', '==', dbBranch)
+                .where('weekStart', '==', shift.weekStart)
+                .get();
+            
+            if (existing.empty) {
+                await db.collection('shifts').add({
+                    branch: dbBranch,
+                    weekStart: shift.weekStart,
+                    weekEnd: shift.weekEnd,
+                    weekLabel: shift.weekLabel,
+                    personelShifts: shift.personelShifts,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    source: 'excel'
+                });
+                sAdded++;
+            } else {
+                sSkipped++;
+            }
+        }
+        
+        toast(`✓ ${pAdded} personel, ${sAdded} shift eklendi`, 'success');
+        loadShiftList();
+        
+    } catch (e) {
+        console.error(e);
+        toast('Hata: ' + e.message, 'error');
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = '📥 Excel Verilerini Yükle';
+}
+
 // ==================== AKTİVİTE LOGLAMA ====================
 
 // Aktivite logla
@@ -14076,6 +14369,22 @@ async function loadActivityLogs() {
             </div>
         `;
     }
+}
+
+// getWeekOptions fonksiyonu (hafta listesi için)// getWeekOptions fonksiyonu (hafta listesi için)
+function getWeekOptions() {
+    const options = [];
+    const today = new Date();
+    for (let i = -12; i <= 2; i++) {
+        const monday = new Date(today);
+        monday.setDate(today.getDate() - today.getDay() + 1 + (i * 7));
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        const label = `${monday.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} - ${sunday.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}`;
+        const value = formatDateLocal(monday);  // Timezone-safe
+        options.push({ value, label, monday, sunday, isCurrent: i === 0 });
+    }
+    return options;
 }
 
 // ==================== CHECKLIST MODULE ====================
@@ -15288,17 +15597,14 @@ async function loadTodayChecks() {
     }
     
     const todayStr = formatDateLocal(today);
-    const isYonetici = currentUser?.role === 'yonetici';
-    const canViewAllBranches = isYonetici || 
-        window.userAdvancedPermissions?.special?.view_all_branches === true ||
-        currentUser?.branch === 'all';
+    const isAdmin = ['yonetici', 'bolge_muduru', 'magaza_muduru', 'mudur', 'admin'].includes(currentUser?.role);
     const userName = currentUser?.name || 'Personel';
     const currentHour = now.getHours();
     const currentMinutes = now.getMinutes();
     
-    // view_all_branches izni olanlar tüm şubeleri görür, diğerleri sadece kendi şubesini
+    // Yönetici için tüm şubeler, diğerleri için kendi şubesi
     let branches = [];
-    if (canViewAllBranches) {
+    if (isAdmin || currentUser?.branch === 'all') {
         branches = STATE.branches || [];
     } else {
         branches = [currentUser?.branch || STATE.branches?.[0] || 'Tuzla TRC'];
@@ -15363,32 +15669,27 @@ async function loadTodayChecks() {
         
         document.getElementById('welcomeDate').textContent = dateStr;
         document.getElementById('welcomeMessage').textContent = `${greeting}, ${userName.split(' ')[0]}! 👋`;
-        document.getElementById('welcomeBranch').innerHTML = `<span>📍</span> <span>${canViewAllBranches ? 'Tüm Şubeler' : primaryBranch}</span>`;
+        document.getElementById('welcomeBranch').innerHTML = `<span>📍</span> <span>${isAdmin ? 'Tüm Şubeler' : primaryBranch}</span>`;
         
         // Shift bilgisi
-        let shiftInfo = canViewAllBranches ? 'Yönetici' : '-';
+        let shiftInfo = isAdmin ? 'Yönetici' : '-';
         welcomeCard.style.display = 'block';
         document.getElementById('welcomeShift').innerHTML = `<span>⏰</span> <span>${shiftInfo}</span>`;
     }
     
-    // Aylık puan kartı (view_monthly_points izni olanlar için)
-    const canViewMonthlyPoints = window.userAdvancedPermissions?.special?.view_monthly_points === true;
-    if (monthlyCard && canViewMonthlyPoints) {
+    // Aylık puan kartı (sadece personel için)
+    if (monthlyCard && !isAdmin) {
         monthlyCard.style.display = 'block';
         loadMonthlyPoints(); // Puan verilerini yükle
     } else if (monthlyCard) {
         monthlyCard.style.display = 'none';
     }
     
-    // Leaderboard ve KPI Dashboard (izinlere göre)
-    const canViewLeaderboard = currentUser?.role === 'yonetici' || window.userAdvancedPermissions?.special?.view_leaderboard === true;
-    const canViewKPI = currentUser?.role === 'yonetici' || window.userAdvancedPermissions?.special?.view_kpi_dashboard === true;
-    
-    if (canViewLeaderboard) {
+    // Leaderboard ve KPI Dashboard (sadece yöneticiler için)
+    if (isAdmin) {
         loadLeaderboard();
-    }
-    if (canViewKPI) {
         loadKPIDashboard();
+        
         // Otomatik kaçırılan check kontrolü (arka planda çalışır)
         setTimeout(() => checkAndProcessMissedChecks(), 5000);
     }
@@ -16974,11 +17275,12 @@ async function loadLeaderboard() {
     
     if (!section || !container) return;
     
-    // Leaderboard görünürlüğü izinle kontrol ediliyor (loadTodayChecks'de)
-    // Şube filtresi için view_all_branches iznini kontrol et
-    const canViewAllBranches = currentUser?.role === 'yonetici' || 
-        window.userAdvancedPermissions?.special?.view_all_branches === true;
-    const userBranch = currentUser?.branch;
+    const isAdmin = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
+    
+    if (!isAdmin) {
+        section.style.display = 'none';
+        return;
+    }
     
     section.style.display = 'block';
     container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tx3)">Yükleniyor...</div>';
@@ -17001,11 +17303,6 @@ async function loadLeaderboard() {
         personelSnapshot.forEach(doc => {
             const d = doc.data();
             if (d.status !== 'inactive' && d.status !== 'deleted') {
-                // Şube filtresi: view_all_branches izni yoksa sadece kendi şubesini göster
-                if (!canViewAllBranches && d.branch !== userBranch) {
-                    return; // Bu personeli atla
-                }
-                
                 const normalizedId = normalizePersonelId(d.name);
                 activePersonel[normalizedId] = {
                     docId: doc.id,
@@ -21840,7 +22137,7 @@ async function runDataMigration() {
         toast(`Migrasyon tamamlandı! ${personelMap.size} personel, ${shiftFixCount} shift düzeltildi.`, 'success');
         
         // Cache'i temizle
-        PERSONEL_DISPLAY_CACHE.clear();
+        clearPersonelDisplayCache();
         _migrationPersonelMap = null;
         
         // Sayfayı yenile
