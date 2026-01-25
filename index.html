@@ -10876,9 +10876,9 @@ function applyAdvancedPermissions() {
         });
     }
     
-    // Admin paneli erişimini kontrol et
-    const hasAnyAdminAccess = Object.values(perms.admin || {}).some(a => a);
-    if (!hasAnyAdminAccess) {
+    // Admin paneli erişimini kontrol et (special.ayarlar_erisim)
+    const hasAyarlarAccess = perms.special?.ayarlar_erisim === true;
+    if (!hasAyarlarAccess) {
         // Ayarlar menüsünü gizle
         const navAdmin = document.querySelector('.nav-item[data-page="admin"]');
         if (navAdmin) navAdmin.style.display = 'none';
