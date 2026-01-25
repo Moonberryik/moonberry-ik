@@ -15597,14 +15597,22 @@ async function loadTodayChecks() {
     }
     
     const todayStr = formatDateLocal(today);
-    const isAdmin = ['yonetici', 'bolge_muduru', 'magaza_muduru', 'mudur', 'admin'].includes(currentUser?.role);
+    
+    // Tüm şubeleri görebilen roller (dinamik yetkiden veya rol bazlı)
+    const canSeeAllBranches = ['yonetici', 'bolge_muduru'].includes(currentUser?.role) 
+        || currentUser?.branch === 'all'
+        || window.userAdvancedPermissions?.special?.view_all_branches === true;
+    
+    // Yönetim yetkisi olan roller (leaderboard, KPI, müdür kontrol vs.)
+    const isManager = ['yonetici', 'bolge_muduru', 'magaza_muduru', 'magaza_mudur_yardimcisi'].includes(currentUser?.role);
+    
     const userName = currentUser?.name || 'Personel';
     const currentHour = now.getHours();
     const currentMinutes = now.getMinutes();
     
-    // Yönetici için tüm şubeler, diğerleri için kendi şubesi
+    // Tüm şubeleri görebilen kullanıcılar için tüm şubeler, diğerleri için kendi şubesi
     let branches = [];
-    if (isAdmin || currentUser?.branch === 'all') {
+    if (canSeeAllBranches) {
         branches = STATE.branches || [];
     } else {
         branches = [currentUser?.branch || STATE.branches?.[0] || 'Tuzla TRC'];
@@ -15669,24 +15677,24 @@ async function loadTodayChecks() {
         
         document.getElementById('welcomeDate').textContent = dateStr;
         document.getElementById('welcomeMessage').textContent = `${greeting}, ${userName.split(' ')[0]}! 👋`;
-        document.getElementById('welcomeBranch').innerHTML = `<span>📍</span> <span>${isAdmin ? 'Tüm Şubeler' : primaryBranch}</span>`;
+        document.getElementById('welcomeBranch').innerHTML = `<span>📍</span> <span>${canSeeAllBranches ? 'Tüm Şubeler' : primaryBranch}</span>`;
         
         // Shift bilgisi
-        let shiftInfo = isAdmin ? 'Yönetici' : '-';
+        let shiftInfo = canSeeAllBranches ? 'Yönetici' : '-';
         welcomeCard.style.display = 'block';
         document.getElementById('welcomeShift').innerHTML = `<span>⏰</span> <span>${shiftInfo}</span>`;
     }
     
     // Aylık puan kartı (sadece personel için)
-    if (monthlyCard && !isAdmin) {
+    if (monthlyCard && !isManager) {
         monthlyCard.style.display = 'block';
         loadMonthlyPoints(); // Puan verilerini yükle
     } else if (monthlyCard) {
         monthlyCard.style.display = 'none';
     }
     
-    // Leaderboard ve KPI Dashboard (sadece yöneticiler için)
-    if (isAdmin) {
+    // Leaderboard ve KPI Dashboard (yöneticiler için)
+    if (isManager) {
         loadLeaderboard();
         loadKPIDashboard();
         
@@ -16533,7 +16541,7 @@ async function loadTodayChecks() {
         }
         
         // 6. Müdür Kontrol (sadece müdürler için)
-        if (isAdmin) {
+        if (isManager) {
             const mudurSubmissionId = `${normalizeBranchId(branch)}_mudur_${todayStr}`;
             let mudurCompleted = false;
             try {
