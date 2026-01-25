@@ -17868,8 +17868,8 @@ async function loadTodayChecks() {
             return (a.priority || 50) - (b.priority || 50);
         });
         
-        // Şube HTML'i oluştur
-        if (sortedBranches.length > 1) {
+        // Şube HTML'i oluştur (tek şube olsa da göster)
+        if (sortedBranches.length >= 1) {
             html += `
                 <div class="branch-group">
                     <div class="branch-header">
@@ -18116,7 +18116,7 @@ async function loadTodayChecks() {
         }
         
         // Şube grubunu kapat
-        if (sortedBranches.length > 1) {
+        if (sortedBranches.length >= 1) {
             html += `</div></div>`;
         }
     }
