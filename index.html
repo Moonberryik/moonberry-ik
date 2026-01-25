@@ -444,6 +444,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .star-rating-3 { color: #95a5a6 !important; }
 .star-rating-2 { color: #e67e22 !important; }
 .star-rating-1 { color: #e74c3c !important; }
+
+/* Duyuru Stilleri */
+.announcement-card{background:linear-gradient(135deg,rgba(255,134,116,.08),rgba(255,134,116,.02));border:1px solid rgba(255,134,116,.2);border-left:3px solid #ff8674;border-radius:12px;padding:14px 16px;position:relative;transition:all .2s}
+.announcement-card:hover{transform:translateX(4px);box-shadow:0 4px 12px rgba(255,134,116,.1)}
+.announcement-card.urgent{background:linear-gradient(135deg,rgba(231,76,60,.1),rgba(231,76,60,.03));border-color:rgba(231,76,60,.3);border-left-color:#e74c3c;animation:soft-pulse 2s ease-in-out infinite}
+.announcement-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px}
+.announcement-title{font-size:.9rem;font-weight:600;color:var(--tx);display:flex;align-items:center;gap:8px}
+.announcement-meta{font-size:.65rem;color:var(--tx3);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.announcement-content{font-size:.82rem;color:var(--tx2);line-height:1.5}
+.announcement-delete{background:none;border:none;color:var(--tx3);cursor:pointer;padding:4px;border-radius:4px;opacity:0;transition:all .2s}
+.announcement-card:hover .announcement-delete{opacity:1}
+.announcement-delete:hover{background:rgba(231,76,60,.1);color:#e74c3c}
+.announcement-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:.6rem;font-weight:600;text-transform:uppercase;background:rgba(255,134,116,.15);color:#ff8674}
+.announcement-badge.urgent{background:rgba(231,76,60,.15);color:#e74c3c}
     </style>
 </head>
 <body>
@@ -660,6 +674,26 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             </div>
                         </div>
                     </div>
+                </div>
+                
+                <!-- Duyurular Alanı -->
+                <div id="announcementsSection" style="margin-bottom:24px;display:none">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:0 4px">
+                        <div style="font-size:.8rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:8px">
+                            <svg width="14" height="14" fill="none" stroke="#ff8674" stroke-width="2" viewBox="0 0 24 24"><path d="M22 17H2a3 3 0 003-3V9a7 7 0 0114 0v5a3 3 0 003 3zM8.5 17v1a3.5 3.5 0 007 0v-1"/></svg>
+                            Duyurular
+                        </div>
+                        <button id="addAnnouncementBtn" onclick="showAddAnnouncementModal()" style="display:none;background:linear-gradient(135deg,#ff8674,#ff6b5b);color:#fff;border:none;padding:6px 12px;border-radius:8px;font-size:.7rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px">
+                            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            Yeni Duyuru
+                        </button>
+                    </div>
+                    <div id="announcementsContainer" style="display:flex;flex-direction:column;gap:10px">
+                        <!-- Duyurular dinamik yüklenecek -->
+                    </div>
+                    <button id="loadMoreAnnouncements" onclick="loadMoreAnnouncements()" style="display:none;width:100%;margin-top:12px;background:var(--bg3);border:1px solid var(--cardBorder);color:var(--tx2);padding:10px;border-radius:8px;font-size:.8rem;cursor:pointer">
+                        Daha fazla göster
+                    </button>
                 </div>
                 
                 <!-- Bu Ay Puan Özeti - Dinamik -->
@@ -4141,6 +4175,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 personelId: personelDoc.id,
                                 email: user.email,
                                 name: personelData.name,
+                                codeName: personelData.codeName || '',
                                 role: personelData.role,
                                 branch: personelData.branch || 'all',
                                 position: personelData.position
@@ -11527,7 +11562,8 @@ const PERMISSION_STRUCTURE = {
         { id: 'delete_records', label: 'Kayıt silebilir' },
         { id: 'assign_password', label: 'Şifre atayabilir' },
         { id: 'view_password', label: 'Personel şifrelerini görebilir' },
-        { id: 'change_others_password', label: 'Başkasının şifresini değiştirebilir' }
+        { id: 'change_others_password', label: 'Başkasının şifresini değiştirebilir' },
+        { id: 'add_announcement', label: 'Duyuru ekleyebilir' }
     ],
     limits: [
         { id: 'shift_history_weeks', label: 'Shift geçmiş limiti (hafta)', type: 'number', options: [1, 5, 52, 999] }
@@ -11540,7 +11576,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: false, edit: false }, tutanak: { view: false, edit: false }, savunma: { view: false, edit: false }, fesih: { view: false, edit: false }, istifa: { view: false, edit: false }, ibraname: { view: false, edit: false } },
         forms: { borc: { view: false, edit: false }, avans: { view: false, edit: false }, zimmet: { view: false, edit: false } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: false, admin_sablonlar: false, admin_oturumlar: false },
-        special: { print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false, view_password: false, change_others_password: false },
+        special: { print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false },
         limits: { shift_history_weeks: 1 }
     },
     magaza_mudur_yardimcisi: {
@@ -11548,7 +11584,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false },
-        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false, view_password: false, change_others_password: false },
+        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false },
         limits: { shift_history_weeks: 5 }
     },
     magaza_muduru: {
@@ -11556,7 +11592,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false },
-        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false, view_password: false, change_others_password: false },
+        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false },
         limits: { shift_history_weeks: 5 }
     },
     bolge_muduru: {
@@ -11564,7 +11600,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: true }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: true, admin_kullanicilar: false, admin_puantaj: true, admin_subeler: true, admin_pozisyonlar: true, admin_ihlaller: true, admin_sablonlar: true, admin_oturumlar: true },
-        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true, view_password: true, change_others_password: true },
+        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true, view_password: true, change_others_password: true, add_announcement: true },
         limits: { shift_history_weeks: 999 }
     }
 };
@@ -16672,15 +16708,29 @@ async function loadTodayChecks() {
         if (currentHour >= 12 && currentHour < 18) greeting = 'İyi günler';
         else if (currentHour >= 18 || currentHour < DAY_END_HOUR) greeting = 'İyi akşamlar';
         
-        document.getElementById('welcomeDate').textContent = dateStr;
-        document.getElementById('welcomeMessage').textContent = `${greeting}, ${userName.split(' ')[0]}! 👋`;
-        document.getElementById('welcomeBranch').innerHTML = `<span>📍</span> <span>${isFullAdmin ? 'Tüm Şubeler' : primaryBranch}</span>`;
+        // İsim: codeName varsa ilk kelimesi, yoksa name'in ilk kelimesi
+        const displayName = currentUser?.codeName 
+            ? currentUser.codeName.split(' ')[0] 
+            : (userName || 'Personel').split(' ')[0];
         
-        // Shift bilgisi
-        let shiftInfo = isFullAdmin ? 'Yönetici' : '-';
+        // Türkiye saati
+        const turkeyTime = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' });
+        
+        // SVG ikonlar (Lucide tarzı)
+        const locationIcon = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+        const clockIcon = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+        
+        document.getElementById('welcomeDate').textContent = dateStr;
+        document.getElementById('welcomeMessage').textContent = `${greeting}, ${displayName}! 👋`;
+        document.getElementById('welcomeBranch').innerHTML = `<span style="display:flex;align-items:center">${locationIcon}</span> <span>${isFullAdmin ? 'Tüm Şubeler' : primaryBranch}</span>`;
+        
+        // Saat bilgisi (anlık Türkiye saati)
         welcomeCard.style.display = 'block';
-        document.getElementById('welcomeShift').innerHTML = `<span>⏰</span> <span>${shiftInfo}</span>`;
+        document.getElementById('welcomeShift').innerHTML = `<span style="display:flex;align-items:center">${clockIcon}</span> <span>${turkeyTime}</span>`;
     }
+    
+    // Duyuruları yükle
+    loadAnnouncements();
     
     // Aylık puan kartı (sadece personel için)
     if (monthlyCard && !isFullAdmin) {
@@ -27072,6 +27122,238 @@ async function getWeeklyDashboardSummary(branch, personnelId) {
         nearestCooldown, // En yakın aktif olacak
         tasks
     };
+}
+
+// ==================== DUYURU SİSTEMİ ====================
+let announcementsData = [];
+let announcementsLimit = 5;
+let allAnnouncementsLoaded = false;
+
+// Duyuruları yükle
+async function loadAnnouncements() {
+    const section = document.getElementById('announcementsSection');
+    const container = document.getElementById('announcementsContainer');
+    const addBtn = document.getElementById('addAnnouncementBtn');
+    const loadMoreBtn = document.getElementById('loadMoreAnnouncements');
+    
+    if (!section || !container) return;
+    
+    // Yetki kontrolü - yönetici veya add_announcement yetkisi olanlar ekleyebilir
+    const canAdd = currentUser?.role === 'yonetici' || 
+                   window.userAdvancedPermissions?.special?.add_announcement === true;
+    if (addBtn) {
+        addBtn.style.display = canAdd ? 'flex' : 'none';
+    }
+    
+    try {
+        // Firebase'den duyuruları çek (son 20)
+        const snapshot = await db.collection('announcements')
+            .orderBy('createdAt', 'desc')
+            .limit(20)
+            .get();
+        
+        announcementsData = [];
+        const userBranch = currentUser?.branch || '';
+        
+        snapshot.forEach(doc => {
+            const data = { id: doc.id, ...doc.data() };
+            // Şube filtresi - 'all' ise herkes görür, değilse sadece o şubedekiler
+            const targetBranches = data.branches || ['all'];
+            if (targetBranches.includes('all') || targetBranches.includes(userBranch) || currentUser?.role === 'yonetici') {
+                announcementsData.push(data);
+            }
+        });
+        
+        if (announcementsData.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+        
+        section.style.display = 'block';
+        renderAnnouncements();
+        
+        // Daha fazla göster butonu
+        if (loadMoreBtn) {
+            loadMoreBtn.style.display = announcementsData.length > announcementsLimit ? 'block' : 'none';
+        }
+    } catch (e) {
+        console.error('Duyurular yüklenemedi:', e);
+    }
+}
+
+// Duyuruları render et
+function renderAnnouncements() {
+    const container = document.getElementById('announcementsContainer');
+    if (!container) return;
+    
+    const visibleAnnouncements = announcementsData.slice(0, announcementsLimit);
+    const canDelete = currentUser?.role === 'yonetici' || 
+                      window.userAdvancedPermissions?.special?.add_announcement === true;
+    
+    container.innerHTML = visibleAnnouncements.map(ann => {
+        const date = ann.createdAt?.toDate ? ann.createdAt.toDate() : new Date(ann.createdAt);
+        const dateStr = date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        const isUrgent = ann.priority === 'urgent';
+        const branchText = ann.branches?.includes('all') ? 'Tüm Şubeler' : (ann.branches?.join(', ') || '');
+        
+        return `
+            <div class="announcement-card ${isUrgent ? 'urgent' : ''}">
+                <div class="announcement-header">
+                    <div class="announcement-title">
+                        ${isUrgent ? '<svg width="14" height="14" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' : ''}
+                        ${ann.title || 'Duyuru'}
+                    </div>
+                    ${canDelete ? `
+                        <button class="announcement-delete" onclick="deleteAnnouncement('${ann.id}')" title="Sil">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                        </button>
+                    ` : ''}
+                </div>
+                <div class="announcement-content">${ann.content || ''}</div>
+                <div class="announcement-meta">
+                    <span class="announcement-badge ${isUrgent ? 'urgent' : ''}">${branchText}</span>
+                    <span>•</span>
+                    <span>${ann.createdByName || 'Yönetici'}</span>
+                    <span>•</span>
+                    <span>${dateStr}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Daha fazla duyuru yükle
+function loadMoreAnnouncements() {
+    announcementsLimit += 5;
+    renderAnnouncements();
+    
+    const loadMoreBtn = document.getElementById('loadMoreAnnouncements');
+    if (loadMoreBtn && announcementsLimit >= announcementsData.length) {
+        loadMoreBtn.style.display = 'none';
+    }
+}
+
+// Duyuru ekleme modalı
+function showAddAnnouncementModal() {
+    const branches = STATE.branches || [];
+    
+    const modalHtml = `
+        <div style="padding:20px">
+            <h3 style="margin:0 0 20px;color:var(--tx);display:flex;align-items:center;gap:10px">
+                <svg width="20" height="20" fill="none" stroke="#ff8674" stroke-width="2" viewBox="0 0 24 24"><path d="M22 17H2a3 3 0 003-3V9a7 7 0 0114 0v5a3 3 0 003 3zM8.5 17v1a3.5 3.5 0 007 0v-1"/></svg>
+                Yeni Duyuru
+            </h3>
+            
+            <div style="margin-bottom:16px">
+                <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">Başlık</label>
+                <input type="text" id="announcementTitle" placeholder="Duyuru başlığı..." 
+                    style="width:100%;padding:12px;border:1px solid var(--cardBorder);border-radius:8px;font-size:.9rem;background:var(--bg2);color:var(--tx)">
+            </div>
+            
+            <div style="margin-bottom:16px">
+                <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">İçerik</label>
+                <textarea id="announcementContent" rows="4" placeholder="Duyuru içeriği..." 
+                    style="width:100%;padding:12px;border:1px solid var(--cardBorder);border-radius:8px;font-size:.9rem;background:var(--bg2);color:var(--tx);resize:vertical"></textarea>
+            </div>
+            
+            <div style="margin-bottom:16px">
+                <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">Hedef Şubeler</label>
+                <div style="display:flex;flex-wrap:wrap;gap:8px">
+                    <label style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg3);border-radius:8px;cursor:pointer;font-size:.85rem">
+                        <input type="checkbox" id="branch_all" value="all" checked onchange="toggleAllBranches(this)">
+                        <span>Tüm Şubeler</span>
+                    </label>
+                    ${branches.map(b => `
+                        <label style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg3);border-radius:8px;cursor:pointer;font-size:.85rem">
+                            <input type="checkbox" class="branch-checkbox" value="${b}" disabled>
+                            <span>${b}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <div style="margin-bottom:20px">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                    <input type="checkbox" id="announcementUrgent">
+                    <span style="font-size:.85rem;color:var(--tx2)">
+                        <strong style="color:#e74c3c">Acil Duyuru</strong> - Öne çıkarılır ve vurgulanır
+                    </span>
+                </label>
+            </div>
+            
+            <div style="display:flex;gap:12px;justify-content:flex-end">
+                <button onclick="closeModal()" style="padding:10px 20px;background:var(--bg3);border:1px solid var(--cardBorder);border-radius:8px;color:var(--tx2);cursor:pointer;font-weight:500">İptal</button>
+                <button onclick="saveAnnouncement()" style="padding:10px 20px;background:linear-gradient(135deg,#ff8674,#ff6b5b);border:none;border-radius:8px;color:#fff;cursor:pointer;font-weight:600">Duyuru Ekle</button>
+            </div>
+        </div>
+    `;
+    
+    showModal(modalHtml);
+}
+
+// Tüm şubeler seçilince diğerlerini devre dışı bırak
+function toggleAllBranches(checkbox) {
+    const branchCheckboxes = document.querySelectorAll('.branch-checkbox');
+    branchCheckboxes.forEach(cb => {
+        cb.disabled = checkbox.checked;
+        if (checkbox.checked) cb.checked = false;
+    });
+}
+
+// Duyuru kaydet
+async function saveAnnouncement() {
+    const title = document.getElementById('announcementTitle')?.value?.trim();
+    const content = document.getElementById('announcementContent')?.value?.trim();
+    const isUrgent = document.getElementById('announcementUrgent')?.checked;
+    const allBranches = document.getElementById('branch_all')?.checked;
+    
+    if (!title) {
+        toast('Başlık gerekli', 'error');
+        return;
+    }
+    
+    // Seçili şubeleri al
+    let branches = ['all'];
+    if (!allBranches) {
+        branches = Array.from(document.querySelectorAll('.branch-checkbox:checked')).map(cb => cb.value);
+        if (branches.length === 0) {
+            toast('En az bir şube seçin', 'error');
+            return;
+        }
+    }
+    
+    try {
+        await db.collection('announcements').add({
+            title,
+            content,
+            branches,
+            priority: isUrgent ? 'urgent' : 'normal',
+            createdBy: currentUser?.id || 'unknown',
+            createdByName: currentUser?.codeName?.split(' ')[0] || currentUser?.name?.split(' ')[0] || 'Yönetici',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        toast('Duyuru eklendi', 'success');
+        closeModal();
+        loadAnnouncements();
+    } catch (e) {
+        console.error('Duyuru eklenemedi:', e);
+        toast('Duyuru eklenemedi', 'error');
+    }
+}
+
+// Duyuru sil
+async function deleteAnnouncement(id) {
+    if (!confirm('Bu duyuruyu silmek istediğinizden emin misiniz?')) return;
+    
+    try {
+        await db.collection('announcements').doc(id).delete();
+        toast('Duyuru silindi', 'success');
+        loadAnnouncements();
+    } catch (e) {
+        console.error('Duyuru silinemedi:', e);
+        toast('Duyuru silinemedi', 'error');
+    }
 }
     </script>
 </body>
