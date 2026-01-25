@@ -1648,16 +1648,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
                 <div class="admin-tabs">
                     <button class="admin-tab active" id="tab-genel" onclick="showAdminTab('genel',this)">Genel</button>
-                    <button class="admin-tab" id="tab-checklistGecmisi" onclick="showAdminTab('checklistGecmisi',this)">Checklist Geçmişi</button>
+                    <button class="admin-tab" id="tab-tumCheckler" onclick="showAdminTab('tumCheckler',this)">Tüm Checkler</button>
                     <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">Pozisyon Yetkileri</button>
                     <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">Oturumlar & Aktiviteler</button>
                     <button class="admin-tab" id="tab-subelerSaatler" onclick="showAdminTab('subelerSaatler',this)">Şubeler & Saatler</button>
-                    <button class="admin-tab" id="tab-checklistAyarlari" onclick="showAdminTab('checklistAyarlari',this)">Checklist Ayarları</button>
+                    <button class="admin-tab" id="tab-checkKurallari" onclick="showAdminTab('checkKurallari',this)">Check & Puantaj Kuralları</button>
+                    <button class="admin-tab" id="tab-checklistTurleri" onclick="showAdminTab('checklistTurleri',this)">Checklist Türleri</button>
+                    <button class="admin-tab" id="tab-ihlaller" onclick="showAdminTab('ihlaller',this)">İhlaller</button>
                     <button class="admin-tab" id="tab-sablonlar" onclick="showAdminTab('sablonlar',this)">Şablonlar</button>
                 </div>
                 
-                <!-- Checklist Geçmişi (Eski: Tüm Checkler) -->
-                <div class="admin-section" id="admin-checklistGecmisi">
+                <!-- Tüm Checkler Özet -->
+                <div class="admin-section" id="admin-tumCheckler">
                     <div class="admin-card">
                         <div class="admin-card-header">
                             <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
@@ -1762,16 +1764,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                 </div>
 
-                <!-- Checklist Ayarları (Check Kuralları + Tür Yönetimi Birleştirilmiş) -->
-                <div class="admin-section" id="admin-checklistAyarlari">
-                    <!-- Alt Tab'lar -->
-                    <div style="display:flex;gap:8px;margin-bottom:16px">
-                        <button class="btn btn-primary" id="checklistAyarTab-kurallar" onclick="switchChecklistAyarTab('kurallar')">⚙️ Zamanlama & Puanlama</button>
-                        <button class="btn btn-ghost" id="checklistAyarTab-turler" onclick="switchChecklistAyarTab('turler')">📋 Tür Yönetimi</button>
-                    </div>
-                    
-                    <!-- Zamanlama & Puanlama Panel -->
-                    <div id="checklistAyarPanel-kurallar">
+                <!-- Check Kuralları - Gelişmiş -->
+                <div class="admin-section" id="admin-checkKurallari">
                     <div class="admin-card">
                         <div class="admin-card-header">
                             <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
@@ -1862,10 +1856,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <p style="color:var(--tx2);text-align:center;padding:20px">Kurallar yükleniyor...</p>
                         </div>
                     </div>
-                    </div><!-- checklistAyarPanel-kurallar kapanış -->
-                    
-                    <!-- Tür Yönetimi Panel -->
-                    <div id="checklistAyarPanel-turler" style="display:none">
+                </div>
+
+                <!-- Checklist Türleri Yönetimi -->
+                <div class="admin-section" id="admin-checklistTurleri">
                     <div class="admin-card">
                         <div class="admin-card-header">
                             <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
@@ -1937,7 +1931,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             </div>
                         </div>
                     </div>
-                    </div><!-- checklistAyarPanel-turler kapanış -->
                 </div>
 
                 <!-- Pozisyon Yetkileri -->
@@ -2091,14 +2084,228 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                 </div>
 
+                <!-- Puantaj Kuralları -->
+                <div class="admin-section" id="admin-puantajKurallar">
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                Puantaj Kuralları
+                            </div>
+                            <button class="btn btn-sm btn-primary" onclick="showAddPuantajRuleModal()">+ Kural Ekle</button>
+                        </div>
+                        <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:16px">Puantaj değerlendirmesinde kullanılacak kuralları belirleyin. Kurallar otomatik olarak prim hesaplamasını etkiler.</p>
+                        <div class="admin-list" id="puantajRulesList">
+                            <p style="color:var(--tx2);text-align:center;padding:20px">Kurallar yükleniyor...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Checklist Saatleri Ayarları -->
+                    <div class="admin-card" style="margin-top:20px">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">📱 Platform Check Saatleri</div>
+                            <button class="btn btn-sm btn-ghost" onclick="savePlatformCheckTimes()">💾 Kaydet</button>
+                        </div>
+                        <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:16px">Platform check'lerinin yapılması gereken saatleri düzenleyin. Her saat için belirlenen tolerans süresi geçerlidir.</p>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px" id="platformCheckTimesContainer">
+                            <input type="time" class="form-input platform-time" value="10:00" style="width:100px">
+                            <input type="time" class="form-input platform-time" value="12:00" style="width:100px">
+                            <input type="time" class="form-input platform-time" value="15:00" style="width:100px">
+                            <input type="time" class="form-input platform-time" value="18:00" style="width:100px">
+                            <input type="time" class="form-input platform-time" value="21:00" style="width:100px">
+                            <input type="time" class="form-input platform-time" value="00:00" style="width:100px">
+                        </div>
+                        <div style="display:flex;gap:8px;margin-top:12px">
+                            <button class="btn btn-sm btn-ghost" onclick="addPlatformCheckTime()" style="font-size:.75rem">+ Saat Ekle</button>
+                            <button class="btn btn-sm btn-ghost" onclick="removePlatformCheckTime()" style="font-size:.75rem;color:var(--danger)">- Saat Çıkar</button>
+                        </div>
+                    </div>
+                    
+                    <!-- CHECK KURALLARI YÖNETİM PANELİ -->
+                    <div class="admin-card" style="margin-top:20px">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">⚙️ Check Sistem Ayarları</div>
+                            <button class="btn btn-sm btn-primary" onclick="saveCheckSystemSettings()">💾 Kaydet</button>
+                        </div>
+                        <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:16px">Checklist ve platform kontrol sisteminin temel ayarlarını yapılandırın.</p>
+                        
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+                            <!-- Süre Ayarları -->
+                            <div style="background:var(--bg2);border-radius:12px;padding:16px">
+                                <div style="font-weight:600;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                                    <span style="font-size:1.1rem">⏱️</span> Süre Ayarları
+                                </div>
+                                <div class="form-group" style="margin-bottom:12px">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Check Tolerans Süresi (dk)</label>
+                                    <input type="number" id="checkTolerance" class="form-input" value="30" min="5" max="120" style="font-size:.85rem">
+                                    <small style="color:var(--tx3);font-size:.7rem">Belirlenen saatten ± bu süre içinde check yapılabilir</small>
+                                </div>
+                                <div class="form-group" style="margin-bottom:12px">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Ekranda Kalma Süresi (sn)</label>
+                                    <input type="number" id="checkScreenTime" class="form-input" value="5" min="1" max="30" style="font-size:.85rem">
+                                    <small style="color:var(--tx3);font-size:.7rem">Onay ekranının görüntülenme süresi</small>
+                                </div>
+                                <div class="form-group" style="margin-bottom:0">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Gecikmeli Check Cezası (dk)</label>
+                                    <input type="number" id="checkLatePenalty" class="form-input" value="15" min="0" max="60" style="font-size:.85rem">
+                                    <small style="color:var(--tx3);font-size:.7rem">Bu süreden sonra puan düşer</small>
+                                </div>
+                            </div>
+                            
+                            <!-- Puanlama Ayarları -->
+                            <div style="background:var(--bg2);border-radius:12px;padding:16px">
+                                <div style="font-weight:600;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                                    <span style="font-size:1.1rem">⭐</span> Puanlama
+                                </div>
+                                <div class="form-group" style="margin-bottom:12px">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Platform Check Puanı</label>
+                                    <input type="number" id="checkPointPlatform" class="form-input" value="10" min="0" max="100" style="font-size:.85rem">
+                                </div>
+                                <div class="form-group" style="margin-bottom:12px">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Temizlik Check Puanı</label>
+                                    <input type="number" id="checkPointCleaning" class="form-input" value="5" min="0" max="100" style="font-size:.85rem">
+                                </div>
+                                <div class="form-group" style="margin-bottom:12px">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Açılış/Kapanış Puanı</label>
+                                    <input type="number" id="checkPointShift" class="form-input" value="15" min="0" max="100" style="font-size:.85rem">
+                                </div>
+                                <div class="form-group" style="margin-bottom:0">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Gecikme Puan Düşümü (%)</label>
+                                    <input type="number" id="checkLateDeduction" class="form-input" value="50" min="0" max="100" style="font-size:.85rem">
+                                    <small style="color:var(--tx3);font-size:.7rem">Gecikmeli check'te puandan düşülecek yüzde</small>
+                                </div>
+                            </div>
+                            
+                            <!-- Genel Ayarlar -->
+                            <div style="background:var(--bg2);border-radius:12px;padding:16px">
+                                <div style="font-weight:600;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                                    <span style="font-size:1.1rem">🔧</span> Genel Ayarlar
+                                </div>
+                                <div class="form-group" style="margin-bottom:12px">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Günlük Maksimum Check</label>
+                                    <input type="number" id="checkMaxDaily" class="form-input" value="20" min="1" max="50" style="font-size:.85rem">
+                                </div>
+                                <div class="form-group" style="margin-bottom:12px">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Fotoğraf Zorunluluğu</label>
+                                    <select id="checkPhotoRequired" class="form-select" style="font-size:.85rem">
+                                        <option value="always">Her Zaman</option>
+                                        <option value="platform" selected>Sadece Platform Check</option>
+                                        <option value="never">Hiçbir Zaman</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom:12px">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Konum Kontrolü</label>
+                                    <select id="checkLocationRequired" class="form-select" style="font-size:.85rem">
+                                        <option value="yes">Aktif</option>
+                                        <option value="no" selected>Pasif</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom:0">
+                                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                                        <input type="checkbox" id="checkNotifyManager" checked style="width:16px;height:16px">
+                                        <span style="font-size:.8rem;color:var(--tx2)">Eksik check'lerde yöneticiyi bilgilendir</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Temizlik Çizelgesi Ayarları -->
+                    <div class="admin-card" style="margin-top:20px">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">🧹 Temizlik Çizelgesi Vardiya Tanımları</div>
+                            <button class="btn btn-sm btn-ghost" onclick="saveTemizlikShiftRules()">💾 Kaydet</button>
+                        </div>
+                        <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:16px">Her vardiya türü için shift başlangıç saatlerini ve görev bitiş saatlerini belirleyin. Personel shift başlangıç saatine göre otomatik atanır.</p>
+                        
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+                            <!-- Açılışçı -->
+                            <div style="background:rgba(241,196,15,.08);border-radius:12px;padding:16px">
+                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                                    <span style="font-size:1.2rem">🌅</span>
+                                    <span style="font-weight:600;color:var(--tx)">Açılışçı</span>
+                                </div>
+                                <div class="form-group" style="margin-bottom:8px">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Shift Başlangıç</label>
+                                    <div style="display:flex;gap:4px;align-items:center">
+                                        <input type="time" id="acilisci_start" class="form-input" value="10:00" style="flex:1;font-size:.85rem">
+                                        <span style="color:var(--tx2)">-</span>
+                                        <input type="time" id="acilisci_end" class="form-input" value="11:00" style="flex:1;font-size:.85rem">
+                                    </div>
+                                </div>
+                                <div class="form-group" style="margin-bottom:0">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Görev Bitişi</label>
+                                    <input type="time" id="acilisci_deadline" class="form-input" value="15:00" style="font-size:.85rem">
+                                </div>
+                            </div>
+                            
+                            <!-- Aracı -->
+                            <div style="background:rgba(52,152,219,.08);border-radius:12px;padding:16px">
+                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                                    <span style="font-size:1.2rem">☀️</span>
+                                    <span style="font-weight:600;color:var(--tx)">Aracı</span>
+                                </div>
+                                <div class="form-group" style="margin-bottom:8px">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Shift Başlangıç</label>
+                                    <div style="display:flex;gap:4px;align-items:center">
+                                        <input type="time" id="araci_start" class="form-input" value="11:00" style="flex:1;font-size:.85rem">
+                                        <span style="color:var(--tx2)">-</span>
+                                        <input type="time" id="araci_end" class="form-input" value="16:00" style="flex:1;font-size:.85rem">
+                                    </div>
+                                </div>
+                                <div class="form-group" style="margin-bottom:0">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Görev Bitişi</label>
+                                    <input type="time" id="araci_deadline" class="form-input" value="19:00" style="font-size:.85rem">
+                                </div>
+                            </div>
+                            
+                            <!-- Kapanışçı -->
+                            <div style="background:rgba(155,89,182,.08);border-radius:12px;padding:16px">
+                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                                    <span style="font-size:1.2rem">🌙</span>
+                                    <span style="font-weight:600;color:var(--tx)">Kapanışçı</span>
+                                </div>
+                                <div class="form-group" style="margin-bottom:8px">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Shift Başlangıç</label>
+                                    <div style="display:flex;gap:4px;align-items:center">
+                                        <input type="time" id="kapanisci_start" class="form-input" value="16:00" style="flex:1;font-size:.85rem">
+                                        <span style="color:var(--tx2)">-</span>
+                                        <input type="time" id="kapanisci_end" class="form-input" value="23:59" style="flex:1;font-size:.85rem">
+                                    </div>
+                                </div>
+                                <div class="form-group" style="margin-bottom:0">
+                                    <label style="font-size:.75rem;color:var(--tx2)">Görev Bitişi</label>
+                                    <input type="time" id="kapanisci_deadline" class="form-input" value="02:00" style="font-size:.85rem">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top:12px;padding:10px;background:var(--bg3);border-radius:8px;font-size:.8rem;color:var(--tx2)">
+                            💡 <strong>Örnek:</strong> Shift başlangıcı 10:30 olan personel → Açılışçı. Shift başlangıcı 13:00 olan → Aracı. Shift başlangıcı 17:00 olan → Kapanışçı.
+                        </div>
+                    </div>
+                </div>
 
-                <!-- Şablonlar (Birleştirilmiş + İhlaller) -->
+                <!-- İhlaller -->
+                <div class="admin-section" id="admin-ihlaller">
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                İhlal Kataloğu
+                            </div>
+                            <button class="btn btn-sm btn-primary" onclick="addViolation()">+ Ekle</button>
+                        </div>
+                        <div class="admin-list" id="violationAdminList"></div>
+                    </div>
+                </div>
+
+                <!-- Şablonlar (Birleştirilmiş) -->
                 <div class="admin-section" id="admin-sablonlar">
                     <!-- Alt Tab'lar -->
                     <div style="display:flex;gap:8px;margin-bottom:16px">
                         <button class="btn btn-primary" id="sablonTab-sozlesme" onclick="switchSablonTab('sozlesme')">📄 Sözleşme Şablonları</button>
                         <button class="btn btn-ghost" id="sablonTab-belgeler" onclick="switchSablonTab('belgeler')">📝 Belge Şablonları</button>
-                        <button class="btn btn-ghost" id="sablonTab-ihlaller" onclick="switchSablonTab('ihlaller')">⚠️ İhlal Kataloğu</button>
                     </div>
                     
                     <!-- Sözleşme Şablonları Panel -->
@@ -2193,19 +2400,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                                 Varsayılana Dön
                             </button>
                         </div>
-                    </div>
-                    
-                    <!-- İhlaller Panel -->
-                    <div id="sablonPanel-ihlaller" class="admin-card" style="display:none">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
-                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                                İhlal Kataloğu
-                            </div>
-                            <button class="btn btn-sm btn-primary" onclick="addViolation()">+ Ekle</button>
-                        </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Disiplin süreçlerinde kullanılacak ihlal türlerini ve cezalarını tanımlayın.</p>
-                        <div class="admin-list" id="violationAdminList"></div>
                     </div>
                 </div>
             </div>
@@ -5394,7 +5588,7 @@ function applyAdminTabPermissions() {
     const yoneticiOnlyTabs = ['genel', 'kullanicilar', 'oturumlar'];
     
     // Rol atanabilir sekmeler (PERMISSION_STRUCTURE.adminTabs'dan)
-    const rolAtanabilirTabs = ['checklistGecmisi', 'subelerSaatler', 'checklistAyarlari', 'sablonlar'];
+    const rolAtanabilirTabs = ['tumCheckler', 'subelerSaatler', 'checkKurallari', 'checklistTurleri', 'ihlaller', 'sablonlar'];
     
     let firstVisibleTab = null;
     let currentActiveHidden = false;
@@ -6578,34 +6772,16 @@ function deleteViolation(i) {
     }, 'danger');
 }
 
-// ========== CHECKLIST AYARLARI TAB GEÇİŞİ ==========
-function switchChecklistAyarTab(tab) {
-    // Tab butonlarını güncelle
-    document.getElementById('checklistAyarTab-kurallar').className = tab === 'kurallar' ? 'btn btn-primary' : 'btn btn-ghost';
-    document.getElementById('checklistAyarTab-turler').className = tab === 'turler' ? 'btn btn-primary' : 'btn btn-ghost';
-    
-    // Panelleri göster/gizle
-    document.getElementById('checklistAyarPanel-kurallar').style.display = tab === 'kurallar' ? 'block' : 'none';
-    document.getElementById('checklistAyarPanel-turler').style.display = tab === 'turler' ? 'block' : 'none';
-    
-    // Türler sekmesine geçildiğinde yükle
-    if (tab === 'turler') {
-        loadChecklistTypesConfig();
-    }
-}
-
 // ========== TEMPLATES ==========
 // Şablon tab geçişi
 function switchSablonTab(tab) {
     // Tab butonlarını güncelle
     document.getElementById('sablonTab-sozlesme').className = tab === 'sozlesme' ? 'btn btn-primary' : 'btn btn-ghost';
     document.getElementById('sablonTab-belgeler').className = tab === 'belgeler' ? 'btn btn-primary' : 'btn btn-ghost';
-    document.getElementById('sablonTab-ihlaller').className = tab === 'ihlaller' ? 'btn btn-primary' : 'btn btn-ghost';
     
     // Panelleri göster/gizle
     document.getElementById('sablonPanel-sozlesme').style.display = tab === 'sozlesme' ? 'block' : 'none';
     document.getElementById('sablonPanel-belgeler').style.display = tab === 'belgeler' ? 'block' : 'none';
-    document.getElementById('sablonPanel-ihlaller').style.display = tab === 'ihlaller' ? 'block' : 'none';
 }
 
 function loadTemplate() {
@@ -10057,9 +10233,11 @@ const PERMISSION_STRUCTURE = {
     ],
     adminTabs: [
         // Rol atanabilir sekmeler (UI'da gösterilir)
-        { id: 'checklistGecmisi', label: 'Checklist Geçmişi' },
+        { id: 'tumCheckler', label: 'Tüm Checkler' },
         { id: 'subelerSaatler', label: 'Şubeler & Saatler' },
-        { id: 'checklistAyarlari', label: 'Checklist Ayarları' },
+        { id: 'checkKurallari', label: 'Check & Puantaj Kuralları' },
+        { id: 'checklistTurleri', label: 'Checklist Türleri' },
+        { id: 'ihlaller', label: 'İhlaller' },
         { id: 'sablonlar', label: 'Şablonlar' }
     ],
     // Sadece yönetici görebilir - UI'da rol atama yapılmaz
@@ -10086,7 +10264,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         pages: { dashboard: { view: true, edit: false }, personel: { view: false, edit: false }, puantaj: { view: true, edit: false }, shift: { view: true, edit: false }, checklist: { view: true, edit: true }, katalog: { view: false, edit: false } },
         documents: { sozlesme: { view: false, edit: false }, tutanak: { view: false, edit: false }, savunma: { view: false, edit: false }, fesih: { view: false, edit: false }, istifa: { view: false, edit: false }, ibraname: { view: false, edit: false } },
         forms: { borc: { view: false, edit: false }, avans: { view: false, edit: false }, zimmet: { view: false, edit: false } },
-        adminTabs: { checklistGecmisi: false, subelerSaatler: false, checklistAyarlari: false, sablonlar: false },
+        adminTabs: { tumCheckler: false, subelerSaatler: false, checkKurallari: false, checklistTurleri: false, ihlaller: false, sablonlar: false },
         special: { ayarlar_erisim: false, view_all_branches: false, print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 1 }
     },
@@ -10094,7 +10272,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
-        adminTabs: { checklistGecmisi: false, subelerSaatler: false, checklistAyarlari: false, sablonlar: true },
+        adminTabs: { tumCheckler: false, subelerSaatler: false, checkKurallari: false, checklistTurleri: false, ihlaller: true, sablonlar: false },
         special: { ayarlar_erisim: true, view_all_branches: false, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 5 }
     },
@@ -10102,7 +10280,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
-        adminTabs: { checklistGecmisi: true, subelerSaatler: true, checklistAyarlari: false, sablonlar: true },
+        adminTabs: { tumCheckler: true, subelerSaatler: true, checkKurallari: false, checklistTurleri: false, ihlaller: true, sablonlar: false },
         special: { ayarlar_erisim: true, view_all_branches: false, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false },
         limits: { shift_history_weeks: 5 }
     },
@@ -10110,7 +10288,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: true }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
-        adminTabs: { checklistGecmisi: true, subelerSaatler: true, checklistAyarlari: true, sablonlar: true },
+        adminTabs: { tumCheckler: true, subelerSaatler: true, checkKurallari: true, checklistTurleri: true, ihlaller: true, sablonlar: true },
         special: { ayarlar_erisim: true, view_all_branches: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true },
         limits: { shift_history_weeks: 999 }
     }
