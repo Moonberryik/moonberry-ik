@@ -73,20 +73,18 @@
 [data-theme="dark"] .section-card{background:var(--sectionBg)!important;border-color:var(--cardBorder)!important}
 
 /* Permission Matrix Styles - Compact */
-#permissionMatrix{min-width:600px;font-size:.8rem}
-#permissionMatrix th,#permissionMatrix td{padding:5px 4px;text-align:center;border-bottom:1px solid var(--cardBorder);white-space:nowrap}
-#permissionMatrix th{background:var(--bg3);font-weight:600;color:var(--tx);position:sticky;top:0;z-index:2;font-size:.75rem}
-#permissionMatrix .perm-category{background:var(--bg3);font-weight:600;color:var(--tx);text-align:left!important;padding-left:10px;font-size:.8rem}
-#permissionMatrix .perm-item{text-align:left!important;padding-left:16px;color:var(--tx2);font-weight:400;font-size:.78rem}
-#permissionMatrix .perm-item-name{position:sticky;left:0;background:var(--bg2);z-index:1;min-width:150px;max-width:180px}
-#permissionMatrix input[type="checkbox"]{width:15px;height:15px;accent-color:var(--brand-coral);cursor:pointer}
-#permissionMatrix select{padding:2px 6px;border-radius:4px;border:1px solid var(--cardBorder);background:var(--bg2);color:var(--tx);font-size:.7rem}
-#permissionMatrix .role-header{min-width:70px;font-size:.72rem}
-#permissionMatrix .role-header-dual{min-width:60px}
-#permissionMatrix .sub-header{font-size:.65rem;font-weight:500;color:var(--tx3)}
+#permissionMatrix{min-width:500px;font-size:.8rem}
+#permissionMatrix th,#permissionMatrix td{padding:4px 3px;text-align:center;border-bottom:1px solid var(--cardBorder);white-space:nowrap}
+#permissionMatrix th{background:var(--bg3);font-weight:600;color:var(--tx);position:sticky;top:0;z-index:2;font-size:.72rem}
+#permissionMatrix .perm-category{background:var(--bg3);font-weight:600;color:var(--tx);text-align:left!important;padding-left:10px;font-size:.78rem}
+#permissionMatrix .perm-item{text-align:left!important;padding-left:14px;color:var(--tx2);font-weight:400;font-size:.76rem}
+#permissionMatrix .perm-item-name{position:sticky;left:0;background:var(--bg2);z-index:1;min-width:120px;max-width:150px}
+#permissionMatrix input[type="checkbox"]{width:14px;height:14px;accent-color:var(--brand-coral);cursor:pointer}
+#permissionMatrix select{padding:2px 4px;border-radius:4px;border:1px solid var(--cardBorder);background:var(--bg2);color:var(--tx);font-size:.68rem}
+#permissionMatrix .role-header{min-width:50px;font-size:.7rem;padding:4px 2px}
+#permissionMatrix .sub-header{font-size:.62rem;font-weight:500;color:var(--tx3);padding:2px}
 #permissionMatrix tr:hover td{background:var(--accentLight)}
 #permissionMatrix tr:hover .perm-item-name{background:var(--accentLight)}
-#permissionMatrixContainer{max-height:500px;overflow-y:auto}
 [data-theme="dark"] #permissionMatrix th{background:var(--bg3)}
 [data-theme="dark"] #permissionMatrix .perm-item-name{background:var(--bg2)}
 [data-theme="dark"] #permissionMatrix tr:hover td,[data-theme="dark"] #permissionMatrix tr:hover .perm-item-name{background:rgba(255,134,116,.1)}
@@ -4479,21 +4477,53 @@ function renderPositionListCombined() {
         'bolge_muduru': '#9b59b6'
     };
     
-    // Kompakt chip formatı
+    // Kompakt chip formatı - SVG ikonlarla
     container.innerHTML = STATE.positions.map((p, i) => {
         const color = roleColors[p.role] || '#888';
         return `
-            <div class="position-chip" style="display:inline-flex;align-items:center;gap:8px;padding:6px 12px;background:${color}15;border:1px solid ${color}40;border-radius:20px;font-size:.82rem">
-                ${getPositionIconHtml(p.icon, 18)}
+            <div class="position-chip" style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:${color}15;border:1px solid ${color}40;border-radius:16px;font-size:.8rem">
+                ${getPositionIconHtml(p.icon, 16)}
                 <span style="font-weight:500;color:var(--tx)">${p.name}</span>
-                <button onclick="editPosition(${i})" style="background:none;border:none;cursor:pointer;padding:2px;color:var(--tx2)" title="Düzenle">✏️</button>
-                <button onclick="deletePosition(${i})" style="background:none;border:none;cursor:pointer;padding:2px;color:var(--red)" title="Sil">×</button>
+                <button onclick="editPosition(${i})" style="background:none;border:none;cursor:pointer;padding:2px;display:flex;align-items:center;color:var(--tx3)" title="Düzenle">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button onclick="confirmDeletePosition(${i})" style="background:none;border:none;cursor:pointer;padding:2px;display:flex;align-items:center;color:var(--tx3)" title="Sil">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
             </div>
         `;
     }).join('');
     
     // Permission Matrix'i de render et
     renderPermissionMatrix();
+}
+
+// Pozisyon silme onay modalı
+function confirmDeletePosition(index) {
+    const pos = STATE.positions[index];
+    if (!pos) return;
+    
+    const modalHtml = `
+        <div id="deletePositionModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:10000">
+            <div style="background:var(--bg2);border-radius:12px;padding:20px;max-width:340px;width:90%;box-shadow:var(--shadow)">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                    <div style="width:40px;height:40px;background:rgba(231,76,60,.12);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    </div>
+                    <div>
+                        <div style="font-weight:600;color:var(--tx);font-size:1rem">Pozisyonu Sil</div>
+                        <div style="font-size:.8rem;color:var(--tx2)">${pos.name}</div>
+                    </div>
+                </div>
+                <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Bu pozisyonu silmek istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
+                <div style="display:flex;gap:10px;justify-content:flex-end">
+                    <button onclick="document.getElementById('deletePositionModal').remove()" class="btn btn-ghost" style="padding:6px 14px;font-size:.85rem">İptal</button>
+                    <button onclick="deletePosition(${index});document.getElementById('deletePositionModal').remove()" class="btn" style="background:var(--red);color:white;padding:6px 14px;font-size:.85rem">Sil</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
 // Dinamik yetki kartları (pozisyonlara göre)
@@ -12107,8 +12137,8 @@ async function renderPermissionMatrix() {
     const table = document.getElementById('permissionMatrix');
     if (!table) return;
     
-    // Pozisyonları al (yönetici hariç)
-    const positions = (STATE.positions || []).filter(p => p.role !== 'yonetici');
+    // Pozisyonları al (yönetici ve ik_mudur hariç)
+    const positions = (STATE.positions || []).filter(p => p.role !== 'yonetici' && p.id !== 'ik_mudur');
     
     if (positions.length === 0) {
         table.innerHTML = '<tr><td style="padding:40px;text-align:center;color:var(--tx2)">Henüz pozisyon tanımlanmamış</td></tr>';
