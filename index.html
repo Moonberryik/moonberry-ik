@@ -1708,8 +1708,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <div class="admin-tabs" id="adminTabsContainer">
                     <button class="admin-tab active" id="tab-genel" onclick="showAdminTab('genel',this)">Genel</button>
                     <button class="admin-tab" id="tab-tumCheckler" onclick="showAdminTab('tumCheckler',this)">Tüm Checkler</button>
-                    <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">Pozisyonlar ve Yetkiler</button>
-                    <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">Oturumlar & Aktiviteler</button>
+                    <button class="admin-tab admin-only-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)" style="display:none">Pozisyonlar ve Yetkiler</button>
+                    <button class="admin-tab admin-only-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)" style="display:none">Oturumlar & Aktiviteler</button>
                     <button class="admin-tab" id="tab-magazaSaatleri" onclick="showAdminTab('magazaSaatleri',this)">Mağaza Saatleri</button>
                     <button class="admin-tab" id="tab-checkKurallari" onclick="showAdminTab('checkKurallari',this)">Check & Puantaj Kuralları</button>
                     <button class="admin-tab" id="tab-checklistTurleri" onclick="showAdminTab('checklistTurleri',this)">Checklist Türleri</button>
@@ -6253,50 +6253,50 @@ async function loadMyProfile() {
 
 // Avatar seçenekleri - DiceBear API ile canlı, güzel avatarlar (40 adet)
 const AVATAR_OPTIONS = [
-    // === ERKEKLER (10) - adventurer-neutral stili ===
-    { label: 'Erkek 1', url: 'https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Felix&backgroundColor=b6e3f4' },
-    { label: 'Erkek 2', url: 'https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Max&backgroundColor=c0aede' },
-    { label: 'Erkek 3', url: 'https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Leo&backgroundColor=d1d4f9' },
-    { label: 'Erkek 4', url: 'https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Buddy&backgroundColor=ffd5dc' },
-    { label: 'Erkek 5', url: 'https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Charlie&backgroundColor=ffdfbf' },
-    { label: 'Erkek 6', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=John&backgroundColor=b6e3f4' },
-    { label: 'Erkek 7', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Mike&backgroundColor=c0aede' },
-    { label: 'Erkek 8', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=David&backgroundColor=d1d4f9' },
-    { label: 'Erkek 9', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=James&backgroundColor=ffd5dc' },
-    { label: 'Erkek 10', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Robert&backgroundColor=ffdfbf' },
-    // === KADINLAR (10) - adventurer-neutral stili ===
-    { label: 'Kadın 1', url: 'https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Bella&backgroundColor=ffd5dc' },
-    { label: 'Kadın 2', url: 'https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Luna&backgroundColor=c0aede' },
-    { label: 'Kadın 3', url: 'https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Coco&backgroundColor=b6e3f4' },
-    { label: 'Kadın 4', url: 'https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Daisy&backgroundColor=ffdfbf' },
-    { label: 'Kadın 5', url: 'https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Ruby&backgroundColor=d1d4f9' },
-    { label: 'Kadın 6', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Emma&backgroundColor=ffd5dc' },
-    { label: 'Kadın 7', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Sophia&backgroundColor=c0aede' },
-    { label: 'Kadın 8', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Olivia&backgroundColor=b6e3f4' },
-    { label: 'Kadın 9', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Ava&backgroundColor=ffdfbf' },
-    { label: 'Kadın 10', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Mia&backgroundColor=d1d4f9' },
-    // === TATLI HAYVANLAR (10) - thumbs stili ===
-    { label: 'Kedi', url: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Whiskers&backgroundColor=ffd5dc' },
-    { label: 'Köpek', url: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Buddy&backgroundColor=ffdfbf' },
-    { label: 'Tavşan', url: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Bunny&backgroundColor=d1d4f9' },
-    { label: 'Ayı', url: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Bear&backgroundColor=c0aede' },
-    { label: 'Panda', url: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Panda&backgroundColor=b6e3f4' },
-    { label: 'Tilki', url: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Fox&backgroundColor=ffdfbf' },
-    { label: 'Penguen', url: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Penguin&backgroundColor=b6e3f4' },
-    { label: 'Baykuş', url: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Owl&backgroundColor=c0aede' },
-    { label: 'Kuş', url: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Bird&backgroundColor=d1d4f9' },
-    { label: 'Balık', url: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Fish&backgroundColor=b6e3f4' },
-    // === KAHVE & İÇECEK SEKTÖRÜ (10) - icons stili ===
-    { label: 'Kahve', url: 'https://api.dicebear.com/7.x/icons/svg?seed=Coffee&backgroundColor=6f4e37&icon=cup-hot' },
-    { label: 'Çay', url: 'https://api.dicebear.com/7.x/icons/svg?seed=Tea&backgroundColor=c0aede&icon=cup-hot' },
-    { label: 'Smoothie', url: 'https://api.dicebear.com/7.x/icons/svg?seed=Smoothie&backgroundColor=ff8674&icon=cup-straw' },
-    { label: 'Juice', url: 'https://api.dicebear.com/7.x/icons/svg?seed=Orange&backgroundColor=ffa500&icon=cup-straw' },
-    { label: 'Latte', url: 'https://api.dicebear.com/7.x/icons/svg?seed=Latte&backgroundColor=d2691e&icon=cup-hot' },
-    { label: 'Espresso', url: 'https://api.dicebear.com/7.x/icons/svg?seed=Espresso&backgroundColor=3c1414&icon=cup-hot' },
-    { label: 'Milkshake', url: 'https://api.dicebear.com/7.x/icons/svg?seed=Milkshake&backgroundColor=ffb6c1&icon=cup-straw' },
-    { label: 'Limonata', url: 'https://api.dicebear.com/7.x/icons/svg?seed=Lemonade&backgroundColor=fff44f&icon=cup-straw' },
-    { label: 'Moonberry', url: 'https://api.dicebear.com/7.x/icons/svg?seed=Moonberry&backgroundColor=008c95&icon=cup-hot' },
-    { label: 'Sunberry', url: 'https://api.dicebear.com/7.x/icons/svg?seed=Sunberry&backgroundColor=ff8674&icon=cup-straw' }
+    // === ERKEKLER (10) - avataaars stili (güzel cartoon) ===
+    { label: 'Erkek 1', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=b6e3f4&accessories=prescription02&clothingColor=3c4f5c&top=shortHairShortFlat' },
+    { label: 'Erkek 2', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Max&backgroundColor=c0aede&top=shortHairShortWaved&facialHair=beardLight' },
+    { label: 'Erkek 3', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Leo&backgroundColor=d1d4f9&top=shortHairDreads01&clothingColor=25557c' },
+    { label: 'Erkek 4', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie&backgroundColor=ffd5dc&top=shortHairShortCurly&accessories=round' },
+    { label: 'Erkek 5', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Oliver&backgroundColor=ffdfbf&top=shortHairTheCaesar&facialHair=beardMedium' },
+    { label: 'Erkek 6', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=John&backgroundColor=b6e3f4' },
+    { label: 'Erkek 7', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Mike&backgroundColor=c0aede' },
+    { label: 'Erkek 8', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=David&backgroundColor=d1d4f9' },
+    { label: 'Erkek 9', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=James&backgroundColor=ffd5dc' },
+    { label: 'Erkek 10', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Robert&backgroundColor=ffdfbf' },
+    // === KADINLAR (10) - avataaars stili ===
+    { label: 'Kadın 1', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bella&backgroundColor=ffd5dc&top=longHairStraight&hairColor=2c1b18' },
+    { label: 'Kadın 2', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Luna&backgroundColor=c0aede&top=longHairCurly&accessories=prescription01' },
+    { label: 'Kadın 3', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Coco&backgroundColor=b6e3f4&top=longHairBob&hairColor=4a312c' },
+    { label: 'Kadın 4', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Daisy&backgroundColor=ffdfbf&top=longHairStraight2&hairColor=b58143' },
+    { label: 'Kadın 5', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ruby&backgroundColor=d1d4f9&top=longHairFrida&accessories=round' },
+    { label: 'Kadın 6', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Emma&backgroundColor=ffd5dc' },
+    { label: 'Kadın 7', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Sophia&backgroundColor=c0aede' },
+    { label: 'Kadın 8', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Olivia&backgroundColor=b6e3f4' },
+    { label: 'Kadın 9', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Ava&backgroundColor=ffdfbf' },
+    { label: 'Kadın 10', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Mia&backgroundColor=d1d4f9' },
+    // === TATLI HAYVANLAR (10) - fun-emoji ve bottts-neutral ===
+    { label: 'Kedi', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Kitty&backgroundColor=ffd5dc' },
+    { label: 'Köpek', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Puppy&backgroundColor=ffdfbf' },
+    { label: 'Tavşan', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Bunny&backgroundColor=d1d4f9' },
+    { label: 'Ayı', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Teddy&backgroundColor=c0aede' },
+    { label: 'Panda', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Panda&backgroundColor=b6e3f4' },
+    { label: 'Tilki', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Foxy&backgroundColor=ffdfbf' },
+    { label: 'Penguen', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Penguin&backgroundColor=b6e3f4' },
+    { label: 'Baykuş', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Owly&backgroundColor=c0aede' },
+    { label: 'Aslan', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Lion&backgroundColor=ffdfbf' },
+    { label: 'Fil', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Elephant&backgroundColor=b6e3f4' },
+    // === SÜPER KAHRAMANLAR (10) - bottts stili ===
+    { label: 'Iron Man', url: 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=IronMan&backgroundColor=e74c3c' },
+    { label: 'Captain', url: 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Captain&backgroundColor=3498db' },
+    { label: 'Hulk', url: 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Hulk&backgroundColor=27ae60' },
+    { label: 'Thor', url: 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Thor&backgroundColor=f39c12' },
+    { label: 'Spider', url: 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Spider&backgroundColor=c0392b' },
+    { label: 'Batman', url: 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Batman&backgroundColor=2c3e50' },
+    { label: 'Superman', url: 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Superman&backgroundColor=2980b9' },
+    { label: 'Flash', url: 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Flash&backgroundColor=e74c3c' },
+    { label: 'Wonder', url: 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Wonder&backgroundColor=9b59b6' },
+    { label: 'Aquaman', url: 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Aquaman&backgroundColor=1abc9c' }
 ];
 
 // Avatar seçme fonksiyonu
@@ -6414,7 +6414,7 @@ function openAvatarModal(docId) {
             
             <!-- İçecekler -->
             <div>
-                <div style="font-size:.7rem;color:var(--tx3);margin-bottom:6px;font-weight:600">☕ Kahve & İçecek</div>
+                <div style="font-size:.7rem;color:var(--tx3);margin-bottom:6px;font-weight:600">🦸 Süper Kahramanlar</div>
                 <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
                     ${icecekler.map((avatar, i) => `
                         <div onclick="selectAvatar(${i + 30}, '${docId}')" style="aspect-ratio:1;border-radius:10px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.05)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
