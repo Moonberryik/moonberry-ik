@@ -9098,11 +9098,15 @@ function showAddPersonelModal(editId = null) {
     
     // Yetki kontrolleri (dinamik)
     const isYonetici = currentUser?.role === 'yonetici';
+    const isBolgeMuduru = currentUser?.role === 'bolge_muduru';
     const perms = window.userAdvancedPermissions;
     const canSeeSalary = isYonetici || perms?.special?.view_salary;
     const canViewPassword = isYonetici || perms?.special?.view_password;
     const canAssignPassword = isYonetici || perms?.special?.assign_password;
     const canChangePassword = isYonetici || perms?.special?.change_others_password;
+    
+    // Şube değiştirme yetkisi - Yönetici ve Bölge Müdürü değiştirebilir
+    const canChangeBranch = isYonetici || isBolgeMuduru || perms?.special?.canViewAllBranches;
     
     // Şifre alanını gösterme koşulu
     const showPasswordField = isYonetici || canAssignPassword || canChangePassword;
@@ -9110,6 +9114,17 @@ function showAddPersonelModal(editId = null) {
     const salaryField = canSeeSalary 
         ? `<div class="form-group"><label class="form-label">Brüt Ücret (TL)</label><input type="number" id="personelSalary" class="form-input"></div>`
         : `<input type="hidden" id="personelSalary" value="">`;
+    
+    // Şube alanı - yetkisi olmayanlar değiştiremez (editId varsa ve kendi kartıysa readonly)
+    const branchField = canChangeBranch 
+        ? `<div class="form-group"><label class="form-label">Şube</label><select id="personelBranch" class="form-select">${STATE.branches.map(b => `<option value="${b}">${b}</option>`).join('')}</select></div>`
+        : `<div class="form-group"><label class="form-label">Şube</label><input type="text" id="personelBranchDisplay" class="form-input" readonly style="background:var(--bg3);cursor:not-allowed"><input type="hidden" id="personelBranch" value=""></div>`;
+    
+    // Pozisyon alanı - sadece yetkili değiştirebilir
+    const canChangePosition = isYonetici || isBolgeMuduru || perms?.pages?.personel?.edit;
+    const positionField = canChangePosition
+        ? `<div class="form-group"><label class="form-label">Pozisyon</label><select id="personelPosition" class="form-select">${STATE.positions.map(p => `<option value="${p.name}">${p.name}</option>`).join('')}</select></div>`
+        : `<div class="form-group"><label class="form-label">Pozisyon</label><input type="text" id="personelPositionDisplay" class="form-input" readonly style="background:var(--bg3);cursor:not-allowed"><input type="hidden" id="personelPosition" value=""></div>`;
     
     const body = `
         <input type="hidden" id="personelEditId" value="${editId || ''}">
@@ -9120,8 +9135,8 @@ function showAddPersonelModal(editId = null) {
             <div class="form-group"><label class="form-label">Telefon</label><input type="tel" id="personelPhone" class="form-input"></div>
             <div class="form-group full"><label class="form-label">Adres</label><input type="text" id="personelAddress" class="form-input"></div>
             <div class="form-group"><label class="form-label">IBAN</label><input type="text" id="personelIBAN" class="form-input"></div>
-            <div class="form-group"><label class="form-label">Şube</label><select id="personelBranch" class="form-select">${STATE.branches.map(b => `<option value="${b}">${b}</option>`).join('')}</select></div>
-            <div class="form-group"><label class="form-label">Pozisyon</label><select id="personelPosition" class="form-select">${STATE.positions.map(p => `<option value="${p.name}">${p.name}</option>`).join('')}</select></div>
+            ${branchField}
+            ${positionField}
             <div class="form-group"><label class="form-label">İşe Başlama</label><input type="date" id="personelStartDate" class="form-input"></div>
             ${salaryField}
         </div>
@@ -9185,13 +9200,26 @@ async function loadPersonelForEdit(id) {
             document.getElementById('personelCodeName').value = p.codeName || '';
             document.getElementById('personelTC').value = p.tc || '';
             document.getElementById('personelPhone').value = p.phone || '';
-            document.getElementById('personelEmail').value = p.email || '';
+            const emailEl = document.getElementById('personelEmail');
+            if (emailEl) emailEl.value = p.email || '';
             document.getElementById('personelAddress').value = p.address || '';
             document.getElementById('personelIBAN').value = p.iban || '';
-            document.getElementById('personelBranch').value = p.branch || '';
-            document.getElementById('personelPosition').value = p.position || '';
+            
+            // Şube - hem hidden hem display varsa ikisini de set et
+            const branchSelect = document.getElementById('personelBranch');
+            const branchDisplay = document.getElementById('personelBranchDisplay');
+            if (branchSelect) branchSelect.value = p.branch || '';
+            if (branchDisplay) branchDisplay.value = p.branch || '';
+            
+            // Pozisyon - hem hidden hem display varsa ikisini de set et
+            const positionSelect = document.getElementById('personelPosition');
+            const positionDisplay = document.getElementById('personelPositionDisplay');
+            if (positionSelect) positionSelect.value = p.position || '';
+            if (positionDisplay) positionDisplay.value = p.position || '';
+            
             document.getElementById('personelStartDate').value = p.startDate || '';
-            document.getElementById('personelSalary').value = p.salary || '';
+            const salaryEl = document.getElementById('personelSalary');
+            if (salaryEl) salaryEl.value = p.salary || '';
             // Şifre alanı - düzenleme modunda boş bırakılır (değişmeyecekse)
             
             // Şifre görme yetkisi olan için mevcut şifreyi credentials'dan al
