@@ -27250,58 +27250,51 @@ function loadMoreAnnouncements() {
 function showAddAnnouncementModal() {
     const branches = STATE.branches || [];
     
-    const modalHtml = `
-        <div style="padding:20px">
-            <h3 style="margin:0 0 20px;color:var(--tx);display:flex;align-items:center;gap:10px">
-                <svg width="20" height="20" fill="none" stroke="#ff8674" stroke-width="2" viewBox="0 0 24 24"><path d="M22 17H2a3 3 0 003-3V9a7 7 0 0114 0v5a3 3 0 003 3zM8.5 17v1a3.5 3.5 0 007 0v-1"/></svg>
-                Yeni Duyuru
-            </h3>
-            
-            <div style="margin-bottom:16px">
-                <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">Başlık</label>
-                <input type="text" id="announcementTitle" placeholder="Duyuru başlığı..." 
-                    style="width:100%;padding:12px;border:1px solid var(--cardBorder);border-radius:8px;font-size:.9rem;background:var(--bg2);color:var(--tx)">
-            </div>
-            
-            <div style="margin-bottom:16px">
-                <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">İçerik</label>
-                <textarea id="announcementContent" rows="4" placeholder="Duyuru içeriği..." 
-                    style="width:100%;padding:12px;border:1px solid var(--cardBorder);border-radius:8px;font-size:.9rem;background:var(--bg2);color:var(--tx);resize:vertical"></textarea>
-            </div>
-            
-            <div style="margin-bottom:16px">
-                <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">Hedef Şubeler</label>
-                <div style="display:flex;flex-wrap:wrap;gap:8px">
-                    <label style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg3);border-radius:8px;cursor:pointer;font-size:.85rem">
-                        <input type="checkbox" id="branch_all" value="all" checked onchange="toggleAllBranches(this)">
-                        <span>Tüm Şubeler</span>
-                    </label>
-                    ${branches.map(b => `
-                        <label style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg3);border-radius:8px;cursor:pointer;font-size:.85rem">
-                            <input type="checkbox" class="branch-checkbox" value="${b}" disabled>
-                            <span>${b}</span>
-                        </label>
-                    `).join('')}
-                </div>
-            </div>
-            
-            <div style="margin-bottom:20px">
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-                    <input type="checkbox" id="announcementUrgent">
-                    <span style="font-size:.85rem;color:var(--tx2)">
-                        <strong style="color:#e74c3c">Acil Duyuru</strong> - Öne çıkarılır ve vurgulanır
-                    </span>
+    const bodyHtml = `
+        <div style="margin-bottom:16px">
+            <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">Başlık</label>
+            <input type="text" id="announcementTitle" placeholder="Duyuru başlığı..." 
+                style="width:100%;padding:12px;border:1px solid var(--cardBorder);border-radius:8px;font-size:.9rem;background:var(--bg2);color:var(--tx)">
+        </div>
+        
+        <div style="margin-bottom:16px">
+            <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">İçerik</label>
+            <textarea id="announcementContent" rows="4" placeholder="Duyuru içeriği..." 
+                style="width:100%;padding:12px;border:1px solid var(--cardBorder);border-radius:8px;font-size:.9rem;background:var(--bg2);color:var(--tx);resize:vertical"></textarea>
+        </div>
+        
+        <div style="margin-bottom:16px">
+            <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">Hedef Şubeler</label>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+                <label style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg3);border-radius:8px;cursor:pointer;font-size:.85rem">
+                    <input type="checkbox" id="branch_all" value="all" checked onchange="toggleAllBranches(this)">
+                    <span>Tüm Şubeler</span>
                 </label>
+                ${branches.map(b => `
+                    <label style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg3);border-radius:8px;cursor:pointer;font-size:.85rem">
+                        <input type="checkbox" class="branch-checkbox" value="${b}" disabled>
+                        <span>${b}</span>
+                    </label>
+                `).join('')}
             </div>
-            
-            <div style="display:flex;gap:12px;justify-content:flex-end">
-                <button onclick="closeModal()" style="padding:10px 20px;background:var(--bg3);border:1px solid var(--cardBorder);border-radius:8px;color:var(--tx2);cursor:pointer;font-weight:500">İptal</button>
-                <button onclick="saveAnnouncement()" style="padding:10px 20px;background:linear-gradient(135deg,#ff8674,#ff6b5b);border:none;border-radius:8px;color:#fff;cursor:pointer;font-weight:600">Duyuru Ekle</button>
-            </div>
+        </div>
+        
+        <div>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                <input type="checkbox" id="announcementUrgent">
+                <span style="font-size:.85rem;color:var(--tx2)">
+                    <strong style="color:#e74c3c">Acil Duyuru</strong> - Öne çıkarılır ve vurgulanır
+                </span>
+            </label>
         </div>
     `;
     
-    showModal(modalHtml);
+    const footerHtml = `
+        <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
+        <button class="btn btn-primary" onclick="saveAnnouncement()" style="background:linear-gradient(135deg,#ff8674,#ff6b5b);border:none">Duyuru Ekle</button>
+    `;
+    
+    showModal('Yeni Duyuru', bodyHtml, footerHtml);
 }
 
 // Tüm şubeler seçilince diğerlerini devre dışı bırak
