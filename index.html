@@ -618,20 +618,22 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
                 <!-- Kullanıcı Bilgisi ve Çıkış -->
                 <div class="sidebar-user" style="margin-top:auto;padding:16px 20px;border-top:1px solid rgba(255,255,255,.1)">
-                    <div id="userInfo" onclick="goTo('admin');showAdminTab('genel',document.querySelector('.admin-tab'))" style="display:flex;align-items:center;gap:12px;margin-bottom:12px;cursor:pointer;padding:8px;margin:-8px;border-radius:8px;transition:background .2s" onmouseover="this.style.background='rgba(255,255,255,.1)'" onmouseout="this.style.background='transparent'">
+                    <div id="userInfo" onclick="goTo('admin');showAdminTab('genel',document.querySelector('.admin-tab'))" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:8px;margin:-8px -8px 8px -8px;border-radius:8px;transition:background .2s" onmouseover="this.style.background='rgba(255,255,255,.1)'" onmouseout="this.style.background='transparent'" title="Profil Ayarları">
                         <div class="user-avatar" style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;flex-shrink:0;overflow:hidden" id="userAvatar">👤</div>
                         <div class="user-details" style="flex:1;overflow:hidden">
                             <div id="userName" style="color:var(--sidebarTx);font-size:.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Yükleniyor...</div>
                             <div id="userRole" style="color:var(--sidebarTx2);font-size:.7rem">-</div>
                         </div>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sidebarTx2)" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     </div>
-                    <button class="logout-btn" onclick="logout()" style="width:100%;padding:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--sidebarTx2);font-size:.8rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.background='rgba(231,76,60,.2)';this.style.borderColor='rgba(231,76,60,.4)';this.style.color='#e74c3c'" onmouseout="this.style.background='rgba(255,255,255,.1)';this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--sidebarTx2)'">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                        Çıkış Yap
-                    </button>
-                    <div class="sidebar-toggle-inner" onclick="toggleSidebar()" title="Menüyü Daralt/Genişlet" style="margin-top:12px">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 19l-7-7 7-7"/><path d="M18 19l-7-7 7-7"/></svg>
-                        <span>Daralt</span>
+                    <div style="display:flex;gap:8px">
+                        <button onclick="logout()" style="flex:1;padding:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--sidebarTx2);font-size:.75rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.background='rgba(231,76,60,.2)';this.style.borderColor='rgba(231,76,60,.4)';this.style.color='#e74c3c'" onmouseout="this.style.background='rgba(255,255,255,.1)';this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--sidebarTx2)'" title="Çıkış Yap">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                            <span class="user-details">Çıkış</span>
+                        </button>
+                        <button onclick="toggleSidebar()" style="padding:10px 12px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--sidebarTx2);cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background='rgba(255,255,255,.15)'" onmouseout="this.style.background='rgba(255,255,255,.1)'" title="Menüyü Daralt/Genişlet">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 19l-7-7 7-7"/><path d="M18 19l-7-7 7-7"/></svg>
+                        </button>
                     </div>
                 </div>
             </nav>
@@ -4790,6 +4792,15 @@ function applyBaristaRestrictions() {
     if (navPersonel) navPersonel.style.display = 'none';
     if (navKatalog) navKatalog.style.display = 'none';
     
+    // Sidebar'daki Belgeler ve Formlar gruplarını gizle
+    const navBelgeler = document.getElementById('nav-belgeler');
+    const navFormlar = document.getElementById('nav-formlar');
+    if (navBelgeler) navBelgeler.style.display = 'none';
+    if (navFormlar) navFormlar.style.display = 'none';
+    
+    // Divider'ları (ayırıcı çizgiler) gizle
+    document.querySelectorAll('.nav-divider').forEach(div => div.style.display = 'none');
+    
     // Barista badge'i ekle
     const userRoleEl = document.getElementById('userRole');
     if (userRoleEl) {
@@ -6134,7 +6145,7 @@ async function loadMyProfile() {
                             <div style="font-size:.75rem;color:var(--tx3)">${p.branch || '-'}</div>
                         </div>
                     </div>
-                    <div style="font-size:.65rem;color:var(--tx3);margin-bottom:12px">📷 Fotoğraf: Max 500KB, JPG/PNG</div>
+                    <div style="font-size:.65rem;color:var(--tx3);margin-bottom:12px">📷 Fotoğrafa tıkla → JPG/PNG seç (otomatik boyutlandırılır)</div>
                     
                     <div style="display:grid;gap:10px;font-size:.85rem">
                         <div style="display:flex;align-items:center;gap:8px">
@@ -6203,40 +6214,48 @@ async function handleProfilePhotoUpload(input, docId) {
     const file = input.files[0];
     if (!file) return;
     
-    // Dosya kontrolü
-    const maxSize = 500 * 1024; // 500KB
-    if (file.size > maxSize) {
-        toast('Fotoğraf çok büyük. Max 500KB olmalı.', 'error');
-        return;
-    }
-    
+    // Sadece format kontrolü
     if (!file.type.match(/^image\/(jpeg|png|webp)$/)) {
         toast('Sadece JPG, PNG veya WebP formatı desteklenir', 'error');
         return;
     }
     
     try {
-        toast('Fotoğraf yükleniyor...', 'info');
+        toast('Fotoğraf işleniyor...', 'info');
         
-        // Resmi küçült ve base64'e çevir
-        const resizedBase64 = await resizeAndCompressImage(file, 400, 400, 0.8);
+        // Resmi otomatik küçült ve sıkıştır (max 300KB hedefle)
+        const resizedBase64 = await resizeAndCompressImage(file, 400, 400, 0.7);
+        
+        // Base64 boyutunu kontrol et, hala büyükse daha fazla sıkıştır
+        let finalBase64 = resizedBase64;
+        const maxBase64Size = 300 * 1024; // 300KB (Firestore için güvenli)
+        
+        if (finalBase64.length > maxBase64Size) {
+            // Daha agresif sıkıştırma
+            finalBase64 = await resizeAndCompressImage(file, 300, 300, 0.5);
+        }
+        
+        if (finalBase64.length > maxBase64Size) {
+            // En son çare - çok küçük
+            finalBase64 = await resizeAndCompressImage(file, 200, 200, 0.4);
+        }
         
         // Firestore'a kaydet
         await db.collection('personel').doc(docId).update({
-            photoUrl: resizedBase64,
+            photoUrl: finalBase64,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
         // Preview'u güncelle
         const preview = document.getElementById('profilePhotoPreview');
         if (preview) {
-            preview.innerHTML = `<img src="${resizedBase64}" style="width:100%;height:100%;object-fit:cover">`;
+            preview.innerHTML = `<img src="${finalBase64}" style="width:100%;height:100%;object-fit:cover">`;
         }
         
         // Sidebar avatar'ı güncelle
         const sidebarAvatar = document.getElementById('userAvatar');
         if (sidebarAvatar) {
-            sidebarAvatar.innerHTML = `<img src="${resizedBase64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+            sidebarAvatar.innerHTML = `<img src="${finalBase64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
         }
         
         toast('Fotoğraf güncellendi', 'success');
