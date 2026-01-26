@@ -618,8 +618,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 </div>
                 <!-- Kullanıcı Bilgisi ve Çıkış -->
                 <div class="sidebar-user" style="margin-top:auto;padding:16px 20px;border-top:1px solid rgba(255,255,255,.1)">
-                    <div id="userInfo" style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-                        <div class="user-avatar" style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;flex-shrink:0" id="userAvatar">👤</div>
+                    <div id="userInfo" onclick="goTo('admin');showAdminTab('genel',document.querySelector('.admin-tab'))" style="display:flex;align-items:center;gap:12px;margin-bottom:12px;cursor:pointer;padding:8px;margin:-8px;border-radius:8px;transition:background .2s" onmouseover="this.style.background='rgba(255,255,255,.1)'" onmouseout="this.style.background='transparent'">
+                        <div class="user-avatar" style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;flex-shrink:0;overflow:hidden" id="userAvatar">👤</div>
                         <div class="user-details" style="flex:1;overflow:hidden">
                             <div id="userName" style="color:var(--sidebarTx);font-size:.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Yükleniyor...</div>
                             <div id="userRole" style="color:var(--sidebarTx2);font-size:.7rem">-</div>
@@ -661,7 +661,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                         Yönetim Paneli
                     </div>
-                    <div class="page-subtitle" id="companyName">Yükleniyor...</div>
+                    <div class="page-subtitle" id="motivationQuote" style="font-style:italic;font-size:.85rem;color:var(--tx3)">Yükleniyor...</div>
                 </div>
                 
                 <!-- Personel Karşılama Kartı - Dinamik -->
@@ -696,8 +696,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                         <div style="display:flex;align-items:center;gap:8px">
                             <select id="announcementLimitSelect" onchange="changeAnnouncementLimit(this.value)" style="padding:4px 8px;border:1px solid var(--cardBorder);border-radius:6px;font-size:.7rem;background:var(--bg2);color:var(--tx2);cursor:pointer">
-                                <option value="3">3 göster</option>
-                                <option value="5" selected>5 göster</option>
+                                <option value="3" selected>3 göster</option>
+                                <option value="5">5 göster</option>
                                 <option value="10">10 göster</option>
                             </select>
                             <button id="addAnnouncementBtn" onclick="showAddAnnouncementModal()" style="display:none;background:linear-gradient(135deg,#ff8674,#ff6b5b);color:#fff;border:none;padding:6px 12px;border-radius:8px;font-size:.7rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px">
@@ -1698,20 +1698,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <div class="page-title">⚙️ Yönetim Paneli</div>
                     <div class="page-subtitle">Sistem ayarlarını yönetin</div>
                 </div>
-                <div class="admin-tabs">
-                    <button class="admin-tab active" onclick="showAdminTab('genel',this)">Genel</button>
-                    <button class="admin-tab" onclick="showAdminTab('tumCheckler',this)">Tüm Checkler</button>
+                <div class="admin-tabs" id="adminTabsContainer">
+                    <button class="admin-tab active" id="tab-genel" onclick="showAdminTab('genel',this)">Genel</button>
+                    <button class="admin-tab" id="tab-tumCheckler" onclick="showAdminTab('tumCheckler',this)">Tüm Checkler</button>
                     <button class="admin-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">Pozisyonlar ve Yetkiler</button>
                     <button class="admin-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">Oturumlar & Aktiviteler</button>
-                    <button class="admin-tab" onclick="showAdminTab('magazaSaatleri',this)">Mağaza Saatleri</button>
-                    <button class="admin-tab" onclick="showAdminTab('checkKurallari',this)">Check & Puantaj Kuralları</button>
-                    <button class="admin-tab" onclick="showAdminTab('checklistTurleri',this)">Checklist Türleri</button>
-                    <button class="admin-tab" onclick="showAdminTab('subeler',this)">Şubeler</button>
-                    <!-- Pozisyonlar artık Yetkiler ile birleşti -->
-                    <button class="admin-tab" onclick="showAdminTab('ihlaller',this)">İhlaller</button>
-                    <button class="admin-tab" onclick="showAdminTab('sablonlar',this)">Sözleşme Şablonları</button>
-                    <button class="admin-tab" onclick="showAdminTab('belgeler',this)">Belge Şablonları</button>
-                    <!-- Aktiviteler artık Oturumlar ile birleşti -->
+                    <button class="admin-tab" id="tab-magazaSaatleri" onclick="showAdminTab('magazaSaatleri',this)">Mağaza Saatleri</button>
+                    <button class="admin-tab" id="tab-checkKurallari" onclick="showAdminTab('checkKurallari',this)">Check & Puantaj Kuralları</button>
+                    <button class="admin-tab" id="tab-checklistTurleri" onclick="showAdminTab('checklistTurleri',this)">Checklist Türleri</button>
+                    <button class="admin-tab" id="tab-subeler" onclick="showAdminTab('subeler',this)">Şubeler</button>
+                    <button class="admin-tab" id="tab-ihlaller" onclick="showAdminTab('ihlaller',this)">İhlaller</button>
+                    <button class="admin-tab" id="tab-sablonlar" onclick="showAdminTab('sablonlar',this)">Sözleşme Şablonları</button>
+                    <button class="admin-tab" id="tab-belgeler" onclick="showAdminTab('belgeler',this)">Belge Şablonları</button>
                     <button class="admin-tab" id="tab-yedekler" onclick="showAdminTab('yedekler',this)">Yedekler</button>
                 </div>
                 
@@ -4380,7 +4378,7 @@ function initSidebarState() {
 
 function initUI() {
     initSidebarState();
-    document.getElementById('companyName').textContent = STATE.company.name;
+    loadMotivationQuote();
     populateSelects();
     renderPositionCards();
     renderViolations();
@@ -4711,8 +4709,11 @@ function applyUserPermissions() {
         };
         userRoleEl.textContent = roleNames[currentUser.role] || currentUser.role;
     }
-    if (userAvatarEl && currentUser.name) {
-        userAvatarEl.textContent = currentUser.name.charAt(0).toUpperCase();
+    
+    // Avatar - fotoğraf varsa göster, yoksa baş harf
+    if (userAvatarEl) {
+        // Firestore'dan fotoğrafı çek
+        loadUserAvatar();
     }
     
     // Yönetici her şeye erişebilir
@@ -4783,12 +4784,10 @@ function applyBaristaRestrictions() {
         }
     });
     
-    // Personel ve Ayarlar gizle
+    // Personel ve Katalog gizle (Ayarlar görünsün - kendi profilini düzenleyebilsin)
     const navPersonel = document.querySelector('.nav-item[data-page="personel"]');
-    const navAdmin = document.querySelector('.nav-item[data-page="admin"]');
     const navKatalog = document.querySelector('.nav-item[data-page="katalog"]');
     if (navPersonel) navPersonel.style.display = 'none';
-    if (navAdmin) navAdmin.style.display = 'none';
     if (navKatalog) navKatalog.style.display = 'none';
     
     // Barista badge'i ekle
@@ -4883,6 +4882,22 @@ function goTo(page) {
     if (page === 'admin') { 
         renderAdminLists(); 
         loadMyProfile(); // Profilim kartını yükle
+        
+        // Barista için sadece Genel sekmesi görünsün
+        const isBarista = currentUser?.role === 'barista' || currentUser?.role === 'magaza_mudur_yardimcisi';
+        const adminTabs = ['tumCheckler', 'kullanicilar', 'oturumlar', 'magazaSaatleri', 'checkKurallari', 'checklistTurleri', 'subeler', 'ihlaller', 'sablonlar', 'belgeler', 'yedekler'];
+        
+        adminTabs.forEach(tabId => {
+            const tab = document.getElementById('tab-' + tabId);
+            if (tab) {
+                tab.style.display = isBarista ? 'none' : '';
+            }
+        });
+        
+        // Barista için Genel sekmesini göster ve aktif yap
+        if (isBarista) {
+            showAdminTab('genel', document.getElementById('tab-genel'));
+        }
     }
     if (page === 'personel') loadPersonelList();
     if (page === 'puantaj') { 
@@ -5961,6 +5976,13 @@ function openAdminWithPin() {
         return;
     }
     
+    // Barista ve Müdür Yardımcısı - sadece Genel sekmesine erişebilir (kendi profilini düzenlemek için)
+    if (currentUser.role === 'barista' || currentUser.role === 'magaza_mudur_yardimcisi') {
+        goTo('admin');
+        showAdminTab('genel', document.getElementById('tab-genel'));
+        return;
+    }
+    
     // Diğer roller için gelişmiş izin kontrolü
     if (checkPermission('admin', 'admin_genel', 'access')) {
         goTo('admin');
@@ -6086,13 +6108,25 @@ async function loadMyProfile() {
             'barista': 'Barista'
         };
         
+        // Profil fotoğrafı - varsa göster
+        const photoUrl = p.photoUrl || '';
+        const photoDisplay = photoUrl 
+            ? `<img src="${photoUrl}" style="width:100%;height:100%;object-fit:cover">`
+            : `${(p.name || 'U').charAt(0).toUpperCase()}`;
+        
         container.innerHTML = `
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
                 <!-- Sol: Bilgiler -->
                 <div>
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--bg4)">
-                        <div style="width:60px;height:60px;background:linear-gradient(135deg,#008c95,#00a8a8);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem;font-weight:600">
-                            ${(p.name || 'U').charAt(0).toUpperCase()}
+                        <div style="position:relative">
+                            <div id="profilePhotoPreview" style="width:70px;height:70px;background:linear-gradient(135deg,#008c95,#00a8a8);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem;font-weight:600;overflow:hidden;cursor:pointer" onclick="document.getElementById('profilePhotoInput').click()" title="Fotoğraf değiştir">
+                                ${photoDisplay}
+                            </div>
+                            <div style="position:absolute;bottom:0;right:0;width:24px;height:24px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid var(--cardBg)" onclick="document.getElementById('profilePhotoInput').click()">
+                                <svg width="12" height="12" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                            </div>
+                            <input type="file" id="profilePhotoInput" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleProfilePhotoUpload(this, '${docId}')">
                         </div>
                         <div>
                             <div style="font-size:1.2rem;font-weight:600;color:var(--tx)">${p.name || '-'}</div>
@@ -6100,11 +6134,13 @@ async function loadMyProfile() {
                             <div style="font-size:.75rem;color:var(--tx3)">${p.branch || '-'}</div>
                         </div>
                     </div>
+                    <div style="font-size:.65rem;color:var(--tx3);margin-bottom:12px">📷 Fotoğraf: Max 500KB, JPG/PNG</div>
                     
                     <div style="display:grid;gap:10px;font-size:.85rem">
                         <div style="display:flex;align-items:center;gap:8px">
                             <span style="width:24px;color:var(--tx3)">📧</span>
-                            <span style="color:var(--tx2)">${p.email || '-'}</span>
+                            <span style="color:var(--tx2);opacity:.7">${p.email || '-'}</span>
+                            <span style="font-size:.65rem;color:var(--tx3)">(değiştirilemez)</span>
                         </div>
                         <div style="display:flex;align-items:center;gap:8px">
                             <span style="width:24px;color:var(--tx3)">📱</span>
@@ -6160,6 +6196,97 @@ async function loadMyProfile() {
         console.error('Profil yükleme hatası:', error);
         container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--red)">Yükleme hatası: ' + error.message + '</div>';
     }
+}
+
+// Profil fotoğrafı yükleme
+async function handleProfilePhotoUpload(input, docId) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    // Dosya kontrolü
+    const maxSize = 500 * 1024; // 500KB
+    if (file.size > maxSize) {
+        toast('Fotoğraf çok büyük. Max 500KB olmalı.', 'error');
+        return;
+    }
+    
+    if (!file.type.match(/^image\/(jpeg|png|webp)$/)) {
+        toast('Sadece JPG, PNG veya WebP formatı desteklenir', 'error');
+        return;
+    }
+    
+    try {
+        toast('Fotoğraf yükleniyor...', 'info');
+        
+        // Resmi küçült ve base64'e çevir
+        const resizedBase64 = await resizeAndCompressImage(file, 400, 400, 0.8);
+        
+        // Firestore'a kaydet
+        await db.collection('personel').doc(docId).update({
+            photoUrl: resizedBase64,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // Preview'u güncelle
+        const preview = document.getElementById('profilePhotoPreview');
+        if (preview) {
+            preview.innerHTML = `<img src="${resizedBase64}" style="width:100%;height:100%;object-fit:cover">`;
+        }
+        
+        // Sidebar avatar'ı güncelle
+        const sidebarAvatar = document.getElementById('userAvatar');
+        if (sidebarAvatar) {
+            sidebarAvatar.innerHTML = `<img src="${resizedBase64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+        }
+        
+        toast('Fotoğraf güncellendi', 'success');
+        
+    } catch (error) {
+        console.error('Fotoğraf yükleme hatası:', error);
+        toast('Fotoğraf yüklenemedi: ' + error.message, 'error');
+    }
+}
+
+// Resmi küçült ve sıkıştır
+function resizeAndCompressImage(file, maxWidth, maxHeight, quality) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                
+                // Oranı koru
+                if (width > height) {
+                    if (width > maxWidth) {
+                        height *= maxWidth / width;
+                        width = maxWidth;
+                    }
+                } else {
+                    if (height > maxHeight) {
+                        width *= maxHeight / height;
+                        height = maxHeight;
+                    }
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // JPEG olarak sıkıştır
+                const base64 = canvas.toDataURL('image/jpeg', quality);
+                resolve(base64);
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
 }
 
 // Profil bilgilerini kaydet
@@ -6840,7 +6967,6 @@ function saveCompany() {
     STATE.company.mersis = getVal('admin_mersis') || STATE.company.mersis;
     STATE.company.address = getVal('admin_address') || STATE.company.address;
     saveState();
-    document.getElementById('companyName').textContent = STATE.company.name;
     toast('Şirket bilgileri kaydedildi', 'success');
 }
 
@@ -11971,6 +12097,39 @@ function checkPermission(category, id, type = 'view') {
     }
     
     return false;
+}
+
+// Kullanıcı avatarını yükle
+async function loadUserAvatar() {
+    const userAvatarEl = document.getElementById('userAvatar');
+    if (!userAvatarEl || !currentUser?.email) {
+        if (userAvatarEl && currentUser?.name) {
+            userAvatarEl.textContent = currentUser.name.charAt(0).toUpperCase();
+        }
+        return;
+    }
+    
+    try {
+        const personelSnap = await db.collection('personel').where('email', '==', currentUser.email).limit(1).get();
+        
+        if (!personelSnap.empty) {
+            const data = personelSnap.docs[0].data();
+            if (data.photoUrl) {
+                userAvatarEl.innerHTML = `<img src="${data.photoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+                return;
+            }
+        }
+        
+        // Fotoğraf yoksa baş harf göster
+        if (currentUser.name) {
+            userAvatarEl.textContent = currentUser.name.charAt(0).toUpperCase();
+        }
+    } catch (error) {
+        console.error('Avatar yükleme hatası:', error);
+        if (currentUser?.name) {
+            userAvatarEl.textContent = currentUser.name.charAt(0).toUpperCase();
+        }
+    }
 }
 
 // Kullanıcı girişinde izinleri yükle
@@ -27142,9 +27301,42 @@ async function getWeeklyDashboardSummary(branch, personnelId) {
     };
 }
 
+// ==================== MOTİVASYON SÖZLERİ ====================
+async function loadMotivationQuote() {
+    const quoteEl = document.getElementById('motivationQuote');
+    if (!quoteEl) return;
+    
+    try {
+        // Firestore'dan rastgele söz çek
+        const snapshot = await db.collection('motivationQuotes').get();
+        
+        if (snapshot.empty) {
+            // Fallback - yerel sözler
+            const fallbackQuotes = [
+                { text: "Başarı, her gün tekrarlanan küçük çabaların toplamıdır.", author: "Robert Collier" },
+                { text: "Bugün yapabileceğin işi yarına bırakma.", author: "Benjamin Franklin" },
+                { text: "Hayal edebiliyorsan, yapabilirsin.", author: "Walt Disney" }
+            ];
+            const quote = fallbackQuotes[Math.floor(Math.random() * fallbackQuotes.length)];
+            quoteEl.innerHTML = `"${quote.text}" <span style="color:var(--accent);font-weight:500">— ${quote.author}</span>`;
+            return;
+        }
+        
+        // Rastgele bir söz seç
+        const quotes = snapshot.docs.map(doc => doc.data());
+        const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+        
+        quoteEl.innerHTML = `"${randomQuote.text}" <span style="color:var(--accent);font-weight:500">— ${randomQuote.author}</span>`;
+        
+    } catch (error) {
+        console.error('Motivasyon sözü yüklenemedi:', error);
+        quoteEl.innerHTML = `"Her yeni gün, yeni bir başlangıçtır." <span style="color:var(--accent);font-weight:500">— Anonim</span>`;
+    }
+}
+
 // ==================== DUYURU SİSTEMİ ====================
 let announcementsData = [];
-let announcementsLimit = 5;
+let announcementsLimit = 3;
 let allAnnouncementsLoaded = false;
 
 // Duyuruları yükle
