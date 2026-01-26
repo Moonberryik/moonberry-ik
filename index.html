@@ -4959,6 +4959,12 @@ function goTo(page) {
             if (subeSelect && subeSelect.options.length === 0) {
                 const branches = STATE.branches || DEFAULT_STATE.branches || [];
                 subeSelect.innerHTML = branches.map(b => `<option value="${b}">${b}</option>`).join('');
+                // Kullanıcının şubesini seç
+                const userBr = currentUser?.branch;
+                if (userBr && userBr !== 'all') {
+                    const opt = Array.from(subeSelect.options).find(o => o.value === userBr);
+                    if (opt) subeSelect.value = opt.value;
+                }
                 console.warn('[Checklist Init] 3s güvence fallback tetiklendi');
                 if (typeof loadChecklistTypes === 'function') loadChecklistTypes();
             }
@@ -21970,10 +21976,13 @@ async function initChecklistPage() {
     
     if (subeSelect.options.length === 0 && immediateBranches.length > 0) {
         subeSelect.innerHTML = immediateBranches.map(b => `<option value="${b}">${b}</option>`).join('');
-        // Default Tuzla Port seç
-        const tuzlaOpt = Array.from(subeSelect.options).find(o => o.value.toLowerCase().includes('tuzla'));
-        if (tuzlaOpt) subeSelect.value = tuzlaOpt.value;
-        console.log('[Checklist Init] Immediate fill OK:', immediateBranches.length, 'şube');
+        // Kullanıcının şubesini seç (dinamik)
+        const userBranchImm = currentUser?.branch;
+        if (userBranchImm && userBranchImm !== 'all') {
+            const userOpt = Array.from(subeSelect.options).find(o => o.value === userBranchImm);
+            if (userOpt) subeSelect.value = userOpt.value;
+        }
+        console.log('[Checklist Init] Immediate fill OK:', immediateBranches.length, 'şube, seçili:', subeSelect.value);
     }
     
     // Config'i timeout ile yükle (5 saniye max)
@@ -22014,14 +22023,12 @@ async function initChecklistPage() {
     
     subeSelect.innerHTML = branches.map(b => `<option value="${b}">${b}</option>`).join('');
     
-    // Kullanıcının şubesini seç veya default Tuzla Port
+    // Kullanıcının şubesini seç
     if (userBranch && userBranch !== 'all') {
         const userOption = Array.from(subeSelect.options).find(o => o.value === userBranch);
         if (userOption) subeSelect.value = userOption.value;
-    } else {
-        const tuzlaOption = Array.from(subeSelect.options).find(o => o.value.toLowerCase().includes('tuzla'));
-        if (tuzlaOption) subeSelect.value = tuzlaOption.value;
     }
+    // Admin için ilk şube seçili kalsın (liste sırasına göre)
     
     // Tarih bugün
     document.getElementById('checklistDate').value = new Date().toISOString().split('T')[0];
