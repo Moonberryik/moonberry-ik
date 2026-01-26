@@ -12697,22 +12697,9 @@ function applyAdvancedPermissions() {
     
     const perms = window.userAdvancedPermissions;
     
-    // Navbar menülerini kısıtla
-    document.querySelectorAll('.nav-item[data-page]').forEach(item => {
-        const page = item.dataset.page;
-        const pagePerm = perms.pages?.[page];
-        
-        if (pagePerm && !pagePerm.view) {
-            item.style.display = 'none';
-        }
-    });
-    
-    // İhlal Kataloğu özel kontrolü
-    const katalogPerm = perms.pages?.katalog;
-    if (katalogPerm && !katalogPerm.view) {
-        const navKatalog = document.querySelector('.nav-item[data-page="katalog"]');
-        if (navKatalog) navKatalog.style.display = 'none';
-    }
+    // ===== DİNAMİK SIDEBAR GÜNCELLEMESİ =====
+    // Tüm sidebar kontrolü bu fonksiyonda yapılıyor (hardcoded değil)
+    updateSidebarByPermissions(perms);
     
     // Dashboard kartlarını kısıtla
     document.querySelectorAll('.dashboard-card').forEach(card => {
