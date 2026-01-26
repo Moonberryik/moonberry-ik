@@ -9017,7 +9017,7 @@ async function loadPersonelList() {
             
             const role = p.role || getRoleFromPosition(p.position);
             const roleInfo = roleStyles[role] || { name: 'Personel', color: '#9ca3af', icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' };
-            const hasAccess = !!(p.email && p.password);
+            const hasAccess = !!(p.email && p.hasPassword);
             
             // Hiyerarşi kontrolü
             const targetLevel = getHierarchyLevel(role, p.position);
@@ -9082,7 +9082,7 @@ async function loadPersonelList() {
         
         // İstatistik özet
         const total = snapshot.size;
-        const withAccess = snapshot.docs.filter(d => d.data().email && d.data().password).length;
+        const withAccess = snapshot.docs.filter(d => d.data().email && d.data().hasPassword).length;
         const byBranch = {};
         snapshot.forEach(doc => {
             const branch = doc.data().branch || 'Belirtilmemiş';
