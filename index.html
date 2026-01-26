@@ -72,6 +72,24 @@
 [data-theme="dark"] .dashboard-card-desc{color:var(--tx2)!important}
 [data-theme="dark"] .section-card{background:var(--sectionBg)!important;border-color:var(--cardBorder)!important}
 
+/* Permission Matrix Styles */
+#permissionMatrix{min-width:700px}
+#permissionMatrix th,#permissionMatrix td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--cardBorder);white-space:nowrap}
+#permissionMatrix th{background:var(--bg3);font-weight:600;color:var(--tx);position:sticky;top:0;z-index:2}
+#permissionMatrix .perm-category{background:var(--bg3);font-weight:600;color:var(--tx);text-align:left!important;padding-left:12px}
+#permissionMatrix .perm-item{text-align:left!important;padding-left:24px;color:var(--tx2);font-weight:400}
+#permissionMatrix .perm-item-name{position:sticky;left:0;background:var(--bg2);z-index:1;min-width:180px}
+#permissionMatrix input[type="checkbox"]{width:18px;height:18px;accent-color:var(--brand-coral);cursor:pointer}
+#permissionMatrix select{padding:4px 8px;border-radius:6px;border:1px solid var(--cardBorder);background:var(--bg2);color:var(--tx);font-size:.8rem}
+#permissionMatrix .role-header{min-width:90px}
+#permissionMatrix .role-header-dual{min-width:80px}
+#permissionMatrix .sub-header{font-size:.7rem;font-weight:500;color:var(--tx3)}
+#permissionMatrix tr:hover td{background:var(--accentLight)}
+#permissionMatrix tr:hover .perm-item-name{background:var(--accentLight)}
+[data-theme="dark"] #permissionMatrix th{background:var(--bg3)}
+[data-theme="dark"] #permissionMatrix .perm-item-name{background:var(--bg2)}
+[data-theme="dark"] #permissionMatrix tr:hover td,[data-theme="dark"] #permissionMatrix tr:hover .perm-item-name{background:rgba(255,134,116,.1)}
+
 /* Barista Mode - CSS ile gizleme (JavaScript'e bağımlı değil) */
 body.barista-mode #dashboard-formlar-section{display:none!important}
 body.barista-mode .nav-divider{display:none!important}
@@ -2013,96 +2031,24 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <div class="admin-card">
                         <div class="admin-card-header">
                             <div class="admin-card-title">🔐 Pozisyon Yetkileri</div>
+                            <button class="btn btn-primary" onclick="saveMatrixPermissions()">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                Tümünü Kaydet
+                            </button>
                         </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:24px">
-                            Her pozisyon için hangi sayfaları görebileceğini ve hangi işlemleri yapabileceğini belirleyin. Bir pozisyona tıklayarak yetkilerini düzenleyin.
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">
+                            Her pozisyon için yetkileri belirleyin. G=Görme, D=Düzenleme. Yönetici tüm yetkilere sahiptir.
                         </p>
                         
-                        <!-- Dinamik Pozisyon Kartları -->
-                        <div id="dynamicPositionCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:24px">
-                            <!-- JavaScript ile doldurulacak -->
+                        <!-- Permission Matrix Table -->
+                        <div id="permissionMatrixContainer" style="overflow-x:auto;border:1px solid var(--cardBorder);border-radius:12px">
+                            <table id="permissionMatrix" style="width:100%;border-collapse:collapse;font-size:.85rem">
+                                <!-- JavaScript ile doldurulacak -->
+                            </table>
                         </div>
                         
-                        <!-- Seçili Rol İzinleri -->
-                        <div id="selectedRolePermissions" style="display:none;background:var(--bg2);border:1px solid var(--cardBorder);border-radius:16px;padding:24px">
-                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-                                <div style="display:flex;align-items:center;gap:12px">
-                                    <span id="selectedRoleIcon" style="font-size:2rem">🧑‍🍳</span>
-                                    <div>
-                                        <div id="selectedRoleName" style="font-weight:600;color:var(--tx);font-size:1.2rem">Barista</div>
-                                        <div id="selectedRoleDesc" style="font-size:.8rem;color:var(--tx2)">Yetkileri düzenle</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
-                                <!-- Sayfalar -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
-                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem;display:flex;align-items:center;gap:8px">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>
-                                        Sayfalar
-                                    </div>
-                                    <div style="display:flex;flex-direction:column;gap:8px" id="pagePermissions"></div>
-                                </div>
-                                
-                                <!-- Belgeler -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
-                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem;display:flex;align-items:center;gap:8px">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                        Belgeler
-                                    </div>
-                                    <div style="display:flex;flex-direction:column;gap:8px" id="docPermissions"></div>
-                                </div>
-                                
-                                <!-- Formlar -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
-                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem;display:flex;align-items:center;gap:8px">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                                        Formlar
-                                    </div>
-                                    <div style="display:flex;flex-direction:column;gap:8px" id="formPermissions"></div>
-                                </div>
-                                
-                                <!-- Yönetim -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
-                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem;display:flex;align-items:center;gap:8px">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                                        Yönetim
-                                    </div>
-                                    <div style="display:flex;flex-direction:column;gap:8px" id="adminPermissions"></div>
-                                </div>
-                                
-                                <!-- Özel Yetkiler -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
-                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem;display:flex;align-items:center;gap:8px">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                                        Özel Yetkiler
-                                    </div>
-                                    <div style="display:flex;flex-direction:column;gap:8px" id="specialPermissions"></div>
-                                </div>
-                                
-                                <!-- Limitler -->
-                                <div style="background:var(--bg3);border-radius:12px;padding:16px">
-                                    <div style="font-weight:600;color:var(--tx);margin-bottom:12px;font-size:.9rem;display:flex;align-items:center;gap:8px">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                                        Limitler
-                                    </div>
-                                    <div style="display:flex;flex-direction:column;gap:8px" id="limitsPermissions"></div>
-                                </div>
-                            </div>
-                            
-                            <div style="display:flex;gap:12px;margin-top:20px;justify-content:flex-end">
-                                <button class="btn btn-ghost" onclick="hideRolePermissions()">İptal</button>
-                                <button class="btn btn-primary" onclick="saveAdvancedPermissions()">Yetkileri Kaydet</button>
-                            </div>
-                        </div>
-                        
-                        <!-- Bilgi -->
-                        <div id="permissionsInfo" style="text-align:center;padding:40px;color:var(--tx2)">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:.5;margin-bottom:12px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><circle cx="12" cy="16" r="1"/></svg>
-                            <div style="font-size:1rem;font-weight:500;color:var(--tx);margin-bottom:8px">Bir pozisyon seçin</div>
-                            <div style="font-size:.85rem">Yukarıdaki kartlardan düzenlemek istediğiniz pozisyona tıklayın</div>
-                        </div>
+                        <!-- Kaydetme durumu -->
+                        <div id="matrixSaveStatus" style="margin-top:12px;text-align:right;font-size:.8rem;color:var(--tx2)"></div>
                     </div>
                 </div>
 
@@ -4557,6 +4503,9 @@ function renderPositionListCombined() {
             </div>
         </div>
     `).join('');
+    
+    // Permission Matrix'i de render et
+    renderPermissionMatrix();
 }
 
 // Dinamik yetki kartları (pozisyonlara göre)
@@ -12068,6 +12017,199 @@ const DEFAULT_ROLE_PERMISSIONS = {
         limits: { shift_history_weeks: 999 }
     }
 };
+
+// ==================== PERMISSION MATRIX FONKSIYONLARI ====================
+
+// Matrix için cache (değişiklikleri takip etmek için)
+let matrixPermissionsCache = {};
+
+// Kategori başlıkları ve ikonları
+const PERMISSION_CATEGORIES = {
+    pages: { label: '📄 Sayfalar', hasDual: true },
+    documents: { label: '📝 Belgeler', hasDual: true },
+    forms: { label: '📋 Formlar', hasDual: true },
+    admin: { label: '⚙️ Yönetim Sekmeleri', hasDual: false },
+    special: { label: '🔒 Özel Yetkiler', hasDual: false },
+    limits: { label: '📊 Limitler', hasDual: false, isLimit: true }
+};
+
+// Permission Matrix'i render et
+async function renderPermissionMatrix() {
+    const table = document.getElementById('permissionMatrix');
+    if (!table) return;
+    
+    // Pozisyonları al (yönetici hariç)
+    const positions = (STATE.positions || []).filter(p => p.role !== 'yonetici');
+    
+    if (positions.length === 0) {
+        table.innerHTML = '<tr><td style="padding:40px;text-align:center;color:var(--tx2)">Henüz pozisyon tanımlanmamış</td></tr>';
+        return;
+    }
+    
+    // Her pozisyon için izinleri yükle
+    matrixPermissionsCache = {};
+    for (const pos of positions) {
+        matrixPermissionsCache[pos.id] = await getPositionPermissions(pos.id, pos.role);
+    }
+    
+    let html = '';
+    
+    // === HEADER ROW 1: Pozisyon isimleri ===
+    html += '<thead><tr>';
+    html += '<th class="perm-item-name" rowspan="2" style="text-align:left;min-width:200px">Yetki</th>';
+    
+    positions.forEach(pos => {
+        // Sayfalar, Belgeler, Formlar için G/D çift sütun
+        const dualCategories = Object.keys(PERMISSION_CATEGORIES).filter(k => PERMISSION_CATEGORIES[k].hasDual);
+        const singleCategories = Object.keys(PERMISSION_CATEGORIES).filter(k => !PERMISSION_CATEGORIES[k].hasDual);
+        
+        // Her pozisyon için colspan hesapla
+        html += `<th colspan="2" class="role-header" style="background:var(--accentLight);color:var(--tx)">${pos.icon || '👤'} ${pos.name}</th>`;
+    });
+    html += '</tr>';
+    
+    // === HEADER ROW 2: G/D başlıkları ===
+    html += '<tr>';
+    positions.forEach(() => {
+        html += '<th class="sub-header" style="width:40px">G</th>';
+        html += '<th class="sub-header" style="width:40px">D</th>';
+    });
+    html += '</tr></thead>';
+    
+    // === BODY ===
+    html += '<tbody>';
+    
+    // Her kategori için
+    for (const [catKey, catInfo] of Object.entries(PERMISSION_CATEGORIES)) {
+        const items = PERMISSION_STRUCTURE[catKey] || [];
+        if (items.length === 0) continue;
+        
+        // Kategori başlık satırı
+        html += `<tr class="perm-category-row"><td class="perm-category" colspan="${1 + positions.length * 2}">${catInfo.label}</td></tr>`;
+        
+        // Her madde için satır
+        items.forEach(item => {
+            html += '<tr>';
+            html += `<td class="perm-item perm-item-name">${item.label}</td>`;
+            
+            positions.forEach(pos => {
+                const perms = matrixPermissionsCache[pos.id] || {};
+                
+                if (catInfo.isLimit) {
+                    // Limit - Select dropdown
+                    const limitValue = perms.limits?.[item.id] || item.options?.[0] || 1;
+                    html += `<td colspan="2">`;
+                    html += `<select data-pos="${pos.id}" data-cat="limits" data-id="${item.id}" onchange="handleMatrixChange(this)">`;
+                    (item.options || [1, 5, 52, 999]).forEach(opt => {
+                        const selected = limitValue == opt ? 'selected' : '';
+                        const label = opt === 999 ? 'Sınırsız' : opt;
+                        html += `<option value="${opt}" ${selected}>${label}</option>`;
+                    });
+                    html += '</select></td>';
+                } else if (catInfo.hasDual) {
+                    // View/Edit çift checkbox
+                    const viewChecked = perms[catKey]?.[item.id]?.view ? 'checked' : '';
+                    const editChecked = perms[catKey]?.[item.id]?.edit ? 'checked' : '';
+                    html += `<td><input type="checkbox" data-pos="${pos.id}" data-cat="${catKey}" data-id="${item.id}" data-type="view" ${viewChecked} onchange="handleMatrixChange(this)"></td>`;
+                    html += `<td><input type="checkbox" data-pos="${pos.id}" data-cat="${catKey}" data-id="${item.id}" data-type="edit" ${editChecked} onchange="handleMatrixChange(this)"></td>`;
+                } else {
+                    // Tek checkbox (admin, special)
+                    const checked = perms[catKey]?.[item.id] ? 'checked' : '';
+                    html += `<td colspan="2"><input type="checkbox" data-pos="${pos.id}" data-cat="${catKey}" data-id="${item.id}" data-type="enabled" ${checked} onchange="handleMatrixChange(this)"></td>`;
+                }
+            });
+            
+            html += '</tr>';
+        });
+    }
+    
+    html += '</tbody>';
+    table.innerHTML = html;
+    
+    console.log('[Matrix] Rendered with', positions.length, 'positions');
+}
+
+// Pozisyon izinlerini al (Firebase veya varsayılan)
+async function getPositionPermissions(positionId, baseRole) {
+    try {
+        // Önce Firebase'den kontrol et
+        const doc = await db.collection('advancedPermissions').doc(positionId).get();
+        if (doc.exists) {
+            return doc.data();
+        }
+    } catch (e) {
+        console.warn('[Matrix] Firebase error:', e);
+    }
+    
+    // Varsayılan izinleri döndür
+    return DEFAULT_ROLE_PERMISSIONS[baseRole] || DEFAULT_ROLE_PERMISSIONS.barista || {};
+}
+
+// Matrix değişiklik handler
+function handleMatrixChange(element) {
+    const posId = element.dataset.pos;
+    const cat = element.dataset.cat;
+    const id = element.dataset.id;
+    const type = element.dataset.type;
+    
+    if (!matrixPermissionsCache[posId]) {
+        matrixPermissionsCache[posId] = {};
+    }
+    
+    if (!matrixPermissionsCache[posId][cat]) {
+        matrixPermissionsCache[posId][cat] = {};
+    }
+    
+    if (cat === 'limits') {
+        matrixPermissionsCache[posId][cat][id] = parseInt(element.value);
+    } else if (type === 'view' || type === 'edit') {
+        if (!matrixPermissionsCache[posId][cat][id]) {
+            matrixPermissionsCache[posId][cat][id] = { view: false, edit: false };
+        }
+        matrixPermissionsCache[posId][cat][id][type] = element.checked;
+    } else {
+        matrixPermissionsCache[posId][cat][id] = element.checked;
+    }
+    
+    // Değişiklik göstergesi
+    document.getElementById('matrixSaveStatus').innerHTML = '<span style="color:var(--yellow)">● Kaydedilmemiş değişiklikler var</span>';
+}
+
+// Tüm matrix izinlerini kaydet
+async function saveMatrixPermissions() {
+    const statusEl = document.getElementById('matrixSaveStatus');
+    statusEl.innerHTML = '<span style="color:var(--blue)">⏳ Kaydediliyor...</span>';
+    
+    try {
+        const batch = db.batch();
+        let count = 0;
+        
+        for (const [posId, perms] of Object.entries(matrixPermissionsCache)) {
+            const ref = db.collection('advancedPermissions').doc(posId);
+            batch.set(ref, {
+                ...perms,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedBy: currentUser?.email || 'unknown'
+            }, { merge: true });
+            count++;
+        }
+        
+        await batch.commit();
+        
+        statusEl.innerHTML = `<span style="color:var(--green)">✓ ${count} pozisyon kaydedildi</span>`;
+        toast('Yetkiler kaydedildi', 'success');
+        
+        // 3 saniye sonra mesajı temizle
+        setTimeout(() => {
+            statusEl.innerHTML = '';
+        }, 3000);
+        
+    } catch (error) {
+        console.error('[Matrix] Save error:', error);
+        statusEl.innerHTML = '<span style="color:var(--red)">✗ Kaydetme hatası</span>';
+        toast('Kaydetme hatası: ' + error.message, 'error');
+    }
+}
 
 // Pozisyon seçimi için yeni fonksiyonlar
 let selectedRoleForPerm = null;
