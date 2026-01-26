@@ -581,8 +581,9 @@ body::before {
             if (!data || !data.k) return null;
             try {
                 // k = encoded password, s = salt
-                const decoded = atob(data.k);
-                // Salt varsa kaldır (son 4 karakter)
+                // UTF-8 destekli decode (Türkçe karakterler için)
+                const decoded = decodeURIComponent(escape(atob(data.k)));
+                // Salt varsa kaldır (son karakterler)
                 if (data.s && decoded.endsWith(data.s)) {
                     return decoded.slice(0, -data.s.length);
                 }
