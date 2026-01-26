@@ -465,6 +465,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 @keyframes ann-slide{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
 @keyframes ann-blink{0%,100%{opacity:1}50%{opacity:.5}}
 @keyframes ann-heartbeat{0%,100%{transform:scale(1)}14%{transform:scale(1.03)}28%{transform:scale(1)}42%{transform:scale(1.03)}70%{transform:scale(1)}}
+@keyframes ann-swing{0%,100%{transform:rotate(0deg)}25%{transform:rotate(3deg)}75%{transform:rotate(-3deg)}}
+@keyframes ann-tada{0%,100%{transform:scale(1) rotate(0)}10%,20%{transform:scale(.95) rotate(-2deg)}30%,50%,70%,90%{transform:scale(1.05) rotate(2deg)}40%,60%,80%{transform:scale(1.05) rotate(-2deg)}}
+@keyframes ann-rubber{0%,100%{transform:scaleX(1)}30%{transform:scaleX(1.15)}40%{transform:scaleX(.9)}50%{transform:scaleX(1.05)}65%{transform:scaleX(.98)}75%{transform:scaleX(1.02)}}
+@keyframes ann-flash{0%,50%,100%{opacity:1}25%,75%{opacity:.3}}
     </style>
 </head>
 <body>
@@ -27168,15 +27172,32 @@ async function loadAnnouncements() {
         
         announcementsData = [];
         const userBranch = currentUser?.branch || '';
+        const now = new Date();
         
-        snapshot.forEach(doc => {
+        for (const doc of snapshot.docs) {
             const data = { id: doc.id, ...doc.data() };
+            
+            // Süresi dolmuş duyuruları sil
+            if (data.expiresAt) {
+                const expiresDate = data.expiresAt.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
+                if (expiresDate < now) {
+                    // Süresi dolmuş - sil
+                    try {
+                        await db.collection('announcements').doc(doc.id).delete();
+                        console.log('Süresi dolmuş duyuru silindi:', doc.id);
+                    } catch (e) {
+                        console.error('Duyuru silinemedi:', e);
+                    }
+                    continue; // Bu duyuruyu listeye ekleme
+                }
+            }
+            
             // Şube filtresi - 'all' ise herkes görür, değilse sadece o şubedekiler
             const targetBranches = data.branches || ['all'];
             if (targetBranches.includes('all') || targetBranches.includes(userBranch) || currentUser?.role === 'yonetici') {
                 announcementsData.push(data);
             }
-        });
+        }
         
         // Duyuru yoksa ve ekleme yetkisi de yoksa gizle
         if (announcementsData.length === 0 && !canAdd) {
@@ -27251,7 +27272,7 @@ function renderAnnouncements() {
         }
     };
     
-    // Animasyon CSS mapping
+    // Animasyon CSS mapping (toplam 12)
     const animationCSS = {
         none: '',
         pulse: 'animation:ann-pulse 2s ease-in-out infinite',
@@ -27260,7 +27281,11 @@ function renderAnnouncements() {
         bounce: 'animation:ann-bounce 1s ease-in-out infinite',
         slide: 'animation:ann-slide 1.5s ease-in-out infinite',
         blink: 'animation:ann-blink 1s ease-in-out infinite',
-        heartbeat: 'animation:ann-heartbeat 1.5s ease-in-out infinite'
+        heartbeat: 'animation:ann-heartbeat 1.5s ease-in-out infinite',
+        swing: 'animation:ann-swing 1s ease-in-out infinite',
+        tada: 'animation:ann-tada 1.5s ease-in-out infinite',
+        rubber: 'animation:ann-rubber 1s ease-in-out infinite',
+        flash: 'animation:ann-flash 1.5s ease-in-out infinite'
     };
     
     container.innerHTML = visibleAnnouncements.map(ann => {
@@ -27276,12 +27301,20 @@ function renderAnnouncements() {
         return `
             <div class="announcement-card" style="background:${config.bgColor};border-color:${config.borderColor};border-left-color:${config.color};${animation}">
                 <div class="announcement-header">
-                    <div class="announcement-title">
-                        ${config.icon}
-                        ${ann.title || 'Duyuru'}
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1;min-width:0">
+                        <div class="announcement-title" style="display:flex;align-items:center;gap:6px">
+                            ${config.icon}
+                            <span>${ann.title || 'Duyuru'}</span>
+                        </div>
+                        <span style="font-size:.6rem;color:var(--tx3)">•</span>
+                        <span style="font-size:.65rem;color:var(--tx3)">${branchText}</span>
+                        <span style="font-size:.6rem;color:var(--tx3)">•</span>
+                        <span style="font-size:.65rem;color:var(--tx3)">${ann.createdByName || 'Yönetici'}</span>
+                        <span style="font-size:.6rem;color:var(--tx3)">•</span>
+                        <span style="font-size:.65rem;color:var(--tx3)">${dateStr}</span>
                     </div>
                     ${canEdit ? `
-                        <div style="display:flex;gap:4px">
+                        <div style="display:flex;gap:4px;flex-shrink:0">
                             <button class="announcement-edit" onclick="showAddAnnouncementModal('${ann.id}')" title="Düzenle">
                                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                             </button>
@@ -27292,13 +27325,6 @@ function renderAnnouncements() {
                     ` : ''}
                 </div>
                 <div class="announcement-content">${ann.content || ''}</div>
-                <div class="announcement-meta">
-                    <span class="announcement-badge" style="background:${config.bgColor};color:${config.color};border:1px solid ${config.borderColor}">${branchText}</span>
-                    <span>•</span>
-                    <span>${ann.createdByName || 'Yönetici'}</span>
-                    <span>•</span>
-                    <span>${dateStr}</span>
-                </div>
             </div>
         `;
     }).join('');
@@ -27426,8 +27452,39 @@ function showAddAnnouncementModal(editId = null) {
                     style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'heartbeat' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:ann-heartbeat 1.5s ease-in-out infinite">
                     Kalp Atışı
                 </button>
+                <button type="button" class="animation-option ${currentAnimation === 'swing' ? 'selected' : ''}" data-animation="swing" 
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'swing' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:ann-swing 1s ease-in-out infinite">
+                    Sallanma
+                </button>
+                <button type="button" class="animation-option ${currentAnimation === 'tada' ? 'selected' : ''}" data-animation="tada" 
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'tada' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:ann-tada 1.5s ease-in-out infinite">
+                    Tada
+                </button>
+                <button type="button" class="animation-option ${currentAnimation === 'rubber' ? 'selected' : ''}" data-animation="rubber" 
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'rubber' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:ann-rubber 1s ease-in-out infinite">
+                    Esnek
+                </button>
+                <button type="button" class="animation-option ${currentAnimation === 'flash' ? 'selected' : ''}" data-animation="flash" 
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'flash' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:ann-flash 1.5s ease-in-out infinite">
+                    Flaş
+                </button>
             </div>
             <input type="hidden" id="announcementAnimation" value="${currentAnimation}">
+        </div>
+        
+        <div style="margin-bottom:16px">
+            <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">Otomatik Silinme</label>
+            <div style="display:flex;align-items:center;gap:10px">
+                <select id="announcementAutoDelete" style="padding:8px 12px;border:1px solid var(--cardBorder);border-radius:8px;font-size:.85rem;background:var(--bg2);color:var(--tx);cursor:pointer">
+                    <option value="0" ${!editData?.expiresAt ? 'selected' : ''}>Silinmesin</option>
+                    <option value="1" ${editData?.expiresDays === 1 ? 'selected' : ''}>1 gün sonra</option>
+                    <option value="3" ${editData?.expiresDays === 3 ? 'selected' : ''}>3 gün sonra</option>
+                    <option value="7" ${editData?.expiresDays === 7 ? 'selected' : ''}>7 gün sonra</option>
+                    <option value="14" ${editData?.expiresDays === 14 ? 'selected' : ''}>14 gün sonra</option>
+                    <option value="30" ${editData?.expiresDays === 30 ? 'selected' : ''}>30 gün sonra</option>
+                </select>
+                <span style="font-size:.75rem;color:var(--tx3)">Süre dolunca duyuru otomatik silinir</span>
+            </div>
         </div>
         
         <div style="margin-bottom:16px">
@@ -27539,6 +27596,7 @@ async function saveAnnouncement(editId = '') {
     const content = document.getElementById('announcementContent')?.value?.trim();
     const announcementType = document.querySelector('input[name="announcementType"]:checked')?.value || 'info';
     const animation = document.getElementById('announcementAnimation')?.value || 'none';
+    const autoDeleteDays = parseInt(document.getElementById('announcementAutoDelete')?.value) || 0;
     
     if (!title) {
         toast('Başlık gerekli', 'error');
@@ -27564,6 +27622,17 @@ async function saveAnnouncement(editId = '') {
         animation,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
+    
+    // Otomatik silinme
+    if (autoDeleteDays > 0) {
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + autoDeleteDays);
+        data.expiresAt = firebase.firestore.Timestamp.fromDate(expiresAt);
+        data.expiresDays = autoDeleteDays;
+    } else {
+        data.expiresAt = null;
+        data.expiresDays = null;
+    }
     
     try {
         if (editId) {
