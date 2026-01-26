@@ -9118,15 +9118,13 @@ async function savePersonel() {
     // Format: busra_sogut (tam isim, Türkçe karakterler transliterate)
     const uniqueId = normalizePersonelId(name);
     
-    // Pozisyondan rol belirleme
-    const positionToRole = {
-        'Barista': 'barista',
-        'Barista / Servis': 'barista',
-        'Mağaza Müdürü': 'magaza_muduru',
-        'Mağaza Müdür Yardımcısı': 'magaza_mudur_yardimcisi',
-        'Bölge Müdürü': 'bolge_muduru'
-    };
-    const role = positionToRole[position] || 'barista';
+    // Pozisyondan rol belirleme - DİNAMİK (STATE.positions'dan)
+    let role = 'barista'; // varsayılan
+    const matchedPosition = STATE.positions.find(p => p.name === position || p.id === position);
+    if (matchedPosition) {
+        role = matchedPosition.role;
+    }
+    console.log(`[Personel] Pozisyon: "${position}" → Rol: "${role}"`);
     
     const data = {
         name,
