@@ -447,17 +447,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 
 /* Duyuru Stilleri */
 .announcement-card{background:linear-gradient(135deg,rgba(255,134,116,.08),rgba(255,134,116,.02));border:1px solid rgba(255,134,116,.2);border-left:3px solid #ff8674;border-radius:12px;padding:14px 16px;position:relative;transition:all .2s}
-.announcement-card:hover{transform:translateX(4px);box-shadow:0 4px 12px rgba(255,134,116,.1)}
-.announcement-card.urgent{background:linear-gradient(135deg,rgba(231,76,60,.1),rgba(231,76,60,.03));border-color:rgba(231,76,60,.3);border-left-color:#e74c3c;animation:soft-pulse 2s ease-in-out infinite}
+.announcement-card:hover{transform:translateX(4px);box-shadow:0 4px 12px rgba(0,0,0,.05)}
 .announcement-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px}
 .announcement-title{font-size:.9rem;font-weight:600;color:var(--tx);display:flex;align-items:center;gap:8px}
-.announcement-meta{font-size:.65rem;color:var(--tx3);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.announcement-meta{font-size:.65rem;color:var(--tx3);display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:10px}
 .announcement-content{font-size:.82rem;color:var(--tx2);line-height:1.5}
-.announcement-delete{background:none;border:none;color:var(--tx3);cursor:pointer;padding:4px;border-radius:4px;opacity:0;transition:all .2s}
-.announcement-card:hover .announcement-delete{opacity:1}
+.announcement-edit,.announcement-delete{background:none;border:none;color:var(--tx3);cursor:pointer;padding:4px;border-radius:4px;opacity:0;transition:all .2s}
+.announcement-card:hover .announcement-edit,.announcement-card:hover .announcement-delete{opacity:1}
+.announcement-edit:hover{background:rgba(0,140,149,.1);color:#008c95}
 .announcement-delete:hover{background:rgba(231,76,60,.1);color:#e74c3c}
 .announcement-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:.6rem;font-weight:600;text-transform:uppercase;background:rgba(255,134,116,.15);color:#ff8674}
-.announcement-badge.urgent{background:rgba(231,76,60,.15);color:#e74c3c}
+/* Duyuru Animasyonları */
+@keyframes gentle-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
+@keyframes glow-border{0%,100%{box-shadow:0 0 5px rgba(255,134,116,.3)}50%{box-shadow:0 0 15px rgba(255,134,116,.6)}}
     </style>
 </head>
 <body>
@@ -683,10 +685,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <svg width="14" height="14" fill="none" stroke="#ff8674" stroke-width="2" viewBox="0 0 24 24"><path d="M22 17H2a3 3 0 003-3V9a7 7 0 0114 0v5a3 3 0 003 3zM8.5 17v1a3.5 3.5 0 007 0v-1"/></svg>
                             Duyurular
                         </div>
-                        <button id="addAnnouncementBtn" onclick="showAddAnnouncementModal()" style="display:none;background:linear-gradient(135deg,#ff8674,#ff6b5b);color:#fff;border:none;padding:6px 12px;border-radius:8px;font-size:.7rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px">
-                            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                            Yeni Duyuru
-                        </button>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <select id="announcementLimitSelect" onchange="changeAnnouncementLimit(this.value)" style="padding:4px 8px;border:1px solid var(--cardBorder);border-radius:6px;font-size:.7rem;background:var(--bg2);color:var(--tx2);cursor:pointer">
+                                <option value="3">3 göster</option>
+                                <option value="5" selected>5 göster</option>
+                                <option value="10">10 göster</option>
+                            </select>
+                            <button id="addAnnouncementBtn" onclick="showAddAnnouncementModal()" style="display:none;background:linear-gradient(135deg,#ff8674,#ff6b5b);color:#fff;border:none;padding:6px 12px;border-radius:8px;font-size:.7rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px">
+                                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                Yeni Duyuru
+                            </button>
+                        </div>
                     </div>
                     <div id="announcementsContainer" style="display:flex;flex-direction:column;gap:10px">
                         <!-- Duyurular dinamik yüklenecek -->
@@ -27200,8 +27209,8 @@ function renderAnnouncements() {
     }
     
     const visibleAnnouncements = announcementsData.slice(0, announcementsLimit);
-    const canDelete = currentUser?.role === 'yonetici' || 
-                      window.userAdvancedPermissions?.special?.add_announcement === true;
+    const canEdit = currentUser?.role === 'yonetici' || 
+                    window.userAdvancedPermissions?.special?.add_announcement === true;
     
     // Duyuru türleri için ikon ve renkler
     const typeConfig = {
@@ -27227,8 +27236,7 @@ function renderAnnouncements() {
             icon: '<svg width="16" height="16" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
             color: '#e74c3c',
             bgColor: 'rgba(231,76,60,.1)',
-            borderColor: 'rgba(231,76,60,.3)',
-            animate: true
+            borderColor: 'rgba(231,76,60,.3)'
         },
         celebration: { 
             icon: '<svg width="16" height="16" fill="none" stroke="#9b59b6" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>',
@@ -27238,26 +27246,40 @@ function renderAnnouncements() {
         }
     };
     
+    // Animasyon CSS mapping
+    const animationCSS = {
+        none: '',
+        pulse: 'animation:soft-pulse 2s ease-in-out infinite',
+        shake: 'animation:gentle-shake 0.5s ease-in-out infinite',
+        glow: 'animation:glow-border 2s ease-in-out infinite'
+    };
+    
     container.innerHTML = visibleAnnouncements.map(ann => {
         const date = ann.createdAt?.toDate ? ann.createdAt.toDate() : new Date(ann.createdAt);
-        const dateStr = date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        const dateStr = date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
         const branchText = ann.branches?.includes('all') ? 'Tüm Şubeler' : (ann.branches?.join(', ') || '');
         
         // Tür bilgisini al (eski format uyumluluğu için priority'yi de kontrol et)
         const annType = ann.type || (ann.priority === 'urgent' ? 'urgent' : 'info');
         const config = typeConfig[annType] || typeConfig.info;
+        const animation = animationCSS[ann.animation] || '';
         
         return `
-            <div class="announcement-card" style="background:${config.bgColor};border-color:${config.borderColor};border-left-color:${config.color};${config.animate ? 'animation:soft-pulse 2s ease-in-out infinite' : ''}">
+            <div class="announcement-card" style="background:${config.bgColor};border-color:${config.borderColor};border-left-color:${config.color};${animation}">
                 <div class="announcement-header">
                     <div class="announcement-title">
                         ${config.icon}
                         ${ann.title || 'Duyuru'}
                     </div>
-                    ${canDelete ? `
-                        <button class="announcement-delete" onclick="deleteAnnouncement('${ann.id}')" title="Sil">
-                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-                        </button>
+                    ${canEdit ? `
+                        <div style="display:flex;gap:4px">
+                            <button class="announcement-edit" onclick="showAddAnnouncementModal('${ann.id}')" title="Düzenle" style="background:none;border:none;color:var(--tx3);cursor:pointer;padding:4px;border-radius:4px;opacity:0;transition:all .2s">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
+                            <button class="announcement-delete" onclick="deleteAnnouncement('${ann.id}')" title="Sil" style="background:none;border:none;color:var(--tx3);cursor:pointer;padding:4px;border-radius:4px;opacity:0;transition:all .2s">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                            </button>
+                        </div>
                     ` : ''}
                 </div>
                 <div class="announcement-content">${ann.content || ''}</div>
@@ -27284,48 +27306,76 @@ function loadMoreAnnouncements() {
     }
 }
 
-// Duyuru ekleme modalı
-function showAddAnnouncementModal() {
+// Gösterilen duyuru sayısını değiştir
+function changeAnnouncementLimit(value) {
+    announcementsLimit = parseInt(value) || 5;
+    renderAnnouncements();
+    
+    // Daha fazla butonu güncelle
+    const loadMoreBtn = document.getElementById('loadMoreAnnouncements');
+    if (loadMoreBtn) {
+        loadMoreBtn.style.display = announcementsData.length > announcementsLimit ? 'block' : 'none';
+    }
+}
+
+// Duyuru ekleme/düzenleme modalı
+function showAddAnnouncementModal(editId = null) {
     const branches = STATE.branches || [];
+    const isEdit = !!editId;
+    
+    // Düzenleme modunda mevcut veriyi al
+    let editData = null;
+    if (isEdit) {
+        editData = announcementsData.find(a => a.id === editId);
+        if (!editData) {
+            toast('Duyuru bulunamadı', 'error');
+            return;
+        }
+    }
+    
+    const currentType = editData?.type || 'info';
+    const currentBranches = editData?.branches || ['all'];
+    const currentAnimation = editData?.animation || 'none';
+    const isAllBranches = currentBranches.includes('all');
     
     const bodyHtml = `
         <div style="margin-bottom:16px">
             <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">Başlık</label>
-            <input type="text" id="announcementTitle" placeholder="Duyuru başlığı..." 
+            <input type="text" id="announcementTitle" placeholder="Duyuru başlığı..." value="${editData?.title || ''}"
                 style="width:100%;padding:12px;border:1px solid var(--cardBorder);border-radius:8px;font-size:.9rem;background:var(--bg2);color:var(--tx)">
         </div>
         
         <div style="margin-bottom:16px">
             <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">İçerik</label>
-            <textarea id="announcementContent" rows="4" placeholder="Duyuru içeriği..." 
-                style="width:100%;padding:12px;border:1px solid var(--cardBorder);border-radius:8px;font-size:.9rem;background:var(--bg2);color:var(--tx);resize:vertical"></textarea>
+            <textarea id="announcementContent" rows="3" placeholder="Duyuru içeriği..." 
+                style="width:100%;padding:12px;border:1px solid var(--cardBorder);border-radius:8px;font-size:.9rem;background:var(--bg2);color:var(--tx);resize:vertical">${editData?.content || ''}</textarea>
         </div>
         
         <div style="margin-bottom:16px">
             <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">Duyuru Türü</label>
             <div style="display:flex;flex-wrap:wrap;gap:8px">
-                <label class="announcement-type-option" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid var(--bg4);border-radius:10px;cursor:pointer;transition:all .2s">
-                    <input type="radio" name="announcementType" value="info" checked style="display:none">
+                <label class="announcement-type-option" data-type="info" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid var(--bg4);border-radius:10px;cursor:pointer;transition:all .2s">
+                    <input type="radio" name="announcementType" value="info" ${currentType === 'info' ? 'checked' : ''} style="display:none">
                     <svg width="18" height="18" fill="none" stroke="#3498db" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                     <span style="font-size:.85rem;font-weight:500">Bilgilendirme</span>
                 </label>
-                <label class="announcement-type-option" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid var(--bg4);border-radius:10px;cursor:pointer;transition:all .2s">
-                    <input type="radio" name="announcementType" value="success" style="display:none">
+                <label class="announcement-type-option" data-type="success" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid var(--bg4);border-radius:10px;cursor:pointer;transition:all .2s">
+                    <input type="radio" name="announcementType" value="success" ${currentType === 'success' ? 'checked' : ''} style="display:none">
                     <svg width="18" height="18" fill="none" stroke="#27ae60" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                     <span style="font-size:.85rem;font-weight:500">İyi Haber</span>
                 </label>
-                <label class="announcement-type-option" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid var(--bg4);border-radius:10px;cursor:pointer;transition:all .2s">
-                    <input type="radio" name="announcementType" value="warning" style="display:none">
+                <label class="announcement-type-option" data-type="warning" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid var(--bg4);border-radius:10px;cursor:pointer;transition:all .2s">
+                    <input type="radio" name="announcementType" value="warning" ${currentType === 'warning' ? 'checked' : ''} style="display:none">
                     <svg width="18" height="18" fill="none" stroke="#f39c12" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                     <span style="font-size:.85rem;font-weight:500">Uyarı</span>
                 </label>
-                <label class="announcement-type-option" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid var(--bg4);border-radius:10px;cursor:pointer;transition:all .2s">
-                    <input type="radio" name="announcementType" value="urgent" style="display:none">
+                <label class="announcement-type-option" data-type="urgent" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid var(--bg4);border-radius:10px;cursor:pointer;transition:all .2s">
+                    <input type="radio" name="announcementType" value="urgent" ${currentType === 'urgent' ? 'checked' : ''} style="display:none">
                     <svg width="18" height="18" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                     <span style="font-size:.85rem;font-weight:500">Acil</span>
                 </label>
-                <label class="announcement-type-option" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid var(--bg4);border-radius:10px;cursor:pointer;transition:all .2s">
-                    <input type="radio" name="announcementType" value="celebration" style="display:none">
+                <label class="announcement-type-option" data-type="celebration" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid var(--bg4);border-radius:10px;cursor:pointer;transition:all .2s">
+                    <input type="radio" name="announcementType" value="celebration" ${currentType === 'celebration' ? 'checked' : ''} style="display:none">
                     <svg width="18" height="18" fill="none" stroke="#9b59b6" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                     <span style="font-size:.85rem;font-weight:500">Kutlama</span>
                 </label>
@@ -27333,15 +27383,38 @@ function showAddAnnouncementModal() {
         </div>
         
         <div style="margin-bottom:16px">
-            <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">Hedef Şubeler</label>
+            <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">Animasyon</label>
             <div style="display:flex;flex-wrap:wrap;gap:8px">
-                <label style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg3);border-radius:8px;cursor:pointer;font-size:.85rem">
-                    <input type="checkbox" id="branch_all" value="all" checked onchange="toggleAnnouncementAllBranches(this)">
+                <button type="button" class="animation-option ${currentAnimation === 'none' ? 'selected' : ''}" data-animation="none" 
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'none' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx)">
+                    Yok
+                </button>
+                <button type="button" class="animation-option ${currentAnimation === 'pulse' ? 'selected' : ''}" data-animation="pulse" 
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'pulse' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:soft-pulse 2s ease-in-out infinite">
+                    Nabız
+                </button>
+                <button type="button" class="animation-option ${currentAnimation === 'shake' ? 'selected' : ''}" data-animation="shake" 
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'shake' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:gentle-shake 0.5s ease-in-out infinite">
+                    Sallama
+                </button>
+                <button type="button" class="animation-option ${currentAnimation === 'glow' ? 'selected' : ''}" data-animation="glow" 
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'glow' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:glow-border 2s ease-in-out infinite">
+                    Parlama
+                </button>
+            </div>
+            <input type="hidden" id="announcementAnimation" value="${currentAnimation}">
+        </div>
+        
+        <div style="margin-bottom:16px">
+            <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">Hedef Şubeler</label>
+            <div id="branchSelectionContainer" style="display:flex;flex-wrap:wrap;gap:8px">
+                <label class="branch-option ${isAllBranches ? 'selected' : ''}" data-branch="all" 
+                    style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:${isAllBranches ? 'rgba(0,140,149,.1)' : 'var(--bg3)'};border:2px solid ${isAllBranches ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.85rem;transition:all .2s">
                     <span>Tüm Şubeler</span>
                 </label>
                 ${branches.map(b => `
-                    <label style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg3);border-radius:8px;cursor:pointer;font-size:.85rem">
-                        <input type="checkbox" class="branch-checkbox" value="${b}" disabled onchange="toggleAnnouncementSingleBranch(this)">
+                    <label class="branch-option ${!isAllBranches && currentBranches.includes(b) ? 'selected' : ''}" data-branch="${b}" 
+                        style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:${!isAllBranches && currentBranches.includes(b) ? 'rgba(0,140,149,.1)' : 'var(--bg3)'};border:2px solid ${!isAllBranches && currentBranches.includes(b) ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.85rem;transition:all .2s">
                         <span>${b}</span>
                     </label>
                 `).join('')}
@@ -27351,13 +27424,14 @@ function showAddAnnouncementModal() {
     
     const footerHtml = `
         <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
-        <button class="btn btn-primary" onclick="saveAnnouncement()" style="background:linear-gradient(135deg,#ff8674,#ff6b5b);border:none">Duyuru Ekle</button>
+        <button class="btn btn-primary" onclick="saveAnnouncement('${editId || ''}')" style="background:linear-gradient(135deg,#ff8674,#ff6b5b);border:none">${isEdit ? 'Kaydet' : 'Duyuru Ekle'}</button>
     `;
     
-    showModal('Yeni Duyuru', bodyHtml, footerHtml);
+    showModal(isEdit ? 'Duyuruyu Düzenle' : 'Yeni Duyuru', bodyHtml, footerHtml);
     
-    // Duyuru türü seçimi için tıklama efekti
+    // Event listener'ları ekle
     setTimeout(() => {
+        // Duyuru türü seçimi
         document.querySelectorAll('.announcement-type-option').forEach(opt => {
             opt.addEventListener('click', function() {
                 document.querySelectorAll('.announcement-type-option').forEach(o => {
@@ -27366,77 +27440,125 @@ function showAddAnnouncementModal() {
                 });
                 this.style.borderColor = '#008c95';
                 this.style.background = 'rgba(0,140,149,.1)';
+                this.querySelector('input').checked = true;
             });
-            // İlk seçili olanı işaretle
             if (opt.querySelector('input:checked')) {
                 opt.style.borderColor = '#008c95';
                 opt.style.background = 'rgba(0,140,149,.1)';
             }
         });
+        
+        // Animasyon seçimi
+        document.querySelectorAll('.animation-option').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.animation-option').forEach(b => {
+                    b.style.borderColor = 'var(--bg4)';
+                    b.classList.remove('selected');
+                });
+                this.style.borderColor = '#008c95';
+                this.classList.add('selected');
+                document.getElementById('announcementAnimation').value = this.dataset.animation;
+            });
+        });
+        
+        // Şube seçimi
+        document.querySelectorAll('.branch-option').forEach(label => {
+            label.addEventListener('click', function() {
+                const branch = this.dataset.branch;
+                const allOption = document.querySelector('.branch-option[data-branch="all"]');
+                
+                if (branch === 'all') {
+                    // Tüm şubeler seçildi - diğerlerini kaldır
+                    document.querySelectorAll('.branch-option').forEach(l => {
+                        l.classList.remove('selected');
+                        l.style.borderColor = 'var(--bg4)';
+                        l.style.background = 'var(--bg3)';
+                    });
+                    this.classList.add('selected');
+                    this.style.borderColor = '#008c95';
+                    this.style.background = 'rgba(0,140,149,.1)';
+                } else {
+                    // Tek şube seçildi
+                    if (allOption.classList.contains('selected')) {
+                        // Tüm şubeler seçiliydi - kaldır
+                        allOption.classList.remove('selected');
+                        allOption.style.borderColor = 'var(--bg4)';
+                        allOption.style.background = 'var(--bg3)';
+                    }
+                    // Bu şubeyi toggle et
+                    this.classList.toggle('selected');
+                    if (this.classList.contains('selected')) {
+                        this.style.borderColor = '#008c95';
+                        this.style.background = 'rgba(0,140,149,.1)';
+                    } else {
+                        this.style.borderColor = 'var(--bg4)';
+                        this.style.background = 'var(--bg3)';
+                    }
+                    
+                    // Hiç şube seçili değilse "Tüm Şubeler"i seç
+                    const selectedBranches = document.querySelectorAll('.branch-option.selected:not([data-branch="all"])');
+                    if (selectedBranches.length === 0) {
+                        allOption.classList.add('selected');
+                        allOption.style.borderColor = '#008c95';
+                        allOption.style.background = 'rgba(0,140,149,.1)';
+                    }
+                }
+            });
+        });
     }, 100);
 }
 
-// Duyuru - Tüm şubeler checkbox'u değişince
-function toggleAnnouncementAllBranches(checkbox) {
-    const branchCheckboxes = document.querySelectorAll('.branch-checkbox');
-    branchCheckboxes.forEach(cb => {
-        cb.disabled = checkbox.checked;
-        if (checkbox.checked) cb.checked = false;
-    });
-}
-
-// Duyuru - Tek şube seçilince "Tüm Şubeler" otomatik kalksın
-function toggleAnnouncementSingleBranch(checkbox) {
-    const allCheckbox = document.getElementById('branch_all');
-    if (checkbox.checked && allCheckbox?.checked) {
-        // Tüm şubeler seçiliyken tek şubeye basıldı
-        allCheckbox.checked = false;
-        // Tüm şubeleri aktif et
-        document.querySelectorAll('.branch-checkbox').forEach(cb => {
-            cb.disabled = false;
-        });
-    }
-}
-
-// Duyuru kaydet
-async function saveAnnouncement() {
+// Duyuru kaydet (ekleme veya düzenleme)
+async function saveAnnouncement(editId = '') {
     const title = document.getElementById('announcementTitle')?.value?.trim();
     const content = document.getElementById('announcementContent')?.value?.trim();
     const announcementType = document.querySelector('input[name="announcementType"]:checked')?.value || 'info';
-    const allBranches = document.getElementById('branch_all')?.checked;
+    const animation = document.getElementById('announcementAnimation')?.value || 'none';
     
     if (!title) {
         toast('Başlık gerekli', 'error');
         return;
     }
     
-    // Seçili şubeleri al
+    // Seçili şubeleri al (yeni label-based seçim)
+    const allSelected = document.querySelector('.branch-option[data-branch="all"].selected');
     let branches = ['all'];
-    if (!allBranches) {
-        branches = Array.from(document.querySelectorAll('.branch-checkbox:checked')).map(cb => cb.value);
+    if (!allSelected) {
+        branches = Array.from(document.querySelectorAll('.branch-option.selected:not([data-branch="all"])')).map(l => l.dataset.branch);
         if (branches.length === 0) {
             toast('En az bir şube seçin', 'error');
             return;
         }
     }
     
+    const data = {
+        title,
+        content,
+        branches,
+        type: announcementType,
+        animation,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    
     try {
-        await db.collection('announcements').add({
-            title,
-            content,
-            branches,
-            type: announcementType,
-            createdBy: currentUser?.id || 'unknown',
-            createdByName: currentUser?.codeName?.split(' ')[0] || currentUser?.name?.split(' ')[0] || 'Yönetici',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        if (editId) {
+            // Düzenleme
+            await db.collection('announcements').doc(editId).update(data);
+            toast('Duyuru güncellendi', 'success');
+        } else {
+            // Yeni ekleme
+            data.createdBy = currentUser?.id || 'unknown';
+            data.createdByName = currentUser?.codeName?.split(' ')[0] || currentUser?.name?.split(' ')[0] || 'Yönetici';
+            data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            await db.collection('announcements').add(data);
+            toast('Duyuru eklendi', 'success');
+        }
         
-        toast('Duyuru eklendi', 'success');
         closeModal();
         loadAnnouncements();
     } catch (e) {
-        console.error('Duyuru eklenemedi:', e);
-        toast('Duyuru eklenemedi', 'error');
+        console.error('Duyuru kaydedilemedi:', e);
+        toast('Duyuru kaydedilemedi', 'error');
     }
 }
 
