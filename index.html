@@ -458,8 +458,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .announcement-delete:hover{background:rgba(231,76,60,.1);color:#e74c3c}
 .announcement-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:.6rem;font-weight:600;text-transform:uppercase;background:rgba(255,134,116,.15);color:#ff8674}
 /* Duyuru Animasyonları */
-@keyframes gentle-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
-@keyframes glow-border{0%,100%{box-shadow:0 0 5px rgba(255,134,116,.3)}50%{box-shadow:0 0 15px rgba(255,134,116,.6)}}
+@keyframes ann-pulse{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:1;transform:scale(1.02)}}
+@keyframes ann-shake{0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-3px)}20%,40%,60%,80%{transform:translateX(3px)}}
+@keyframes ann-glow{0%,100%{box-shadow:0 0 5px rgba(255,134,116,.3)}50%{box-shadow:0 0 20px rgba(255,134,116,.7)}}
+@keyframes ann-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes ann-slide{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+@keyframes ann-blink{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes ann-heartbeat{0%,100%{transform:scale(1)}14%{transform:scale(1.03)}28%{transform:scale(1)}42%{transform:scale(1.03)}70%{transform:scale(1)}}
     </style>
 </head>
 <body>
@@ -27249,9 +27254,13 @@ function renderAnnouncements() {
     // Animasyon CSS mapping
     const animationCSS = {
         none: '',
-        pulse: 'animation:soft-pulse 2s ease-in-out infinite',
-        shake: 'animation:gentle-shake 0.5s ease-in-out infinite',
-        glow: 'animation:glow-border 2s ease-in-out infinite'
+        pulse: 'animation:ann-pulse 2s ease-in-out infinite',
+        shake: 'animation:ann-shake 1s ease-in-out infinite',
+        glow: 'animation:ann-glow 2s ease-in-out infinite',
+        bounce: 'animation:ann-bounce 1s ease-in-out infinite',
+        slide: 'animation:ann-slide 1.5s ease-in-out infinite',
+        blink: 'animation:ann-blink 1s ease-in-out infinite',
+        heartbeat: 'animation:ann-heartbeat 1.5s ease-in-out infinite'
     };
     
     container.innerHTML = visibleAnnouncements.map(ann => {
@@ -27273,10 +27282,10 @@ function renderAnnouncements() {
                     </div>
                     ${canEdit ? `
                         <div style="display:flex;gap:4px">
-                            <button class="announcement-edit" onclick="showAddAnnouncementModal('${ann.id}')" title="Düzenle" style="background:none;border:none;color:var(--tx3);cursor:pointer;padding:4px;border-radius:4px;opacity:0;transition:all .2s">
+                            <button class="announcement-edit" onclick="showAddAnnouncementModal('${ann.id}')" title="Düzenle">
                                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                             </button>
-                            <button class="announcement-delete" onclick="deleteAnnouncement('${ann.id}')" title="Sil" style="background:none;border:none;color:var(--tx3);cursor:pointer;padding:4px;border-radius:4px;opacity:0;transition:all .2s">
+                            <button class="announcement-delete" onclick="deleteAnnouncement('${ann.id}')" title="Sil">
                                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                             </button>
                         </div>
@@ -27390,16 +27399,32 @@ function showAddAnnouncementModal(editId = null) {
                     Yok
                 </button>
                 <button type="button" class="animation-option ${currentAnimation === 'pulse' ? 'selected' : ''}" data-animation="pulse" 
-                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'pulse' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:soft-pulse 2s ease-in-out infinite">
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'pulse' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:ann-pulse 2s ease-in-out infinite">
                     Nabız
                 </button>
                 <button type="button" class="animation-option ${currentAnimation === 'shake' ? 'selected' : ''}" data-animation="shake" 
-                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'shake' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:gentle-shake 0.5s ease-in-out infinite">
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'shake' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:ann-shake 1s ease-in-out infinite">
                     Sallama
                 </button>
                 <button type="button" class="animation-option ${currentAnimation === 'glow' ? 'selected' : ''}" data-animation="glow" 
-                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'glow' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:glow-border 2s ease-in-out infinite">
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'glow' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:ann-glow 2s ease-in-out infinite">
                     Parlama
+                </button>
+                <button type="button" class="animation-option ${currentAnimation === 'bounce' ? 'selected' : ''}" data-animation="bounce" 
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'bounce' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:ann-bounce 1s ease-in-out infinite">
+                    Zıplama
+                </button>
+                <button type="button" class="animation-option ${currentAnimation === 'slide' ? 'selected' : ''}" data-animation="slide" 
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'slide' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:ann-slide 1.5s ease-in-out infinite">
+                    Kayma
+                </button>
+                <button type="button" class="animation-option ${currentAnimation === 'blink' ? 'selected' : ''}" data-animation="blink" 
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'blink' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:ann-blink 1s ease-in-out infinite">
+                    Yanıp Sönme
+                </button>
+                <button type="button" class="animation-option ${currentAnimation === 'heartbeat' ? 'selected' : ''}" data-animation="heartbeat" 
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'heartbeat' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:ann-heartbeat 1.5s ease-in-out infinite">
+                    Kalp Atışı
                 </button>
             </div>
             <input type="hidden" id="announcementAnimation" value="${currentAnimation}">
