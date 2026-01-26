@@ -627,11 +627,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sidebarTx2)" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     </div>
                     <div style="display:flex;gap:8px">
-                        <button onclick="logout()" style="flex:1;padding:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--sidebarTx2);font-size:.75rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.background='rgba(231,76,60,.2)';this.style.borderColor='rgba(231,76,60,.4)';this.style.color='#e74c3c'" onmouseout="this.style.background='rgba(255,255,255,.1)';this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--sidebarTx2)'" title="Çıkış Yap">
+                        <button class="logout-btn" onclick="logout()" style="flex:1;padding:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--sidebarTx2);font-size:.75rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.background='rgba(231,76,60,.2)';this.style.borderColor='rgba(231,76,60,.4)';this.style.color='#e74c3c'" onmouseout="this.style.background='rgba(255,255,255,.1)';this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--sidebarTx2)'" title="Çıkış Yap">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                             <span class="user-details">Çıkış</span>
                         </button>
-                        <button onclick="toggleSidebar()" style="padding:10px 12px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--sidebarTx2);cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background='rgba(255,255,255,.2)'" onmouseout="this.style.background='rgba(255,255,255,.1)'" title="Menüyü Daralt/Genişlet">
+                        <button class="sidebar-toggle-inner" onclick="toggleSidebar()" style="padding:10px 12px;margin:0;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--sidebarTx2);cursor:pointer;display:flex;align-items:center;justify-content:center" title="Menüyü Daralt/Genişlet">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 19l-7-7 7-7"/><path d="M18 19l-7-7 7-7"/></svg>
                         </button>
                     </div>
@@ -663,9 +663,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                         Yönetim Paneli
                     </div>
-                    <div style="display:flex;align-items:center;gap:10px">
-                        <div class="page-subtitle" id="motivationQuote" style="font-style:italic;font-size:.85rem;color:var(--tx3);flex:1">Yükleniyor...</div>
-                        <button onclick="loadMotivationQuote()" style="background:#008c95;border:none;cursor:pointer;padding:6px 10px;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:4px;transition:all .2s;color:#fff;font-size:.7rem" onmouseover="this.style.background='#006d73'" onmouseout="this.style.background='#008c95'" title="Yeni söz">
+                    <div class="page-subtitle" style="display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--tx3)">
+                        <span id="motivationQuote" style="font-style:italic">Yükleniyor...</span>
+                        <button onclick="loadMotivationQuote()" style="background:none;border:none;cursor:pointer;padding:2px;display:inline-flex;align-items:center;justify-content:center;transition:all .2s;color:#008c95;opacity:.6;flex-shrink:0" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.6'" title="Yeni söz">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
                         </button>
                     </div>
@@ -27317,6 +27317,115 @@ async function getWeeklyDashboardSummary(branch, personnelId) {
 }
 
 // ==================== MOTİVASYON SÖZLERİ ====================
+// Fallback sözler - Firebase'e erişilemezse kullanılır
+const MOTIVATION_QUOTES = [
+    // Başarı & Hedef
+    { text: "Başarı, her gün tekrarlanan küçük çabaların toplamıdır.", author: "Robert Collier" },
+    { text: "Başarının sırrı, başlamaktır.", author: "Mark Twain" },
+    { text: "Hayal edebiliyorsan, yapabilirsin.", author: "Walt Disney" },
+    { text: "Başarı, hazırlık ile fırsatın buluştuğu yerdir.", author: "Bobby Unser" },
+    { text: "Büyük işler, küçük adımlarla başlar.", author: "Lao Tzu" },
+    { text: "Her başarı, bir karar ile başlar.", author: "Tony Robbins" },
+    { text: "Hedefsiz bir gemi için hiçbir rüzgar uygun değildir.", author: "Seneca" },
+    { text: "Başarı, düşmeden kalkmaktan geçer.", author: "Vince Lombardi" },
+    { text: "Büyük düşün, küçük başla, hemen başla.", author: "Robin Sharma" },
+    { text: "Başarı, yaptığın işi severek yapmaktır.", author: "Steve Jobs" },
+    
+    // Çalışma & Emek
+    { text: "Çalışmak, başarının tek reçetesidir.", author: "Thomas Edison" },
+    { text: "Bugün yapabileceğin işi yarına bırakma.", author: "Benjamin Franklin" },
+    { text: "Zor işler bizi güçlendirir.", author: "Seneca" },
+    { text: "Emek olmadan başarı olmaz.", author: "Thomas Jefferson" },
+    { text: "Disiplin, özgürlüğe giden köprüdür.", author: "Jocko Willink" },
+    { text: "Mükemmellik, alışkanlıkların sonucudur.", author: "Aristoteles" },
+    { text: "Sabır ve azim, tüm zorlukları yener.", author: "Benjamin Franklin" },
+    { text: "Başarı, konfor alanının dışında yaşar.", author: "Neale Donald Walsch" },
+    
+    // Olumlu Düşünce
+    { text: "Pozitif düşünce, pozitif sonuçlar doğurur.", author: "Norman Vincent Peale" },
+    { text: "Düşüncelerinizi değiştirin, hayatınız değişsin.", author: "Wayne Dyer" },
+    { text: "Her yeni gün, yeni bir başlangıçtır.", author: "Eleanor Roosevelt" },
+    { text: "İyimserlik, başarının temelidir.", author: "Helen Keller" },
+    { text: "Zorluklar, karakteri şekillendirir.", author: "Helen Keller" },
+    { text: "Mutluluk bir karar meselesidir.", author: "Abraham Lincoln" },
+    { text: "Umut, karanlıktaki ışıktır.", author: "Desmond Tutu" },
+    
+    // Azim & İrade
+    { text: "Asla pes etme, her şey mümkün.", author: "Muhammad Ali" },
+    { text: "Kararlılık, tüm engelleri aşar.", author: "Leonardo da Vinci" },
+    { text: "Her başarısızlık, başarıya bir adım daha yaklaştırır.", author: "Thomas Edison" },
+    { text: "Sabır acıdır, meyvesi tatlıdır.", author: "Jean-Jacques Rousseau" },
+    { text: "Zorlu günler, güçlü insanlar yaratır.", author: "Robert H. Schuller" },
+    
+    // Kendine Güven
+    { text: "Kendine inan, geri kalanı gelir.", author: "Venus Williams" },
+    { text: "Kendinize yatırım yapın, en iyi yatırımdır.", author: "Warren Buffett" },
+    { text: "Cesaret, korkunun yokluğu değil, korkuya rağmen devam etmektir.", author: "Nelson Mandela" },
+    { text: "Özgüven, başarının anahtarıdır.", author: "Ralph Waldo Emerson" },
+    { text: "Sınırlarınızı siz belirlersiniz.", author: "Carol Burnett" },
+    
+    // Zaman Yönetimi
+    { text: "Zaman altından değerlidir, iyi kullanın.", author: "Benjamin Franklin" },
+    { text: "Dün tarihtir, yarın gizemdir, bugün bir armağandır.", author: "Eleanor Roosevelt" },
+    { text: "Zamanı değil, işi yönetin.", author: "Peter Drucker" },
+    
+    // Gelişim & Öğrenme
+    { text: "Bilgi güçtür.", author: "Francis Bacon" },
+    { text: "Hatalarından öğren, onlardan büyü.", author: "John C. Maxwell" },
+    { text: "Meraklı ol, keşfetmeye devam et.", author: "Steve Jobs" },
+    { text: "Öğrenmek asla bitmez.", author: "Leonardo da Vinci" },
+    { text: "Değişim kaçınılmazdır, gelişim bir seçimdir.", author: "John C. Maxwell" },
+    
+    // Fizikçiler & Bilim İnsanları
+    { text: "Hayal gücü bilgiden daha önemlidir.", author: "Albert Einstein" },
+    { text: "Delilik aynı şeyi yapıp farklı sonuç beklemektir.", author: "Albert Einstein" },
+    { text: "Hayat bisiklete binmek gibidir, dengede kalmak için hareket etmelisin.", author: "Albert Einstein" },
+    { text: "Evrende en güçlü güç bileşik faizdir.", author: "Albert Einstein" },
+    { text: "Basit tutun, mükemmel yapın.", author: "Richard Feynman" },
+    { text: "Doğa basitliği sever.", author: "Isaac Newton" },
+    { text: "Daha ileri görebildiysem, devlerin omuzlarında durduğum içindir.", author: "Isaac Newton" },
+    { text: "Her şey mümkündür, imkansız sadece daha uzun sürer.", author: "Marie Curie" },
+    { text: "Hayatta korkacak bir şey yok, sadece anlaşılacak şeyler var.", author: "Marie Curie" },
+    { text: "Evreni anlamaya çalışırken, kendimizi de anlıyoruz.", author: "Carl Sagan" },
+    
+    // Filozoflar
+    { text: "Kendini bil.", author: "Sokrates" },
+    { text: "Eğitim, özgürlüğün anahtarıdır.", author: "Epictetus" },
+    { text: "Mutluluk, erdemli bir yaşamın ürünüdür.", author: "Aristoteles" },
+    { text: "En büyük zafer, kendini yenmektir.", author: "Platon" },
+    { text: "Değişim tek sabit olandır.", author: "Herakleitos" },
+    { text: "Güçlü olan galip gelmez, galip gelen güçlü olur.", author: "Franz Kafka" },
+    
+    // Modern Liderler
+    { text: "İnovasyon, liderliği tanımlar.", author: "Steve Jobs" },
+    { text: "Müşteriye aşık ol, ürüne değil.", author: "Jeff Bezos" },
+    { text: "Her başarısızlık, bir öğrenme fırsatıdır.", author: "Elon Musk" },
+    { text: "Uzun vadeli düşün.", author: "Jeff Bezos" },
+    { text: "Büyük işler, büyük takımlarla yapılır.", author: "Bill Gates" },
+    { text: "Hata yapmaktan korkma, tekrarlamaktan kork.", author: "Warren Buffett" },
+    { text: "Risk almadan kazanılmaz.", author: "Mark Zuckerberg" },
+    { text: "Basitlik, karmaşıklığın ötesindedir.", author: "Steve Jobs" },
+    
+    // Ekip & İş
+    { text: "Yalnız hızlı gidersin, birlikte uzağa.", author: "Afrika Atasözü" },
+    { text: "Takım oyunu, en güçlü oyundur.", author: "Michael Jordan" },
+    { text: "Liderlik, hizmet etmektir.", author: "Robert K. Greenleaf" },
+    { text: "Örnek ol, sözle değil davranışla.", author: "Albert Einstein" },
+    
+    // Sakinlik
+    { text: "Sakinlik, gücün işaretidir.", author: "Lao Tzu" },
+    { text: "Kontrolün dışındakileri bırak.", author: "Epictetus" },
+    { text: "Şu anı yaşa, endişeyi bırak.", author: "Buddha" },
+    
+    // Motivasyon
+    { text: "İmkansız, olası değil demektir.", author: "Audrey Hepburn" },
+    { text: "Değişim seninle başlar.", author: "Mahatma Gandhi" },
+    { text: "Yılmadan devam et.", author: "Winston Churchill" },
+    { text: "Tutku, başarının yakıtıdır.", author: "Oprah Winfrey" },
+    { text: "Her zorluk, bir öğretmendir.", author: "Paulo Coelho" },
+    { text: "Güç içinde.", author: "Yoda" }
+];
+
 async function loadMotivationQuote() {
     const quoteEl = document.getElementById('motivationQuote');
     if (!quoteEl) return;
@@ -27325,28 +27434,22 @@ async function loadMotivationQuote() {
         // Firestore'dan rastgele söz çek
         const snapshot = await db.collection('motivationQuotes').get();
         
-        if (snapshot.empty) {
-            // Fallback - yerel sözler
-            const fallbackQuotes = [
-                { text: "Başarı, her gün tekrarlanan küçük çabaların toplamıdır.", author: "Robert Collier" },
-                { text: "Bugün yapabileceğin işi yarına bırakma.", author: "Benjamin Franklin" },
-                { text: "Hayal edebiliyorsan, yapabilirsin.", author: "Walt Disney" }
-            ];
-            const quote = fallbackQuotes[Math.floor(Math.random() * fallbackQuotes.length)];
+        if (!snapshot.empty) {
+            // Firestore'dan rastgele seç
+            const quotes = snapshot.docs.map(doc => doc.data());
+            const randomIndex = Math.floor(Math.random() * quotes.length);
+            const quote = quotes[randomIndex];
             quoteEl.innerHTML = `"${quote.text}" <span style="color:var(--accent);font-weight:500">— ${quote.author}</span>`;
             return;
         }
-        
-        // Rastgele bir söz seç
-        const quotes = snapshot.docs.map(doc => doc.data());
-        const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-        
-        quoteEl.innerHTML = `"${randomQuote.text}" <span style="color:var(--accent);font-weight:500">— ${randomQuote.author}</span>`;
-        
     } catch (error) {
-        console.error('Motivasyon sözü yüklenemedi:', error);
-        quoteEl.innerHTML = `"Her yeni gün, yeni bir başlangıçtır." <span style="color:var(--accent);font-weight:500">— Anonim</span>`;
+        console.log('Firestore sözleri yüklenemedi, yerel sözler kullanılıyor');
     }
+    
+    // Fallback - yerel sözler (gerçek random)
+    const randomIndex = Math.floor(Math.random() * MOTIVATION_QUOTES.length);
+    const quote = MOTIVATION_QUOTES[randomIndex];
+    quoteEl.innerHTML = `"${quote.text}" <span style="color:var(--accent);font-weight:500">— ${quote.author}</span>`;
 }
 
 // ==================== DUYURU SİSTEMİ ====================
