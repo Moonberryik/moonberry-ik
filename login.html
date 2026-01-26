@@ -750,6 +750,15 @@ body {
                 
                 await auth.signInAnonymously();
                 
+                // authMapping'e uid → email eşleşmesi kaydet (şifre değiştirme için)
+                const uid = auth.currentUser.uid;
+                const credentialDocId = email.replace(/[@.]/g, '_');
+                await db.collection('authMapping').doc(uid).set({
+                    email: email,
+                    credentialDocId: credentialDocId,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
                 // Personel bilgisini localStorage'a kaydet
                 const personelData = personelSnap.docs[0].data();
                 const userData = {
