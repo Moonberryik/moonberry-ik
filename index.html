@@ -4124,59 +4124,118 @@ document.addEventListener('DOMContentLoaded', () => {
         firebase.auth().onAuthStateChanged(async (user) => {
             if (user) {
                 // Kullanıcı giriş yapmış
-                console.log('User logged in:', user.email);
+                console.log('User logged in:', user.email || 'Anonymous');
                 
                 // Kullanıcı bilgilerini Firestore'dan al
                 try {
                     // Önce config'i yükle (email mapping için)
                     await loadSystemConfig();
                     
-                    // Admin kontrolü - Config'den dinamik liste
-                    const isAdmin = await checkAdminEmail(user.email);
-                    
-                    // 1. ÖNCE PERSONEL koleksiyonundan email ile bul
-                    let foundInPersonel = false;
-                    const personelSnapshot = await db.collection('personel').where('email', '==', user.email).limit(1).get();
-                    
-                    if (!personelSnapshot.empty) {
-                        const personelDoc = personelSnapshot.docs[0];
-                        const personelData = personelDoc.data();
+                    // ========== ANONYMOUS AUTH KONTROLÜ ==========
+                    if (user.isAnonymous || !user.email) {
+                        // localStorage'dan kullanıcı bilgisini al
+                        const storedUser = localStorage.getItem('mb_user');
                         
-                        if (personelData.role) {
-                            currentUser = {
-                                id: user.uid,
-                                personelId: personelDoc.id,
-                                email: user.email,
-                                name: personelData.name,
-                                codeName: personelData.codeName || '',
-                                role: personelData.role,
-                                branch: personelData.branch || 'all',
-                                position: personelData.position
-                            };
-                            foundInPersonel = true;
-                            console.log('✅ Personel koleksiyonundan kullanıcı bulundu:', currentUser.name, currentUser.role);
+                        if (!storedUser) {
+                            console.log('🚫 Anonymous user ama localStorage boş - login\'e yönlendir');
+                            await firebase.auth().signOut();
+                            window.location.replace('login.html');
+                            return;
                         }
-                    }
-                    
-                    // 2. GÜVENLİK: Personel'de bulunamadı VE admin değilse → LOGOUT
-                    if (!foundInPersonel && !isAdmin) {
-                        console.log('🚫 Personel kaydı bulunamadı, erişim engellendi:', user.email);
-                        await firebase.auth().signOut();
-                        alert('Bu hesap artık aktif değil.');
-                        window.location.replace('login.html');
-                        return;
-                    }
-                    
-                    // 3. Admin ise özel ayar
-                    if (!foundInPersonel && isAdmin) {
+                        
+                        const userData = JSON.parse(storedUser);
+                        console.log('✅ Anonymous Auth - localStorage\'dan kullanıcı:', userData.name);
+                        
+                        // Personel hala aktif mi kontrol et
+                        const personelCheck = await db.collection('personel')
+                            .where('email', '==', userData.email)
+                            .limit(1)
+                            .get();
+                        
+                        if (personelCheck.empty) {
+                            console.log('🚫 Personel kaydı silinmiş - logout');
+                            localStorage.removeItem('mb_user');
+                            await firebase.auth().signOut();
+                            alert('Bu hesap artık aktif değil.');
+                            window.location.replace('login.html');
+                            return;
+                        }
+                        
+                        // Güncel personel verisini al (rol değişmiş olabilir)
+                        const personelData = personelCheck.docs[0].data();
+                        
                         currentUser = {
                             id: user.uid,
-                            email: user.email,
-                            name: 'Yönetici',
-                            role: 'yonetici',
-                            branch: 'all'
+                            personelId: personelCheck.docs[0].id,
+                            email: userData.email,
+                            name: personelData.name || userData.name,
+                            codeName: personelData.codeName || '',
+                            uniqueId: personelData.uniqueId || userData.uniqueId,
+                            role: personelData.role || userData.role,
+                            branch: personelData.branch || userData.branch || 'all',
+                            position: personelData.position || userData.position,
+                            authType: 'anonymous'
                         };
-                        console.log('✅ Admin kullanıcı:', currentUser.email);
+                        
+                        // localStorage'ı güncelle (rol/branch değişmiş olabilir)
+                        localStorage.setItem('mb_user', JSON.stringify(currentUser));
+                        
+                    } else {
+                        // ========== NORMAL EMAIL AUTH ==========
+                        // Admin kontrolü - Config'den dinamik liste
+                        const isAdmin = await checkAdminEmail(user.email);
+                        
+                        // 1. ÖNCE PERSONEL koleksiyonundan email ile bul
+                        let foundInPersonel = false;
+                        const personelSnapshot = await db.collection('personel').where('email', '==', user.email).limit(1).get();
+                        
+                        if (!personelSnapshot.empty) {
+                            const personelDoc = personelSnapshot.docs[0];
+                            const personelData = personelDoc.data();
+                            
+                            if (personelData.role) {
+                                currentUser = {
+                                    id: user.uid,
+                                    personelId: personelDoc.id,
+                                    email: user.email,
+                                    name: personelData.name,
+                                    codeName: personelData.codeName || '',
+                                    uniqueId: personelData.uniqueId,
+                                    role: personelData.role,
+                                    branch: personelData.branch || 'all',
+                                    position: personelData.position,
+                                    authType: 'email'
+                                };
+                                foundInPersonel = true;
+                                console.log('✅ Personel koleksiyonundan kullanıcı bulundu:', currentUser.name, currentUser.role);
+                                
+                                // localStorage'a da kaydet
+                                localStorage.setItem('mb_user', JSON.stringify(currentUser));
+                            }
+                        }
+                        
+                        // 2. GÜVENLİK: Personel'de bulunamadı VE admin değilse → LOGOUT
+                        if (!foundInPersonel && !isAdmin) {
+                            console.log('🚫 Personel kaydı bulunamadı, erişim engellendi:', user.email);
+                            await firebase.auth().signOut();
+                            alert('Bu hesap artık aktif değil.');
+                            window.location.replace('login.html');
+                            return;
+                        }
+                        
+                        // 3. Admin ise özel ayar
+                        if (!foundInPersonel && isAdmin) {
+                            currentUser = {
+                                id: user.uid,
+                                email: user.email,
+                                name: 'Yönetici',
+                                role: 'yonetici',
+                                branch: 'all',
+                                authType: 'email'
+                            };
+                            console.log('✅ Admin kullanıcı:', currentUser.email);
+                            localStorage.setItem('mb_user', JSON.stringify(currentUser));
+                        }
                     }
                     
                     // Kullanıcı adını sidebar'da göster
@@ -4259,6 +4318,7 @@ async function logout() {
         
         // Session bilgilerini temizle
         localStorage.removeItem('mb_session_id');
+        localStorage.removeItem('mb_user');
         
         // Session timeout'ları temizle
         if (sessionTimeoutId) clearTimeout(sessionTimeoutId);
@@ -9408,38 +9468,11 @@ async function savePersonel() {
     try {
         // Email ve şifre varsa işlem yap
         if (email && password) {
-            // 1. Credentials koleksiyonuna kaydet
+            // Credentials koleksiyonuna kaydet (tek kaynak)
             const personelDocId = editId || 'new_' + Date.now();
             await saveCredential(email, password, personelDocId);
-            console.log('Credentials kaydedildi:', email);
-            
-            // 2. Firebase Auth'ta kullanıcı oluştur/güncelle
-            try {
-                // Secondary app ile kullanıcı oluştur (mevcut oturumu bozmaz)
-                const secondaryApp = firebase.initializeApp(firebase.app().options, 'Secondary');
-                const secondaryAuth = secondaryApp.auth();
-                
-                await secondaryAuth.createUserWithEmailAndPassword(email, password);
-                console.log('Firebase Auth kullanıcısı oluşturuldu:', email);
-                
-                // Secondary app'i temizle
-                await secondaryApp.delete();
-                
-                data.hasFirebaseAuth = true;
-                toast('Kullanıcı hesabı oluşturuldu ✓', 'success');
-            } catch (authError) {
-                if (authError.code === 'auth/email-already-in-use') {
-                    console.log('Kullanıcı zaten mevcut, credentials güncellendi:', email);
-                    // Credentials zaten güncellendi, Firebase Auth senkronize olacak (login anında)
-                    toast('Şifre güncellendi. Kullanıcı yeni giriş yaptığında aktif olacak.', 'info');
-                } else if (authError.code === 'auth/app/duplicate-app') {
-                    // Secondary app zaten var, devam et
-                    console.log('Secondary app zaten mevcut');
-                } else {
-                    console.error('Auth hatası:', authError);
-                    // Credentials kaydedildi, Auth olmasa da giriş yapabilir
-                }
-            }
+            console.log('✅ Credentials kaydedildi:', email);
+            toast('Şifre kaydedildi ✓', 'success');
         }
         
         // passwordPlain kaldı ise temizle
