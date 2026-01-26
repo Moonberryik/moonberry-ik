@@ -4944,7 +4944,13 @@ function goTo(page) {
             const branchesPre = STATE.branches || DEFAULT_STATE.branches || [];
             if (branchesPre.length > 0) {
                 subeSelectPre.innerHTML = branchesPre.map(b => `<option value="${b}">${b}</option>`).join('');
-                console.log('[Checklist] Pre-fill dropdown:', branchesPre.length, 'şube');
+                // Kullanıcının şubesini hemen seç (flash önleme)
+                const userBrPre = currentUser?.branch;
+                if (userBrPre && userBrPre !== 'all') {
+                    const optPre = Array.from(subeSelectPre.options).find(o => o.value === userBrPre);
+                    if (optPre) subeSelectPre.value = optPre.value;
+                }
+                console.log('[Checklist] Pre-fill dropdown:', branchesPre.length, 'şube, seçili:', subeSelectPre.value);
             }
         }
         
