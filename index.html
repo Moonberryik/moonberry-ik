@@ -663,7 +663,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                         Yönetim Paneli
                     </div>
-                    <div class="page-subtitle" id="motivationQuote" style="font-style:italic;font-size:.85rem;color:var(--tx3)">Yükleniyor...</div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <div class="page-subtitle" id="motivationQuote" style="font-style:italic;font-size:.85rem;color:var(--tx3);flex:1">Yükleniyor...</div>
+                        <button onclick="loadMotivationQuote()" style="background:transparent;border:none;cursor:pointer;padding:4px;border-radius:4px;display:flex;align-items:center;justify-content:center;transition:all .2s;opacity:.5" onmouseover="this.style.opacity='1';this.style.background='rgba(0,140,149,.1)'" onmouseout="this.style.opacity='.5';this.style.background='transparent'" title="Yeni söz">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#008c95" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                        </button>
+                    </div>
                 </div>
                 
                 <!-- Personel Karşılama Kartı - Dinamik -->
@@ -4791,15 +4796,6 @@ function applyBaristaRestrictions() {
     const navKatalog = document.querySelector('.nav-item[data-page="katalog"]');
     if (navPersonel) navPersonel.style.display = 'none';
     if (navKatalog) navKatalog.style.display = 'none';
-    
-    // Sidebar'daki Belgeler ve Formlar gruplarını gizle
-    const navBelgeler = document.getElementById('nav-belgeler');
-    const navFormlar = document.getElementById('nav-formlar');
-    if (navBelgeler) navBelgeler.style.display = 'none';
-    if (navFormlar) navFormlar.style.display = 'none';
-    
-    // Divider'ları (ayırıcı çizgiler) gizle
-    document.querySelectorAll('.nav-divider').forEach(div => div.style.display = 'none');
     
     // Barista badge'i ekle
     const userRoleEl = document.getElementById('userRole');
