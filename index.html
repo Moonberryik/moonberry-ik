@@ -6196,8 +6196,15 @@ async function loadMyProfile() {
                             <input type="text" id="myProfile_address" value="${p.address || ''}" class="form-input" style="flex:1" placeholder="Ev adresinizi girin">
                         </div>
                         <div style="display:flex;align-items:center;gap:8px">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2" style="flex-shrink:0"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                            <input type="text" id="myProfile_bankName" value="${p.bankName || ''}" class="form-input" style="flex:1" placeholder="Banka adını girin (örn: Ziraat, Garanti)">
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2" style="flex-shrink:0"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
                             <input type="text" id="myProfile_iban" value="${p.iban || ''}" class="form-input" style="flex:1" placeholder="TR00 0000 0000 0000 0000 0000 00">
+                            <button type="button" onclick="copyIban()" style="background:var(--bg3);border:1px solid var(--bg4);border-radius:6px;padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:4px;color:var(--tx2);font-size:.75rem;transition:all .15s" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'" title="IBAN'ı kopyala">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            </button>
                         </div>
                     </div>
                     
@@ -6244,73 +6251,81 @@ async function loadMyProfile() {
     }
 }
 
-// Avatar seçenekleri - Cartoon karakterler ve hayvanlar (eğlenceli, yeni nesil)
+// Avatar seçenekleri - DiceBear API ile canlı, güzel avatarlar (40 adet)
 const AVATAR_OPTIONS = [
-    // Erkek karakterler
-    { label: 'Adam 1', bg: 'linear-gradient(135deg,#3498db,#2980b9)', svg: '<circle cx="12" cy="8" r="5" fill="#ffd5c8"/><circle cx="10" cy="7" r="1" fill="#333"/><circle cx="14" cy="7" r="1" fill="#333"/><path d="M10 10q2 2 4 0" stroke="#333" fill="none" stroke-width=".5"/><path d="M7 5q5-4 10 0" fill="#5d4e37"/><rect x="5" y="15" width="14" height="8" rx="2" fill="#3498db"/>' },
-    { label: 'Adam 2', bg: 'linear-gradient(135deg,#2c3e50,#34495e)', svg: '<circle cx="12" cy="8" r="5" fill="#e8c4a0"/><circle cx="10" cy="7" r="1" fill="#333"/><circle cx="14" cy="7" r="1" fill="#333"/><path d="M10 10q2 1.5 4 0" stroke="#333" fill="none" stroke-width=".5"/><rect x="7" y="3" width="10" height="4" rx="1" fill="#333"/><rect x="5" y="15" width="14" height="8" rx="2" fill="#2c3e50"/>' },
-    { label: 'Adam 3', bg: 'linear-gradient(135deg,#27ae60,#229954)', svg: '<circle cx="12" cy="8" r="5" fill="#ffd5c8"/><circle cx="10" cy="7" r="1.2" fill="#333"/><circle cx="14" cy="7" r="1.2" fill="#333"/><path d="M9 10q3 2 6 0" stroke="#333" fill="none" stroke-width=".5"/><path d="M7 4q5-2 10 0v3q-5 1-10 0z" fill="#8b4513"/><rect x="5" y="15" width="14" height="8" rx="2" fill="#27ae60"/>' },
-    { label: 'Adam 4', bg: 'linear-gradient(135deg,#9b59b6,#8e44ad)', svg: '<circle cx="12" cy="8" r="5" fill="#d4a574"/><circle cx="10" cy="7" r="1" fill="#333"/><circle cx="14" cy="7" r="1" fill="#333"/><ellipse cx="12" cy="10" rx="1.5" ry=".8" fill="#333"/><ellipse cx="12" cy="4" rx="4" ry="2" fill="#1a1a1a"/><rect x="5" y="15" width="14" height="8" rx="2" fill="#9b59b6"/>' },
-    { label: 'Adam 5', bg: 'linear-gradient(135deg,#e67e22,#d35400)', svg: '<circle cx="12" cy="8" r="5" fill="#ffd5c8"/><rect x="8" y="6" width="3" height="1.5" rx=".5" fill="#333"/><rect x="13" y="6" width="3" height="1.5" rx=".5" fill="#333"/><path d="M10 10q2 2 4 0" stroke="#333" fill="none" stroke-width=".5"/><path d="M8 3h8l-1 4h-6z" fill="#c0392b"/><rect x="5" y="15" width="14" height="8" rx="2" fill="#e67e22"/>' },
-    // Kadın karakterler  
-    { label: 'Kadın 1', bg: 'linear-gradient(135deg,#e91e63,#c2185b)', svg: '<circle cx="12" cy="9" r="5" fill="#ffd5c8"/><circle cx="10" cy="8" r="1" fill="#333"/><circle cx="14" cy="8" r="1" fill="#333"/><path d="M10 11q2 1 4 0" stroke="#c0392b" fill="none" stroke-width=".8"/><path d="M5 6q2-4 7-4t7 4q0 6-3 8v2q-4 1-8 0v-2q-3-2-3-8" fill="#5d3a1a"/><rect x="5" y="16" width="14" height="7" rx="2" fill="#e91e63"/>' },
-    { label: 'Kadın 2', bg: 'linear-gradient(135deg,#9c27b0,#7b1fa2)', svg: '<circle cx="12" cy="9" r="5" fill="#e8c4a0"/><circle cx="10" cy="8" r="1" fill="#333"/><circle cx="14" cy="8" r="1" fill="#333"/><path d="M10 11q2 1.5 4 0" stroke="#e91e63" fill="none" stroke-width=".8"/><ellipse cx="12" cy="5" rx="6" ry="4" fill="#1a1a1a"/><rect x="5" y="16" width="14" height="7" rx="2" fill="#9c27b0"/>' },
-    { label: 'Kadın 3', bg: 'linear-gradient(135deg,#ff6b81,#ff4757)', svg: '<circle cx="12" cy="9" r="5" fill="#ffd5c8"/><circle cx="10" cy="8" r="1" fill="#333"/><circle cx="14" cy="8" r="1" fill="#333"/><path d="M10 11q2 1 4 0" stroke="#ff6b81" fill="none" stroke-width=".8"/><path d="M6 4q6-3 12 0q-1 10-6 10t-6-10" fill="#ffd700"/><rect x="5" y="16" width="14" height="7" rx="2" fill="#ff6b81"/>' },
-    { label: 'Kadın 4', bg: 'linear-gradient(135deg,#00cec9,#00b894)', svg: '<circle cx="12" cy="9" r="5" fill="#d4a574"/><circle cx="10" cy="8" r="1" fill="#333"/><circle cx="14" cy="8" r="1" fill="#333"/><path d="M10 11q2 1 4 0" stroke="#333" fill="none" stroke-width=".5"/><path d="M6 5q6-4 12 0l-2 8h-8z" fill="#2d3436"/><rect x="5" y="16" width="14" height="7" rx="2" fill="#00cec9"/>' },
-    { label: 'Kadın 5', bg: 'linear-gradient(135deg,#a55eea,#8854d0)', svg: '<circle cx="12" cy="9" r="5" fill="#ffd5c8"/><circle cx="10" cy="8" r="1.2" fill="#333"/><circle cx="14" cy="8" r="1.2" fill="#333"/><path d="M9.5 11q2.5 2 5 0" stroke="#a55eea" fill="none" stroke-width=".8"/><path d="M5 6q3-5 7-5t7 5c0 4-2 6-2 9h-10c0-3-2-5-2-9" fill="#c0392b"/><rect x="5" y="16" width="14" height="7" rx="2" fill="#a55eea"/>' },
-    // Sevimli hayvanlar
-    { label: 'Kedi', bg: 'linear-gradient(135deg,#fd79a8,#e84393)', svg: '<ellipse cx="12" cy="12" rx="7" ry="6" fill="#ffeaa7"/><polygon points="6,6 8,12 4,10" fill="#ffeaa7"/><polygon points="18,6 16,12 20,10" fill="#ffeaa7"/><circle cx="9" cy="11" r="1.5" fill="#333"/><circle cx="15" cy="11" r="1.5" fill="#333"/><ellipse cx="12" cy="14" rx="1" ry=".7" fill="#fd79a8"/><path d="M10 15q2 1 4 0" stroke="#333" fill="none" stroke-width=".3"/><line x1="5" y1="12" x2="8" y2="11" stroke="#333" stroke-width=".3"/><line x1="5" y1="14" x2="8" y2="13" stroke="#333" stroke-width=".3"/><line x1="19" y1="12" x2="16" y2="11" stroke="#333" stroke-width=".3"/><line x1="19" y1="14" x2="16" y2="13" stroke="#333" stroke-width=".3"/>' },
-    { label: 'Köpek', bg: 'linear-gradient(135deg,#fdcb6e,#f39c12)', svg: '<ellipse cx="12" cy="12" rx="7" ry="6" fill="#d4a574"/><ellipse cx="7" cy="8" rx="3" ry="4" fill="#8b6914"/><ellipse cx="17" cy="8" rx="3" ry="4" fill="#8b6914"/><circle cx="9" cy="11" r="1.5" fill="#333"/><circle cx="15" cy="11" r="1.5" fill="#333"/><ellipse cx="12" cy="15" rx="2" ry="1.5" fill="#333"/><path d="M10 17q2 1 4 0" stroke="#333" fill="none" stroke-width=".5"/><ellipse cx="12" cy="14" rx="4" ry="2" fill="#ffeaa7"/>' },
-    { label: 'Tavşan', bg: 'linear-gradient(135deg,#dfe6e9,#b2bec3)', svg: '<ellipse cx="12" cy="14" rx="6" ry="5" fill="#fff"/><ellipse cx="8" cy="5" rx="2" ry="6" fill="#fff"/><ellipse cx="16" cy="5" rx="2" ry="6" fill="#fff"/><ellipse cx="8" cy="5" rx="1" ry="4" fill="#ffb8b8"/><ellipse cx="16" cy="5" rx="1" ry="4" fill="#ffb8b8"/><circle cx="10" cy="13" r="1" fill="#333"/><circle cx="14" cy="13" r="1" fill="#333"/><ellipse cx="12" cy="16" rx="1" ry=".6" fill="#ffb8b8"/><path d="M10 17q2 .5 4 0" stroke="#333" fill="none" stroke-width=".3"/>' },
-    { label: 'Ayı', bg: 'linear-gradient(135deg,#a0522d,#8b4513)', svg: '<circle cx="12" cy="12" r="7" fill="#d2691e"/><circle cx="6" cy="7" r="2.5" fill="#d2691e"/><circle cx="18" cy="7" r="2.5" fill="#d2691e"/><circle cx="6" cy="7" r="1.5" fill="#deb887"/><circle cx="18" cy="7" r="1.5" fill="#deb887"/><circle cx="9" cy="11" r="1.2" fill="#333"/><circle cx="15" cy="11" r="1.2" fill="#333"/><ellipse cx="12" cy="15" rx="3" ry="2" fill="#deb887"/><ellipse cx="12" cy="14" rx="1" ry=".8" fill="#333"/>' },
-    { label: 'Panda', bg: 'linear-gradient(135deg,#2d3436,#636e72)', svg: '<circle cx="12" cy="12" r="7" fill="#fff"/><ellipse cx="8" cy="10" rx="2.5" ry="3" fill="#333"/><ellipse cx="16" cy="10" rx="2.5" ry="3" fill="#333"/><circle cx="8" cy="10" r="1" fill="#fff"/><circle cx="16" cy="10" r="1" fill="#fff"/><ellipse cx="12" cy="15" rx="1.5" ry="1" fill="#333"/><circle cx="5" cy="6" r="2" fill="#333"/><circle cx="19" cy="6" r="2" fill="#333"/>' },
-    { label: 'Tilki', bg: 'linear-gradient(135deg,#e17055,#d63031)', svg: '<polygon points="12,18 5,12 7,4 12,7 17,4 19,12" fill="#e17055"/><polygon points="7,4 12,7 12,10 6,8" fill="#fff"/><polygon points="17,4 12,7 12,10 18,8" fill="#fff"/><circle cx="9" cy="10" r="1" fill="#333"/><circle cx="15" cy="10" r="1" fill="#333"/><ellipse cx="12" cy="14" rx="1" ry=".7" fill="#333"/><polygon points="10,15 12,17 14,15" fill="#fff"/>' },
-    { label: 'Penguen', bg: 'linear-gradient(135deg,#74b9ff,#0984e3)', svg: '<ellipse cx="12" cy="13" rx="6" ry="7" fill="#2d3436"/><ellipse cx="12" cy="14" rx="4" ry="5" fill="#fff"/><circle cx="10" cy="10" r="1" fill="#333"/><circle cx="14" cy="10" r="1" fill="#333"/><polygon points="12,13 10,15 14,15" fill="#f39c12"/><ellipse cx="7" cy="16" rx="2" ry="1" fill="#2d3436"/><ellipse cx="17" cy="16" rx="2" ry="1" fill="#2d3436"/>' },
-    { label: 'Baykuş', bg: 'linear-gradient(135deg,#6c5ce7,#5f27cd)', svg: '<ellipse cx="12" cy="12" rx="7" ry="7" fill="#8b7355"/><circle cx="9" cy="10" r="3" fill="#fff"/><circle cx="15" cy="10" r="3" fill="#fff"/><circle cx="9" cy="10" r="1.5" fill="#333"/><circle cx="15" cy="10" r="1.5" fill="#333"/><polygon points="12,13 11,16 13,16" fill="#f39c12"/><polygon points="5,5 8,9 5,9" fill="#8b7355"/><polygon points="19,5 16,9 19,9" fill="#8b7355"/><path d="M8 17q4 2 8 0" stroke="#5d4e37" fill="none" stroke-width=".5"/>' },
-    // Moonberry özel
-    { label: 'Kahve', bg: 'linear-gradient(135deg,#008c95,#00a8a8)', svg: '<rect x="6" y="8" width="12" height="10" rx="2" fill="#fff"/><rect x="7" y="9" width="10" height="6" rx="1" fill="#6f4e37"/><path d="M18 10q3 0 3 3t-3 3" fill="none" stroke="#fff" stroke-width="2"/><path d="M8 7q4-3 8 0" fill="none" stroke="#ddd" stroke-width="1.5"/><path d="M9 6q3-2 6 0" fill="none" stroke="#ddd" stroke-width="1"/>' },
-    { label: 'Çilek', bg: 'linear-gradient(135deg,#ff8674,#ff6b5b)', svg: '<path d="M12 4l-2-2h4l-2 2" fill="#27ae60"/><ellipse cx="12" cy="13" rx="6" ry="7" fill="#e74c3c"/><circle cx="9" cy="11" r=".8" fill="#ffeaa7"/><circle cx="15" cy="11" r=".8" fill="#ffeaa7"/><circle cx="12" cy="14" r=".8" fill="#ffeaa7"/><circle cx="8" cy="15" r=".8" fill="#ffeaa7"/><circle cx="16" cy="15" r=".8" fill="#ffeaa7"/><circle cx="10" cy="17" r=".8" fill="#ffeaa7"/><circle cx="14" cy="17" r=".8" fill="#ffeaa7"/><path d="M9 8l3-2 3 2" fill="#27ae60"/>' }
+    // === ERKEKLER (10) - adventurer-neutral stili ===
+    { label: 'Erkek 1', url: 'https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Felix&backgroundColor=b6e3f4' },
+    { label: 'Erkek 2', url: 'https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Max&backgroundColor=c0aede' },
+    { label: 'Erkek 3', url: 'https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Leo&backgroundColor=d1d4f9' },
+    { label: 'Erkek 4', url: 'https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Buddy&backgroundColor=ffd5dc' },
+    { label: 'Erkek 5', url: 'https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Charlie&backgroundColor=ffdfbf' },
+    { label: 'Erkek 6', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=John&backgroundColor=b6e3f4' },
+    { label: 'Erkek 7', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Mike&backgroundColor=c0aede' },
+    { label: 'Erkek 8', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=David&backgroundColor=d1d4f9' },
+    { label: 'Erkek 9', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=James&backgroundColor=ffd5dc' },
+    { label: 'Erkek 10', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Robert&backgroundColor=ffdfbf' },
+    // === KADINLAR (10) - adventurer-neutral stili ===
+    { label: 'Kadın 1', url: 'https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Bella&backgroundColor=ffd5dc' },
+    { label: 'Kadın 2', url: 'https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Luna&backgroundColor=c0aede' },
+    { label: 'Kadın 3', url: 'https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Coco&backgroundColor=b6e3f4' },
+    { label: 'Kadın 4', url: 'https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Daisy&backgroundColor=ffdfbf' },
+    { label: 'Kadın 5', url: 'https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Ruby&backgroundColor=d1d4f9' },
+    { label: 'Kadın 6', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Emma&backgroundColor=ffd5dc' },
+    { label: 'Kadın 7', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Sophia&backgroundColor=c0aede' },
+    { label: 'Kadın 8', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Olivia&backgroundColor=b6e3f4' },
+    { label: 'Kadın 9', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Ava&backgroundColor=ffdfbf' },
+    { label: 'Kadın 10', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Mia&backgroundColor=d1d4f9' },
+    // === TATLI HAYVANLAR (10) - thumbs stili ===
+    { label: 'Kedi', url: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Whiskers&backgroundColor=ffd5dc' },
+    { label: 'Köpek', url: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Buddy&backgroundColor=ffdfbf' },
+    { label: 'Tavşan', url: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Bunny&backgroundColor=d1d4f9' },
+    { label: 'Ayı', url: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Bear&backgroundColor=c0aede' },
+    { label: 'Panda', url: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Panda&backgroundColor=b6e3f4' },
+    { label: 'Tilki', url: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Fox&backgroundColor=ffdfbf' },
+    { label: 'Penguen', url: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Penguin&backgroundColor=b6e3f4' },
+    { label: 'Baykuş', url: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Owl&backgroundColor=c0aede' },
+    { label: 'Kuş', url: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Bird&backgroundColor=d1d4f9' },
+    { label: 'Balık', url: 'https://api.dicebear.com/7.x/thumbs/svg?seed=Fish&backgroundColor=b6e3f4' },
+    // === KAHVE & İÇECEK SEKTÖRÜ (10) - icons stili ===
+    { label: 'Kahve', url: 'https://api.dicebear.com/7.x/icons/svg?seed=Coffee&backgroundColor=6f4e37&icon=cup-hot' },
+    { label: 'Çay', url: 'https://api.dicebear.com/7.x/icons/svg?seed=Tea&backgroundColor=c0aede&icon=cup-hot' },
+    { label: 'Smoothie', url: 'https://api.dicebear.com/7.x/icons/svg?seed=Smoothie&backgroundColor=ff8674&icon=cup-straw' },
+    { label: 'Juice', url: 'https://api.dicebear.com/7.x/icons/svg?seed=Orange&backgroundColor=ffa500&icon=cup-straw' },
+    { label: 'Latte', url: 'https://api.dicebear.com/7.x/icons/svg?seed=Latte&backgroundColor=d2691e&icon=cup-hot' },
+    { label: 'Espresso', url: 'https://api.dicebear.com/7.x/icons/svg?seed=Espresso&backgroundColor=3c1414&icon=cup-hot' },
+    { label: 'Milkshake', url: 'https://api.dicebear.com/7.x/icons/svg?seed=Milkshake&backgroundColor=ffb6c1&icon=cup-straw' },
+    { label: 'Limonata', url: 'https://api.dicebear.com/7.x/icons/svg?seed=Lemonade&backgroundColor=fff44f&icon=cup-straw' },
+    { label: 'Moonberry', url: 'https://api.dicebear.com/7.x/icons/svg?seed=Moonberry&backgroundColor=008c95&icon=cup-hot' },
+    { label: 'Sunberry', url: 'https://api.dicebear.com/7.x/icons/svg?seed=Sunberry&backgroundColor=ff8674&icon=cup-straw' }
 ];
 
 // Avatar seçme fonksiyonu
 async function selectAvatar(avatarIndex, docId) {
     try {
         const avatar = AVATAR_OPTIONS[avatarIndex];
-        if (!avatar) return;
-        
-        // Gradient renklerini çıkar
-        const colors = avatar.bg.match(/#[a-f0-9]{6}/gi) || ['#008c95', '#00a8a8'];
-        
-        // SVG'yi base64'e çevir
-        const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24">
-            <defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:${colors[0]}"/>
-                <stop offset="100%" style="stop-color:${colors[1] || colors[0]}"/>
-            </linearGradient></defs>
-            <rect width="24" height="24" fill="url(#grad)"/>
-            ${avatar.svg}
-        </svg>`;
-        
-        const base64 = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgContent)));
+        if (!avatar || !avatar.url) return;
         
         toast('Avatar kaydediliyor...', 'info');
         
+        // DiceBear URL'sini doğrudan kaydet
+        const avatarUrl = avatar.url;
+        
         // Firebase'e kaydet
         await db.collection('personel').doc(docId).update({
-            photoUrl: base64,
+            photoUrl: avatarUrl,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
         // UI güncelle
         const preview = document.getElementById('profilePhotoPreview');
         if (preview) {
-            preview.innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover">`;
+            preview.innerHTML = `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover">`;
         }
         
         // Sidebar avatar güncelle
         const sidebarAvatar = document.getElementById('userAvatar');
         if (sidebarAvatar && currentUser?.personelId === docId) {
-            sidebarAvatar.innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+            sidebarAvatar.innerHTML = `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
         }
         
         // Modal'ı kapat
@@ -6326,15 +6341,19 @@ async function selectAvatar(avatarIndex, docId) {
 
 // Avatar modal aç
 function openAvatarModal(docId) {
-    const colors = ['#008c95', '#00a8a8'];
-    
     const modal = document.createElement('div');
     modal.id = 'avatarModal';
     modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
     modal.onclick = (e) => { if (e.target === modal) closeAvatarModal(); };
     
+    // Kategorilere ayır
+    const erkekler = AVATAR_OPTIONS.slice(0, 10);
+    const kadinlar = AVATAR_OPTIONS.slice(10, 20);
+    const hayvanlar = AVATAR_OPTIONS.slice(20, 30);
+    const icecekler = AVATAR_OPTIONS.slice(30, 40);
+    
     modal.innerHTML = `
-        <div style="background:var(--cardBg);border-radius:16px;padding:24px;max-width:400px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+        <div style="background:var(--cardBg);border-radius:16px;padding:24px;max-width:480px;width:95%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
                 <h3 style="margin:0;color:var(--tx);font-size:1.1rem">Profil Resmi Seç</h3>
                 <button onclick="closeAvatarModal()" style="background:none;border:none;cursor:pointer;padding:4px">
@@ -6343,27 +6362,66 @@ function openAvatarModal(docId) {
             </div>
             
             <!-- Fotoğraf Yükle -->
-            <div style="background:var(--bg3);border:2px dashed var(--bg4);border-radius:12px;padding:20px;text-align:center;margin-bottom:20px;cursor:pointer;transition:all .2s" onclick="document.getElementById('avatarFileInput').click()" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--bg4)'">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="1.5" style="margin-bottom:8px"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <div style="background:var(--bg3);border:2px dashed var(--bg4);border-radius:12px;padding:16px;text-align:center;margin-bottom:16px;cursor:pointer;transition:all .2s" onclick="document.getElementById('avatarFileInput').click()" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--bg4)'">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="1.5" style="margin-bottom:6px"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
                 <div style="font-size:.85rem;color:var(--tx2)">Fotoğraf Yükle</div>
-                <div style="font-size:.7rem;color:var(--tx3);margin-top:4px">JPG, PNG veya WebP</div>
-                <input type="file" id="avatarFileInput" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleProfilePhotoUpload(this, '${docId}')">
+                <div style="font-size:.65rem;color:var(--tx3);margin-top:2px">JPG, PNG, WebP</div>
+                <input type="file" id="avatarFileInput" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleProfilePhotoUpload(this, '${docId}');closeAvatarModal();">
             </div>
             
             <!-- Veya -->
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
                 <div style="flex:1;height:1px;background:var(--bg4)"></div>
-                <span style="font-size:.75rem;color:var(--tx3)">veya avatar seç</span>
+                <span style="font-size:.7rem;color:var(--tx3)">veya avatar seç</span>
                 <div style="flex:1;height:1px;background:var(--bg4)"></div>
             </div>
             
-            <!-- Avatar Grid -->
-            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
-                ${AVATAR_OPTIONS.map((avatar, i) => `
-                    <div onclick="selectAvatar(${i}, '${docId}')" style="aspect-ratio:1;border-radius:12px;cursor:pointer;transition:all .2s;border:2px solid transparent;overflow:hidden;background:${avatar.bg}" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.05)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
-                        <svg width="100%" height="100%" viewBox="0 0 24 24">${avatar.svg}</svg>
-                    </div>
-                `).join('')}
+            <!-- Erkekler -->
+            <div style="margin-bottom:12px">
+                <div style="font-size:.7rem;color:var(--tx3);margin-bottom:6px;font-weight:600">👨 Erkek</div>
+                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+                    ${erkekler.map((avatar, i) => `
+                        <div onclick="selectAvatar(${i}, '${docId}')" style="aspect-ratio:1;border-radius:10px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.05)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
+                            <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <!-- Kadınlar -->
+            <div style="margin-bottom:12px">
+                <div style="font-size:.7rem;color:var(--tx3);margin-bottom:6px;font-weight:600">👩 Kadın</div>
+                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+                    ${kadinlar.map((avatar, i) => `
+                        <div onclick="selectAvatar(${i + 10}, '${docId}')" style="aspect-ratio:1;border-radius:10px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.05)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
+                            <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <!-- Hayvanlar -->
+            <div style="margin-bottom:12px">
+                <div style="font-size:.7rem;color:var(--tx3);margin-bottom:6px;font-weight:600">🐾 Sevimli Hayvanlar</div>
+                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+                    ${hayvanlar.map((avatar, i) => `
+                        <div onclick="selectAvatar(${i + 20}, '${docId}')" style="aspect-ratio:1;border-radius:10px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.05)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
+                            <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <!-- İçecekler -->
+            <div>
+                <div style="font-size:.7rem;color:var(--tx3);margin-bottom:6px;font-weight:600">☕ Kahve & İçecek</div>
+                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+                    ${icecekler.map((avatar, i) => `
+                        <div onclick="selectAvatar(${i + 30}, '${docId}')" style="aspect-ratio:1;border-radius:10px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.05)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
+                            <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+                        </div>
+                    `).join('')}
+                </div>
             </div>
         </div>
     `;
@@ -6500,12 +6558,14 @@ function resizeAndCompressImage(file, maxWidth, maxHeight, quality) {
 async function saveMyProfile(docId) {
     const phone = document.getElementById('myProfile_phone')?.value?.trim() || '';
     const address = document.getElementById('myProfile_address')?.value?.trim() || '';
+    const bankName = document.getElementById('myProfile_bankName')?.value?.trim() || '';
     const iban = document.getElementById('myProfile_iban')?.value?.trim() || '';
     
     try {
         await db.collection('personel').doc(docId).update({
             phone,
             address,
+            bankName,
             iban,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -6515,6 +6575,24 @@ async function saveMyProfile(docId) {
         console.error('Profil kaydetme hatası:', error);
         toast('Kaydetme hatası: ' + error.message, 'error');
     }
+}
+
+// IBAN kopyalama
+function copyIban() {
+    const ibanInput = document.getElementById('myProfile_iban');
+    if (!ibanInput || !ibanInput.value) {
+        toast('Kopyalanacak IBAN yok', 'error');
+        return;
+    }
+    
+    navigator.clipboard.writeText(ibanInput.value).then(() => {
+        toast('IBAN kopyalandı!', 'success');
+    }).catch(err => {
+        // Fallback
+        ibanInput.select();
+        document.execCommand('copy');
+        toast('IBAN kopyalandı!', 'success');
+    });
 }
 
 // Kendi şifremi değiştir
@@ -8800,8 +8878,8 @@ async function loadPersonelList() {
                 <div class="personel-card" data-search="${searchData}" data-branch="${p.branch || ''}" style="background:var(--bg2);border:1px solid var(--cardBorder);border-left:3px solid ${branchColor};border-radius:10px;padding:14px;transition:all .15s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
                     <!-- Header -->
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-                        <div style="width:40px;height:40px;background:linear-gradient(135deg,${roleInfo.color},${roleInfo.color}88);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff">
-                            ${roleInfo.icon}
+                        <div style="width:40px;height:40px;background:linear-gradient(135deg,${roleInfo.color},${roleInfo.color}88);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;overflow:hidden">
+                            ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover">` : roleInfo.icon}
                         </div>
                         <div style="flex:1;min-width:0">
                             <div style="font-weight:600;color:var(--tx);font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name || 'İsimsiz'}</div>
