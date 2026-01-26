@@ -4928,7 +4928,8 @@ function goTo(page) {
         
         // Barista için sadece Genel sekmesi görünsün
         const isBarista = currentUser?.role === 'barista' || currentUser?.role === 'magaza_mudur_yardimcisi';
-        const adminTabs = ['tumCheckler', 'kullanicilar', 'oturumlar', 'magazaSaatleri', 'checkKurallari', 'checklistTurleri', 'subeler', 'ihlaller', 'sablonlar', 'belgeler', 'yedekler'];
+        // NOT: 'kullanicilar' ve 'oturumlar' burada YOK - bunlar sadece yönetici için (renderAdminLists'te kontrol ediliyor)
+        const adminTabs = ['tumCheckler', 'magazaSaatleri', 'checkKurallari', 'checklistTurleri', 'subeler', 'ihlaller', 'sablonlar', 'belgeler', 'yedekler'];
         
         adminTabs.forEach(tabId => {
             const tab = document.getElementById('tab-' + tabId);
