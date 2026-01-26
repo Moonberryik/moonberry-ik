@@ -117,12 +117,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .sidebar.collapsed .nav-items.collapsed{max-height:500px}
 .sidebar.collapsed .nav-group{position:relative}
 .sidebar.collapsed .nav-item:hover::after{content:attr(data-tooltip);position:absolute;left:65px;top:50%;transform:translateY(-50%);background:var(--bg2);color:var(--tx);padding:8px 14px;border-radius:8px;font-size:.8rem;white-space:nowrap;box-shadow:var(--shadow);z-index:1000;pointer-events:none;border:1px solid var(--bg4)}
-.sidebar.collapsed .sidebar-user{padding:12px 6px}
+.sidebar.collapsed .sidebar-user{padding:8px}
 .sidebar.collapsed .sidebar-user .user-details{display:none}
 .sidebar.collapsed .sidebar-user .user-avatar{margin:0 auto}
-.sidebar.collapsed .logout-btn{padding:10px;font-size:0;justify-content:center}
+.sidebar.collapsed #userInfo{margin:0 0 8px 0;padding:4px;justify-content:center}
+.sidebar.collapsed #userInfo svg{display:none}
+.sidebar.collapsed .sidebar-user>div:last-child{flex-direction:column;gap:4px}
+.sidebar.collapsed .logout-btn{flex:none;width:100%;padding:8px;font-size:0;justify-content:center}
 .sidebar.collapsed .logout-btn svg{margin:0}
-.sidebar.collapsed .sidebar-toggle-inner{justify-content:center}
+.sidebar.collapsed .sidebar-toggle-inner{flex:none;width:100%;padding:8px;margin:0;justify-content:center}
 .sidebar.collapsed .sidebar-toggle-inner span{display:none}
 .sidebar-toggle-inner{display:flex;align-items:center;gap:10px;padding:10px 14px;margin:8px 12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;cursor:pointer;transition:all .2s;color:var(--sidebarTx2);font-size:.8rem;font-weight:500}
 .sidebar-toggle-inner:hover{background:rgba(255,134,116,.15);border-color:rgba(255,134,116,.3);color:#fff}
@@ -4740,8 +4743,8 @@ function applyUserPermissions() {
 
 // Barista kısıtlamaları
 function applyBaristaRestrictions() {
-    // İzin verilen sayfalar
-    const allowedPages = ['dashboard', 'puantaj', 'shift', 'checklist'];
+    // İzin verilen sayfalar (admin dahil - sadece Genel sekmesi görünecek)
+    const allowedPages = ['dashboard', 'puantaj', 'shift', 'checklist', 'admin'];
     
     // Navbar menülerini kısıtla
     document.querySelectorAll('.nav-item[data-page]').forEach(item => {
@@ -4780,14 +4783,14 @@ function applyBaristaRestrictions() {
         }
     });
     
-    // Dashboard section'ları kontrol et - Belgeler bölümünü tamamen gizle
+    // Dashboard section'ları kontrol et - Belgeler ve Formlar bölümünü tamamen gizle
     document.querySelectorAll('.dashboard-section').forEach(section => {
         const header = section.querySelector('div');
-        if (header && header.textContent.includes('Belgeler')) {
-            section.style.display = 'none';
-        }
-        if (header && header.textContent.includes('Sistem')) {
-            section.style.display = 'none';
+        if (header) {
+            const text = header.textContent || '';
+            if (text.includes('Belgeler') || text.includes('Sistem') || text.includes('Formlar')) {
+                section.style.display = 'none';
+            }
         }
     });
     
@@ -4797,10 +4800,10 @@ function applyBaristaRestrictions() {
     if (navPersonel) navPersonel.style.display = 'none';
     if (navKatalog) navKatalog.style.display = 'none';
     
-    // Barista badge'i ekle
+    // Rol yazısı - SALT OKUNUR kaldırıldı
     const userRoleEl = document.getElementById('userRole');
     if (userRoleEl) {
-        userRoleEl.innerHTML = '<span style="background:var(--accent);color:#fff;padding:2px 8px;border-radius:10px;font-size:.65rem">SALT OKUNUR</span> Barista';
+        userRoleEl.textContent = 'Barista';
     }
     
     // Dashboard'da FORMLAR bölümünü gizle (ID ile)
@@ -6252,6 +6255,26 @@ async function handleProfilePhotoUpload(input, docId) {
         const sidebarAvatar = document.getElementById('userAvatar');
         if (sidebarAvatar) {
             sidebarAvatar.innerHTML = `<img src="${finalBase64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+        }
+        
+        // Ekip durumu kartlarındaki avatarları güncelle (email ile eşleştir)
+        if (currentUser?.email) {
+            document.querySelectorAll('.team-member-avatar, .shift-avatar, [data-email="' + currentUser.email + '"]').forEach(avatar => {
+                if (avatar.dataset?.email === currentUser.email || avatar.closest('[data-email="' + currentUser.email + '"]')) {
+                    avatar.innerHTML = `<img src="${finalBase64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+                }
+            });
+            
+            // Personel cache'ini güncelle
+            if (_personelDisplayCache && _personelDisplayCache.has(currentUser.email)) {
+                const cached = _personelDisplayCache.get(currentUser.email);
+                if (cached) cached.photoUrl = finalBase64;
+            }
+        }
+        
+        // Dashboard'ı yenile (ekip durumu güncellensin)
+        if (typeof loadDashboardData === 'function') {
+            loadDashboardData();
         }
         
         toast('Fotoğraf güncellendi', 'success');
