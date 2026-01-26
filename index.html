@@ -6510,166 +6510,183 @@ function openAvatarModal(docId) {
     const fotoKadin = AVATAR_OPTIONS.slice(140, 160);
     const fotoCesitli = AVATAR_OPTIONS.slice(160, 180);
     
+    // Mobil kontrolü
+    const isMobile = window.innerWidth < 600;
+    const photoCols = isMobile ? 5 : 10;
+    const avatarCols = isMobile ? 6 : 12;
+    const gap = isMobile ? '6px' : '4px';
+    
     modal.innerHTML = `
-        <div style="background:var(--cardBg);border-radius:16px;padding:20px;max-width:600px;width:95%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;position:sticky;top:0;background:var(--cardBg);padding-bottom:8px;z-index:1">
-                <h3 style="margin:0;color:var(--tx);font-size:1rem">Profil Resmi Seç <span style="font-size:.75rem;color:var(--tx3)">(180 avatar)</span></h3>
-                <button onclick="closeAvatarModal()" style="background:none;border:none;cursor:pointer;padding:4px">
+        <style>
+            .avatar-grid-photo { display:grid; grid-template-columns:repeat(${photoCols},1fr); gap:${gap}; }
+            .avatar-grid { display:grid; grid-template-columns:repeat(${avatarCols},1fr); gap:${gap}; }
+            .avatar-item { aspect-ratio:1; border-radius:8px; cursor:pointer; transition:all .15s; border:2px solid transparent; overflow:hidden; background:var(--bg3); min-width:40px; }
+            .avatar-item-photo { aspect-ratio:1; border-radius:50%; cursor:pointer; transition:all .15s; border:3px solid transparent; overflow:hidden; background:var(--bg3); min-width:44px; }
+            .avatar-item:hover, .avatar-item-photo:hover { border-color:var(--accent); transform:scale(1.08); }
+            .avatar-item img, .avatar-item-photo img { width:100%; height:100%; object-fit:cover; }
+        </style>
+        <div style="background:var(--cardBg);border-radius:16px;padding:16px;max-width:600px;width:95%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;position:sticky;top:-16px;background:var(--cardBg);padding:16px 0 8px;margin:-16px -16px 12px;padding-left:16px;padding-right:16px;z-index:1">
+                <h3 style="margin:0;color:var(--tx);font-size:1rem">Profil Resmi Seç</h3>
+                <button onclick="closeAvatarModal()" style="background:var(--bg3);border:none;cursor:pointer;padding:8px;border-radius:8px">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
             
             <!-- Fotoğraf Yükle -->
-            <div style="background:var(--bg3);border:2px dashed var(--bg4);border-radius:12px;padding:14px;text-align:center;margin-bottom:14px;cursor:pointer;transition:all .2s" onclick="document.getElementById('avatarFileInput').click()" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--bg4)'">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="1.5" style="margin-bottom:4px"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                <div style="font-size:.8rem;color:var(--tx2)">Kendi Fotoğrafını Yükle</div>
+            <div style="background:var(--bg3);border:2px dashed var(--bg4);border-radius:12px;padding:16px;text-align:center;margin-bottom:16px;cursor:pointer;transition:all .2s" onclick="document.getElementById('avatarFileInput').click()" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--bg4)'">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="1.5" style="margin-bottom:4px"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <div style="font-size:.85rem;color:var(--tx2)">Kendi Fotoğrafını Yükle</div>
                 <input type="file" id="avatarFileInput" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleProfilePhotoUpload(this, '${docId}');closeAvatarModal();">
             </div>
             
             <!-- ===== GERÇEK FOTOĞRAFLAR ===== -->
-            <div style="font-size:.7rem;color:var(--accent);font-weight:600;margin:16px 0 8px;text-transform:uppercase;letter-spacing:1px">📸 Gerçek Fotoğraflar</div>
+            <div style="font-size:.75rem;color:var(--accent);font-weight:600;margin:16px 0 10px;text-transform:uppercase;letter-spacing:1px">📸 Gerçek Fotoğraflar</div>
             
             <!-- Erkek Fotoğrafları -->
-            <div style="margin-bottom:8px">
-                <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:4px">
+            <div style="margin-bottom:10px">
+                <div class="avatar-grid-photo">
                     ${fotoErkek.map((avatar, i) => `
-                        <div onclick="selectAvatar(${i + 120}, '${docId}')" style="aspect-ratio:1;border-radius:50%;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.1)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
-                            <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+                        <div class="avatar-item-photo" onclick="selectAvatar(${i + 120}, '${docId}')" title="${avatar.label}">
+                            <img src="${avatar.url}" loading="lazy">
                         </div>
                     `).join('')}
                 </div>
             </div>
             
             <!-- Kadın Fotoğrafları -->
-            <div style="margin-bottom:8px">
-                <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:4px">
+            <div style="margin-bottom:10px">
+                <div class="avatar-grid-photo">
                     ${fotoKadin.map((avatar, i) => `
-                        <div onclick="selectAvatar(${i + 140}, '${docId}')" style="aspect-ratio:1;border-radius:50%;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.1)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
-                            <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+                        <div class="avatar-item-photo" onclick="selectAvatar(${i + 140}, '${docId}')" title="${avatar.label}">
+                            <img src="${avatar.url}" loading="lazy">
                         </div>
                     `).join('')}
                 </div>
             </div>
             
             <!-- Çeşitli Fotoğraflar -->
-            <div style="margin-bottom:12px">
-                <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:4px">
+            <div style="margin-bottom:16px">
+                <div class="avatar-grid-photo">
                     ${fotoCesitli.map((avatar, i) => `
-                        <div onclick="selectAvatar(${i + 160}, '${docId}')" style="aspect-ratio:1;border-radius:50%;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.1)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
-                            <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+                        <div class="avatar-item-photo" onclick="selectAvatar(${i + 160}, '${docId}')" title="${avatar.label}">
+                            <img src="${avatar.url}" loading="lazy">
                         </div>
                     `).join('')}
                 </div>
             </div>
             
             <!-- ===== ÇİZİM AVATARLAR ===== -->
-            <div style="font-size:.7rem;color:var(--accent);font-weight:600;margin:16px 0 8px;text-transform:uppercase;letter-spacing:1px">🎨 Çizim Avatarlar</div>
+            <div style="font-size:.75rem;color:var(--accent);font-weight:600;margin:16px 0 10px;text-transform:uppercase;letter-spacing:1px">🎨 Çizim Avatarlar</div>
             
             <!-- Avataaars -->
-            <div style="margin-bottom:8px">
-                <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:4px">
+            <div style="margin-bottom:10px">
+                <div class="avatar-grid">
                     ${avataaars.map((avatar, i) => `
-                        <div onclick="selectAvatar(${i + 60}, '${docId}')" style="aspect-ratio:1;border-radius:8px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.08)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
-                            <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+                        <div class="avatar-item" onclick="selectAvatar(${i + 60}, '${docId}')" title="${avatar.label}">
+                            <img src="${avatar.url}" loading="lazy">
                         </div>
                     `).join('')}
                 </div>
             </div>
             
             <!-- Lorelei -->
-            <div style="margin-bottom:8px">
-                <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:4px">
+            <div style="margin-bottom:10px">
+                <div class="avatar-grid">
                     ${lorelei.map((avatar, i) => `
-                        <div onclick="selectAvatar(${i + 72}, '${docId}')" style="aspect-ratio:1;border-radius:8px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.08)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
-                            <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+                        <div class="avatar-item" onclick="selectAvatar(${i + 72}, '${docId}')" title="${avatar.label}">
+                            <img src="${avatar.url}" loading="lazy">
                         </div>
                     `).join('')}
                 </div>
             </div>
             
             <!-- Adventurer -->
-            <div style="margin-bottom:8px">
-                <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:4px">
+            <div style="margin-bottom:10px">
+                <div class="avatar-grid">
                     ${adventurer.map((avatar, i) => `
-                        <div onclick="selectAvatar(${i + 84}, '${docId}')" style="aspect-ratio:1;border-radius:8px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.08)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
-                            <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+                        <div class="avatar-item" onclick="selectAvatar(${i + 84}, '${docId}')" title="${avatar.label}">
+                            <img src="${avatar.url}" loading="lazy">
                         </div>
                     `).join('')}
                 </div>
             </div>
             
-            <!-- Big Ears + Micah -->
-            <div style="margin-bottom:8px">
-                <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:4px">
+            <!-- Big Ears -->
+            <div style="margin-bottom:10px">
+                <div class="avatar-grid">
                     ${bigEars.map((avatar, i) => `
-                        <div onclick="selectAvatar(${i + 96}, '${docId}')" style="aspect-ratio:1;border-radius:8px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.08)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
-                            <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+                        <div class="avatar-item" onclick="selectAvatar(${i + 96}, '${docId}')" title="${avatar.label}">
+                            <img src="${avatar.url}" loading="lazy">
                         </div>
                     `).join('')}
                 </div>
             </div>
             
-            <div style="margin-bottom:12px">
-                <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:4px">
+            <!-- Micah -->
+            <div style="margin-bottom:16px">
+                <div class="avatar-grid">
                     ${micah.map((avatar, i) => `
-                        <div onclick="selectAvatar(${i + 108}, '${docId}')" style="aspect-ratio:1;border-radius:8px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.08)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
-                            <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+                        <div class="avatar-item" onclick="selectAvatar(${i + 108}, '${docId}')" title="${avatar.label}">
+                            <img src="${avatar.url}" loading="lazy">
                         </div>
                     `).join('')}
                 </div>
             </div>
             
             <!-- ===== EMOJİ & ÖZEL ===== -->
-            <div style="font-size:.7rem;color:var(--accent);font-weight:600;margin:16px 0 8px;text-transform:uppercase;letter-spacing:1px">✨ Emoji & Özel</div>
+            <div style="font-size:.75rem;color:var(--accent);font-weight:600;margin:16px 0 10px;text-transform:uppercase;letter-spacing:1px">✨ Emoji & Özel</div>
             
-            <!-- Notionists + BigSmile -->
-            <div style="margin-bottom:8px">
-                <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:4px">
+            <!-- Notionists -->
+            <div style="margin-bottom:10px">
+                <div class="avatar-grid">
                     ${notionists.map((avatar, i) => `
-                        <div onclick="selectAvatar(${i}, '${docId}')" style="aspect-ratio:1;border-radius:8px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.08)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
-                            <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+                        <div class="avatar-item" onclick="selectAvatar(${i}, '${docId}')" title="${avatar.label}">
+                            <img src="${avatar.url}" loading="lazy">
                         </div>
                     `).join('')}
                 </div>
             </div>
             
-            <div style="margin-bottom:8px">
-                <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:4px">
+            <!-- BigSmile -->
+            <div style="margin-bottom:10px">
+                <div class="avatar-grid">
                     ${bigSmile.map((avatar, i) => `
-                        <div onclick="selectAvatar(${i + 12}, '${docId}')" style="aspect-ratio:1;border-radius:8px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.08)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
-                            <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+                        <div class="avatar-item" onclick="selectAvatar(${i + 12}, '${docId}')" title="${avatar.label}">
+                            <img src="${avatar.url}" loading="lazy">
                         </div>
                     `).join('')}
                 </div>
             </div>
             
-            <!-- Fun Emoji (Hayvanlar) -->
-            <div style="margin-bottom:8px">
-                <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:4px">
+            <!-- Fun Emoji -->
+            <div style="margin-bottom:10px">
+                <div class="avatar-grid">
                     ${funEmoji.map((avatar, i) => `
-                        <div onclick="selectAvatar(${i + 24}, '${docId}')" style="aspect-ratio:1;border-radius:8px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.08)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
-                            <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+                        <div class="avatar-item" onclick="selectAvatar(${i + 24}, '${docId}')" title="${avatar.label}">
+                            <img src="${avatar.url}" loading="lazy">
                         </div>
                     `).join('')}
                 </div>
             </div>
             
-            <!-- Pixel Art + Shapes -->
-            <div style="margin-bottom:8px">
-                <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:4px">
+            <!-- Pixel Art -->
+            <div style="margin-bottom:10px">
+                <div class="avatar-grid">
                     ${pixelArt.map((avatar, i) => `
-                        <div onclick="selectAvatar(${i + 36}, '${docId}')" style="aspect-ratio:1;border-radius:8px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.08)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
-                            <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+                        <div class="avatar-item" onclick="selectAvatar(${i + 36}, '${docId}')" title="${avatar.label}">
+                            <img src="${avatar.url}" loading="lazy">
                         </div>
                     `).join('')}
                 </div>
             </div>
             
+            <!-- Shapes -->
             <div>
-                <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:4px">
+                <div class="avatar-grid">
                     ${shapes.map((avatar, i) => `
-                        <div onclick="selectAvatar(${i + 48}, '${docId}')" style="aspect-ratio:1;border-radius:8px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.08)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
-                            <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+                        <div class="avatar-item" onclick="selectAvatar(${i + 48}, '${docId}')" title="${avatar.label}">
+                            <img src="${avatar.url}" loading="lazy">
                         </div>
                     `).join('')}
                 </div>
@@ -6907,22 +6924,11 @@ async function changeMyPassword(docId) {
 }
 
 function renderAdminLists() {
-    // Yönetici-only tab'ları kontrol et
+    // Bu sekmeler SADECE YÖNETİCİ tarafından görülecek
     const adminOnlyTabs = ['tab-kullanicilar', 'tab-oturumlar', 'tab-aktiviteler'];
     const adminOnlySections = ['admin-kullanicilar', 'admin-oturumlar'];
     
-    if (currentUser?.role !== 'yonetici') {
-        // Tab butonlarını gizle
-        adminOnlyTabs.forEach(tabId => {
-            const tab = document.getElementById(tabId);
-            if (tab) tab.style.display = 'none';
-        });
-        // Bölümleri de gizle (güvenlik)
-        adminOnlySections.forEach(sectionId => {
-            const section = document.getElementById(sectionId);
-            if (section) section.style.display = 'none';
-        });
-    } else {
+    if (currentUser?.role === 'yonetici') {
         // Yönetici için göster
         adminOnlyTabs.forEach(tabId => {
             const tab = document.getElementById(tabId);
@@ -6931,6 +6937,16 @@ function renderAdminLists() {
         adminOnlySections.forEach(sectionId => {
             const section = document.getElementById(sectionId);
             if (section) section.style.display = '';
+        });
+    } else {
+        // Yönetici HARİÇ herkes için gizle
+        adminOnlyTabs.forEach(tabId => {
+            const tab = document.getElementById(tabId);
+            if (tab) tab.style.display = 'none';
+        });
+        adminOnlySections.forEach(sectionId => {
+            const section = document.getElementById(sectionId);
+            if (section) section.style.display = 'none';
         });
     }
     
