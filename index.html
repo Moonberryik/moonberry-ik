@@ -90,12 +90,8 @@
 [data-theme="dark"] #permissionMatrix tr:hover td,[data-theme="dark"] #permissionMatrix tr:hover .perm-item-name{background:rgba(255,134,116,.1)}
 
 /* Barista Mode - CSS ile gizleme (JavaScript'e bağımlı değil) */
-body.barista-mode #dashboard-formlar-section{display:none!important}
-body.barista-mode .nav-divider{display:none!important}
-body.barista-mode #nav-belgeler{display:none!important}
-body.barista-mode #nav-formlar{display:none!important}
-body.barista-mode .nav-item[data-page="personel"]{display:none!important}
-body.barista-mode .nav-item[data-page="katalog"]{display:none!important}
+/* Barista Mode - Artık dinamik JS kontrolü ile yönetiliyor */
+/* Sidebar görünürlüğü updateSidebarByPermissions() fonksiyonu tarafından kontrol edilir */
 
 *{margin:0;padding:0;box-sizing:border-box}
 html{font-size:15px}
@@ -4709,105 +4705,79 @@ function applyUserPermissions() {
     loadUserAdvancedPermissions();
 }
 
-// Barista kısıtlamaları
+// Rol kısıtlamaları - Artık Firebase yetkilerine göre çalışıyor
 function applyBaristaRestrictions() {
-    // Body'ye barista-mode class'ı ekle (CSS kuralları devreye girsin)
-    document.body.classList.add('barista-mode');
+    // Bu fonksiyon artık sadece yetkilerin yüklenmesini tetikliyor
+    // Asıl kısıtlama updateSidebarByPermissions tarafından yapılıyor
     
-    // İzin verilen sayfalar (admin dahil - sadece Genel sekmesi görünecek)
-    const allowedPages = ['dashboard', 'puantaj', 'shift', 'checklist', 'admin'];
-    
-    // Navbar menülerini kısıtla
-    document.querySelectorAll('.nav-item[data-page]').forEach(item => {
-        const page = item.dataset.page;
-        if (!allowedPages.includes(page)) {
-            item.style.setProperty('display', 'none', 'important');
-        }
-    });
-    
-    // Belgeler ve Formlar menülerini tamamen gizle
-    const navBelgeler = document.getElementById('nav-belgeler');
-    const navFormlar = document.getElementById('nav-formlar');
-    if (navBelgeler) navBelgeler.style.setProperty('display', 'none', 'important');
-    if (navFormlar) navFormlar.style.setProperty('display', 'none', 'important');
-    
-    // Nav gruplarını kontrol et - boş olanları gizle
-    document.querySelectorAll('.nav-group').forEach(group => {
-        const visibleItems = group.querySelectorAll('.nav-item:not([style*="display: none"])');
-        if (visibleItems.length === 0) {
-            group.style.setProperty('display', 'none', 'important');
-        }
-    });
-    
-    // Nav-divider'ları tamamen gizle (3 çizgi sorunu) - CSS class ile
-    document.querySelectorAll('.nav-divider').forEach(div => {
-        div.style.setProperty('display', 'none', 'important');
-    });
-    
-    // Dashboard kartlarını kısıtla
-    document.querySelectorAll('.dashboard-card').forEach(card => {
-        const onclick = card.getAttribute('onclick') || '';
-        const allowedCards = ['puantaj', 'shift', 'checklist'];
-        const isAllowed = allowedCards.some(p => onclick.includes(`'${p}'`));
-        if (!isAllowed && onclick.includes('goTo')) {
-            card.style.setProperty('display', 'none', 'important');
-        }
-    });
-    
-    // Dashboard'da FORMLAR bölümünü gizle (ID ile) - ÖNCELİKLİ
-    const formlarSection = document.getElementById('dashboard-formlar-section');
-    if (formlarSection) {
-        formlarSection.style.setProperty('display', 'none', 'important');
+    // userAdvancedPermissions yüklendiyse sidebar'ı güncelle
+    if (window.userAdvancedPermissions) {
+        updateSidebarByPermissions(window.userAdvancedPermissions);
     }
     
-    // Dashboard section'ları kontrol et - Belgeler ve Sistem bölümünü gizle
-    document.querySelectorAll('.dashboard-section').forEach(section => {
-        // ID kontrolü önce
-        if (section.id === 'dashboard-formlar-section') {
-            section.style.setProperty('display', 'none', 'important');
-            return;
+    // Dashboard kartlarını yetkilere göre kontrol et
+    updateDashboardByPermissions();
+    
+    console.log('✅ Yetki kısıtlamaları uygulandı (Firebase bazlı)');
+}
+
+// Dashboard kartlarını yetkilere göre güncelle
+function updateDashboardByPermissions() {
+    const perms = window.userAdvancedPermissions;
+    if (!perms) return;
+    
+    // Yönetici her şeyi görür
+    if (currentUser?.role === 'yonetici') return;
+    
+    // Dashboard kartlarını kontrol et
+    document.querySelectorAll('.dashboard-card').forEach(card => {
+        const onclick = card.getAttribute('onclick') || '';
+        
+        // goTo('sayfa') formatını bul
+        const match = onclick.match(/goTo\(['"](\w+)['"]\)/);
+        if (!match) return;
+        
+        const page = match[1];
+        const hasAccess = perms.pages?.[page]?.view === true;
+        
+        if (!hasAccess) {
+            card.style.display = 'none';
         }
+    });
+    
+    // Dashboard formlar section
+    const formlarSection = document.getElementById('dashboard-formlar-section');
+    if (formlarSection) {
+        const anyFormVisible = Object.values(perms.forms || {}).some(f => f.view === true);
+        formlarSection.style.display = anyFormVisible ? '' : 'none';
+    }
+    
+    // Dashboard belgeler section (varsa)
+    document.querySelectorAll('.dashboard-section').forEach(section => {
         const header = section.querySelector('div');
         if (header) {
             const text = header.textContent || '';
-            if (text.includes('Belgeler') || text.includes('Sistem')) {
-                section.style.setProperty('display', 'none', 'important');
+            if (text.includes('Belgeler')) {
+                const anyDocVisible = Object.values(perms.documents || {}).some(d => d.view === true);
+                section.style.display = anyDocVisible ? '' : 'none';
             }
         }
     });
-    
-    // Personel ve Katalog gizle (Ayarlar görünsün - kendi profilini düzenleyebilsin)
-    const navPersonel = document.querySelector('.nav-item[data-page="personel"]');
-    const navKatalog = document.querySelector('.nav-item[data-page="katalog"]');
-    if (navPersonel) navPersonel.style.setProperty('display', 'none', 'important');
-    if (navKatalog) navKatalog.style.setProperty('display', 'none', 'important');
-    
-    // Rol yazısı - SALT OKUNUR kaldırıldı
-    const userRoleEl = document.getElementById('userRole');
-    if (userRoleEl) {
-        userRoleEl.textContent = 'Barista';
-    }
-    
-    console.log('✅ Barista kısıtlamaları uygulandı');
 }
 
-// Barista kısıtlamalarını DOM değişikliklerinde de uygula
+// DOM değişikliklerinde yetki kısıtlamalarını tekrar uygula
 function setupBaristaObserver() {
-    if (currentUser?.role !== 'barista') return;
+    // Yönetici için gerek yok
+    if (currentUser?.role === 'yonetici') return;
     
     const dashboardPage = document.getElementById('page-dashboard');
     if (!dashboardPage) return;
     
     const observer = new MutationObserver(() => {
-        const formlarSection = document.getElementById('dashboard-formlar-section');
-        if (formlarSection && formlarSection.style.display !== 'none') {
-            formlarSection.style.setProperty('display', 'none', 'important');
+        // Yetkiler yüklendiyse uygula
+        if (window.userAdvancedPermissions) {
+            updateDashboardByPermissions();
         }
-        document.querySelectorAll('.nav-divider').forEach(div => {
-            if (div.style.display !== 'none') {
-                div.style.setProperty('display', 'none', 'important');
-            }
-        });
     });
     
     observer.observe(dashboardPage, { childList: true, subtree: true });
@@ -12857,11 +12827,120 @@ function applyAdvancedPermissions() {
     // Checklist başkasının doldurma yetkisi
     window.userCanFillOthersChecklist = perms.special?.fill_others_checklist || false;
     
+    // Sidebar'ı yetkilere göre güncelle
+    updateSidebarByPermissions(perms);
+    
     console.log('✅ Gelişmiş izinler uygulandı', { 
         createWeek: perms.special?.create_shift_week,
         historyWeeks: window.userShiftHistoryWeeks,
         fillOthers: window.userCanFillOthersChecklist
     });
+}
+
+// Sidebar görünürlüğünü yetkilere göre güncelle
+function updateSidebarByPermissions(perms) {
+    if (!perms) {
+        perms = window.userAdvancedPermissions || {};
+    }
+    
+    // Yönetici her şeyi görür
+    if (currentUser?.role === 'yonetici') {
+        console.log('[Sidebar] Yönetici - tüm menüler görünür');
+        return;
+    }
+    
+    console.log('[Sidebar] Yetkiye göre güncelleniyor...', perms);
+    
+    // Dinamik olarak PERMISSION_STRUCTURE'dan al (hardcoded değil)
+    const documentPages = (PERMISSION_STRUCTURE.documents || []).map(d => d.id);
+    const formPages = (PERMISSION_STRUCTURE.forms || []).map(f => f.id);
+    
+    // 1. Sayfalar (pages) - Her birini kontrol et
+    const pageItems = document.querySelectorAll('.nav-item[data-page]');
+    pageItems.forEach(item => {
+        const page = item.dataset.page;
+        
+        // Admin sayfası ayrı kontrol edilecek
+        if (page === 'admin') return;
+        
+        // Belgeler ve formlar kendi gruplarında kontrol edilecek
+        if (documentPages.includes(page) || formPages.includes(page)) return;
+        
+        // Notlar sayfası ayrı kontrol
+        if (page === 'notlar') {
+            // Notlar şimdilik yönetici dışında gizli
+            item.style.display = 'none';
+            return;
+        }
+        
+        // Pages kategorisindeki yetkiyi kontrol et
+        const hasAccess = perms.pages?.[page]?.view === true;
+        item.style.display = hasAccess ? '' : 'none';
+        console.log(`[Sidebar] ${page}: ${hasAccess ? 'GÖRÜNÜR' : 'GİZLİ'}`);
+    });
+    
+    // 2. Belgeler grubu - en az biri görünürse grup görünsün
+    const navBelgeler = document.getElementById('nav-belgeler');
+    if (navBelgeler) {
+        const anyDocVisible = Object.values(perms.documents || {}).some(d => d.view === true);
+        navBelgeler.style.display = anyDocVisible ? '' : 'none';
+        console.log(`[Sidebar] Belgeler grubu: ${anyDocVisible ? 'GÖRÜNÜR' : 'GİZLİ'}`);
+        
+        // Belge alt menülerini de kontrol et
+        const docItems = navBelgeler.querySelectorAll('.nav-item[data-page]');
+        docItems.forEach(item => {
+            const docType = item.dataset.page;
+            const hasAccess = perms.documents?.[docType]?.view === true;
+            item.style.display = hasAccess ? '' : 'none';
+        });
+    }
+    
+    // 3. Formlar grubu - en az biri görünürse grup görünsün
+    const navFormlar = document.getElementById('nav-formlar');
+    if (navFormlar) {
+        const anyFormVisible = Object.values(perms.forms || {}).some(f => f.view === true);
+        navFormlar.style.display = anyFormVisible ? '' : 'none';
+        console.log(`[Sidebar] Formlar grubu: ${anyFormVisible ? 'GÖRÜNÜR' : 'GİZLİ'}`);
+        
+        // Form alt menülerini de kontrol et
+        const formItems = navFormlar.querySelectorAll('.nav-item[data-page]');
+        formItems.forEach(item => {
+            const formType = item.dataset.page;
+            const hasAccess = perms.forms?.[formType]?.view === true;
+            item.style.display = hasAccess ? '' : 'none';
+        });
+    }
+    
+    // 4. Admin/Ayarlar - en az bir admin yetkisi varsa görünsün
+    const navAdmin = document.querySelector('.nav-item[data-page="admin"]');
+    if (navAdmin) {
+        const anyAdminAccess = Object.values(perms.admin || {}).some(a => a === true);
+        navAdmin.style.display = anyAdminAccess ? '' : 'none';
+        console.log(`[Sidebar] Admin: ${anyAdminAccess ? 'GÖRÜNÜR' : 'GİZLİ'}`);
+    }
+    
+    // 5. Dashboard formlar section (kendi dashboard'unda form gösterme)
+    const dashboardFormlar = document.getElementById('dashboard-formlar-section');
+    if (dashboardFormlar) {
+        const anyFormVisible = Object.values(perms.forms || {}).some(f => f.view === true);
+        dashboardFormlar.style.display = anyFormVisible ? '' : 'none';
+    }
+    
+    // 6. Nav divider'ları (belgeler/formlar yoksa divider da gizle)
+    const dividers = document.querySelectorAll('.nav-divider');
+    dividers.forEach(div => {
+        // Önceki ve sonraki elementi kontrol et
+        const prev = div.previousElementSibling;
+        const next = div.nextElementSibling;
+        const prevVisible = prev && getComputedStyle(prev).display !== 'none';
+        const nextVisible = next && getComputedStyle(next).display !== 'none';
+        div.style.display = (prevVisible && nextVisible) ? '' : 'none';
+    });
+    
+    console.log('[Sidebar] Yetki güncellemesi tamamlandı');
+}
+    
+    console.log('[Sidebar] Güncelleme tamamlandı');
 }
 
 
