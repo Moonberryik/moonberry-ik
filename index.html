@@ -664,10 +664,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         Yönetim Paneli
                     </div>
                     <div class="page-subtitle" style="display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--tx3)">
-                        <span id="motivationQuote" style="font-style:italic">Yükleniyor...</span>
                         <button onclick="loadMotivationQuote()" style="background:none;border:none;cursor:pointer;padding:2px;display:inline-flex;align-items:center;justify-content:center;transition:all .2s;color:#008c95;opacity:.6;flex-shrink:0" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.6'" title="Yeni söz">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
                         </button>
+                        <span id="motivationQuote" style="font-style:italic">Yükleniyor...</span>
                     </div>
                 </div>
                 
@@ -6177,7 +6177,19 @@ async function loadMyProfile() {
                             <div style="font-size:.75rem;color:var(--tx3)">${p.branch || '-'}</div>
                         </div>
                     </div>
-                    <div style="font-size:.65rem;color:var(--tx3);margin-bottom:12px">📷 Fotoğrafa tıkla → JPG/PNG seç (otomatik boyutlandırılır)</div>
+                    <div style="font-size:.65rem;color:var(--tx3);margin-bottom:8px">📷 Fotoğrafa tıkla veya aşağıdan avatar seç</div>
+                    
+                    <!-- Avatar Seçenekleri -->
+                    <div id="avatarSelector" style="margin-bottom:12px">
+                        <div style="font-size:.7rem;color:var(--tx3);margin-bottom:6px;font-weight:500">Avatar Seç:</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:6px;max-height:80px;overflow-y:auto;padding:4px 0">
+                            ${AVATAR_OPTIONS.map((avatar, i) => `
+                                <div onclick="selectAvatar(${i}, '${docId}')" style="width:32px;height:32px;border-radius:50%;cursor:pointer;transition:all .2s;border:2px solid transparent;overflow:hidden;display:flex;align-items:center;justify-content:center;background:${avatar.bg}" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.1)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="${avatar.color}" stroke="none">${avatar.path}</svg>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
                     
                     <div style="display:grid;gap:10px;font-size:.85rem">
                         <div style="display:flex;align-items:center;gap:8px">
@@ -6238,6 +6250,83 @@ async function loadMyProfile() {
     } catch (error) {
         console.error('Profil yükleme hatası:', error);
         container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--red)">Yükleme hatası: ' + error.message + '</div>';
+    }
+}
+
+// Avatar seçenekleri - Minimalist premium tasarım (20+ seçenek)
+const AVATAR_OPTIONS = [
+    // Erkek avatarlar (mavi tonları)
+    { label: 'Erkek 1', bg: 'linear-gradient(135deg,#3498db,#2980b9)', color: '#fff', path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>' },
+    { label: 'Erkek 2', bg: 'linear-gradient(135deg,#2c3e50,#34495e)', color: '#fff', path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/><path d="M8 8c0-2 2-4 4-4s4 2 4 4" fill="none" stroke="#fff" stroke-width="1"/>' },
+    { label: 'Erkek 3', bg: 'linear-gradient(135deg,#1abc9c,#16a085)', color: '#fff', path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>' },
+    { label: 'Erkek 4', bg: 'linear-gradient(135deg,#9b59b6,#8e44ad)', color: '#fff', path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>' },
+    { label: 'Erkek 5', bg: 'linear-gradient(135deg,#e67e22,#d35400)', color: '#fff', path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>' },
+    { label: 'Erkek 6', bg: 'linear-gradient(135deg,#27ae60,#229954)', color: '#fff', path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>' },
+    { label: 'Erkek 7', bg: 'linear-gradient(135deg,#c0392b,#a93226)', color: '#fff', path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>' },
+    { label: 'Erkek 8', bg: 'linear-gradient(135deg,#7f8c8d,#95a5a6)', color: '#fff', path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>' },
+    { label: 'Erkek 9', bg: 'linear-gradient(135deg,#1e3799,#0c2461)', color: '#fff', path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>' },
+    { label: 'Erkek 10', bg: 'linear-gradient(135deg,#006266,#009432)', color: '#fff', path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>' },
+    // Kadın avatarlar (pembe/mor tonları)
+    { label: 'Kadın 1', bg: 'linear-gradient(135deg,#e91e63,#c2185b)', color: '#fff', path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/><ellipse cx="12" cy="6" rx="5" ry="3" fill="none" stroke="#fff" stroke-width="1"/>' },
+    { label: 'Kadın 2', bg: 'linear-gradient(135deg,#9c27b0,#7b1fa2)', color: '#fff', path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/><ellipse cx="12" cy="6" rx="5" ry="3" fill="none" stroke="#fff" stroke-width="1"/>' },
+    { label: 'Kadın 3', bg: 'linear-gradient(135deg,#ff6b81,#ff4757)', color: '#fff', path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/><ellipse cx="12" cy="6" rx="5" ry="3" fill="none" stroke="#fff" stroke-width="1"/>' },
+    { label: 'Kadın 4', bg: 'linear-gradient(135deg,#ffa502,#ff7f50)', color: '#fff', path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/><ellipse cx="12" cy="6" rx="5" ry="3" fill="none" stroke="#fff" stroke-width="1"/>' },
+    { label: 'Kadın 5', bg: 'linear-gradient(135deg,#a55eea,#8854d0)', color: '#fff', path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/><ellipse cx="12" cy="6" rx="5" ry="3" fill="none" stroke="#fff" stroke-width="1"/>' },
+    { label: 'Kadın 6', bg: 'linear-gradient(135deg,#fd79a8,#e84393)', color: '#fff', path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/><ellipse cx="12" cy="6" rx="5" ry="3" fill="none" stroke="#fff" stroke-width="1"/>' },
+    { label: 'Kadın 7', bg: 'linear-gradient(135deg,#00cec9,#00b894)', color: '#fff', path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/><ellipse cx="12" cy="6" rx="5" ry="3" fill="none" stroke="#fff" stroke-width="1"/>' },
+    { label: 'Kadın 8', bg: 'linear-gradient(135deg,#6c5ce7,#5f27cd)', color: '#fff', path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/><ellipse cx="12" cy="6" rx="5" ry="3" fill="none" stroke="#fff" stroke-width="1"/>' },
+    { label: 'Kadın 9', bg: 'linear-gradient(135deg,#fab1a0,#e17055)', color: '#fff', path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/><ellipse cx="12" cy="6" rx="5" ry="3" fill="none" stroke="#fff" stroke-width="1"/>' },
+    { label: 'Kadın 10', bg: 'linear-gradient(135deg,#74b9ff,#0984e3)', color: '#fff', path: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/><ellipse cx="12" cy="6" rx="5" ry="3" fill="none" stroke="#fff" stroke-width="1"/>' },
+    // Nötr/Unisex avatarlar
+    { label: 'Nötr 1', bg: 'linear-gradient(135deg,#008c95,#00a8a8)', color: '#fff', path: '<circle cx="12" cy="10" r="3"/><path d="M5 20c0-4 3-5 7-5s7 1 7 5"/>' },
+    { label: 'Nötr 2', bg: 'linear-gradient(135deg,#ff8674,#ff6b5b)', color: '#fff', path: '<circle cx="12" cy="10" r="3"/><path d="M5 20c0-4 3-5 7-5s7 1 7 5"/>' },
+    { label: 'Nötr 3', bg: 'linear-gradient(135deg,#636e72,#2d3436)', color: '#fff', path: '<circle cx="12" cy="10" r="3"/><path d="M5 20c0-4 3-5 7-5s7 1 7 5"/>' },
+    { label: 'Nötr 4', bg: 'linear-gradient(135deg,#f39c12,#e74c3c)', color: '#fff', path: '<circle cx="12" cy="10" r="3"/><path d="M5 20c0-4 3-5 7-5s7 1 7 5"/>' }
+];
+
+// Avatar seçme fonksiyonu
+async function selectAvatar(avatarIndex, docId) {
+    try {
+        const avatar = AVATAR_OPTIONS[avatarIndex];
+        if (!avatar) return;
+        
+        // SVG'yi base64'e çevir
+        const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24">
+            <defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:${avatar.bg.match(/#[a-f0-9]{6}/gi)?.[0] || '#008c95'}"/>
+                <stop offset="100%" style="stop-color:${avatar.bg.match(/#[a-f0-9]{6}/gi)?.[1] || '#00a8a8'}"/>
+            </linearGradient></defs>
+            <rect width="24" height="24" fill="url(#grad)"/>
+            <g fill="${avatar.color}">${avatar.path}</g>
+        </svg>`;
+        
+        const base64 = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgContent)));
+        
+        toast('Avatar kaydediliyor...', 'info');
+        
+        // Firebase'e kaydet
+        await db.collection('personel').doc(docId).update({
+            photoUrl: base64,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // UI güncelle
+        const preview = document.getElementById('profilePhotoPreview');
+        if (preview) {
+            preview.innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover">`;
+        }
+        
+        // Sidebar avatar güncelle
+        const sidebarAvatar = document.getElementById('userAvatar');
+        if (sidebarAvatar && currentUser?.personelId === docId) {
+            sidebarAvatar.innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+        }
+        
+        toast('Avatar güncellendi!', 'success');
+        
+    } catch (error) {
+        console.error('Avatar kaydetme hatası:', error);
+        toast('Avatar kaydedilemedi: ' + error.message, 'error');
     }
 }
 
