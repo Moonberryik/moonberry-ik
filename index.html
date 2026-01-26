@@ -71,6 +71,15 @@
 [data-theme="dark"] .dashboard-card-title{color:var(--tx)!important}
 [data-theme="dark"] .dashboard-card-desc{color:var(--tx2)!important}
 [data-theme="dark"] .section-card{background:var(--sectionBg)!important;border-color:var(--cardBorder)!important}
+
+/* Barista Mode - CSS ile gizleme (JavaScript'e bağımlı değil) */
+body.barista-mode #dashboard-formlar-section{display:none!important}
+body.barista-mode .nav-divider{display:none!important}
+body.barista-mode #nav-belgeler{display:none!important}
+body.barista-mode #nav-formlar{display:none!important}
+body.barista-mode .nav-item[data-page="personel"]{display:none!important}
+body.barista-mode .nav-item[data-page="katalog"]{display:none!important}
+
 *{margin:0;padding:0;box-sizing:border-box}
 html{font-size:15px}
 body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.6;min-height:100vh;overflow-x:hidden}
@@ -106,7 +115,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .sidebar{transition:width .3s ease}
 .sidebar.collapsed{width:60px}
 .sidebar.collapsed .logo-text,.sidebar.collapsed .logo-sub{display:none}
-.sidebar.collapsed .sidebar-header{padding:16px 10px;min-height:60px}
+.sidebar.collapsed .sidebar-header{padding:12px 8px;min-height:60px;flex-direction:column;gap:8px}
+.sidebar.collapsed .sidebar-header .logo{justify-content:center}
+.sidebar.collapsed .sidebar-header .logo img{width:32px}
+.sidebar.collapsed .sidebar-header .sidebar-toggle-inner{width:100%;padding:6px}
 .sidebar.collapsed .logo{justify-content:center}
 .sidebar.collapsed .logo-icon{width:36px;height:36px;font-size:1.1rem}
 .sidebar.collapsed .nav{padding:12px 6px}
@@ -122,10 +134,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .sidebar.collapsed .sidebar-user .user-avatar{margin:0 auto}
 .sidebar.collapsed #userInfo{margin:0 0 8px 0;padding:4px;justify-content:center}
 .sidebar.collapsed #userInfo svg{display:none}
-.sidebar.collapsed .sidebar-bottom-buttons{flex-direction:column;gap:4px}
-.sidebar.collapsed .logout-btn{width:100%;padding:10px;justify-content:center}
-.sidebar.collapsed .sidebar-toggle-inner{width:100%;padding:10px;margin:0;justify-content:center}
-.sidebar.collapsed .sidebar-toggle-inner span{display:none}
+.sidebar.collapsed .logout-btn{padding:10px;justify-content:center}
+.sidebar.collapsed .logout-btn span{display:none}
 .sidebar.collapsed .sidebar-toggle-inner svg{transform:rotate(180deg)}
 .sidebar-toggle-inner svg{flex-shrink:0;transition:transform .3s}
 
@@ -518,14 +528,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     <!-- App -->
     <div class="app">
         <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="logo" onclick="goTo('dashboard')" style="cursor:pointer" title="Ana Sayfaya Dön">
+            <div class="sidebar-header" style="display:flex;align-items:center;justify-content:space-between">
+                <div class="logo" onclick="goTo('dashboard')" style="cursor:pointer;display:flex;align-items:center;gap:12px" title="Ana Sayfaya Dön">
                     <img id="sidebarLogo" src="https://static.wixstatic.com/media/760af2_cb121a61291f4f07adb48cfb70f3e2d9~mv2.png/v1/fill/w_94,h_82,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/beyazwhitelogo-min1.png" alt="Logo" style="width:40px;height:auto">
-                    <div>
+                    <div class="user-details">
                         <div class="logo-text">Moonberry</div>
                         <div class="logo-sub">Yönetim Paneli</div>
                     </div>
                 </div>
+                <button class="sidebar-toggle-inner" onclick="toggleSidebar()" style="padding:8px;margin:0;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:6px;color:var(--sidebarTx2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s" onmouseover="this.style.background='rgba(255,134,116,.15)';this.style.borderColor='rgba(255,134,116,.3)'" onmouseout="this.style.background='rgba(255,255,255,.05)';this.style.borderColor='rgba(255,255,255,.08)'" title="Menüyü Daralt/Genişlet">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+                </button>
             </div>
             <nav class="nav">
                 <!-- Ana Sayfa -->
@@ -626,15 +639,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                         <svg class="user-details" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sidebarTx2)" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     </div>
-                    <div class="sidebar-bottom-buttons" style="display:flex;gap:6px">
-                        <button class="logout-btn" onclick="logout()" style="padding:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--sidebarTx2);cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background='rgba(231,76,60,.15)';this.style.borderColor='rgba(231,76,60,.3)';this.style.color='#e74c3c'" onmouseout="this.style.background='rgba(255,255,255,.08)';this.style.borderColor='rgba(255,255,255,.1)';this.style.color='var(--sidebarTx2)'" title="Çıkış Yap">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                        </button>
-                        <button class="sidebar-toggle-inner" onclick="toggleSidebar()" style="flex:1;padding:10px;margin:0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--sidebarTx2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.background='rgba(255,134,116,.15)';this.style.borderColor='rgba(255,134,116,.3)'" onmouseout="this.style.background='rgba(255,255,255,.08)';this.style.borderColor='rgba(255,255,255,.1)'" title="Menüyü Daralt/Genişlet">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-                            <span class="user-details" style="font-size:.7rem;font-weight:500">Daralt</span>
-                        </button>
-                    </div>
+                    <button class="logout-btn" onclick="logout()" style="width:100%;padding:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--sidebarTx2);cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.8rem" onmouseover="this.style.background='rgba(231,76,60,.15)';this.style.borderColor='rgba(231,76,60,.3)';this.style.color='#e74c3c'" onmouseout="this.style.background='rgba(255,255,255,.08)';this.style.borderColor='rgba(255,255,255,.1)';this.style.color='var(--sidebarTx2)'" title="Çıkış Yap">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        <span class="user-details">Çıkış Yap</span>
+                    </button>
                 </div>
             </nav>
         </aside>
@@ -4740,6 +4748,9 @@ function applyUserPermissions() {
 
 // Barista kısıtlamaları
 function applyBaristaRestrictions() {
+    // Body'ye barista-mode class'ı ekle (CSS kuralları devreye girsin)
+    document.body.classList.add('barista-mode');
+    
     // İzin verilen sayfalar (admin dahil - sadece Genel sekmesi görünecek)
     const allowedPages = ['dashboard', 'puantaj', 'shift', 'checklist', 'admin'];
     
@@ -9580,7 +9591,8 @@ async function loadPuantaj() {
                 codeName: p.codeName,
                 displayName: getPersonelDisplayName(p),  // codeName varsa onu, yoksa "Büşra S."
                 tc: p.tc, 
-                position: p.position, 
+                position: p.position,
+                photoUrl: p.photoUrl || '',
                 toplamPuan,
                 manuelPuan,
                 otomatikPuan,
@@ -9700,8 +9712,8 @@ async function loadPuantaj() {
                     <!-- Header - TIKLANABİLİR -->
                     <div onclick="showPersonelPuanDetay('${p.id}', '${p.name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;cursor:pointer;padding:8px;margin:-8px;border-radius:8px;transition:background .15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
                         <div style="display:flex;align-items:center;gap:10px">
-                            <div style="width:36px;height:36px;background:linear-gradient(135deg,${brandColor},${brandColor}99);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600">
-                                ${p.name.charAt(0).toUpperCase()}
+                            <div style="width:36px;height:36px;background:linear-gradient(135deg,${brandColor},${brandColor}99);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;overflow:hidden">
+                                ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover">` : p.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
                                 <div style="display:flex;align-items:center;gap:8px">
@@ -10678,7 +10690,8 @@ async function loadPuantajAnaliz() {
                     name: d.name,
                     codeName: d.codeName,
                     position: d.position,
-                    branch: d.branch
+                    branch: d.branch,
+                    photoUrl: d.photoUrl || ''
                 };
             }
         });
@@ -12335,17 +12348,6 @@ function applyAdvancedPermissions() {
                 btn.style.display = 'none';
             }
         });
-    }
-    
-    // Salt okunur badge ekle (düzenleme izni yoksa)
-    const hasAnyEdit = Object.values(perms.pages || {}).some(p => p.edit) ||
-                       Object.values(perms.documents || {}).some(d => d.edit);
-    
-    if (!hasAnyEdit) {
-        const userRoleEl = document.getElementById('userRole');
-        if (userRoleEl && !userRoleEl.innerHTML.includes('SALT OKUNUR')) {
-            userRoleEl.innerHTML = '<span style="background:var(--accent);color:#fff;padding:2px 8px;border-radius:10px;font-size:.65rem">SALT OKUNUR</span> ' + userRoleEl.textContent;
-        }
     }
     
     // Yeni Hafta Oluşturma yetkisi
