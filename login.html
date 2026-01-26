@@ -12,20 +12,13 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <style>
 :root {
-    --bg: #fafafa;
-    --bg2: #ffffff;
-    --bg3: #f0f0f0;
-    --bg4: #e0e0e0;
-    --tx: #1a1a1a;
-    --tx2: #555555;
-    --tx3: #888888;
-    --brand-coral: #ff8674;
     --brand-teal: #008c95;
-    --accent: var(--brand-coral);
-    --accent2: var(--brand-teal);
-    --red: #e74c3c;
-    --green: #27ae60;
-    --radius: 12px;
+    --brand-coral: #ff8674;
+    --white: #ffffff;
+    --black: #1a1a1a;
+    --gray: #6b7280;
+    --gray-light: #f3f4f6;
+    --radius: 8px;
     --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -37,76 +30,25 @@
 
 body {
     font-family: var(--font);
-    background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 50%, #f0f0f0 100%);
-    background-size: 400% 400%;
-    animation: bgMove 15s ease infinite;
-    color: var(--tx);
+    background: var(--brand-teal);
+    color: var(--black);
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 20px;
-    position: relative;
-    overflow: hidden;
-}
-
-body::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle at 20% 80%, rgba(0,140,149,0.05) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(255,134,116,0.05) 0%, transparent 50%);
-    animation: floatBg 20s ease-in-out infinite;
-    pointer-events: none;
-}
-
-@keyframes bgMove {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-}
-
-@keyframes floatBg {
-    0%, 100% { transform: translate(0, 0) rotate(0deg); }
-    33% { transform: translate(2%, 2%) rotate(1deg); }
-    66% { transform: translate(-2%, 1%) rotate(-1deg); }
 }
 
 .login-container {
     width: 100%;
-    max-width: 420px;
+    max-width: 400px;
 }
 
 .login-card {
-    background: var(--bg2);
-    border: 1px solid var(--bg4);
-    border-radius: 20px;
+    background: var(--white);
+    border-radius: 16px;
     padding: 48px 40px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
-    position: relative;
-    overflow: hidden;
-}
-
-.login-card::before {
-    content: '';
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    right: -2px;
-    bottom: -2px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2), var(--accent));
-    background-size: 200% 200%;
-    border-radius: 22px;
-    z-index: -1;
-    opacity: 0.3;
-    animation: borderGlow 4s ease infinite;
-}
-
-@keyframes borderGlow {
-    0%, 100% { background-position: 0% 50%; opacity: 0.2; }
-    50% { background-position: 100% 50%; opacity: 0.4; }
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
 }
 
 .logo-container {
@@ -115,41 +57,25 @@ body::before {
 }
 
 .logo-img {
-    width: 80px;
-    height: 72px;
+    width: 72px;
+    height: 64px;
     object-fit: contain;
-    animation: logoFloat 3s ease-in-out infinite;
-    filter: drop-shadow(0 4px 12px rgba(0,140,149,0.2));
-}
-
-@keyframes logoFloat {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-5px); }
 }
 
 .login-title {
     font-size: 1.5rem;
     font-weight: 700;
     text-align: center;
-    margin-bottom: 8px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2), var(--accent));
-    background-size: 200% 200%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    animation: titleGlow 3s ease infinite;
-}
-
-@keyframes titleGlow {
-    0%, 100% { background-position: 0% 50%; filter: brightness(1); }
-    50% { background-position: 100% 50%; filter: brightness(1.2); }
+    margin-bottom: 4px;
+    color: var(--black);
 }
 
 .login-subtitle {
-    color: var(--tx2);
+    color: var(--gray);
     font-size: 0.9rem;
     text-align: center;
-    margin-bottom: 36px;
+    margin-bottom: 32px;
+    font-weight: 400;
 }
 
 .form-group {
@@ -159,7 +85,7 @@ body::before {
 .form-label {
     display: block;
     font-size: 0.85rem;
-    color: var(--tx2);
+    color: var(--black);
     font-weight: 500;
     margin-bottom: 8px;
 }
@@ -167,237 +93,231 @@ body::before {
 .form-input {
     width: 100%;
     padding: 14px 16px;
-    background: var(--bg3);
-    border: 2px solid var(--bg4);
+    background: var(--white);
+    border: 1.5px solid #e5e7eb;
     border-radius: var(--radius);
-    color: var(--tx);
+    color: var(--black);
     font-size: 1rem;
     font-family: var(--font);
     outline: none;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-input::placeholder {
+    color: #9ca3af;
 }
 
 .form-input:focus {
-    border-color: var(--accent);
-    background: var(--bg);
-    box-shadow: 0 0 0 4px rgba(255, 134, 116, 0.15), 0 0 20px rgba(0, 140, 149, 0.1);
-    transform: translateY(-1px);
+    border-color: var(--brand-teal);
+    box-shadow: 0 0 0 3px rgba(0, 140, 149, 0.1);
 }
 
 .form-input.error {
-    border-color: var(--red);
+    border-color: #ef4444;
     animation: shake 0.4s;
 }
 
 @keyframes shake {
     0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-8px); }
-    75% { transform: translateX(8px); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+}
+
+.password-wrapper {
+    position: relative;
+}
+
+.password-wrapper .form-input {
+    padding-right: 48px;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: var(--gray);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.password-toggle:hover {
+    color: var(--brand-teal);
+}
+
+.password-toggle svg {
+    width: 20px;
+    height: 20px;
 }
 
 .login-btn {
     width: 100%;
-    padding: 16px 24px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    background-size: 200% 200%;
-    animation: gradientShift 3s ease infinite;
+    padding: 14px 24px;
+    background: var(--brand-teal);
     border: none;
     border-radius: var(--radius);
-    color: #fff;
+    color: var(--white);
     font-size: 1rem;
     font-weight: 600;
     font-family: var(--font);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s, transform 0.1s;
     margin-top: 8px;
     position: relative;
-    overflow: hidden;
 }
 
-@keyframes gradientShift {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
+.login-btn:hover {
+    background: #007a82;
 }
 
-.login-btn::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
-    transform: rotate(45deg);
-    animation: shimmer 2s infinite;
-}
-
-@keyframes shimmer {
-    0% { transform: translateX(-100%) rotate(45deg); }
-    100% { transform: translateX(100%) rotate(45deg); }
-}
-
-.login-btn:hover:not(:disabled) {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 12px 32px rgba(255, 134, 116, 0.4), 0 4px 16px rgba(0, 140, 149, 0.3);
+.login-btn:active {
+    transform: scale(0.98);
 }
 
 .login-btn:disabled {
-    opacity: 0.6;
+    opacity: 0.7;
     cursor: not-allowed;
-    transform: none;
-}
-
-.login-btn .spinner {
-    display: none;
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin-right: 8px;
-}
-
-.login-btn.loading .spinner {
-    display: inline-block;
 }
 
 .login-btn.loading .btn-text {
-    opacity: 0.8;
+    opacity: 0;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.error-message {
-    background: rgba(231, 76, 60, 0.1);
-    border: 1px solid var(--red);
-    border-radius: 8px;
-    padding: 12px 16px;
-    color: var(--red);
-    font-size: 0.85rem;
-    margin-bottom: 20px;
-    display: none;
-    align-items: center;
-    gap: 10px;
-}
-
-.error-message.show {
-    display: flex;
-}
-
-.error-icon {
-    font-size: 1.2rem;
-}
-
-.locked-message {
-    background: rgba(231, 76, 60, 0.15);
-    border: 1px solid var(--red);
-    border-radius: 8px;
-    padding: 16px;
-    color: var(--red);
-    font-size: 0.9rem;
-    margin-bottom: 20px;
-    text-align: center;
-    display: none;
-}
-
-.locked-message.show {
+.login-btn.loading .spinner {
     display: block;
 }
 
-.locked-timer {
-    font-weight: 700;
-    font-size: 1.1rem;
+.spinner {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: var(--white);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
 .forgot-password {
     text-align: center;
-    margin-top: 24px;
+    margin-top: 20px;
 }
 
 .forgot-link {
-    color: var(--tx3);
+    color: var(--gray);
     font-size: 0.85rem;
     text-decoration: none;
-    transition: color 0.2s;
     cursor: pointer;
+    transition: color 0.2s;
 }
 
 .forgot-link:hover {
-    color: var(--accent);
+    color: var(--brand-teal);
 }
 
 .footer-info {
     text-align: center;
-    margin-top: 32px;
+    margin-top: 24px;
     padding-top: 24px;
-    border-top: 1px solid var(--bg4);
-    color: var(--tx3);
-    font-size: 0.75rem;
+    border-top: 1px solid #f3f4f6;
+    font-size: 0.8rem;
+    color: var(--gray);
 }
 
+/* Mesajlar */
+.locked-message,
+.error-message,
 .success-message {
-    background: rgba(39, 174, 96, 0.1);
-    border: 1px solid var(--green);
-    border-radius: 8px;
-    padding: 12px 16px;
-    color: var(--green);
-    font-size: 0.85rem;
-    margin-bottom: 20px;
     display: none;
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    font-size: 0.9rem;
     align-items: center;
     gap: 10px;
 }
 
+.locked-message.show,
+.error-message.show,
 .success-message.show {
     display: flex;
 }
 
-/* Reset Password Modal */
+.locked-message {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.error-message {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.success-message {
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.error-icon {
+    font-size: 1rem;
+}
+
+.locked-timer {
+    font-weight: 600;
+}
+
+/* Modal */
 .modal-overlay {
     position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
     align-items: center;
     justify-content: center;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s;
     z-index: 1000;
+    padding: 20px;
 }
 
 .modal-overlay.show {
-    opacity: 1;
-    visibility: visible;
+    display: flex;
 }
 
 .modal {
-    background: var(--bg2);
-    border: 1px solid var(--bg4);
+    background: var(--white);
     border-radius: 16px;
     padding: 32px;
-    width: 90%;
+    width: 100%;
     max-width: 400px;
-    transform: scale(0.9);
-    transition: transform 0.3s;
-}
-
-.modal-overlay.show .modal {
-    transform: scale(1);
 }
 
 .modal-title {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
     font-weight: 600;
-    margin-bottom: 12px;
-    color: var(--tx);
+    margin-bottom: 8px;
+    color: var(--black);
 }
 
 .modal-desc {
-    color: var(--tx2);
+    color: var(--gray);
     font-size: 0.9rem;
     margin-bottom: 24px;
 }
@@ -411,70 +331,66 @@ body::before {
 .modal-btn {
     flex: 1;
     padding: 12px 20px;
-    border-radius: 8px;
+    border-radius: var(--radius);
     font-size: 0.9rem;
     font-weight: 500;
     font-family: var(--font);
     cursor: pointer;
     transition: all 0.2s;
-    border: none;
 }
 
 .modal-btn-secondary {
-    background: var(--bg3);
-    color: var(--tx2);
+    background: var(--gray-light);
+    border: none;
+    color: var(--black);
 }
 
 .modal-btn-secondary:hover {
-    background: var(--bg4);
+    background: #e5e7eb;
 }
 
 .modal-btn-primary {
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    color: #fff;
+    background: var(--brand-teal);
+    border: none;
+    color: var(--white);
 }
 
 .modal-btn-primary:hover {
-    box-shadow: 0 4px 16px rgba(255, 134, 116, 0.3);
+    background: #007a82;
 }
 
 /* Toast */
 .toast {
     position: fixed;
     bottom: 24px;
-    right: 24px;
-    background: var(--bg2);
-    border: 1px solid var(--bg4);
-    border-radius: 10px;
-    padding: 14px 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--black);
+    color: var(--white);
+    padding: 14px 24px;
+    border-radius: var(--radius);
     display: flex;
     align-items: center;
     gap: 10px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-    transform: translateX(150%);
-    transition: transform 0.3s;
+    font-size: 0.9rem;
+    opacity: 0;
+    transition: all 0.3s;
     z-index: 2000;
 }
 
 .toast.show {
-    transform: translateX(0);
-}
-
-.toast.success {
-    border-left: 3px solid var(--green);
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
 }
 
 .toast.error {
-    border-left: 3px solid var(--red);
+    background: #991b1b;
 }
 
-.toast-icon {
-    font-size: 1.2rem;
-}
-
-.toast-message {
-    font-size: 0.9rem;
-    color: var(--tx);
+@media (max-width: 480px) {
+    .login-card {
+        padding: 32px 24px;
+    }
 }
     </style>
 </head>
@@ -509,12 +425,20 @@ body::before {
             <form id="loginForm" onsubmit="handleLogin(event)">
                 <div class="form-group">
                     <label class="form-label" for="email">E-posta Adresi</label>
-                    <input type="email" id="email" class="form-input" placeholder="ornek@moonberry.com" required autocomplete="email">
+                    <input type="email" id="email" class="form-input" placeholder="isim@moonberrycoffee.com" required autocomplete="email">
                 </div>
                 
                 <div class="form-group">
                     <label class="form-label" for="password">Şifre</label>
-                    <input type="password" id="password" class="form-input" placeholder="••••••••" required autocomplete="current-password">
+                    <div class="password-wrapper">
+                        <input type="password" id="password" class="form-input" placeholder="••••••••" required autocomplete="current-password">
+                        <button type="button" class="password-toggle" onclick="togglePassword()" id="passwordToggle">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 
                 <button type="submit" class="login-btn" id="loginBtn">
@@ -528,8 +452,7 @@ body::before {
             </div>
             
             <div class="footer-info">
-                © 2024 Moonberry Coffee<br>
-                Güvenli bağlantı ile korunmaktadır 🔒
+                © 2026 Moonberry Coffee
             </div>
         </div>
     </div>
@@ -537,7 +460,7 @@ body::before {
     <!-- Şifre Sıfırlama Modal -->
     <div class="modal-overlay" id="resetModal">
         <div class="modal">
-            <h2 class="modal-title">🔐 Şifre Sıfırlama</h2>
+            <h2 class="modal-title">Şifre Sıfırlama</h2>
             <p class="modal-desc">E-posta adresinizi girin, şifre sıfırlama bağlantısı göndereceğiz.</p>
             
             <div class="form-group" style="margin-bottom:0">
@@ -558,6 +481,26 @@ body::before {
     </div>
 
     <script>
+        // ==================== ŞİFRE GÖSTER/GİZLE ====================
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggleBtn = document.getElementById('passwordToggle');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>`;
+            } else {
+                passwordInput.type = 'password';
+                toggleBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>`;
+            }
+        }
+        
         // ==================== FIREBASE CONFIG ====================
         const firebaseConfig = {
             apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
@@ -711,18 +654,90 @@ body::before {
             hideError();
             
             try {
-                // 1. Önce Firebase Auth ile dene
-                await auth.signInWithEmailAndPassword(email, password);
+                // ========== ADIM 1: Önce Firebase Auth dene ==========
+                try {
+                    await auth.signInWithEmailAndPassword(email, password);
+                    
+                    // Auth başarılı - Personel kontrolü
+                    const personelCheck = await db.collection('personel')
+                        .where('email', '==', email)
+                        .limit(1)
+                        .get();
+                    
+                    if (personelCheck.empty) {
+                        await auth.signOut();
+                        await logLoginAttempt(email, false, 'personel_not_found');
+                        showError('Bu hesap artık aktif değil.');
+                        btn.classList.remove('loading');
+                        btn.disabled = false;
+                        return;
+                    }
+                    
+                    // Personel bilgisini localStorage'a kaydet
+                    const personelData = personelCheck.docs[0].data();
+                    const userData = {
+                        email: email,
+                        name: personelData.name,
+                        role: personelData.role,
+                        branch: personelData.branch,
+                        uniqueId: personelData.uniqueId,
+                        position: personelData.position,
+                        authType: 'email'
+                    };
+                    localStorage.setItem('mb_user', JSON.stringify(userData));
+                    
+                    await logLoginAttempt(email, true, 'auth');
+                    clearLockout();
+                    showToast('Giriş başarılı!', 'success');
+                    
+                    setTimeout(() => {
+                        window.location.replace('index.html');
+                    }, 800);
+                    return;
+                    
+                } catch (authError) {
+                    console.log('Firebase Auth hatası:', authError.code);
+                    // Auth başarısız - Credentials ile devam et
+                }
                 
-                // 2. GÜVENLİK: Personel koleksiyonunda var mı kontrol et
-                const personelCheck = await db.collection('personel')
+                // ========== ADIM 2: Credentials kontrolü ==========
+                const emailDocId = email.replace(/[@.]/g, '_');
+                const credDoc = await db.collection('credentials').doc(emailDocId).get();
+                
+                if (!credDoc.exists) {
+                    await logLoginAttempt(email, false, 'no_credentials');
+                    showError('Bu hesap için şifre tanımlanmamış.');
+                    btn.classList.remove('loading');
+                    btn.disabled = false;
+                    return;
+                }
+                
+                const credData = credDoc.data();
+                const storedPassword = decodeCredential(credData);
+                
+                if (!storedPassword || storedPassword !== password) {
+                    await logLoginAttempt(email, false, 'wrong_password');
+                    loginAttempts++;
+                    localStorage.setItem('mb_login_attempts', loginAttempts);
+                    
+                    if (loginAttempts >= MAX_ATTEMPTS) {
+                        setLockout();
+                        showError('Çok fazla hatalı deneme! Bekleyin.');
+                    } else {
+                        showError('Şifre hatalı.');
+                    }
+                    btn.classList.remove('loading');
+                    btn.disabled = false;
+                    return;
+                }
+                
+                // ========== ADIM 3: Şifre DOĞRU - Personel kontrolü ==========
+                const personelSnap = await db.collection('personel')
                     .where('email', '==', email)
                     .limit(1)
                     .get();
                 
-                if (personelCheck.empty) {
-                    // Personel'de yok = SİLİNMİŞ veya YETKİSİZ
-                    await auth.signOut(); // Logout yap
+                if (personelSnap.empty) {
                     await logLoginAttempt(email, false, 'personel_not_found');
                     showError('Bu hesap artık aktif değil.');
                     btn.classList.remove('loading');
@@ -730,118 +745,38 @@ body::before {
                     return;
                 }
                 
-                // Başarılı giriş - Log
-                await logLoginAttempt(email, true, 'auth');
+                // ========== ADIM 4: Anonymous Auth ile giriş ==========
+                console.log('Credentials doğru, Anonymous Auth ile giriş yapılıyor...');
+                
+                await auth.signInAnonymously();
+                
+                // Personel bilgisini localStorage'a kaydet
+                const personelData = personelSnap.docs[0].data();
+                const userData = {
+                    email: email,
+                    name: personelData.name,
+                    role: personelData.role,
+                    branch: personelData.branch,
+                    uniqueId: personelData.uniqueId,
+                    position: personelData.position,
+                    authType: 'anonymous'
+                };
+                localStorage.setItem('mb_user', JSON.stringify(userData));
+                
+                await logLoginAttempt(email, true, 'credentials_anonymous');
                 clearLockout();
-                showToast('Giriş başarılı! Yönlendiriliyorsunuz...', 'success');
+                showToast('Giriş başarılı!', 'success');
                 
                 setTimeout(() => {
                     window.location.replace('index.html');
-                }, 1000);
+                }, 800);
                 
-            } catch (authError) {
-                console.log('Firebase Auth hatası:', authError.code);
-                
-                // 3. Kullanıcı bulunamadıysa credentials koleksiyonundan kontrol et
-                if (authError.code === 'auth/user-not-found' || authError.code === 'auth/invalid-credential') {
-                    try {
-                        // Önce personel'de var mı kontrol et
-                        const personelCheck = await db.collection('personel')
-                            .where('email', '==', email)
-                            .limit(1)
-                            .get();
-                        
-                        if (personelCheck.empty) {
-                            await logLoginAttempt(email, false, 'personel_not_found');
-                            showError('Bu e-posta ile kayıtlı kullanıcı bulunamadı.');
-                            btn.classList.remove('loading');
-                            btn.disabled = false;
-                            return;
-                        }
-                        
-                        // Email'i doc ID formatına çevir (güvenlik için hash-like)
-                        const emailDocId = email.replace(/[@.]/g, '_');
-                        
-                        // credentials koleksiyonundan tek döküman çek
-                        const credDoc = await db.collection('credentials').doc(emailDocId).get();
-                        
-                        if (credDoc.exists) {
-                            const credData = credDoc.data();
-                            
-                            // Obfuscated şifreyi decode et ve karşılaştır
-                            const storedPassword = decodeCredential(credData);
-                            
-                            if (storedPassword && storedPassword === password) {
-                                console.log('Credentials şifresi eşleşti, Firebase Auth kullanıcısı oluşturuluyor...');
-                                
-                                try {
-                                    // Firebase Auth'ta yeni kullanıcı oluştur
-                                    await auth.createUserWithEmailAndPassword(email, password);
-                                    
-                                    // Başarılı giriş - Log
-                                    await logLoginAttempt(email, true, 'credentials_new');
-                                    clearLockout();
-                                    showToast('Hesabınız aktive edildi! Yönlendiriliyorsunuz...', 'success');
-                                    
-                                    setTimeout(() => {
-                                        window.location.replace('index.html');
-                                    }, 1000);
-                                    return;
-                                    
-                                } catch (createError) {
-                                    console.error('Kullanıcı oluşturma hatası:', createError);
-                                    if (createError.code === 'auth/email-already-in-use') {
-                                        // Auth var ama şifre yanlış
-                                        await logLoginAttempt(email, false, 'wrong_password');
-                                        showError('Şifre hatalı.');
-                                    } else {
-                                        await logLoginAttempt(email, false, 'create_error');
-                                        showError('Hesap oluşturulamadı.');
-                                    }
-                                }
-                            } else {
-                                // Şifre yanlış
-                                await logLoginAttempt(email, false, 'wrong_password');
-                                showError('Şifre hatalı.');
-                            }
-                        } else {
-                            // Credentials yok
-                            await logLoginAttempt(email, false, 'no_credentials');
-                            showError('Bu hesap için şifre tanımlanmamış.');
-                        }
-                        
-                    } catch (firestoreError) {
-                        console.error('Firestore hatası:', firestoreError);
-                        await logLoginAttempt(email, false, 'db_error');
-                        showError('Veritabanı hatası. Lütfen tekrar deneyin.');
-                    }
-                } else {
-                    // Diğer Firebase Auth hataları
-                    const remaining = MAX_ATTEMPTS - loginAttempts - 1;
-                    let errorMsg = getErrorMessage(authError.code);
-                    if (remaining > 0) {
-                        errorMsg += ` (${remaining} deneme hakkınız kaldı)`;
-                    }
-                    showError(errorMsg);
-                }
-                
-                // Hatalı deneme sayısını artır
-                loginAttempts++;
-                localStorage.setItem('mb_login_attempts', loginAttempts);
-                
-                if (loginAttempts >= MAX_ATTEMPTS) {
-                    setLockout();
-                    showError('Çok fazla hatalı deneme! 15 dakika bekleyin.');
-                }
-                
+            } catch (error) {
+                console.error('Giriş hatası:', error);
+                await logLoginAttempt(email, false, 'error');
+                showError('Giriş yapılamadı. Tekrar deneyin.');
                 btn.classList.remove('loading');
                 btn.disabled = false;
-                
-                // Input'u salla
-                document.getElementById('password').classList.add('error');
-                setTimeout(() => {
-                    document.getElementById('password').classList.remove('error');
-                }, 400);
             }
         }
         
