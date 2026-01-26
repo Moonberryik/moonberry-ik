@@ -7352,7 +7352,27 @@ async function saveBranch() {
         
         // 4. Checklist'leri kopyala (40-80%)
         setProgress(40, 'Checklist şablonları kopyalanıyor...');
-        const checklistTypes = ['acilis', 'kapanis', 'gunluk', 'mudur', 'platform', 'aylik', 'haftalik'];
+        
+        // DİNAMİK: Kaynak şubedeki TÜM checklist'leri bul
+        const sourceChecklists = await db.collection('checklists')
+            .where('branch', '==', sourceSourceBranch)
+            .get();
+        
+        // Checklist türlerini çıkar (branch_TYPE formatından TYPE'ı al)
+        const checklistTypes = [];
+        sourceChecklists.forEach(doc => {
+            const docId = doc.id;
+            // sourceBranchKey_TYPE formatından TYPE'ı çıkar
+            if (docId.startsWith(sourceBranchKey + '_')) {
+                const type = docId.replace(sourceBranchKey + '_', '');
+                if (!checklistTypes.includes(type)) {
+                    checklistTypes.push(type);
+                }
+            }
+        });
+        
+        log(`📋 Kaynak şubede ${checklistTypes.length} checklist türü bulundu: ${checklistTypes.join(', ')}`);
+        
         let copiedCount = 0;
         
         for (let i = 0; i < checklistTypes.length; i++) {
@@ -7415,9 +7435,14 @@ async function saveBranch() {
         for (let i = 0; i < testUsers.length; i++) {
             const user = testUsers[i];
             const email = `${branchShortName}_${user.suffix}@moonberrycoffee.com`;
+            const uniqueId = normalizePersonelId(user.displayName);
             
             try {
-                // Firebase Auth'a ekle (secondary app ile)
+                // 1. Credentials koleksiyonuna kaydet
+                await saveCredential(email, testPassword, null);
+                log(`✓ Credentials: ${email}`);
+                
+                // 2. Firebase Auth'a ekle (secondary app ile)
                 try {
                     const secondaryApp = firebase.initializeApp(firebase.app().options, `Secondary_${Date.now()}_${i}`);
                     const secondaryAuth = secondaryApp.auth();
@@ -7427,14 +7452,16 @@ async function saveBranch() {
                 } catch (authErr) {
                     if (authErr.code !== 'auth/email-already-in-use') {
                         console.warn('Auth hatası:', authErr);
+                        log(`⚠ Auth (login'de oluşturulacak): ${email}`);
                     }
                 }
                 
-                // Personel koleksiyonuna ekle (şifre encoded olarak)
+                // 3. Personel koleksiyonuna ekle (şifre artık credentials'da)
                 const personelRef = await db.collection('personel').add({
                     name: user.displayName,
+                    codeName: user.displayName,
+                    uniqueId: uniqueId,
                     email: email,
-                    password: encodePassword(testPassword),
                     role: user.role,
                     position: user.position,
                     branch: name,
@@ -7445,7 +7472,7 @@ async function saveBranch() {
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                createdPersonelIds.push({ id: personelRef.id, ...user, email });
+                createdPersonelIds.push({ id: personelRef.id, ...user, email, uniqueId });
                 
                 // Users koleksiyonuna ekle
                 await db.collection('users').doc(email).set({
@@ -7489,7 +7516,8 @@ async function saveBranch() {
         const personelFullNames = {};
         
         createdPersonelIds.forEach((p, idx) => {
-            const odaId = normalizeTurkishChars(p.displayName).replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+            // uniqueId kullan (zaten oluşturuldu)
+            const odaId = p.uniqueId || normalizeTurkishChars(p.displayName).replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
             personelOrder.push(odaId);
             
             // Kısa isim: Şube adını çıkar, kalan kısmı kullan
