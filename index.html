@@ -6251,52 +6251,73 @@ async function loadMyProfile() {
     }
 }
 
-// Avatar seçenekleri - DiceBear API ile canlı, güzel avatarlar (40 adet)
+// Avatar seçenekleri - 60 adet çeşitli avatarlar
 const AVATAR_OPTIONS = [
-    // === ERKEKLER (10) - avataaars stili (güzel cartoon) ===
-    { label: 'Erkek 1', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=b6e3f4&accessories=prescription02&clothingColor=3c4f5c&top=shortHairShortFlat' },
-    { label: 'Erkek 2', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Max&backgroundColor=c0aede&top=shortHairShortWaved&facialHair=beardLight' },
-    { label: 'Erkek 3', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Leo&backgroundColor=d1d4f9&top=shortHairDreads01&clothingColor=25557c' },
-    { label: 'Erkek 4', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie&backgroundColor=ffd5dc&top=shortHairShortCurly&accessories=round' },
-    { label: 'Erkek 5', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Oliver&backgroundColor=ffdfbf&top=shortHairTheCaesar&facialHair=beardMedium' },
-    { label: 'Erkek 6', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=John&backgroundColor=b6e3f4' },
-    { label: 'Erkek 7', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Mike&backgroundColor=c0aede' },
-    { label: 'Erkek 8', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=David&backgroundColor=d1d4f9' },
-    { label: 'Erkek 9', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=James&backgroundColor=ffd5dc' },
-    { label: 'Erkek 10', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Robert&backgroundColor=ffdfbf' },
-    // === KADINLAR (10) - avataaars stili ===
-    { label: 'Kadın 1', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bella&backgroundColor=ffd5dc&top=longHairStraight&hairColor=2c1b18' },
-    { label: 'Kadın 2', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Luna&backgroundColor=c0aede&top=longHairCurly&accessories=prescription01' },
-    { label: 'Kadın 3', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Coco&backgroundColor=b6e3f4&top=longHairBob&hairColor=4a312c' },
-    { label: 'Kadın 4', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Daisy&backgroundColor=ffdfbf&top=longHairStraight2&hairColor=b58143' },
-    { label: 'Kadın 5', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ruby&backgroundColor=d1d4f9&top=longHairFrida&accessories=round' },
-    { label: 'Kadın 6', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Emma&backgroundColor=ffd5dc' },
-    { label: 'Kadın 7', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Sophia&backgroundColor=c0aede' },
-    { label: 'Kadın 8', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Olivia&backgroundColor=b6e3f4' },
-    { label: 'Kadın 9', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Ava&backgroundColor=ffdfbf' },
-    { label: 'Kadın 10', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Mia&backgroundColor=d1d4f9' },
-    // === TATLI HAYVANLAR (10) - fun-emoji ve bottts-neutral ===
-    { label: 'Kedi', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Kitty&backgroundColor=ffd5dc' },
-    { label: 'Köpek', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Puppy&backgroundColor=ffdfbf' },
-    { label: 'Tavşan', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Bunny&backgroundColor=d1d4f9' },
-    { label: 'Ayı', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Teddy&backgroundColor=c0aede' },
-    { label: 'Panda', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Panda&backgroundColor=b6e3f4' },
-    { label: 'Tilki', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Foxy&backgroundColor=ffdfbf' },
-    { label: 'Penguen', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Penguin&backgroundColor=b6e3f4' },
-    { label: 'Baykuş', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Owly&backgroundColor=c0aede' },
-    { label: 'Aslan', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Lion&backgroundColor=ffdfbf' },
-    { label: 'Fil', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Elephant&backgroundColor=b6e3f4' },
-    // === SÜPER KAHRAMANLAR (10) - bottts stili ===
-    { label: 'Iron Man', url: 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=IronMan&backgroundColor=e74c3c' },
-    { label: 'Captain', url: 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Captain&backgroundColor=3498db' },
-    { label: 'Hulk', url: 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Hulk&backgroundColor=27ae60' },
-    { label: 'Thor', url: 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Thor&backgroundColor=f39c12' },
-    { label: 'Spider', url: 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Spider&backgroundColor=c0392b' },
-    { label: 'Batman', url: 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Batman&backgroundColor=2c3e50' },
-    { label: 'Superman', url: 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Superman&backgroundColor=2980b9' },
-    { label: 'Flash', url: 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Flash&backgroundColor=e74c3c' },
-    { label: 'Wonder', url: 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Wonder&backgroundColor=9b59b6' },
-    { label: 'Aquaman', url: 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Aquaman&backgroundColor=1abc9c' }
+    // === KİŞİLER SET 1 (12) - notionists stili ===
+    { label: 'Kişi 1', url: 'https://api.dicebear.com/7.x/notionists/svg?seed=Felix&backgroundColor=b6e3f4' },
+    { label: 'Kişi 2', url: 'https://api.dicebear.com/7.x/notionists/svg?seed=Aneka&backgroundColor=c0aede' },
+    { label: 'Kişi 3', url: 'https://api.dicebear.com/7.x/notionists/svg?seed=Leo&backgroundColor=d1d4f9' },
+    { label: 'Kişi 4', url: 'https://api.dicebear.com/7.x/notionists/svg?seed=Zoe&backgroundColor=ffd5dc' },
+    { label: 'Kişi 5', url: 'https://api.dicebear.com/7.x/notionists/svg?seed=Max&backgroundColor=ffdfbf' },
+    { label: 'Kişi 6', url: 'https://api.dicebear.com/7.x/notionists/svg?seed=Luna&backgroundColor=b6e3f4' },
+    { label: 'Kişi 7', url: 'https://api.dicebear.com/7.x/notionists/svg?seed=Oscar&backgroundColor=c0aede' },
+    { label: 'Kişi 8', url: 'https://api.dicebear.com/7.x/notionists/svg?seed=Ruby&backgroundColor=d1d4f9' },
+    { label: 'Kişi 9', url: 'https://api.dicebear.com/7.x/notionists/svg?seed=Jack&backgroundColor=ffd5dc' },
+    { label: 'Kişi 10', url: 'https://api.dicebear.com/7.x/notionists/svg?seed=Mia&backgroundColor=ffdfbf' },
+    { label: 'Kişi 11', url: 'https://api.dicebear.com/7.x/notionists/svg?seed=Noah&backgroundColor=b6e3f4' },
+    { label: 'Kişi 12', url: 'https://api.dicebear.com/7.x/notionists/svg?seed=Emma&backgroundColor=c0aede' },
+    // === KİŞİLER SET 2 (12) - big-smile stili ===
+    { label: 'Smile 1', url: 'https://api.dicebear.com/7.x/big-smile/svg?seed=Happy1&backgroundColor=b6e3f4' },
+    { label: 'Smile 2', url: 'https://api.dicebear.com/7.x/big-smile/svg?seed=Happy2&backgroundColor=c0aede' },
+    { label: 'Smile 3', url: 'https://api.dicebear.com/7.x/big-smile/svg?seed=Happy3&backgroundColor=d1d4f9' },
+    { label: 'Smile 4', url: 'https://api.dicebear.com/7.x/big-smile/svg?seed=Happy4&backgroundColor=ffd5dc' },
+    { label: 'Smile 5', url: 'https://api.dicebear.com/7.x/big-smile/svg?seed=Happy5&backgroundColor=ffdfbf' },
+    { label: 'Smile 6', url: 'https://api.dicebear.com/7.x/big-smile/svg?seed=Joy1&backgroundColor=b6e3f4' },
+    { label: 'Smile 7', url: 'https://api.dicebear.com/7.x/big-smile/svg?seed=Joy2&backgroundColor=c0aede' },
+    { label: 'Smile 8', url: 'https://api.dicebear.com/7.x/big-smile/svg?seed=Joy3&backgroundColor=d1d4f9' },
+    { label: 'Smile 9', url: 'https://api.dicebear.com/7.x/big-smile/svg?seed=Joy4&backgroundColor=ffd5dc' },
+    { label: 'Smile 10', url: 'https://api.dicebear.com/7.x/big-smile/svg?seed=Joy5&backgroundColor=ffdfbf' },
+    { label: 'Smile 11', url: 'https://api.dicebear.com/7.x/big-smile/svg?seed=Fun1&backgroundColor=b6e3f4' },
+    { label: 'Smile 12', url: 'https://api.dicebear.com/7.x/big-smile/svg?seed=Fun2&backgroundColor=c0aede' },
+    // === SEVİMLİ HAYVANLAR (12) - fun-emoji stili ===
+    { label: 'Kedi', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Cat123&backgroundColor=ffd5dc' },
+    { label: 'Köpek', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Dog456&backgroundColor=ffdfbf' },
+    { label: 'Tavşan', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Rabbit789&backgroundColor=d1d4f9' },
+    { label: 'Ayı', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Bear012&backgroundColor=c0aede' },
+    { label: 'Panda', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Panda345&backgroundColor=b6e3f4' },
+    { label: 'Tilki', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Fox678&backgroundColor=ffdfbf' },
+    { label: 'Aslan', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Lion901&backgroundColor=ffd5dc' },
+    { label: 'Kaplan', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Tiger234&backgroundColor=ffdfbf' },
+    { label: 'Koala', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Koala567&backgroundColor=c0aede' },
+    { label: 'Penguen', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Penguin890&backgroundColor=b6e3f4' },
+    { label: 'Baykuş', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Owl111&backgroundColor=d1d4f9' },
+    { label: 'Maymun', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Monkey222&backgroundColor=ffdfbf' },
+    // === SÜPER KAHRAMANLAR (12) - pixel-art stili ===
+    { label: 'Hero 1', url: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Superman&backgroundColor=2980b9' },
+    { label: 'Hero 2', url: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Batman&backgroundColor=2c3e50' },
+    { label: 'Hero 3', url: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Spiderman&backgroundColor=c0392b' },
+    { label: 'Hero 4', url: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Ironman&backgroundColor=e74c3c' },
+    { label: 'Hero 5', url: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Hulk&backgroundColor=27ae60' },
+    { label: 'Hero 6', url: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Thor&backgroundColor=f39c12' },
+    { label: 'Hero 7', url: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Flash&backgroundColor=e74c3c' },
+    { label: 'Hero 8', url: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Aquaman&backgroundColor=1abc9c' },
+    { label: 'Hero 9', url: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Wonder&backgroundColor=9b59b6' },
+    { label: 'Hero 10', url: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Arrow&backgroundColor=27ae60' },
+    { label: 'Hero 11', url: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Cyborg&backgroundColor=7f8c8d' },
+    { label: 'Hero 12', url: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Raven&backgroundColor=8e44ad' },
+    // === KAHVE & İÇECEKLER (12) - shapes stili ===
+    { label: 'Kahve 1', url: 'https://api.dicebear.com/7.x/shapes/svg?seed=Coffee1&backgroundColor=6f4e37' },
+    { label: 'Kahve 2', url: 'https://api.dicebear.com/7.x/shapes/svg?seed=Latte2&backgroundColor=d2691e' },
+    { label: 'Kahve 3', url: 'https://api.dicebear.com/7.x/shapes/svg?seed=Mocha3&backgroundColor=8b4513' },
+    { label: 'Çay', url: 'https://api.dicebear.com/7.x/shapes/svg?seed=Tea4&backgroundColor=228b22' },
+    { label: 'Smoothie', url: 'https://api.dicebear.com/7.x/shapes/svg?seed=Smoothie5&backgroundColor=ff6b6b' },
+    { label: 'Juice 1', url: 'https://api.dicebear.com/7.x/shapes/svg?seed=Orange6&backgroundColor=ffa500' },
+    { label: 'Juice 2', url: 'https://api.dicebear.com/7.x/shapes/svg?seed=Apple7&backgroundColor=ff4757' },
+    { label: 'Juice 3', url: 'https://api.dicebear.com/7.x/shapes/svg?seed=Berry8&backgroundColor=9b59b6' },
+    { label: 'Milkshake', url: 'https://api.dicebear.com/7.x/shapes/svg?seed=Milk9&backgroundColor=ffb6c1' },
+    { label: 'Limonata', url: 'https://api.dicebear.com/7.x/shapes/svg?seed=Lemon10&backgroundColor=f1c40f' },
+    { label: 'Moonberry', url: 'https://api.dicebear.com/7.x/shapes/svg?seed=Moonberry11&backgroundColor=008c95' },
+    { label: 'Sunberry', url: 'https://api.dicebear.com/7.x/shapes/svg?seed=Sunberry12&backgroundColor=ff8674' }
 ];
 
 // Avatar seçme fonksiyonu
@@ -6346,78 +6367,90 @@ function openAvatarModal(docId) {
     modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
     modal.onclick = (e) => { if (e.target === modal) closeAvatarModal(); };
     
-    // Kategorilere ayır
-    const erkekler = AVATAR_OPTIONS.slice(0, 10);
-    const kadinlar = AVATAR_OPTIONS.slice(10, 20);
-    const hayvanlar = AVATAR_OPTIONS.slice(20, 30);
-    const icecekler = AVATAR_OPTIONS.slice(30, 40);
+    // 5 Kategoriye ayır (her biri 12 avatar)
+    const kisiler1 = AVATAR_OPTIONS.slice(0, 12);
+    const kisiler2 = AVATAR_OPTIONS.slice(12, 24);
+    const hayvanlar = AVATAR_OPTIONS.slice(24, 36);
+    const kahramanlar = AVATAR_OPTIONS.slice(36, 48);
+    const icecekler = AVATAR_OPTIONS.slice(48, 60);
     
     modal.innerHTML = `
-        <div style="background:var(--cardBg);border-radius:16px;padding:24px;max-width:480px;width:95%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-                <h3 style="margin:0;color:var(--tx);font-size:1.1rem">Profil Resmi Seç</h3>
+        <div style="background:var(--cardBg);border-radius:16px;padding:20px;max-width:520px;width:95%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <h3 style="margin:0;color:var(--tx);font-size:1rem">Profil Resmi Seç</h3>
                 <button onclick="closeAvatarModal()" style="background:none;border:none;cursor:pointer;padding:4px">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
             
             <!-- Fotoğraf Yükle -->
-            <div style="background:var(--bg3);border:2px dashed var(--bg4);border-radius:12px;padding:16px;text-align:center;margin-bottom:16px;cursor:pointer;transition:all .2s" onclick="document.getElementById('avatarFileInput').click()" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--bg4)'">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="1.5" style="margin-bottom:6px"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                <div style="font-size:.85rem;color:var(--tx2)">Fotoğraf Yükle</div>
-                <div style="font-size:.65rem;color:var(--tx3);margin-top:2px">JPG, PNG, WebP</div>
+            <div style="background:var(--bg3);border:2px dashed var(--bg4);border-radius:12px;padding:14px;text-align:center;margin-bottom:14px;cursor:pointer;transition:all .2s" onclick="document.getElementById('avatarFileInput').click()" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--bg4)'">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="1.5" style="margin-bottom:4px"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <div style="font-size:.8rem;color:var(--tx2)">Fotoğraf Yükle</div>
                 <input type="file" id="avatarFileInput" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleProfilePhotoUpload(this, '${docId}');closeAvatarModal();">
             </div>
             
-            <!-- Veya -->
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+            <!-- Ayırıcı -->
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
                 <div style="flex:1;height:1px;background:var(--bg4)"></div>
-                <span style="font-size:.7rem;color:var(--tx3)">veya avatar seç</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
                 <div style="flex:1;height:1px;background:var(--bg4)"></div>
             </div>
             
-            <!-- Erkekler -->
-            <div style="margin-bottom:12px">
-                <div style="font-size:.7rem;color:var(--tx3);margin-bottom:6px;font-weight:600">👨 Erkek</div>
-                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
-                    ${erkekler.map((avatar, i) => `
-                        <div onclick="selectAvatar(${i}, '${docId}')" style="aspect-ratio:1;border-radius:10px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.05)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
+            <!-- 👤 Kişiler Set 1 -->
+            <div style="margin-bottom:10px">
+                <div style="font-size:1.1rem;margin-bottom:6px;text-align:center">👤</div>
+                <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:5px">
+                    ${kisiler1.map((avatar, i) => `
+                        <div onclick="selectAvatar(${i}, '${docId}')" style="aspect-ratio:1;border-radius:8px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.08)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
                             <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
                         </div>
                     `).join('')}
                 </div>
             </div>
             
-            <!-- Kadınlar -->
-            <div style="margin-bottom:12px">
-                <div style="font-size:.7rem;color:var(--tx3);margin-bottom:6px;font-weight:600">👩 Kadın</div>
-                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
-                    ${kadinlar.map((avatar, i) => `
-                        <div onclick="selectAvatar(${i + 10}, '${docId}')" style="aspect-ratio:1;border-radius:10px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.05)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
+            <!-- 😊 Kişiler Set 2 -->
+            <div style="margin-bottom:10px">
+                <div style="font-size:1.1rem;margin-bottom:6px;text-align:center">😊</div>
+                <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:5px">
+                    ${kisiler2.map((avatar, i) => `
+                        <div onclick="selectAvatar(${i + 12}, '${docId}')" style="aspect-ratio:1;border-radius:8px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.08)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
                             <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
                         </div>
                     `).join('')}
                 </div>
             </div>
             
-            <!-- Hayvanlar -->
-            <div style="margin-bottom:12px">
-                <div style="font-size:.7rem;color:var(--tx3);margin-bottom:6px;font-weight:600">🐾 Sevimli Hayvanlar</div>
-                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+            <!-- 🐾 Hayvanlar -->
+            <div style="margin-bottom:10px">
+                <div style="font-size:1.1rem;margin-bottom:6px;text-align:center">🐾</div>
+                <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:5px">
                     ${hayvanlar.map((avatar, i) => `
-                        <div onclick="selectAvatar(${i + 20}, '${docId}')" style="aspect-ratio:1;border-radius:10px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.05)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
+                        <div onclick="selectAvatar(${i + 24}, '${docId}')" style="aspect-ratio:1;border-radius:8px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.08)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
                             <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
                         </div>
                     `).join('')}
                 </div>
             </div>
             
-            <!-- İçecekler -->
+            <!-- 🦸 Süper Kahramanlar -->
+            <div style="margin-bottom:10px">
+                <div style="font-size:1.1rem;margin-bottom:6px;text-align:center">🦸</div>
+                <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:5px">
+                    ${kahramanlar.map((avatar, i) => `
+                        <div onclick="selectAvatar(${i + 36}, '${docId}')" style="aspect-ratio:1;border-radius:8px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.08)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
+                            <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <!-- ☕ Kahve & İçecekler -->
             <div>
-                <div style="font-size:.7rem;color:var(--tx3);margin-bottom:6px;font-weight:600">🦸 Süper Kahramanlar</div>
-                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+                <div style="font-size:1.1rem;margin-bottom:6px;text-align:center">☕</div>
+                <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:5px">
                     ${icecekler.map((avatar, i) => `
-                        <div onclick="selectAvatar(${i + 30}, '${docId}')" style="aspect-ratio:1;border-radius:10px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.05)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
+                        <div onclick="selectAvatar(${i + 48}, '${docId}')" style="aspect-ratio:1;border-radius:8px;cursor:pointer;transition:all .15s;border:2px solid transparent;overflow:hidden;background:var(--bg3)" title="${avatar.label}" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.08)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
                             <img src="${avatar.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
                         </div>
                     `).join('')}
