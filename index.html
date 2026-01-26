@@ -82,7 +82,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 /* App Layout */
 .app{display:flex;min-height:100vh;opacity:0;transition:opacity .3s}
 .sidebar{width:260px;background:var(--sidebarBg);border-right:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;position:fixed;height:100vh;z-index:100;transition:var(--transition)}
-.sidebar-header{padding:24px 20px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-header{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.1);min-height:60px;display:flex;align-items:center}
 .logo{display:flex;align-items:center;gap:12px}
 .logo-icon{width:42px;height:42px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:1.4rem;box-shadow:0 4px 16px rgba(255,134,116,.3)}
 .logo-text{font-size:1.1rem;font-weight:700;letter-spacing:-.02em;color:var(--sidebarTx)}
@@ -106,7 +106,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .sidebar{transition:width .3s ease}
 .sidebar.collapsed{width:60px}
 .sidebar.collapsed .logo-text,.sidebar.collapsed .logo-sub{display:none}
-.sidebar.collapsed .sidebar-header{padding:16px 10px}
+.sidebar.collapsed .sidebar-header{padding:16px 10px;min-height:60px}
 .sidebar.collapsed .logo{justify-content:center}
 .sidebar.collapsed .logo-icon{width:36px;height:36px;font-size:1.1rem}
 .sidebar.collapsed .nav{padding:12px 6px}
@@ -122,20 +122,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .sidebar.collapsed .sidebar-user .user-avatar{margin:0 auto}
 .sidebar.collapsed #userInfo{margin:0 0 8px 0;padding:4px;justify-content:center}
 .sidebar.collapsed #userInfo svg{display:none}
-.sidebar.collapsed .sidebar-user>div:last-child{flex-direction:column;gap:4px}
-.sidebar.collapsed .logout-btn{flex:none;width:100%;padding:8px;font-size:0;justify-content:center}
-.sidebar.collapsed .logout-btn svg{margin:0}
-.sidebar.collapsed .sidebar-toggle-inner{flex:none;width:100%;padding:8px;margin:0;justify-content:center}
+.sidebar.collapsed .sidebar-bottom-buttons{flex-direction:column;gap:4px}
+.sidebar.collapsed .logout-btn{width:100%;padding:10px;justify-content:center}
+.sidebar.collapsed .sidebar-toggle-inner{width:100%;padding:10px;margin:0;justify-content:center}
 .sidebar.collapsed .sidebar-toggle-inner span{display:none}
-.sidebar-toggle-inner{display:flex;align-items:center;gap:10px;padding:10px 14px;margin:8px 12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;cursor:pointer;transition:all .2s;color:var(--sidebarTx2);font-size:.8rem;font-weight:500}
-.sidebar-toggle-inner:hover{background:rgba(255,134,116,.15);border-color:rgba(255,134,116,.3);color:#fff}
-.sidebar-toggle-inner svg{flex-shrink:0;transition:transform .3s}
 .sidebar.collapsed .sidebar-toggle-inner svg{transform:rotate(180deg)}
+.sidebar-toggle-inner svg{flex-shrink:0;transition:transform .3s}
 
 /* Main Content */
 .main{flex:1;margin-left:260px;background:var(--bg);min-height:100vh;position:relative;transition:margin-left .3s ease}
 .main.sidebar-collapsed{margin-left:60px}
-.main-header{position:sticky;top:0;right:0;z-index:50;display:flex;justify-content:flex-end;padding:16px 32px;background:var(--bg);border-bottom:1px solid var(--bg4)}
+.main-header{position:sticky;top:0;right:0;z-index:50;display:flex;justify-content:flex-end;align-items:center;padding:16px 32px;min-height:60px;background:var(--bg);border-bottom:1px solid var(--bg4)}
 .page{display:none;padding:24px 32px;animation:fadeUp .3s}
 .page.active{display:block}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
@@ -627,15 +624,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <div id="userName" style="color:var(--sidebarTx);font-size:.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Yükleniyor...</div>
                             <div id="userRole" style="color:var(--sidebarTx2);font-size:.7rem">-</div>
                         </div>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sidebarTx2)" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        <svg class="user-details" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sidebarTx2)" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     </div>
-                    <div style="display:flex;gap:8px">
-                        <button class="logout-btn" onclick="logout()" style="flex:1;padding:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--sidebarTx2);font-size:.75rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.background='rgba(231,76,60,.2)';this.style.borderColor='rgba(231,76,60,.4)';this.style.color='#e74c3c'" onmouseout="this.style.background='rgba(255,255,255,.1)';this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--sidebarTx2)'" title="Çıkış Yap">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                            <span class="user-details">Çıkış</span>
+                    <div class="sidebar-bottom-buttons" style="display:flex;gap:6px">
+                        <button class="logout-btn" onclick="logout()" style="padding:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--sidebarTx2);cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background='rgba(231,76,60,.15)';this.style.borderColor='rgba(231,76,60,.3)';this.style.color='#e74c3c'" onmouseout="this.style.background='rgba(255,255,255,.08)';this.style.borderColor='rgba(255,255,255,.1)';this.style.color='var(--sidebarTx2)'" title="Çıkış Yap">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                         </button>
-                        <button class="sidebar-toggle-inner" onclick="toggleSidebar()" style="padding:10px 12px;margin:0;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--sidebarTx2);cursor:pointer;display:flex;align-items:center;justify-content:center" title="Menüyü Daralt/Genişlet">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 19l-7-7 7-7"/><path d="M18 19l-7-7 7-7"/></svg>
+                        <button class="sidebar-toggle-inner" onclick="toggleSidebar()" style="flex:1;padding:10px;margin:0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--sidebarTx2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.background='rgba(255,134,116,.15)';this.style.borderColor='rgba(255,134,116,.3)'" onmouseout="this.style.background='rgba(255,255,255,.08)';this.style.borderColor='rgba(255,255,255,.1)'" title="Menüyü Daralt/Genişlet">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+                            <span class="user-details" style="font-size:.7rem;font-weight:500">Daralt</span>
                         </button>
                     </div>
                 </div>
@@ -4750,27 +4747,27 @@ function applyBaristaRestrictions() {
     document.querySelectorAll('.nav-item[data-page]').forEach(item => {
         const page = item.dataset.page;
         if (!allowedPages.includes(page)) {
-            item.style.display = 'none';
+            item.style.setProperty('display', 'none', 'important');
         }
     });
     
     // Belgeler ve Formlar menülerini tamamen gizle
     const navBelgeler = document.getElementById('nav-belgeler');
     const navFormlar = document.getElementById('nav-formlar');
-    if (navBelgeler) navBelgeler.style.display = 'none';
-    if (navFormlar) navFormlar.style.display = 'none';
+    if (navBelgeler) navBelgeler.style.setProperty('display', 'none', 'important');
+    if (navFormlar) navFormlar.style.setProperty('display', 'none', 'important');
     
     // Nav gruplarını kontrol et - boş olanları gizle
     document.querySelectorAll('.nav-group').forEach(group => {
         const visibleItems = group.querySelectorAll('.nav-item:not([style*="display: none"])');
         if (visibleItems.length === 0) {
-            group.style.display = 'none';
+            group.style.setProperty('display', 'none', 'important');
         }
     });
     
-    // Nav-divider'ları tamamen gizle (3 çizgi sorunu)
+    // Nav-divider'ları tamamen gizle (3 çizgi sorunu) - CSS class ile
     document.querySelectorAll('.nav-divider').forEach(div => {
-        div.style.display = 'none';
+        div.style.setProperty('display', 'none', 'important');
     });
     
     // Dashboard kartlarını kısıtla
@@ -4779,17 +4776,28 @@ function applyBaristaRestrictions() {
         const allowedCards = ['puantaj', 'shift', 'checklist'];
         const isAllowed = allowedCards.some(p => onclick.includes(`'${p}'`));
         if (!isAllowed && onclick.includes('goTo')) {
-            card.style.display = 'none';
+            card.style.setProperty('display', 'none', 'important');
         }
     });
     
-    // Dashboard section'ları kontrol et - Belgeler ve Formlar bölümünü tamamen gizle
+    // Dashboard'da FORMLAR bölümünü gizle (ID ile) - ÖNCELİKLİ
+    const formlarSection = document.getElementById('dashboard-formlar-section');
+    if (formlarSection) {
+        formlarSection.style.setProperty('display', 'none', 'important');
+    }
+    
+    // Dashboard section'ları kontrol et - Belgeler ve Sistem bölümünü gizle
     document.querySelectorAll('.dashboard-section').forEach(section => {
+        // ID kontrolü önce
+        if (section.id === 'dashboard-formlar-section') {
+            section.style.setProperty('display', 'none', 'important');
+            return;
+        }
         const header = section.querySelector('div');
         if (header) {
             const text = header.textContent || '';
-            if (text.includes('Belgeler') || text.includes('Sistem') || text.includes('Formlar')) {
-                section.style.display = 'none';
+            if (text.includes('Belgeler') || text.includes('Sistem')) {
+                section.style.setProperty('display', 'none', 'important');
             }
         }
     });
@@ -4797,8 +4805,8 @@ function applyBaristaRestrictions() {
     // Personel ve Katalog gizle (Ayarlar görünsün - kendi profilini düzenleyebilsin)
     const navPersonel = document.querySelector('.nav-item[data-page="personel"]');
     const navKatalog = document.querySelector('.nav-item[data-page="katalog"]');
-    if (navPersonel) navPersonel.style.display = 'none';
-    if (navKatalog) navKatalog.style.display = 'none';
+    if (navPersonel) navPersonel.style.setProperty('display', 'none', 'important');
+    if (navKatalog) navKatalog.style.setProperty('display', 'none', 'important');
     
     // Rol yazısı - SALT OKUNUR kaldırıldı
     const userRoleEl = document.getElementById('userRole');
@@ -4806,11 +4814,29 @@ function applyBaristaRestrictions() {
         userRoleEl.textContent = 'Barista';
     }
     
-    // Dashboard'da FORMLAR bölümünü gizle (ID ile)
-    const formlarSection = document.getElementById('dashboard-formlar-section');
-    if (formlarSection) formlarSection.style.display = 'none';
-    
     console.log('✅ Barista kısıtlamaları uygulandı');
+}
+
+// Barista kısıtlamalarını DOM değişikliklerinde de uygula
+function setupBaristaObserver() {
+    if (currentUser?.role !== 'barista') return;
+    
+    const dashboardPage = document.getElementById('page-dashboard');
+    if (!dashboardPage) return;
+    
+    const observer = new MutationObserver(() => {
+        const formlarSection = document.getElementById('dashboard-formlar-section');
+        if (formlarSection && formlarSection.style.display !== 'none') {
+            formlarSection.style.setProperty('display', 'none', 'important');
+        }
+        document.querySelectorAll('.nav-divider').forEach(div => {
+            if (div.style.display !== 'none') {
+                div.style.setProperty('display', 'none', 'important');
+            }
+        });
+    });
+    
+    observer.observe(dashboardPage, { childList: true, subtree: true });
 }
 
 async function loadFirebaseData() {
@@ -6892,6 +6918,7 @@ function applyRolePreviewPermissions(role, branch) {
     // Barista için özel kısıtlamalar
     if (role === 'barista') {
         applyBaristaRestrictions();
+        setupBaristaObserver(); // DOM değişikliklerini izle
         if (branch) {
             document.querySelectorAll('select[id*="Sube"]').forEach(select => {
                 select.value = branch;
