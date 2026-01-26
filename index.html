@@ -1336,7 +1336,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
                             Kayıtlı Personel
                         </span>
-                        <button class="btn btn-primary btn-sm" onclick="showAddPersonelModal()">+ Yeni Personel</button>
+                        <button id="btnNewPersonel" class="btn btn-primary btn-sm" onclick="showAddPersonelModal()">+ Yeni Personel</button>
                     </div>
                     <div class="form-group">
                         <input type="text" id="personelSearch" class="form-input" placeholder="İsim, TC veya şube ara..." oninput="filterPersonel()">
@@ -4098,6 +4098,18 @@ function migratePositions() {
 
 function saveState() {
     localStorage.setItem('moonberry_state', JSON.stringify(STATE));
+    
+    // Pozisyonları Firebase'e de kaydet
+    if (db && STATE.positions && STATE.positions.length > 0) {
+        db.collection('systemConfig').doc('positions').set({
+            positions: STATE.positions,
+            updatedAt: new Date().toISOString()
+        }).then(() => {
+            console.log('[saveState] Pozisyonlar Firebase\'e kaydedildi');
+        }).catch(err => {
+            console.warn('[saveState] Firebase kaydetme hatası:', err.message);
+        });
+    }
 }
 
 // ==================== INIT ====================
@@ -7361,12 +7373,18 @@ async function saveBranch() {
         const branchShortName = normalizeTurkishChars(name).replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
         const testPassword = 'Test.123*';
         
+        // Pozisyon isimlerini STATE.positions'dan dinamik al
+        const getPositionName = (role) => {
+            const pos = STATE.positions.find(p => p.role === role);
+            return pos?.name || role;
+        };
+        
         const testUsers = [
-            { role: 'magaza_muduru', suffix: 'mudur', displayName: `${name} Test Müdür`, position: 'Mağaza Müdürü' },
-            { role: 'mudur_yardimcisi', suffix: 'mudur_yrd', displayName: `${name} Test Md. Yrd.`, position: 'Mağaza Müdür Yardımcısı' },
-            { role: 'barista', suffix: 'barista1', displayName: `${name} Barista 1`, position: 'Barista' },
-            { role: 'barista', suffix: 'barista2', displayName: `${name} Barista 2`, position: 'Barista' },
-            { role: 'barista', suffix: 'barista3', displayName: `${name} Barista 3`, position: 'Barista' }
+            { role: 'magaza_muduru', suffix: 'mudur', displayName: `${name} Test Müdür`, position: getPositionName('magaza_muduru') },
+            { role: 'mudur_yardimcisi', suffix: 'mudur_yrd', displayName: `${name} Test Md. Yrd.`, position: getPositionName('mudur_yardimcisi') },
+            { role: 'barista', suffix: 'barista1', displayName: `${name} Barista 1`, position: getPositionName('barista') },
+            { role: 'barista', suffix: 'barista2', displayName: `${name} Barista 2`, position: getPositionName('barista') },
+            { role: 'barista', suffix: 'barista3', displayName: `${name} Barista 3`, position: getPositionName('barista') }
         ];
         
         const createdPersonelIds = [];
@@ -8873,6 +8891,16 @@ async function loadPersonelList() {
     const container = document.getElementById('personelListContainer');
     if (!container) return;
     
+    // "Yeni Personel" butonu yetki kontrolü
+    const btnNewPersonel = document.getElementById('btnNewPersonel');
+    if (btnNewPersonel) {
+        const isYonetici = currentUser?.role === 'yonetici';
+        const perms = window.userAdvancedPermissions;
+        const canAddPersonel = isYonetici || perms?.pages?.personel?.add === true;
+        btnNewPersonel.style.display = canAddPersonel ? '' : 'none';
+        console.log('[Personel] Yeni Personel butonu:', canAddPersonel ? 'görünür' : 'gizli');
+    }
+    
     container.innerHTML = '<p style="color:var(--tx2);text-align:center;padding:20px">Yükleniyor...</p>';
     
     try {
@@ -8938,8 +8966,27 @@ async function loadPersonelList() {
         // Şifre gösterimi kaldırıldı - sadece edit modalda görünecek
         let headerHtml = '';
         
+        // Personelleri sırala: 1) Hiyerarşi seviyesi (yüksek önce), 2) Giriş tarihi (eski önce)
+        const sortedDocs = snapshot.docs.sort((a, b) => {
+            const pA = a.data();
+            const pB = b.data();
+            
+            // Hiyerarşi seviyesi (yüksek önce)
+            const roleA = pA.role || getRoleFromPosition(pA.position);
+            const roleB = pB.role || getRoleFromPosition(pB.position);
+            const levelA = getHierarchyLevel(roleA, pA.position);
+            const levelB = getHierarchyLevel(roleB, pB.position);
+            
+            if (levelB !== levelA) return levelB - levelA; // Yüksek seviye önce
+            
+            // Giriş tarihi (eski önce)
+            const dateA = pA.startDate ? new Date(pA.startDate) : new Date('9999-12-31');
+            const dateB = pB.startDate ? new Date(pB.startDate) : new Date('9999-12-31');
+            return dateA - dateB; // Eski tarih önce
+        });
+        
         let html = headerHtml + '<div id="personelGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">';
-        snapshot.forEach(doc => {
+        sortedDocs.forEach(doc => {
             const p = doc.data();
             const docId = doc.id;
             
@@ -12933,6 +12980,14 @@ function applyAdvancedPermissions() {
     
     // Sidebar'ı yetkilere göre güncelle
     updateSidebarByPermissions(perms);
+    
+    // "Yeni Personel" butonu yetkisi - personel.add yetkisi olmayan göremez
+    const btnNewPersonel = document.getElementById('btnNewPersonel');
+    if (btnNewPersonel) {
+        const canAddPersonel = perms.pages?.personel?.add === true;
+        btnNewPersonel.style.display = canAddPersonel ? '' : 'none';
+        console.log('[Permission] Yeni Personel butonu:', canAddPersonel ? 'görünür' : 'gizli');
+    }
     
     console.log('✅ Gelişmiş izinler uygulandı', { 
         createWeek: perms.special?.create_shift_week,
@@ -21682,6 +21737,17 @@ async function loadSystemConfig() {
     try {
         // Admin emails yükle
         await loadAdminEmails();
+        
+        // ====== POZİSYONLARI FIREBASE'DEN YÜKLE ======
+        try {
+            const posDoc = await db.collection('systemConfig').doc('positions').get();
+            if (posDoc.exists && posDoc.data().positions) {
+                STATE.positions = posDoc.data().positions;
+                console.log('[Config] Pozisyonlar Firebase\'den yüklendi:', STATE.positions.length, 'adet');
+            }
+        } catch (posErr) {
+            console.warn('[Config] Pozisyonlar yüklenemedi, localStorage kullanılacak:', posErr.message);
+        }
         
         // Sistem ayarları
         const sysDoc = await db.collection('config').doc('system').get();
