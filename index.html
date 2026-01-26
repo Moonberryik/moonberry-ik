@@ -4960,9 +4960,14 @@ function goTo(page) {
         });
         
         // 3 saniye güvence - dropdown hala boşsa zorla doldur
+        // Ama checklist zaten yüklendiyse atlA
         setTimeout(() => {
             const subeSelect = document.getElementById('checklistSube');
-            if (subeSelect && subeSelect.options.length === 0) {
+            const typeButtons = document.getElementById('checklistTypeButtons');
+            const hasTypes = typeButtons && typeButtons.querySelectorAll('.checklist-type-btn').length > 0;
+            
+            // Sadece dropdown boş VE türler yüklenmemişse çalış
+            if (subeSelect && subeSelect.options.length === 0 && !hasTypes) {
                 const branches = STATE.branches || DEFAULT_STATE.branches || [];
                 subeSelect.innerHTML = branches.map(b => `<option value="${b}">${b}</option>`).join('');
                 // Kullanıcının şubesini seç
