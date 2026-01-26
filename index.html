@@ -7945,12 +7945,12 @@ async function executeDeleteBranch(branchName, index) {
 
 // ========== POSITIONS ==========
 function addPosition() {
-    // Mevcut roller
+    // Mevcut roller ve varsayılan seviyeleri
     const roles = [
-        { id: 'barista', name: 'Barista (Sınırlı Yetki)' },
-        { id: 'mudur_yardimcisi', name: 'Müdür Yardımcısı (Orta Yetki)' },
-        { id: 'magaza_muduru', name: 'Mağaza Müdürü (Geniş Yetki)' },
-        { id: 'bolge_muduru', name: 'Bölge Müdürü (Tam Yetki)' }
+        { id: 'barista', name: 'Barista (Sınırlı Yetki)', defaultLevel: 1 },
+        { id: 'mudur_yardimcisi', name: 'Müdür Yardımcısı (Orta Yetki)', defaultLevel: 2 },
+        { id: 'magaza_muduru', name: 'Mağaza Müdürü (Geniş Yetki)', defaultLevel: 3 },
+        { id: 'bolge_muduru', name: 'Bölge Müdürü (Tam Yetki)', defaultLevel: 4 }
     ];
     
     showModal('Yeni Pozisyon Ekle', `
@@ -7975,10 +7975,21 @@ function addPosition() {
             </div>
             <div class="form-group">
                 <label class="form-label">Sistem Rolü *</label>
-                <select id="newPosRole" class="form-select">
-                    ${roles.map(r => `<option value="${r.id}">${r.name}</option>`).join('')}
+                <select id="newPosRole" class="form-select" onchange="updateLevelFromRole()">
+                    ${roles.map(r => `<option value="${r.id}" data-level="${r.defaultLevel}">${r.name}</option>`).join('')}
                 </select>
                 <small style="color:var(--tx2);font-size:.7rem">Bu rol, pozisyonun yetkilerini belirler</small>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Hiyerarşi Seviyesi *</label>
+                <select id="newPosLevel" class="form-select">
+                    <option value="1">1 - En Alt (Barista)</option>
+                    <option value="2">2 - Alt-Orta (Müdür Yardımcısı)</option>
+                    <option value="3">3 - Orta (Mağaza Müdürü)</option>
+                    <option value="4">4 - Üst (Bölge Müdürü)</option>
+                    <option value="5">5 - En Üst (Yönetici)</option>
+                </select>
+                <small style="color:var(--tx2);font-size:.7rem">Düşük seviye, yüksek seviyeyi düzenleyemez</small>
             </div>
             <div class="form-group full">
                 <label class="form-label">İkon</label>
@@ -7996,6 +8007,17 @@ function addPosition() {
         <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
         <button class="btn btn-primary" onclick="savePosition()">Ekle</button>
     `);
+}
+
+// Rol değişince level otomatik güncelle
+function updateLevelFromRole() {
+    const roleSelect = document.getElementById('newPosRole') || document.getElementById('editPosRole');
+    const levelSelect = document.getElementById('newPosLevel') || document.getElementById('editPosLevel');
+    if (roleSelect && levelSelect) {
+        const selectedOption = roleSelect.options[roleSelect.selectedIndex];
+        const defaultLevel = selectedOption.dataset.level || '1';
+        levelSelect.value = defaultLevel;
+    }
 }
 
 // SVG İkon Seti - Premium ve Minimalist
@@ -8156,6 +8178,7 @@ function savePosition() {
     const type = getVal('newPosType');
     const role = getVal('newPosRole');
     const icon = getVal('newPosIcon') || '👤';
+    const level = parseInt(getVal('newPosLevel')) || 1;
     
     if (!id || !name) {
         toast('ID ve Ad zorunludur', 'error');
@@ -8168,7 +8191,7 @@ function savePosition() {
         return;
     }
     
-    STATE.positions.push({ id, name, type, role, icon });
+    STATE.positions.push({ id, name, type, role, icon, level });
     if (!STATE.templates[id]) STATE.templates[id] = '';
     
     // Yetki varsayılanlarını oluştur (rol bazlı)
@@ -8192,11 +8215,14 @@ function savePosition() {
 function editPosition(i) {
     const p = STATE.positions[i];
     const roles = [
-        { id: 'barista', name: 'Barista (Sınırlı Yetki)' },
-        { id: 'mudur_yardimcisi', name: 'Müdür Yardımcısı (Orta Yetki)' },
-        { id: 'magaza_muduru', name: 'Mağaza Müdürü (Geniş Yetki)' },
-        { id: 'bolge_muduru', name: 'Bölge Müdürü (Tam Yetki)' }
+        { id: 'barista', name: 'Barista (Sınırlı Yetki)', defaultLevel: 1 },
+        { id: 'mudur_yardimcisi', name: 'Müdür Yardımcısı (Orta Yetki)', defaultLevel: 2 },
+        { id: 'magaza_muduru', name: 'Mağaza Müdürü (Geniş Yetki)', defaultLevel: 3 },
+        { id: 'bolge_muduru', name: 'Bölge Müdürü (Tam Yetki)', defaultLevel: 4 }
     ];
+    
+    // Mevcut level veya role'e göre varsayılan
+    const currentLevel = p.level || (roles.find(r => r.id === p.role)?.defaultLevel || 1);
     
     showModal('Pozisyon Düzenle', `
         <div class="form-grid">
@@ -8219,9 +8245,20 @@ function editPosition(i) {
             </div>
             <div class="form-group">
                 <label class="form-label">Sistem Rolü</label>
-                <select id="editPosRole" class="form-select">
-                    ${roles.map(r => `<option value="${r.id}" ${p.role===r.id?'selected':''}>${r.name}</option>`).join('')}
+                <select id="editPosRole" class="form-select" onchange="updateLevelFromRole()">
+                    ${roles.map(r => `<option value="${r.id}" data-level="${r.defaultLevel}" ${p.role===r.id?'selected':''}>${r.name}</option>`).join('')}
                 </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Hiyerarşi Seviyesi</label>
+                <select id="editPosLevel" class="form-select">
+                    <option value="1" ${currentLevel===1?'selected':''}>1 - En Alt (Barista)</option>
+                    <option value="2" ${currentLevel===2?'selected':''}>2 - Alt-Orta (Müdür Yardımcısı)</option>
+                    <option value="3" ${currentLevel===3?'selected':''}>3 - Orta (Mağaza Müdürü)</option>
+                    <option value="4" ${currentLevel===4?'selected':''}>4 - Üst (Bölge Müdürü)</option>
+                    <option value="5" ${currentLevel===5?'selected':''}>5 - En Üst (Yönetici)</option>
+                </select>
+                <small style="color:var(--tx2);font-size:.7rem">Düşük seviye, yüksek seviyeyi düzenleyemez</small>
             </div>
             <div class="form-group full">
                 <label class="form-label">İkon</label>
@@ -8246,13 +8283,15 @@ function updatePosition(i) {
     const newId = getVal('editPosId');
     const role = getVal('editPosRole');
     const icon = getVal('editPosIcon') || '👤';
+    const level = parseInt(getVal('editPosLevel')) || 1;
     
     STATE.positions[i] = {
         id: newId,
         name: getVal('editPosName'),
         type: getVal('editPosType'),
         role: role,
-        icon: icon
+        icon: icon,
+        level: level
     };
     
     // Template'i taşı
@@ -8788,6 +8827,48 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ==================== PERSONEL YÖNETİMİ ====================
+
+// Hiyerarşi seviyesi hesaplama (dinamik - STATE.positions'dan)
+function getHierarchyLevel(role, position) {
+    // Yönetici her zaman en üst
+    if (role === 'yonetici') return 5;
+    
+    // Pozisyona göre seviye bul
+    const pos = STATE.positions.find(p => p.name === position || p.role === role);
+    if (pos?.level) return pos.level;
+    
+    // Varsayılan role mapping (pozisyonda level yoksa)
+    const defaultLevels = {
+        'barista': 1,
+        'mudur_yardimcisi': 2,
+        'magaza_mudur_yardimcisi': 2,
+        'magaza_muduru': 3,
+        'bolge_muduru': 4,
+        'yonetici': 5
+    };
+    return defaultLevels[role] || 1;
+}
+
+// Düzenleme/silme yetkisi var mı?
+function canEditPersonel(targetRole, targetPosition, targetEmail) {
+    // Yönetici her şeyi düzenleyebilir
+    if (currentUser?.role === 'yonetici') return true;
+    
+    // Kendi kartını herkes düzenleyebilir
+    if (currentUser?.email === targetEmail) return true;
+    
+    // Personel yetkisi yoksa hiç düzenleyemez
+    const perms = window.userAdvancedPermissions;
+    if (!perms?.pages?.personel?.edit) return false;
+    
+    // Hiyerarşi kontrolü
+    const myLevel = getHierarchyLevel(currentUser?.role, null);
+    const targetLevel = getHierarchyLevel(targetRole, targetPosition);
+    
+    // Sadece altındakileri düzenleyebilir (eşit seviye dahil)
+    return myLevel >= targetLevel;
+}
+
 async function loadPersonelList() {
     const container = document.getElementById('personelListContainer');
     if (!container) return;
@@ -8797,8 +8878,17 @@ async function loadPersonelList() {
     try {
         // Mağaza müdürü için şube filtresi
         const isFullAdmin = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
-        const isYonetici = currentUser?.role === 'yonetici'; // Sadece yönetici şifre görebilir
+        const isYonetici = currentUser?.role === 'yonetici';
         const userBranch = currentUser?.branch;
+        
+        // Şifre yetkileri (dinamik)
+        const perms = window.userAdvancedPermissions;
+        const canViewPassword = isYonetici || perms?.special?.view_password;
+        const canAssignPassword = isYonetici || perms?.special?.assign_password;
+        const canChangePassword = isYonetici || perms?.special?.change_others_password;
+        
+        // Kullanıcının hiyerarşi seviyesi
+        const myLevel = getHierarchyLevel(currentUser?.role, null);
         
         let query = db.collection('personel').orderBy('name');
         // Mağaza müdürü sadece kendi şubesinin personelini görebilir
@@ -8816,14 +8906,11 @@ async function loadPersonelList() {
         // Şifre göster/gizle state
         window._showPasswords = window._showPasswords || false;
         
-        // Pozisyondan rol belirleme
-        const positionToRole = {
-            'Barista': 'barista',
-            'Barista / Servis': 'barista',
-            'Mağaza Müdürü': 'magaza_muduru',
-            'Mağaza Müdür Yardımcısı': 'magaza_mudur_yardimcisi',
-            'Bölge Müdürü': 'bolge_muduru'
-        };
+        // Pozisyondan rol belirleme (dinamik)
+        function getRoleFromPosition(position) {
+            const pos = STATE.positions.find(p => p.name === position);
+            return pos?.role || 'barista';
+        }
         
         // Rol görünümleri - SVG ikonlar
         const roleStyles = {
@@ -8831,6 +8918,7 @@ async function loadPersonelList() {
             'bolge_muduru': { name: 'Bölge Müdürü', color: '#9b59b6', icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>' },
             'magaza_muduru': { name: 'Mağaza Müdürü', color: '#008c95', icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>' },
             'magaza_mudur_yardimcisi': { name: 'Müdür Yrd.', color: '#3498db', icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' },
+            'mudur_yardimcisi': { name: 'Müdür Yrd.', color: '#3498db', icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' },
             'barista': { name: 'Barista', color: '#27ae60', icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>' }
         };
         
@@ -8857,9 +8945,17 @@ async function loadPersonelList() {
             
             if (!docId) return;
             
-            const role = p.role || positionToRole[p.position] || 'barista';
+            const role = p.role || getRoleFromPosition(p.position);
             const roleInfo = roleStyles[role] || { name: 'Personel', color: '#9ca3af', icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' };
             const hasAccess = !!(p.email && p.password);
+            
+            // Hiyerarşi kontrolü
+            const targetLevel = getHierarchyLevel(role, p.position);
+            const canEdit = canEditPersonel(role, p.position, p.email);
+            const isOwnCard = currentUser?.email === p.email;
+            
+            // Barista seviyesinde ve başkasının kartı ise kısıtlı görünüm
+            const showLimitedView = myLevel <= 1 && !isOwnCard && !isYonetici;
             
             // Şube rengi
             const isMoonberry = (p.branch || '').includes('Şişli') || (p.branch || '').includes('Merkez');
@@ -8871,7 +8967,7 @@ async function loadPersonelList() {
             html += `
                 <div class="personel-card" data-search="${searchData}" data-branch="${p.branch || ''}" style="background:var(--bg2);border:1px solid var(--cardBorder);border-left:3px solid ${branchColor};border-radius:10px;padding:14px;transition:all .15s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
                     <!-- Header -->
-                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:${showLimitedView ? '0' : '10px'}">
                         <div style="width:40px;height:40px;background:linear-gradient(135deg,${roleInfo.color},${roleInfo.color}88);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;overflow:hidden">
                             ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover">` : roleInfo.icon}
                         </div>
@@ -8882,7 +8978,8 @@ async function loadPersonelList() {
                         <span style="background:${roleInfo.color}15;color:${roleInfo.color};padding:3px 8px;border-radius:5px;font-size:.65rem;font-weight:600">${roleInfo.name}</span>
                     </div>
                     
-                    <!-- Info Grid -->
+                    ${showLimitedView ? '' : `
+                    <!-- Info Grid - Sadece yetkisi olanlar görür -->
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:.75rem;color:var(--tx2);margin-bottom:10px">
                         <div style="display:flex;align-items:center;gap:4px">${ICONS.location} ${p.branch || '-'}</div>
                         <div style="display:flex;align-items:center;gap:4px">${ICONS.phone} ${p.phone || '-'}</div>
@@ -8890,12 +8987,13 @@ async function loadPersonelList() {
                         <div style="display:flex;align-items:center;gap:4px">${ICONS.id} ${p.tc ? p.tc.slice(0, 3) + '***' : '-'}</div>
                     </div>
                     
-                    <!-- Footer -->
+                    <!-- Footer - Sadece düzenleme yetkisi olanlar görür -->
                     <div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--bg4)">
                         <div style="font-size:.7rem;color:${hasAccess ? '#27ae60' : 'var(--tx3)'}; display:flex;align-items:center;gap:4px">
                             ${hasAccess ? ICONS.unlock : (p.email ? ICONS.key : ICONS.lock)}
                             ${hasAccess ? 'Aktif' : (p.email ? 'Şifre yok' : 'E-posta yok')}
                         </div>
+                        ${canEdit ? `
                         <div style="display:flex;gap:4px">
                             <button onclick="editPersonel('${docId}')" style="padding:5px 10px;background:var(--bg3);border:none;border-radius:5px;color:var(--tx);cursor:pointer;font-size:.75rem;display:flex;align-items:center;gap:4px;transition:all .15s" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">
                                 ${ICONS.edit} Düzenle
@@ -8904,7 +9002,9 @@ async function loadPersonelList() {
                                 ${ICONS.trash}
                             </button>
                         </div>
+                        ` : `<span style="font-size:.65rem;color:var(--tx3)">Sadece görüntüleme</span>`}
                     </div>
+                    `}
                 </div>
             `;
         });
@@ -8949,8 +9049,17 @@ function showAddPersonelModal(editId = null) {
     const isEdit = !!editId;
     const title = isEdit ? 'Personel Düzenle' : 'Yeni Personel Ekle';
     
-    // Brüt ücret sadece yönetici ve bölge müdürü görebilir
-    const canSeeSalary = currentUser?.role === 'yonetici' || currentUser?.role === 'bolge_muduru';
+    // Yetki kontrolleri (dinamik)
+    const isYonetici = currentUser?.role === 'yonetici';
+    const perms = window.userAdvancedPermissions;
+    const canSeeSalary = isYonetici || perms?.special?.view_salary;
+    const canViewPassword = isYonetici || perms?.special?.view_password;
+    const canAssignPassword = isYonetici || perms?.special?.assign_password;
+    const canChangePassword = isYonetici || perms?.special?.change_others_password;
+    
+    // Şifre alanını gösterme koşulu
+    const showPasswordField = isYonetici || canAssignPassword || canChangePassword;
+    
     const salaryField = canSeeSalary 
         ? `<div class="form-group"><label class="form-label">Brüt Ücret (TL)</label><input type="number" id="personelSalary" class="form-input"></div>`
         : `<input type="hidden" id="personelSalary" value="">`;
@@ -8970,6 +9079,7 @@ function showAddPersonelModal(editId = null) {
             ${salaryField}
         </div>
         
+        ${showPasswordField ? `
         <!-- SİSTEM GİRİŞİ - Kompakt -->
         <div style="margin-top:16px;padding:12px 16px;background:linear-gradient(135deg,rgba(0,140,149,.06),rgba(255,134,116,.06));border-radius:10px;border:1px solid var(--cardBorder)">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
@@ -8985,8 +9095,8 @@ function showAddPersonelModal(editId = null) {
                 <div style="flex:1">
                     <label style="font-size:.75rem;color:var(--tx2);margin-bottom:4px;display:block">Şifre ${isEdit ? '<span style="color:var(--tx3)">(değiştirmek için girin)</span>' : ''}</label>
                     <div style="position:relative">
-                        <input type="password" id="personelPassword" class="form-input" style="font-size:.85rem;padding-right:${isEdit && currentUser?.role === 'yonetici' ? '36px' : '12px'}" minlength="6" placeholder="${isEdit ? '••••••••' : 'En az 6 karakter'}">
-                        ${isEdit && currentUser?.role === 'yonetici' ? `
+                        <input type="password" id="personelPassword" class="form-input" style="font-size:.85rem;padding-right:${isEdit && canViewPassword ? '36px' : '12px'}" minlength="6" placeholder="${isEdit ? '••••••••' : 'En az 6 karakter'}">
+                        ${isEdit && canViewPassword ? `
                             <button type="button" onclick="togglePersonelPasswordView()" id="btnTogglePassword" 
                                 style="position:absolute;right:2px;top:50%;transform:translateY(-50%);width:30px;height:30px;background:transparent;border:none;cursor:pointer;color:var(--tx3);display:flex;align-items:center;justify-content:center;border-radius:4px;transition:all .12s"
                                 onmouseover="this.style.color='var(--tx)'"
@@ -9001,6 +9111,10 @@ function showAddPersonelModal(editId = null) {
                 </div>
             </div>
         </div>
+        ` : `
+        <input type="hidden" id="personelEmail" value="">
+        <input type="hidden" id="personelPassword" value="">
+        `}
     `;
     
     const footer = `
@@ -9033,8 +9147,12 @@ async function loadPersonelForEdit(id) {
             document.getElementById('personelSalary').value = p.salary || '';
             // Şifre alanı - düzenleme modunda boş bırakılır (değişmeyecekse)
             
-            // Admin için mevcut şifreyi credentials'dan al
-            if (currentUser?.role === 'yonetici' && p.email) {
+            // Şifre görme yetkisi olan için mevcut şifreyi credentials'dan al
+            const isYonetici = currentUser?.role === 'yonetici';
+            const perms = window.userAdvancedPermissions;
+            const canViewPassword = isYonetici || perms?.special?.view_password;
+            
+            if (canViewPassword && p.email) {
                 // Credentials koleksiyonundan şifre çek
                 const credPassword = await getCredential(p.email);
                 window._currentPersonelPassword = credPassword;
