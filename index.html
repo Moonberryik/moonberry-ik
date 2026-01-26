@@ -2368,7 +2368,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <div class="admin-card">
                         <div class="admin-card-header">
                             <div class="admin-card-title">📍 Şubeler</div>
-                            <button class="btn btn-sm btn-primary" onclick="addBranch()">+ Ekle</button>
+                            <button id="btnAddBranch" class="btn btn-sm btn-primary" onclick="addBranch()">+ Ekle</button>
                         </div>
                         <div class="admin-list" id="branchList"></div>
                     </div>
@@ -6703,16 +6703,22 @@ function renderAdminLists() {
         if (rolePreviewCard) rolePreviewCard.style.display = 'block';
     }
     
-    // Branches
+    // Branches - yetki kontrolü ile
     const branchList = document.getElementById('branchList');
     if (branchList) {
+        const isYonetici = currentUser?.role === 'yonetici';
+        const perms = window.userAdvancedPermissions;
+        const canManageBranches = isYonetici || perms?.special?.manage_branches;
+        
         branchList.innerHTML = STATE.branches.map((b, i) => `
             <div class="admin-list-item">
                 <div class="admin-list-item-text">${b}</div>
+                ${canManageBranches ? `
                 <div class="admin-list-item-actions">
                     <button class="admin-btn-icon admin-btn-edit" onclick="editBranch(${i})">✏️</button>
                     <button class="admin-btn-icon admin-btn-delete" onclick="deleteBranch(${i})">🗑️</button>
                 </div>
+                ` : ''}
             </div>
         `).join('');
     }
@@ -12184,7 +12190,8 @@ const PERMISSION_STRUCTURE = {
         { id: 'admin_pozisyonlar', label: 'Pozisyonlar' },
         { id: 'admin_ihlaller', label: 'İhlal Düzenleme' },
         { id: 'admin_sablonlar', label: 'Şablonlar' },
-        { id: 'admin_oturumlar', label: 'Oturum Ayarları' }
+        { id: 'admin_oturumlar', label: 'Oturum Ayarları' },
+        { id: 'admin_yedekler', label: 'Yedekler' }
     ],
     special: [
         { id: 'print_shift', label: 'Shift planını yazdırabilir' },
@@ -12197,7 +12204,8 @@ const PERMISSION_STRUCTURE = {
         { id: 'assign_password', label: 'Şifre atayabilir' },
         { id: 'view_password', label: 'Personel şifrelerini görebilir' },
         { id: 'change_others_password', label: 'Başkasının şifresini değiştirebilir' },
-        { id: 'add_announcement', label: 'Duyuru ekleyebilir' }
+        { id: 'add_announcement', label: 'Duyuru ekleyebilir' },
+        { id: 'manage_branches', label: 'Şube ekleyebilir/silebilir' }
     ],
     limits: [
         { id: 'shift_history_weeks', label: 'Shift geçmiş limiti (hafta)', type: 'number', options: [1, 5, 12, 999] }
@@ -12209,32 +12217,32 @@ const DEFAULT_ROLE_PERMISSIONS = {
         pages: { dashboard: { view: true, edit: false }, personel: { view: false, edit: false }, puantaj: { view: true, edit: false }, shift: { view: true, edit: false }, checklist: { view: true, edit: true }, katalog: { view: false, edit: false } },
         documents: { sozlesme: { view: false, edit: false }, tutanak: { view: false, edit: false }, savunma: { view: false, edit: false }, fesih: { view: false, edit: false }, istifa: { view: false, edit: false }, ibraname: { view: false, edit: false } },
         forms: { borc: { view: false, edit: false }, avans: { view: false, edit: false }, zimmet: { view: false, edit: false } },
-        admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: false, admin_sablonlar: false, admin_oturumlar: false },
-        special: { print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false },
+        admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: false, admin_sablonlar: false, admin_oturumlar: false, admin_yedekler: false },
+        special: { print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false, manage_branches: false },
         limits: { shift_history_weeks: 1 }
     },
     magaza_mudur_yardimcisi: {
         pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
-        admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false },
-        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false },
+        admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false, admin_yedekler: false },
+        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false, manage_branches: false },
         limits: { shift_history_weeks: 5 }
     },
     magaza_muduru: {
         pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
-        admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false },
-        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false },
+        admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false, admin_yedekler: false },
+        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false, manage_branches: false },
         limits: { shift_history_weeks: 5 }
     },
     bolge_muduru: {
         pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: true }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
-        admin: { admin_genel: true, admin_kullanicilar: false, admin_puantaj: true, admin_subeler: true, admin_pozisyonlar: true, admin_ihlaller: true, admin_sablonlar: true, admin_oturumlar: true },
-        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true, view_password: true, change_others_password: true, add_announcement: true },
+        admin: { admin_genel: true, admin_kullanicilar: false, admin_puantaj: true, admin_subeler: true, admin_pozisyonlar: true, admin_ihlaller: true, admin_sablonlar: true, admin_oturumlar: true, admin_yedekler: false },
+        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true, view_password: true, change_others_password: true, add_announcement: true, manage_branches: false },
         limits: { shift_history_weeks: 999 }
     }
 };
@@ -13032,6 +13040,20 @@ function applyAdvancedPermissions() {
         const canAddPersonel = perms.pages?.personel?.add === true;
         btnNewPersonel.style.display = canAddPersonel ? '' : 'none';
         console.log('[Permission] Yeni Personel butonu:', canAddPersonel ? 'görünür' : 'gizli');
+    }
+    
+    // "Şube Ekle" butonu yetkisi - manage_branches yetkisi olmayan göremez
+    const btnAddBranch = document.getElementById('btnAddBranch');
+    if (btnAddBranch) {
+        const canManageBranches = perms.special?.manage_branches === true;
+        btnAddBranch.style.display = canManageBranches ? '' : 'none';
+    }
+    
+    // Yedekler sekmesi yetkisi - admin_yedekler yetkisi olmayan göremez
+    const tabYedekler = document.getElementById('tab-yedekler');
+    if (tabYedekler) {
+        const canViewBackups = perms.admin?.admin_yedekler === true;
+        tabYedekler.style.display = canViewBackups ? '' : 'none';
     }
     
     console.log('✅ Gelişmiş izinler uygulandı', { 
@@ -20429,16 +20451,26 @@ async function loadChecklistTypesConfig() {
     }
 }
 
-// Şube tab'larını render et (dinamik)
+// Şube tab'larını render et (dinamik + yetki bazlı)
 function renderChecklistTypeBranchTabs() {
     const container = document.getElementById('checklistTypeBranchTabs');
     if (!container) return;
     
-    const branches = STATE.branches || [];
+    let branches = STATE.branches || [];
     if (branches.length === 0) return;
     
-    // İlk şubeyi seç (eğer seçili değilse)
-    if (!selectedChecklistTypeBranch) {
+    // Yetki kontrolü: Sadece Yönetici ve Bölge Müdürü tüm şubeleri görsün
+    const isAdmin = currentUser?.role === 'yonetici';
+    const isBolgeMuduru = currentUser?.role === 'bolge_muduru';
+    const canSeeAllBranches = isAdmin || isBolgeMuduru;
+    
+    if (!canSeeAllBranches && currentUser?.branch && currentUser?.branch !== 'all') {
+        // Sadece kendi şubesini göster
+        branches = branches.filter(b => b === currentUser.branch);
+    }
+    
+    // İlk şubeyi seç (eğer seçili değilse veya seçili şube listede yoksa)
+    if (!selectedChecklistTypeBranch || !branches.includes(selectedChecklistTypeBranch)) {
         selectedChecklistTypeBranch = branches[0];
     }
     
