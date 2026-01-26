@@ -91,14 +91,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 /* App Layout */
 .app{display:flex;min-height:100vh;opacity:0;transition:opacity .3s}
 .sidebar{width:260px;background:var(--sidebarBg);border-right:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;position:fixed;height:100vh;z-index:100;transition:width .3s ease}
-.sidebar-header{height:56px;padding:0 16px;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:space-between}
+.sidebar-header{height:56px;padding:0 16px;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center}
 .logo{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
 .logo-text-wrap{overflow:hidden}
 .logo-text{font-size:1rem;font-weight:700;letter-spacing:-.02em;color:var(--sidebarTx);white-space:nowrap}
 .logo-sub{font-size:.65rem;color:var(--sidebarTx3);margin-top:1px;white-space:nowrap}
-.sidebar-collapse-btn{width:32px;height:32px;background:transparent;border:none;border-radius:6px;color:var(--sidebarTx2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
-.sidebar-collapse-btn:hover{background:rgba(255,134,116,.15);color:#fff}
-.sidebar-collapse-btn svg{transition:transform .3s}
 .nav{flex:1;padding:12px 10px;overflow-y:auto}
 .nav-group{margin-bottom:8px}
 .nav-label{font-size:.75rem;color:var(--sidebarTx2);padding:10px 14px;margin-bottom:0;font-weight:500;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border-radius:var(--radiusSm);transition:var(--transition)}
@@ -113,8 +110,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .nav-item .icon{font-size:1rem;width:20px;text-align:center;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .nav-item .icon svg{width:18px;height:18px;stroke:currentColor;stroke-width:2;fill:none}
 .nav-divider{height:1px;background:rgba(255,255,255,.1);margin:12px 12px}
-.logout-btn{width:100%;padding:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:8px;color:var(--sidebarTx2);cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.8rem}
-.logout-btn:hover{background:rgba(231,76,60,.12);border-color:rgba(231,76,60,.2);color:#e74c3c}
 
 /* Sidebar Collapsed */
 .sidebar.collapsed{width:60px}
@@ -122,8 +117,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .sidebar.collapsed .logo{justify-content:center;flex:none}
 .sidebar.collapsed .logo img{width:28px}
 .sidebar.collapsed .logo-text-wrap{display:none}
-.sidebar.collapsed .sidebar-collapse-btn{position:absolute;right:8px}
-.sidebar.collapsed .sidebar-collapse-btn svg{transform:rotate(180deg)}
 .sidebar.collapsed .nav{padding:8px 4px}
 .sidebar.collapsed .nav-label{padding:10px;justify-content:center;font-size:0}
 .sidebar.collapsed .nav-label .nav-arrow{display:none}
@@ -136,9 +129,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .sidebar.collapsed .sidebar-user .user-details{display:none}
 .sidebar.collapsed .sidebar-user .user-avatar{margin:0 auto}
 .sidebar.collapsed #userInfo{margin:0 0 8px 0;padding:4px;justify-content:center}
-.sidebar.collapsed #userInfo svg{display:none}
-.sidebar.collapsed .logout-btn{padding:10px;justify-content:center}
-.sidebar.collapsed .logout-btn span{display:none}
 
 /* Main Content */
 .main{flex:1;margin-left:260px;background:var(--bg);min-height:100vh;position:relative;transition:margin-left .3s ease}
@@ -537,38 +527,35 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         <div class="logo-sub">Yönetim Paneli</div>
                     </div>
                 </div>
-                <button class="sidebar-collapse-btn" onclick="toggleSidebar()" title="Daralt">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 19l-7-7 7-7"/><path d="M18 19l-7-7 7-7"/></svg>
-                </button>
             </div>
             <nav class="nav">
                 <!-- Ana Sayfa -->
-                <div class="nav-item active" data-page="dashboard" onclick="goTo('dashboard')">
+                <div class="nav-item active" data-page="dashboard" data-tooltip="Ana Sayfa" onclick="goTo('dashboard')">
                     <span class="icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> Ana Sayfa
                 </div>
                 
                 <!-- Puantaj -->
-                <div class="nav-item" data-page="puantaj" onclick="goTo('puantaj')">
+                <div class="nav-item" data-page="puantaj" data-tooltip="Puantaj" onclick="goTo('puantaj')">
                     <span class="icon"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span> Puantaj
                 </div>
                 
                 <!-- Shift Planı -->
-                <div class="nav-item" data-page="shift" onclick="goTo('shift')">
+                <div class="nav-item" data-page="shift" data-tooltip="Shift Planı" onclick="goTo('shift')">
                     <span class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> Shift Planı
                 </div>
                 
                 <!-- Checklist -->
-                <div class="nav-item" data-page="checklist" onclick="goTo('checklist')">
+                <div class="nav-item" data-page="checklist" data-tooltip="Checklist" onclick="goTo('checklist')">
                     <span class="icon"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span> Checklist
                 </div>
                 
                 <!-- G13: Müdür Notları (sadece yönetici görebilir) -->
-                <div class="nav-item" id="nav-notlar" data-page="notlar" onclick="goTo('notlar')">
+                <div class="nav-item" id="nav-notlar" data-page="notlar" data-tooltip="Notlar" onclick="goTo('notlar')">
                     <span class="icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> Notlar
                 </div>
                 
                 <!-- Personel -->
-                <div class="nav-item" data-page="personel" onclick="goTo('personel')">
+                <div class="nav-item" data-page="personel" data-tooltip="Personel" onclick="goTo('personel')">
                     <span class="icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Personel
                 </div>
                 
@@ -580,22 +567,22 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         📄 Belgeler <span class="nav-arrow">▼</span>
                     </div>
                     <div class="nav-items collapsed">
-                        <div class="nav-item" data-page="sozlesme" onclick="goTo('sozlesme')">
+                        <div class="nav-item" data-page="sozlesme" data-tooltip="İş Sözleşmesi" onclick="goTo('sozlesme')">
                             <span class="icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span> İş Sözleşmesi
                         </div>
-                        <div class="nav-item" data-page="tutanak" onclick="goTo('tutanak')">
+                        <div class="nav-item" data-page="tutanak" data-tooltip="Tutanak" onclick="goTo('tutanak')">
                             <span class="icon"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span> Tutanak
                         </div>
-                        <div class="nav-item" data-page="savunma" onclick="goTo('savunma')">
+                        <div class="nav-item" data-page="savunma" data-tooltip="Savunma İsteme" onclick="goTo('savunma')">
                             <span class="icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> Savunma İsteme
                         </div>
-                        <div class="nav-item" data-page="fesih" onclick="goTo('fesih')">
+                        <div class="nav-item" data-page="fesih" data-tooltip="Fesih" onclick="goTo('fesih')">
                             <span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></span> Fesih
                         </div>
-                        <div class="nav-item" data-page="istifa" onclick="goTo('istifa')">
+                        <div class="nav-item" data-page="istifa" data-tooltip="İstifa" onclick="goTo('istifa')">
                             <span class="icon"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span> İstifa
                         </div>
-                        <div class="nav-item" data-page="ibraname" onclick="goTo('ibraname')">
+                        <div class="nav-item" data-page="ibraname" data-tooltip="İbraname" onclick="goTo('ibraname')">
                             <span class="icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span> İbraname
                         </div>
                     </div>
@@ -607,13 +594,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         📑 Formlar <span class="nav-arrow">▼</span>
                     </div>
                     <div class="nav-items collapsed">
-                        <div class="nav-item" data-page="borc" onclick="goTo('borc')">
+                        <div class="nav-item" data-page="borc" data-tooltip="Borç İkrar" onclick="goTo('borc')">
                             <span class="icon"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span> Borç İkrar
                         </div>
-                        <div class="nav-item" data-page="avans" onclick="goTo('avans')">
+                        <div class="nav-item" data-page="avans" data-tooltip="Avans Talebi" onclick="goTo('avans')">
                             <span class="icon"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Avans Talebi
                         </div>
-                        <div class="nav-item" data-page="zimmet" onclick="goTo('zimmet')">
+                        <div class="nav-item" data-page="zimmet" data-tooltip="Zimmet Formu" onclick="goTo('zimmet')">
                             <span class="icon"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></span> Zimmet Formu
                         </div>
                     </div>
@@ -622,28 +609,30 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <div class="nav-divider"></div>
                 
                 <!-- İhlal Kataloğu (tek başına) -->
-                <div class="nav-item" data-page="katalog" onclick="goTo('katalog')">
+                <div class="nav-item" data-page="katalog" data-tooltip="İhlal Kataloğu" onclick="goTo('katalog')">
                     <span class="icon"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span> İhlal Kataloğu
                 </div>
                 
                 <!-- Ayarlar (en altta) -->
-                <div class="nav-item" data-page="admin" onclick="openAdminWithPin()">
+                <div class="nav-item" data-page="admin" data-tooltip="Ayarlar" onclick="openAdminWithPin()">
                     <span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Ayarlar
                 </div>
                 <!-- Kullanıcı Bilgisi ve Çıkış -->
-                <div class="sidebar-user" style="margin-top:auto;padding:16px 20px;border-top:1px solid rgba(255,255,255,.1)">
-                    <div id="userInfo" onclick="goTo('admin');showAdminTab('genel',document.querySelector('.admin-tab'))" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:8px;margin:-8px -8px 8px -8px;border-radius:8px;transition:background .2s" onmouseover="this.style.background='rgba(255,255,255,.1)'" onmouseout="this.style.background='transparent'" title="Profil Ayarları">
+                <div class="sidebar-user" style="margin-top:auto;padding:12px;border-top:1px solid rgba(255,255,255,.1)">
+                    <div id="userInfo" onclick="goTo('admin');showAdminTab('genel',document.querySelector('.admin-tab'))" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:8px;margin-bottom:8px;border-radius:8px;transition:background .2s" onmouseover="this.style.background='rgba(255,255,255,.1)'" onmouseout="this.style.background='transparent'" title="Profil Ayarları">
                         <div class="user-avatar" style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;flex-shrink:0;overflow:hidden" id="userAvatar">👤</div>
                         <div class="user-details" style="flex:1;overflow:hidden">
                             <div id="userName" style="color:var(--sidebarTx);font-size:.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Yükleniyor...</div>
                             <div id="userRole" style="color:var(--sidebarTx2);font-size:.7rem">-</div>
                         </div>
-                        <svg class="user-details" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sidebarTx2)" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     </div>
-                    <button class="logout-btn" onclick="logout()" title="Çıkış Yap">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                        <span>Çıkış</span>
-                    </button>
+                    <!-- Çıkış ve Daralt butonları - nav-item stili -->
+                    <div class="nav-item sidebar-action-btn" data-tooltip="Çıkış Yap" onclick="logout()">
+                        <span class="icon"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span> Çıkış Yap
+                    </div>
+                    <div class="nav-item sidebar-action-btn" data-tooltip="Menüyü Daralt" onclick="toggleSidebar()">
+                        <span class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg></span> Daralt
+                    </div>
                 </div>
             </nav>
         </aside>
@@ -4375,11 +4364,10 @@ function initSidebarState() {
     if (sidebar) {
         sidebar.addEventListener('click', (e) => {
             if (sidebar.classList.contains('collapsed')) {
-                // Toggle butonu veya nav-item'a tıklanmadıysa aç
-                const isToggle = e.target.closest('.sidebar-collapse-btn');
+                // Nav-item veya sidebar-action-btn'a tıklanmadıysa aç
                 const isNavItem = e.target.closest('.nav-item');
-                const isLogout = e.target.closest('.logout-btn');
-                if (!isToggle && !isNavItem && !isLogout) {
+                const isUserInfo = e.target.closest('#userInfo');
+                if (!isNavItem && !isUserInfo) {
                     toggleSidebar();
                 }
             }
