@@ -4491,7 +4491,7 @@ function renderPositionListCombined() {
     container.innerHTML = STATE.positions.map((p, i) => `
         <div class="admin-list-item" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border-radius:10px;margin-bottom:8px">
             <div style="display:flex;align-items:center;gap:12px">
-                <span style="font-size:1.5rem">${p.icon || '👤'}</span>
+                ${getPositionIconHtml(p.icon, 28)}
                 <div>
                     <div style="font-weight:600;color:var(--tx)">${p.name}</div>
                     <div style="font-size:.75rem;color:var(--tx2)">${p.type} • <span style="color:${roleColors[p.role] || '#888'}">${roleNames[p.role] || 'Rol atanmamış'}</span></div>
@@ -8048,6 +8048,24 @@ const ICON_LIBRARY = {
         { id: 'flag', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>', label: 'Bayrak' }
     ]
 };
+
+// İkon ID'sinden SVG HTML döndür
+function getPositionIconHtml(iconId, size = 24) {
+    // Emoji kontrolü (eski veriler için)
+    if (iconId && iconId.length <= 4 && /[\u{1F300}-\u{1F9FF}]/u.test(iconId)) {
+        return `<span style="font-size:${size}px">${iconId}</span>`;
+    }
+    
+    // ICON_LIBRARY'den bul
+    const icon = Object.values(ICON_LIBRARY).flat().find(i => i.id === iconId);
+    if (icon) {
+        return `<span style="width:${size}px;height:${size}px;display:inline-flex;align-items:center;justify-content:center;color:var(--tx)">${icon.svg}</span>`;
+    }
+    
+    // Varsayılan user ikonu
+    const defaultIcon = ICON_LIBRARY['Pozisyon'].find(i => i.id === 'user');
+    return `<span style="width:${size}px;height:${size}px;display:inline-flex;align-items:center;justify-content:center;color:var(--tx)">${defaultIcon?.svg || '👤'}</span>`;
+}
 
 // Geriye uyumluluk için emoji mapping
 const EMOJI_TO_ICON = {
@@ -12022,6 +12040,63 @@ const DEFAULT_ROLE_PERMISSIONS = {
 
 // Matrix için cache (değişiklikleri takip etmek için)
 let matrixPermissionsCache = {};
+let matrixHasUnsavedChanges = false;
+
+// Sayfa kapatma uyarısı
+window.addEventListener('beforeunload', function(e) {
+    if (matrixHasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'Kaydedilmemiş değişiklikler var. Çıkmak istediğinize emin misiniz?';
+        return e.returnValue;
+    }
+});
+
+// Unsaved changes modal göster
+function showUnsavedChangesModal(callback) {
+    const modalHtml = `
+        <div id="unsavedChangesModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:10000">
+            <div style="background:var(--bg2);border-radius:16px;padding:24px;max-width:400px;width:90%;box-shadow:var(--shadow)">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+                    <div style="width:48px;height:48px;background:rgba(255,134,116,.15);border-radius:12px;display:flex;align-items:center;justify-content:center">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff8674" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </div>
+                    <div>
+                        <div style="font-weight:600;color:var(--tx);font-size:1.1rem">Kaydedilmemiş Değişiklikler</div>
+                        <div style="font-size:.85rem;color:var(--tx2)">Değişiklikleriniz kaybolacak</div>
+                    </div>
+                </div>
+                <p style="color:var(--tx2);font-size:.9rem;margin-bottom:20px">Sayfadan ayrılmadan önce değişiklikleri kaydetmek ister misiniz?</p>
+                <div style="display:flex;gap:12px;justify-content:flex-end">
+                    <button onclick="document.getElementById('unsavedChangesModal').remove()" class="btn btn-ghost">İptal</button>
+                    <button onclick="discardMatrixChanges()" class="btn" style="background:var(--red);color:white">Kaydetme</button>
+                    <button onclick="saveAndContinue()" class="btn btn-primary">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    window._unsavedChangesCallback = callback;
+}
+
+// Değişiklikleri kaydetmeden devam
+function discardMatrixChanges() {
+    matrixHasUnsavedChanges = false;
+    document.getElementById('unsavedChangesModal')?.remove();
+    if (window._unsavedChangesCallback) {
+        window._unsavedChangesCallback();
+        window._unsavedChangesCallback = null;
+    }
+}
+
+// Kaydet ve devam
+async function saveAndContinue() {
+    await saveMatrixPermissions();
+    document.getElementById('unsavedChangesModal')?.remove();
+    if (window._unsavedChangesCallback) {
+        window._unsavedChangesCallback();
+        window._unsavedChangesCallback = null;
+    }
+}
 
 // Kategori başlıkları ve ikonları
 const PERMISSION_CATEGORIES = {
@@ -12064,7 +12139,7 @@ async function renderPermissionMatrix() {
         const singleCategories = Object.keys(PERMISSION_CATEGORIES).filter(k => !PERMISSION_CATEGORIES[k].hasDual);
         
         // Her pozisyon için colspan hesapla
-        html += `<th colspan="2" class="role-header" style="background:var(--accentLight);color:var(--tx)">${pos.icon || '👤'} ${pos.name}</th>`;
+        html += `<th colspan="2" class="role-header" style="background:var(--accentLight);color:var(--tx)">${getPositionIconHtml(pos.icon, 18)} ${pos.name}</th>`;
     });
     html += '</tr>';
     
@@ -12171,6 +12246,9 @@ function handleMatrixChange(element) {
         matrixPermissionsCache[posId][cat][id] = element.checked;
     }
     
+    // Kaydedilmemiş değişiklik flag
+    matrixHasUnsavedChanges = true;
+    
     // Değişiklik göstergesi
     document.getElementById('matrixSaveStatus').innerHTML = '<span style="color:var(--yellow)">● Kaydedilmemiş değişiklikler var</span>';
 }
@@ -12195,6 +12273,9 @@ async function saveMatrixPermissions() {
         }
         
         await batch.commit();
+        
+        // Kaydedildi - flag'i temizle
+        matrixHasUnsavedChanges = false;
         
         statusEl.innerHTML = `<span style="color:var(--green)">✓ ${count} pozisyon kaydedildi</span>`;
         toast('Yetkiler kaydedildi', 'success');
