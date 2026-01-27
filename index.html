@@ -4302,10 +4302,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Giriş aktivitesini logla
                     logActivity('login', { device: navigator.userAgent });
                     
-                    // G15: Yönetici ve Müdürler girince 30sn sonra günlük yedekleme kontrolü
-                    if (['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role)) {
-                        setTimeout(() => checkAndRunDailyBackup(), 30000);
-                    }
+                    // G15: Herkes girince 30sn sonra yedekleme kontrolü (eksik günleri de telafi eder)
+                    setTimeout(() => checkAndRunBackupWithCatchup(), 30000);
                 } catch (error) {
                     console.error('Error loading user data:', error);
                 }
@@ -15130,7 +15128,7 @@ renderAdminLists = function() {
     }
 };
 
-// ==================== G15: OTOMATİK YEDEKLEME (PARÇALI) ====================
+// ==================== G15: OTOMATİK YEDEKLEME (PARÇALI + SAATLIK + TELAFİ) ====================
 const BACKUP_CONFIG = {
     collections: [
         'personel', 'shifts', 'checklists', 'checklistSubmissions',
@@ -15139,39 +15137,86 @@ const BACKUP_CONFIG = {
         'permissions', 'positions', 'branches', 'credentials'
     ],
     maxPartSizeBytes: 900000, // 900KB güvenli limit (Firestore 1MB)
-    retentionDays: 30
+    retentionDays: 30,
+    intervalHours: 6, // 6 saatte bir yedek
+    catchupDays: 7 // Son 7 gün içindeki eksik yedekleri telafi et
 };
 
-// Günlük yedekleme kontrolü - sayfa açıldığında çalışır
-async function checkAndRunDailyBackup() {
-    const today = formatDateLocal(new Date()).replace(/-/g, '');
-    const backupId = `backup_${today}`;
+// Ana yedekleme kontrolü - saatlik + eksik gün telafisi
+async function checkAndRunBackupWithCatchup() {
+    const now = new Date();
+    const todayStr = formatDateLocal(now);
+    const currentHour = now.getHours();
+    
+    // Hangi saat diliminde yedek alınmalı? (0, 6, 12, 18)
+    const backupHours = [0, 6, 12, 18];
+    const targetHour = backupHours.filter(h => h <= currentHour).pop() || 0;
+    const backupId = `backup_${todayStr.replace(/-/g, '')}_${String(targetHour).padStart(2, '0')}`;
     
     try {
-        // Bugün için yedek var mı?
+        // Bu saat dilimi için yedek var mı?
         const existingDoc = await db.collection('backups').doc(backupId).get();
-        if (existingDoc.exists) {
-            // Aynı gün zaten yedeklendi, sessizce atla
-            return;
+        if (!existingDoc.exists) {
+            // Yedek yok, al
+            await runAutoBackup(backupId, todayStr, targetHour);
         }
         
-        // Yedek yok, al
-        await runAutoBackup();
+        // Eksik günleri telafi et (arka planda)
+        setTimeout(() => catchupMissingBackups(), 60000);
     } catch (e) {
         console.error('[Backup] Kontrol hatası:', e.message);
     }
 }
 
-async function runAutoBackup() {
+// Eksik günleri telafi et
+async function catchupMissingBackups() {
+    try {
+        const now = new Date();
+        const catchupDays = BACKUP_CONFIG.catchupDays;
+        
+        for (let i = 1; i <= catchupDays; i++) {
+            const pastDate = new Date(now);
+            pastDate.setDate(pastDate.getDate() - i);
+            const dateStr = formatDateLocal(pastDate);
+            const backupIdBase = `backup_${dateStr.replace(/-/g, '')}`;
+            
+            // O gün için herhangi bir yedek var mı?
+            const snapshot = await db.collection('backups')
+                .where('date', '==', dateStr)
+                .limit(1)
+                .get();
+            
+            if (snapshot.empty) {
+                // O gün yedek yok, şimdi al (gece 00 saati olarak)
+                const catchupId = `${backupIdBase}_00`;
+                await runAutoBackup(catchupId, dateStr, 0);
+                console.log(`[Backup] Telafi yedek alındı: ${dateStr}`);
+            }
+        }
+    } catch (e) {
+        console.error('[Backup] Telafi hatası:', e.message);
+    }
+}
+
+// Eski fonksiyon uyumluluğu için
+async function checkAndRunDailyBackup() {
+    await checkAndRunBackupWithCatchup();
+}
+
+async function runAutoBackup(backupId = null, dateStr = null, hour = null) {
     const now = new Date();
-    const dateStr = formatDateLocal(now);
-    const today = dateStr.replace(/-/g, '');
-    const backupId = `backup_${today}`;
+    if (!dateStr) dateStr = formatDateLocal(now);
+    if (hour === null) hour = now.getHours();
+    if (!backupId) {
+        const targetHour = [0, 6, 12, 18].filter(h => h <= hour).pop() || 0;
+        backupId = `backup_${dateStr.replace(/-/g, '')}_${String(targetHour).padStart(2, '0')}`;
+    }
     
     try {
         // Tüm koleksiyonları topla
         const backupData = {
             date: dateStr,
+            hour: hour,
             createdAt: now.toISOString(),
             createdBy: currentUser?.name || 'Sistem',
             collections: {}
@@ -15197,6 +15242,7 @@ async function runAutoBackup() {
             // Tek parça - doğrudan kaydet
             await db.collection('backups').doc(backupId).set({
                 date: dateStr,
+                hour: hour,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 createdBy: currentUser?.name || 'Sistem',
                 data: jsonString,
@@ -15225,6 +15271,7 @@ async function runAutoBackup() {
             // Ana backup dökümanı (metadata - veri yok)
             await db.collection('backups').doc(backupId).set({
                 date: dateStr,
+                hour: hour,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 createdBy: currentUser?.name || 'Sistem',
                 totalParts: parts.length,
@@ -15233,7 +15280,7 @@ async function runAutoBackup() {
             });
         }
         
-        console.log(`[Backup] ✓ ${dateStr} yedeklendi (${(sizeBytes/1024/1024).toFixed(2)} MB)`);
+        console.log(`[Backup] ✓ ${dateStr} (${String(hour).padStart(2,'0')}:00) yedeklendi (${(sizeBytes/1024/1024).toFixed(2)} MB)`);
         await cleanOldBackups();
     } catch (e) {
         console.error('[Backup] Hata:', e.message);
@@ -15398,7 +15445,9 @@ async function loadBackupsList() {
             // Part dökümanlarını atla
             if (doc.id.includes('_part')) return;
             
-            const datetime = d.date || doc.id;
+            const dateStr = d.date || doc.id;
+            const hourStr = d.hour !== undefined ? ` ${String(d.hour).padStart(2,'0')}:00` : '';
+            const datetime = dateStr + hourStr;
             const sizeKB = d.totalSize ? (d.totalSize / 1024).toFixed(1) : '?';
             const partsInfo = d.isMultiPart ? ` (${d.totalParts} parça)` : '';
             const createdBy = d.createdBy || 'Sistem';
@@ -18844,10 +18893,10 @@ async function loadTodayChecks() {
     if (isFullAdmin) {
         loadLeaderboard();
         loadKPIDashboard();
-        
-        // Otomatik kaçırılan check kontrolü (arka planda çalışır)
-        setTimeout(() => checkAndProcessMissedChecks(), 5000);
     }
+    
+    // Otomatik kaçırılan check kontrolü (tüm kullanıcılar için çalışır - güvenlik açığı yok)
+    setTimeout(() => checkAndProcessMissedChecks(), 5000);
     
     // Shift verilerini yükle
     const shiftData = {};
