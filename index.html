@@ -2497,13 +2497,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         <div class="admin-card-header">
                             <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
                                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                Otomatik Yedekler
+                                Yedekler
                             </div>
                             <button class="btn btn-sm" style="background:#008c95;color:#fff" onclick="takeManualBackup()">+ Manuel Yedek Al</button>
                         </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Manuel yedek alın ve indirin • 30 günden eski yedekler otomatik silinir</p>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Manuel yedek alın ve indirin</p>
                         <div id="backupsListContainer">
-                            <p style="color:var(--tx2);text-align:center;padding:40px">Yedekler yükleniyor...</p>
+                            <div style="text-align:center;padding:40px">
+                                <button class="btn btn-primary" onclick="loadBackupsList()">Yedekleri Göster</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -6157,7 +6159,7 @@ function switchAdminTab(tab, btn) {
         loadActivityLogs(); // Aktiviteler de oturumlar sekmesinde
     }
     // aktiviteler artık oturumlar ile birleştirildi
-    if (tab === 'yedekler') loadBackupsList();
+    // yedekler lazy-load: butona tıklayınca yüklenir
     if (tab === 'magazaSaatleri') renderBranchHoursSettings();
     if (tab === 'checkKurallari') renderCheckRulesSettings();
     if (tab === 'checklistTurleri') loadChecklistTypesConfig();
