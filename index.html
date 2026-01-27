@@ -4663,7 +4663,7 @@ function getDefaultPermissions(role) {
             pages: { dashboard: true, shift: true, checklist: true, documents: false, personel: false, admin: false },
             docs: { sozlesme: false, savunma: false, tutanak: false, ihtar: false, fesih: false },
             forms: { checklist: true, izin: true, avans: true },
-            admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_ihlaller: false },
+            admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_ihlaller: false, admin_sablonlar: false, admin_oturumlar: false, admin_yedekler: false },
             special: { canViewAllBranches: false, canEditShift: false, canDeletePersonel: false, canExportData: false, view_password: false, change_others_password: false },
             limits: { maxAvans: 3000, maxIzin: 14 }
         },
@@ -4671,7 +4671,7 @@ function getDefaultPermissions(role) {
             pages: { dashboard: true, shift: true, checklist: true, documents: true, personel: false, admin: false },
             docs: { sozlesme: false, savunma: true, tutanak: true, ihtar: false, fesih: false },
             forms: { checklist: true, izin: true, avans: true },
-            admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_ihlaller: true },
+            admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false, admin_yedekler: false },
             special: { canViewAllBranches: false, canEditShift: true, canDeletePersonel: false, canExportData: false, view_password: false, change_others_password: false },
             limits: { maxAvans: 5000, maxIzin: 14 }
         },
@@ -4679,7 +4679,7 @@ function getDefaultPermissions(role) {
             pages: { dashboard: true, shift: true, checklist: true, documents: true, personel: true, admin: false },
             docs: { sozlesme: true, savunma: true, tutanak: true, ihtar: true, fesih: false },
             forms: { checklist: true, izin: true, avans: true },
-            admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_ihlaller: true },
+            admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false, admin_yedekler: false },
             special: { canViewAllBranches: false, canEditShift: true, canDeletePersonel: false, canExportData: true, view_password: false, change_others_password: false },
             limits: { maxAvans: 10000, maxIzin: 21 }
         },
@@ -4687,9 +4687,17 @@ function getDefaultPermissions(role) {
             pages: { dashboard: true, shift: true, checklist: true, documents: true, personel: true, admin: true },
             docs: { sozlesme: true, savunma: true, tutanak: true, ihtar: true, fesih: true },
             forms: { checklist: true, izin: true, avans: true },
-            admin: { admin_genel: true, admin_kullanicilar: true, admin_puantaj: true, admin_subeler: true, admin_ihlaller: true },
+            admin: { admin_genel: true, admin_kullanicilar: false, admin_puantaj: true, admin_subeler: true, admin_ihlaller: true, admin_sablonlar: true, admin_oturumlar: true, admin_yedekler: false },
             special: { canViewAllBranches: true, canEditShift: true, canDeletePersonel: true, canExportData: true, view_password: true, change_others_password: true },
             limits: { maxAvans: 50000, maxIzin: 30 }
+        },
+        'yonetici': {
+            pages: { dashboard: true, shift: true, checklist: true, documents: true, personel: true, admin: true },
+            docs: { sozlesme: true, savunma: true, tutanak: true, ihtar: true, fesih: true },
+            forms: { checklist: true, izin: true, avans: true },
+            admin: { admin_genel: true, admin_kullanicilar: true, admin_puantaj: true, admin_subeler: true, admin_ihlaller: true, admin_sablonlar: true, admin_oturumlar: true, admin_yedekler: true },
+            special: { canViewAllBranches: true, canEditShift: true, canDeletePersonel: true, canExportData: true, view_password: true, change_others_password: true, manage_branches: true },
+            limits: { maxAvans: 999999, maxIzin: 365 }
         }
     };
     
@@ -13125,6 +13133,14 @@ const DEFAULT_ROLE_PERMISSIONS = {
         admin: { admin_genel: true, admin_kullanicilar: false, admin_puantaj: true, admin_subeler: true, admin_pozisyonlar: true, admin_ihlaller: true, admin_sablonlar: true, admin_oturumlar: true, admin_yedekler: false },
         special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true, view_password: true, change_others_password: true, add_announcement: true, manage_branches: false },
         limits: { shift_history_weeks: 999 }
+    },
+    yonetici: {
+        pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
+        documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: true }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
+        forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
+        admin: { admin_genel: true, admin_kullanicilar: true, admin_puantaj: true, admin_subeler: true, admin_pozisyonlar: true, admin_ihlaller: true, admin_sablonlar: true, admin_oturumlar: true, admin_yedekler: true },
+        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true, view_password: true, change_others_password: true, add_announcement: true, manage_branches: true },
+        limits: { shift_history_weeks: 999 }
     }
 };
 
@@ -13791,6 +13807,18 @@ async function loadUserAdvancedPermissions() {
 
 // İzinleri UI'a uygula
 function applyAdvancedPermissions() {
+    // Yönetici her şeyi görür - early return
+    if (currentUser?.role === 'yonetici') {
+        console.log('[Yetkiler] Yönetici - tüm yetkiler açık');
+        // Tüm admin sekmelerini görünür yap
+        const allAdminTabs = ['tab-kullanicilar', 'tab-oturumlar', 'tab-subeler', 'tab-ihlaller', 'tab-sablonlar', 'tab-belgeler', 'tab-yedekler', 'tab-magazaSaatleri', 'tab-checkKurallari', 'tab-checklistTurleri'];
+        allAdminTabs.forEach(tabId => {
+            const tab = document.getElementById(tabId);
+            if (tab) tab.style.display = '';
+        });
+        return;
+    }
+    
     if (!window.userAdvancedPermissions) return;
     
     const perms = window.userAdvancedPermissions;
@@ -13930,12 +13958,30 @@ function applyAdvancedPermissions() {
         btnAddBranch.style.display = canManageBranches ? '' : 'none';
     }
     
-    // Yedekler sekmesi yetkisi - admin_yedekler yetkisi olmayan göremez
-    const tabYedekler = document.getElementById('tab-yedekler');
-    if (tabYedekler) {
-        const canViewBackups = perms.admin?.admin_yedekler === true;
-        tabYedekler.style.display = canViewBackups ? '' : 'none';
-    }
+    // ==================== YÖNETİM SEKMELERİ YETKİ KONTROLÜ ====================
+    // Her sekme için ilgili yetki kontrolü
+    const adminTabPermissions = {
+        'tab-subeler': perms.admin?.admin_subeler,
+        'tab-ihlaller': perms.admin?.admin_ihlaller,
+        'tab-sablonlar': perms.admin?.admin_sablonlar,
+        'tab-belgeler': perms.admin?.admin_sablonlar, // Belgeler de şablonlar yetkisine bağlı
+        'tab-yedekler': perms.admin?.admin_yedekler,
+        'tab-magazaSaatleri': perms.admin?.admin_puantaj || perms.admin?.admin_subeler,
+        'tab-checkKurallari': perms.admin?.admin_puantaj,
+        'tab-checklistTurleri': perms.admin?.admin_puantaj,
+        'tab-kullanicilar': perms.admin?.admin_kullanicilar,
+        'tab-oturumlar': perms.admin?.admin_oturumlar
+    };
+    
+    // Her sekme için görünürlük uygula
+    Object.entries(adminTabPermissions).forEach(([tabId, hasPermission]) => {
+        const tab = document.getElementById(tabId);
+        if (tab) {
+            tab.style.display = hasPermission ? '' : 'none';
+        }
+    });
+    
+    console.log('[Yetkiler] Admin sekmeleri güncellendi:', adminTabPermissions);
     
     console.log('✅ Gelişmiş izinler uygulandı', { 
         createWeek: perms.special?.create_shift_week,
