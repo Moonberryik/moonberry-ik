@@ -22441,17 +22441,10 @@ function toggleAllBranches(type) {
     });
 }
 
-// Otomatik kaydetme için debounce
-let autoSaveTimeout = null;
+// Otomatik kaydetme - direkt kaydet
 function autoSaveCheckRules() {
-    // Önceki timeout'u iptal et
-    if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
-    
-    // 1.5 saniye bekle, sonra kaydet
-    autoSaveTimeout = setTimeout(async () => {
-        console.log('[AutoSave] Check kuralları kaydediliyor...');
-        await saveAdvancedCheckRules();
-    }, 1500);
+    console.log('[AutoSave] Check kuralları kaydediliyor...');
+    saveAdvancedCheckRules();
 }
 
 // Gelişmiş check kurallarını kaydet
