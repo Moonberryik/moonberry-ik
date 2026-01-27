@@ -6984,6 +6984,121 @@ function copyIban() {
     });
 }
 
+// ========== PERSONEL MODAL İÇİN BANKA DROPDOWN ==========
+function showPersonelBankDropdown() {
+    const dropdown = document.getElementById('personelBankDropdown');
+    if (!dropdown) return;
+    
+    renderPersonelBankOptions(TR_BANKS);
+    dropdown.style.display = 'block';
+    
+    setTimeout(() => {
+        document.addEventListener('click', closePersonelBankDropdownOnClickOutside);
+    }, 10);
+}
+
+function closePersonelBankDropdownOnClickOutside(e) {
+    const dropdown = document.getElementById('personelBankDropdown');
+    const input = document.getElementById('personelBankName');
+    
+    if (dropdown && input && !dropdown.contains(e.target) && e.target !== input) {
+        dropdown.style.display = 'none';
+        document.removeEventListener('click', closePersonelBankDropdownOnClickOutside);
+    }
+}
+
+function filterPersonelBanks(query) {
+    const dropdown = document.getElementById('personelBankDropdown');
+    if (!dropdown) return;
+    
+    const q = query.toLowerCase();
+    const filtered = TR_BANKS.filter(bank => 
+        bank.toLowerCase().includes(q) || 
+        normalizeTurkishChars(bank.toLowerCase()).includes(normalizeTurkishChars(q))
+    );
+    
+    renderPersonelBankOptions(filtered);
+    dropdown.style.display = 'block';
+}
+
+function renderPersonelBankOptions(banks) {
+    const dropdown = document.getElementById('personelBankDropdown');
+    if (!dropdown) return;
+    
+    if (banks.length === 0) {
+        dropdown.innerHTML = '<div style="padding:12px;color:var(--tx3);text-align:center;font-size:.85rem">Sonuç bulunamadı</div>';
+        return;
+    }
+    
+    dropdown.innerHTML = banks.map(bank => `
+        <div onclick="selectPersonelBank('${bank}')" style="padding:10px 14px;cursor:pointer;font-size:.9rem;transition:background .1s;border-bottom:1px solid var(--bg3);background:var(--bg)" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='var(--bg)'">
+            ${bank}
+        </div>
+    `).join('');
+}
+
+function selectPersonelBank(bankName) {
+    const input = document.getElementById('personelBankName');
+    const dropdown = document.getElementById('personelBankDropdown');
+    
+    if (input) input.value = bankName;
+    if (dropdown) dropdown.style.display = 'none';
+    
+    document.removeEventListener('click', closePersonelBankDropdownOnClickOutside);
+}
+
+// ========== TELEFON VE IBAN FORMAT FONKSİYONLARI ==========
+function formatPhoneInput(input) {
+    let value = input.value.replace(/\D/g, '');
+    
+    // Başındaki 0 veya 90'ı kaldır
+    if (value.startsWith('0')) value = value.substring(1);
+    if (value.startsWith('90') && value.length > 10) value = value.substring(2);
+    
+    // Max 10 rakam
+    value = value.substring(0, 10);
+    
+    // Format: +90 5XX XXX XX XX
+    let formatted = '';
+    if (value.length > 0) {
+        formatted = '+90 ' + value.substring(0, 3);
+    }
+    if (value.length > 3) {
+        formatted += ' ' + value.substring(3, 6);
+    }
+    if (value.length > 6) {
+        formatted += ' ' + value.substring(6, 8);
+    }
+    if (value.length > 8) {
+        formatted += ' ' + value.substring(8, 10);
+    }
+    
+    input.value = formatted;
+}
+
+function formatIbanInput(input) {
+    let value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    
+    // TR ile başlamalı
+    if (!value.startsWith('TR') && value.length > 0) {
+        if (value.match(/^[0-9]/)) {
+            value = 'TR' + value;
+        }
+    }
+    
+    // Max 26 karakter (TR + 24 rakam)
+    value = value.substring(0, 26);
+    
+    // Format: TRXX XXXX XXXX XXXX XXXX XXXX XX
+    let formatted = '';
+    for (let i = 0; i < value.length; i++) {
+        if (i > 0 && i % 4 === 0) formatted += ' ';
+        formatted += value[i];
+    }
+    
+    input.value = formatted;
+}
+
 // Kendi şifremi değiştir (Credentials tabanlı)
 async function changeMyPassword(docId) {
     const currentPassword = document.getElementById('myProfile_currentPassword')?.value || '';
@@ -9688,12 +9803,19 @@ function showAddPersonelModal(editId = null) {
     const body = `
         <input type="hidden" id="personelEditId" value="${editId || ''}">
         <div class="form-grid">
-            <div class="form-group"><label class="form-label">Ad Soyad *</label><input type="text" id="personelName" class="form-input" required></div>
+            <div class="form-group"><label class="form-label">Ad Soyad</label><input type="text" id="personelName" class="form-input" placeholder="Personel adı soyadı" required></div>
             <div class="form-group"><label class="form-label">Shift Kod Adı</label><input type="text" id="personelCodeName" class="form-input" placeholder="Örn: Esin İ."><small style="color:var(--tx2);font-size:.7rem">Boş bırakılırsa Ad S. formatı kullanılır</small></div>
-            <div class="form-group"><label class="form-label">T.C. Kimlik No *</label><input type="text" id="personelTC" class="form-input" maxlength="11"></div>
-            <div class="form-group"><label class="form-label">Telefon</label><input type="tel" id="personelPhone" class="form-input"></div>
-            <div class="form-group full"><label class="form-label">Adres</label><input type="text" id="personelAddress" class="form-input"></div>
-            <div class="form-group"><label class="form-label">IBAN</label><input type="text" id="personelIBAN" class="form-input"></div>
+            <div class="form-group"><label class="form-label">T.C. Kimlik No</label><input type="text" id="personelTC" class="form-input" maxlength="11" placeholder="11 haneli TC kimlik no"></div>
+            <div class="form-group"><label class="form-label">Telefon</label><input type="tel" id="personelPhone" class="form-input" placeholder="+90 5XX XXX XX XX" oninput="formatPhoneInput(this)"></div>
+            <div class="form-group full"><label class="form-label">Adres</label><input type="text" id="personelAddress" class="form-input" placeholder="Ev adresi"></div>
+            <div class="form-group">
+                <label class="form-label">Banka</label>
+                <div style="position:relative">
+                    <input type="text" id="personelBankName" class="form-input" placeholder="Banka seçin veya yazın" autocomplete="off" onclick="showPersonelBankDropdown()" oninput="filterPersonelBanks(this.value)">
+                    <div id="personelBankDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg);border:1px solid var(--bg4);border-radius:8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.15);margin-top:4px"></div>
+                </div>
+            </div>
+            <div class="form-group"><label class="form-label">IBAN</label><input type="text" id="personelIBAN" class="form-input" placeholder="TR00 0000 0000 0000 0000 0000 00" oninput="formatIbanInput(this)"></div>
             ${branchField}
             ${positionField}
             <div class="form-group"><label class="form-label">İşe Başlama</label><input type="date" id="personelStartDate" class="form-input"></div>
@@ -9757,11 +9879,28 @@ async function loadPersonelForEdit(id) {
             document.getElementById('personelName').value = p.name || '';
             document.getElementById('personelCodeName').value = p.codeName || '';
             document.getElementById('personelTC').value = p.tc || '';
-            document.getElementById('personelPhone').value = p.phone || '';
+            
+            // Telefon - format düzelt
+            const phoneInput = document.getElementById('personelPhone');
+            if (phoneInput) {
+                phoneInput.value = p.phone || '';
+                if (p.phone) formatPhoneInput(phoneInput);
+            }
+            
             const emailEl = document.getElementById('personelEmail');
             if (emailEl) emailEl.value = p.email || '';
             document.getElementById('personelAddress').value = p.address || '';
-            document.getElementById('personelIBAN').value = p.iban || '';
+            
+            // Banka bilgisi
+            const bankNameInput = document.getElementById('personelBankName');
+            if (bankNameInput) bankNameInput.value = p.bankName || '';
+            
+            // IBAN - format düzelt
+            const ibanInput = document.getElementById('personelIBAN');
+            if (ibanInput) {
+                ibanInput.value = p.iban || '';
+                if (p.iban) formatIbanInput(ibanInput);
+            }
             
             // Şube - hem hidden hem display varsa ikisini de set et
             const branchSelect = document.getElementById('personelBranch');
@@ -9881,15 +10020,27 @@ async function savePersonel() {
     }
     console.log(`[Personel] Pozisyon: "${position}" → Rol: "${role}"`);
     
+    // Telefon formatını düzelt
+    const rawPhone = document.getElementById('personelPhone').value.trim();
+    const phone = formatPhoneNumber(rawPhone);
+    
+    // IBAN formatını temizle (boşlukları kaldır)
+    const rawIban = document.getElementById('personelIBAN').value.trim();
+    const iban = rawIban.replace(/\s/g, '');
+    
+    // Banka adı
+    const bankName = document.getElementById('personelBankName')?.value?.trim() || '';
+    
     const data = {
         name,
         codeName,
         uniqueId,  // ← YENİ: Benzersiz ID
         tc,
-        phone: document.getElementById('personelPhone').value.trim(),
+        phone,
         email,
         address: document.getElementById('personelAddress').value.trim(),
-        iban: document.getElementById('personelIBAN').value.trim(),
+        bankName,
+        iban,
         branch: document.getElementById('personelBranch').value,
         position,
         role,
