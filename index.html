@@ -19666,10 +19666,24 @@ async function loadTodayChecks() {
             
             // CHECK_RULES'dan aktiflik saatlerini al
             const mudurRules = CHECK_RULES.mudur || {};
-            const mudurActiveFrom = mudurRules.activeFrom || '18:00';
-            // Müdür deadline = Mağaza kapanış saati (dinamik)
+            // Müdür saatleri mağaza kapanış saatinden dinamik hesaplanır
             const mudurBranchClosingTime = getBranchClosingTime(branch);
             const mudurDeadlineRule = mudurBranchClosingTime || mudurRules.deadline || '23:00';
+            
+            // ActiveFrom = Mağaza kapanış - SHIFT_DURATION (kapanışçı shift başlangıcı)
+            let mudurActiveFrom = mudurRules.activeFrom || '18:00';
+            if (mudurBranchClosingTime) {
+                const [closeH, closeM] = mudurBranchClosingTime.split(':').map(Number);
+                let closeMinutes = closeH * 60 + closeM;
+                if (closeH < 6) closeMinutes += 24 * 60;
+                const shiftDuration = SHIFT_DURATION || 9;
+                let startMinutes = closeMinutes - (shiftDuration * 60);
+                if (startMinutes >= 24 * 60) startMinutes -= 24 * 60;
+                const startH = Math.floor(startMinutes / 60) % 24;
+                const startM = startMinutes % 60;
+                mudurActiveFrom = `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
+            }
+            
             const [activeH, activeM] = mudurActiveFrom.split(':').map(Number);
             const [deadlineRuleH, deadlineRuleM] = mudurDeadlineRule.split(':').map(Number);
             
