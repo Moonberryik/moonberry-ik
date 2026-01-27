@@ -18297,10 +18297,8 @@ async function createAutoPuantajNote(personelId, personelName, checkType, checkT
 // ==================== OTOMATİK KAÇIRILAN CHECK KONTROLÜ ====================
 // Dashboard/checklist yüklendiğinde geçmiş check'leri kontrol eder ve kaçırılanlar için puan keser
 async function checkAndProcessMissedChecks() {
-    // Sadece yönetici/müdür çalıştırabilir
-    if (!['yonetici', 'bolge_muduru', 'magaza_muduru', 'mudur', 'admin'].includes(currentUser?.role)) {
-        return;
-    }
+    // Tüm kullanıcılar için çalışır (güvenlik açığı yok - sadece okuma ve yazma yapıyor)
+    if (!currentUser) return;
     
     console.log('[AutoPuan] Kaçırılan check kontrolü başlıyor...');
     
