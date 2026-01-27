@@ -4796,19 +4796,15 @@ function applyUserPermissions() {
         loadUserAvatar();
     }
     
-    // Yönetici her şeye erişebilir
+    // Gelişmiş izin sistemini yükle ve uygula (tüm roller için)
+    loadUserAdvancedPermissions();
+    
+    // Yönetici her şeye erişebilir - ek kısıtlama yok
     if (currentUser.role === 'yonetici') return;
     
     // Müdür Notları sadece yönetici görebilir
     const navNotlar = document.getElementById('nav-notlar');
     if (navNotlar) navNotlar.style.display = 'none';
-    
-    // G15: Yedekler sekmesi sadece yönetici görebilir
-    const tabYedekler = document.getElementById('tab-yedekler');
-    if (tabYedekler) tabYedekler.style.display = 'none';
-    
-    // Gelişmiş izin sistemini yükle ve uygula
-    loadUserAdvancedPermissions();
 }
 
 // Rol kısıtlamaları - Artık Firebase yetkilerine göre çalışıyor
