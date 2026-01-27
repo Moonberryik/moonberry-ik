@@ -9662,7 +9662,7 @@ function showAddPersonelModal(editId = null) {
                 <div style="flex:1">
                     <label style="font-size:.75rem;color:var(--tx2);margin-bottom:4px;display:block">Şifre ${isEdit ? '<span style="color:var(--tx3)">(değiştirmek için girin)</span>' : ''}</label>
                     <div style="position:relative">
-                        <input type="password" id="personelPassword" class="form-input" style="font-size:.85rem;padding-right:${isEdit && canViewPassword ? '36px' : '12px'}" minlength="6" placeholder="${isEdit ? '••••••••' : 'En az 6 karakter'}">
+                        <input type="password" id="personelPassword" class="form-input" style="font-size:.85rem;padding-right:${isEdit && canViewPassword ? '36px' : '12px'}" minlength="8" placeholder="${isEdit ? '••••••••' : '8+ karakter, harf, rakam, özel'}">
                         ${isEdit && canViewPassword ? `
                             <button type="button" onclick="togglePersonelPasswordView()" id="btnTogglePassword" 
                                 style="position:absolute;right:2px;top:50%;transform:translateY(-50%);width:30px;height:30px;background:transparent;border:none;cursor:pointer;color:var(--tx3);display:flex;align-items:center;justify-content:center;border-radius:4px;transition:all .12s"
@@ -9798,9 +9798,12 @@ async function savePersonel() {
     }
     
     // Yeni kullanıcı ve email + şifre girildiyse şifre kontrolü
-    if (email && password && password.length < 6) {
-        toast('Şifre en az 6 karakter olmalı', 'error');
-        return;
+    if (email && password) {
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.valid) {
+            toast(passwordValidation.message, 'error');
+            return;
+        }
     }
     
     // Kod adı boşsa otomatik oluştur: "Ad S."
