@@ -21943,11 +21943,11 @@ function renderCheckRuleDetails(type) {
         
         // Saat seçenekleri
         const hours = [];
+        // Tam 24 saat - gece geçişi için tüm saatler
         for (let h = 0; h <= 23; h++) {
             hours.push(`${String(h).padStart(2, '0')}:00`);
             hours.push(`${String(h).padStart(2, '0')}:30`);
         }
-        hours.push('00:00', '00:30', '01:00', '01:30', '02:00');
         
         const shiftTypes = [
             { id: 'acilisci', name: 'Açılışçı', icon: '🌅', color: '#27ae60', desc: 'Sabah vardiyası (açılış yapan)' },
@@ -22230,11 +22230,11 @@ function renderTimeSlotCard(type, timeOrSlot, idx, rule) {
     
     // Saat seçenekleri oluştur (08:00 - 02:00 arası, yarım saat aralıklarla)
     const hours = [];
-    for (let h = 8; h <= 23; h++) {
+    // Tam 24 saat - gece geçişi için tüm saatler
+    for (let h = 0; h <= 23; h++) {
         hours.push(`${String(h).padStart(2, '0')}:00`);
         hours.push(`${String(h).padStart(2, '0')}:30`);
     }
-    hours.push('00:00', '00:30', '01:00', '01:30', '02:00');
     
     const startOptions = hours.map(h => 
         `<option value="${h}" ${h === start ? 'selected' : ''}>${h}</option>`
