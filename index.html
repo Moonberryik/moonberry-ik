@@ -19122,11 +19122,25 @@ async function loadTodayChecks() {
             let temizlikDeadline = shiftConfig.window?.end || shiftConfig.deadline || '18:00';
             let temizlikLateWindow = temizlikRules.lateWindow || 30;
             
-            // Kapanışçı için deadline = Mağaza kapanış saati (dinamik)
+            // Kapanışçı için saatler mağaza kapanış saatinden dinamik hesaplanır
             if (currentShiftType === 'kapanisci') {
                 const branchClosingTime = getBranchClosingTime(branch);
                 if (branchClosingTime) {
+                    // Deadline = Mağaza kapanış saati
                     temizlikDeadline = branchClosingTime;
+                    
+                    // ActiveFrom = Mağaza kapanış - SHIFT_DURATION
+                    const [closeH, closeM] = branchClosingTime.split(':').map(Number);
+                    let closeMinutes = closeH * 60 + closeM;
+                    // Gece saati ise (00:00-06:00), 24 saat ekle
+                    if (closeH < 6) closeMinutes += 24 * 60;
+                    const shiftDuration = SHIFT_DURATION || 9;
+                    let startMinutes = closeMinutes - (shiftDuration * 60);
+                    // 24 saati geçerse normalize et
+                    if (startMinutes >= 24 * 60) startMinutes -= 24 * 60;
+                    const startH = Math.floor(startMinutes / 60) % 24;
+                    const startM = startMinutes % 60;
+                    temizlikActiveFrom = `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
                 }
             }
             
@@ -19315,10 +19329,23 @@ async function loadTodayChecks() {
         // 4. Kapanış Hazırlıkları
         {
             const kapanisRules = CHECK_RULES.kapanis || {};
-            const kapanisActiveFrom = kapanisRules.activeFrom || '22:00';
-            // Kapanış deadline = Mağaza kapanış saati (dinamik)
+            // Kapanış saatleri mağaza kapanış saatinden dinamik hesaplanır
             const branchClosingTime = getBranchClosingTime(branch);
             const kapanisDeadline = branchClosingTime || kapanisRules.deadline || '02:00';
+            
+            // ActiveFrom = Mağaza kapanış - SHIFT_DURATION (kapanışçı shift başlangıcı)
+            let kapanisActiveFrom = kapanisRules.activeFrom || '22:00';
+            if (branchClosingTime) {
+                const [closeH, closeM] = branchClosingTime.split(':').map(Number);
+                let closeMinutes = closeH * 60 + closeM;
+                if (closeH < 6) closeMinutes += 24 * 60;
+                const shiftDuration = SHIFT_DURATION || 9;
+                let startMinutes = closeMinutes - (shiftDuration * 60);
+                if (startMinutes >= 24 * 60) startMinutes -= 24 * 60;
+                const startH = Math.floor(startMinutes / 60) % 24;
+                const startM = startMinutes % 60;
+                kapanisActiveFrom = `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
+            }
             const kapanisLateWindow = kapanisRules.lateWindow || 30;
             
             const kapanisSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_kapanis_${todayStr}`;
