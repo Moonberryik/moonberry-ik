@@ -19424,32 +19424,42 @@ async function loadTodayChecks() {
         let isGunlukLate = false;
         let isGunlukMissed = false;
         
-        // Gece 00:00-02:00 arası için - SON slot'un late window'unu kontrol et
+        // Gece 00:00-06:00 arası için - SON slot'un gece geçişini kontrol et
         const isLateNight = currentHour >= 0 && currentHour < 6;
         const nowMinutesTotal = currentHour * 60 + currentMinutes;
         
         if (isLateNight) {
             // Gece saatlerinde son slot'u kontrol et
             const lastSlot = gunlukSlots[gunlukSlots.length - 1];
-            const [lastH, lastM] = lastSlot.end.split(':').map(Number);
-            const lastSlotMinutes = lastH * 60 + lastM;
-            const lastDeadlineMinutes = lastSlotMinutes + gunlukLateWindow;
+            const [lastStartH, lastStartM] = lastSlot.start.split(':').map(Number);
+            const [lastEndH, lastEndM] = lastSlot.end.split(':').map(Number);
             
-            // Gece geçişi hesaplaması
-            const minutesBeforeMidnight = 24 * 60 - lastDeadlineMinutes;
-            const minutesPastMidnight = nowMinutesTotal;
-            const minutesSinceDeadline = minutesBeforeMidnight + minutesPastMidnight;
+            let lastSlotEndMinutes = lastEndH * 60 + lastEndM;
+            let lastSlotStartMinutes = lastStartH * 60 + lastStartM;
             
-            if (minutesSinceDeadline <= 0) {
+            // Gece geçişi kontrolü (end < start ise ertesi güne taşı)
+            if (lastEndH < lastStartH) {
+                lastSlotEndMinutes += 24 * 60; // 02:00 → 26:00 (1560 dk)
+            }
+            
+            const lastDeadlineMinutes = lastSlotEndMinutes + gunlukLateWindow;
+            
+            // Şu anki zamanı da ertesi güne taşı
+            const adjustedNow = nowMinutesTotal + 24 * 60; // 00:31 → 24:31 (1471 dk)
+            
+            if (adjustedNow >= lastSlotStartMinutes && adjustedNow <= lastSlotEndMinutes) {
+                // Slot içinde - aktif, vaktinde
                 activeGunlukSlot = lastSlot;
                 isGunlukActive = true;
-                gunlukRemainingMinutes = -minutesSinceDeadline;
-            } else if (minutesSinceDeadline <= gunlukLateWindow) {
+                gunlukRemainingMinutes = lastSlotEndMinutes - adjustedNow;
+            } else if (adjustedNow > lastSlotEndMinutes && adjustedNow <= lastDeadlineMinutes) {
+                // Late window içinde
                 activeGunlukSlot = lastSlot;
                 isGunlukActive = true;
                 isGunlukLate = true;
-                gunlukRemainingMinutes = gunlukLateWindow - minutesSinceDeadline;
-            } else {
+                gunlukRemainingMinutes = lastDeadlineMinutes - adjustedNow;
+            } else if (adjustedNow > lastDeadlineMinutes) {
+                // Geçmiş - kaçırıldı
                 activeGunlukSlot = lastSlot;
                 isGunlukMissed = true;
                 isGunlukActive = false;
