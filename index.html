@@ -13096,7 +13096,7 @@ const PERMISSION_STRUCTURE = {
         { id: 'run_autopuan', label: 'Otomatik puanlama çalıştırabilir' }
     ],
     limits: [
-        { id: 'shift_history_weeks', label: 'Shift geçmiş limiti (hafta)', type: 'number', options: [1, 5, 12, 999] }
+        { id: 'shift_history_weeks', label: 'Shift geçmiş limiti (hafta)', type: 'number', options: [1, 2, 3, 4, 5, 12, 999] }
     ]
 };
 
@@ -13638,7 +13638,7 @@ function renderLimitsPermissions(perms) {
     let html = '';
     
     const limitLabels = {
-        'shift_history_weeks': { label: 'Shift Geçmiş Görüntüleme', unit: 'hafta', options: [1, 5, 12, 999] }
+        'shift_history_weeks': { label: 'Shift Geçmiş Görüntüleme', unit: 'hafta', options: [1, 2, 3, 4, 5, 12, 999] }
     };
     
     if (PERMISSION_STRUCTURE.limits) {
@@ -19240,9 +19240,24 @@ async function loadTodayChecks() {
             const acilisDeadlineMin = adH * 60 + adM;
             const acilisLateEndMin = acilisDeadlineMin + acilisLateWindow;
             
-            const isAcilisActive = nowMin >= acilisActiveFromMin && nowMin <= acilisDeadlineMin && !acilisCompleted;
-            const isAcilisLate = nowMin > acilisDeadlineMin && nowMin <= acilisLateEndMin && !acilisCompleted;
-            const isAcilisMissed = nowMin > acilisLateEndMin && !acilisCompleted;
+            // Gece yarısını geçen zaman aralığı kontrolü
+            let isAcilisActive, isAcilisLate, isAcilisMissed;
+            
+            if (acilisDeadlineMin < acilisActiveFromMin) {
+                // Gece yarısını geçiyor (örn: 09:30 - 02:00)
+                const isInActiveRange = nowMin >= acilisActiveFromMin || nowMin <= acilisDeadlineMin;
+                const isInLateRange = nowMin > acilisDeadlineMin && nowMin <= acilisLateEndMin;
+                const isPastLate = nowMin > acilisLateEndMin && nowMin < acilisActiveFromMin;
+                
+                isAcilisActive = isInActiveRange && !acilisCompleted;
+                isAcilisLate = isInLateRange && !acilisCompleted;
+                isAcilisMissed = isPastLate && !acilisCompleted;
+            } else {
+                // Normal aralık (aynı gün içinde)
+                isAcilisActive = nowMin >= acilisActiveFromMin && nowMin <= acilisDeadlineMin && !acilisCompleted;
+                isAcilisLate = nowMin > acilisDeadlineMin && nowMin <= acilisLateEndMin && !acilisCompleted;
+                isAcilisMissed = nowMin > acilisLateEndMin && !acilisCompleted;
+            }
             
             // Kalan süre
             let acilisRemainingMinutes = null;
