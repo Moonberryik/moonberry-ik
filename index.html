@@ -2501,7 +2501,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                             </div>
                             <button class="btn btn-sm" style="background:#008c95;color:#fff" onclick="manualBackupNow()">+ Manuel Yedek Al</button>
                         </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Her 3 saatte otomatik yedek • 30 günden eski silinir • Tarih+saat seç ve indir</p>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Her 6 saatte otomatik yedek (00:00, 06:00, 12:00, 18:00) • 30 günden eski silinir</p>
                         <div id="backupsListContainer">
                             <p style="color:var(--tx2);text-align:center;padding:40px">Yedekler yükleniyor...</p>
                         </div>
@@ -15142,7 +15142,7 @@ const BACKUP_CONFIG = {
     catchupDays: 7 // Son 7 gün içindeki eksik yedekleri telafi et
 };
 
-// Ana yedekleme kontrolü - saatlik + eksik gün telafisi
+// Ana yedekleme kontrolü - saatlik (telafi kapalı - performans için)
 async function checkAndRunBackupWithCatchup() {
     const now = new Date();
     const todayStr = formatDateLocal(now);
@@ -15161,8 +15161,8 @@ async function checkAndRunBackupWithCatchup() {
             await runAutoBackup(backupId, todayStr, targetHour);
         }
         
-        // Eksik günleri telafi et (arka planda)
-        setTimeout(() => catchupMissingBackups(), 60000);
+        // NOT: Telafi yedeklemesi performans sorunları nedeniyle devre dışı
+        // Manuel olarak catchupMissingBackups() çağrılabilir
     } catch (e) {
         console.error('[Backup] Kontrol hatası:', e.message);
     }
@@ -15352,45 +15352,59 @@ async function downloadAllBackups() {
     try {
         toast('Tüm yedekler hazırlanıyor...', 'info');
         
-        // Basit sorgu - son 30 yedek
-        const snapshot = await db.collection('backups')
-            .orderBy('createdAt', 'desc')
-            .limit(50)
-            .get();
+        // Basit sorgu
+        const snapshot = await db.collection('backups').get();
         
         if (snapshot.empty) {
             toast('Yedek bulunamadı', 'error');
             return;
         }
         
-        const allBackups = {};
+        // Part olmayan yedekleri topla
+        const backupDocs = [];
+        snapshot.forEach(doc => {
+            if (!doc.id.includes('_part')) {
+                backupDocs.push({ id: doc.id, ...doc.data() });
+            }
+        });
         
-        for (const doc of snapshot.docs) {
-            const meta = doc.data();
-            const backupId = doc.id;
-            
-            // Part dökümanlarını atla
-            if (backupId.includes('_part')) continue;
-            
+        if (backupDocs.length === 0) {
+            toast('İndirilebilir yedek bulunamadı', 'error');
+            return;
+        }
+        
+        const allBackups = {};
+        let processed = 0;
+        
+        for (const meta of backupDocs) {
+            const backupId = meta.id;
             let jsonString = '';
             
-            if (meta.isMultiPart) {
-                for (let i = 1; i <= meta.totalParts; i++) {
-                    const partDoc = await db.collection('backups').doc(`${backupId}_part${i}`).get();
-                    if (partDoc.exists) {
-                        jsonString += partDoc.data().data;
+            try {
+                if (meta.isMultiPart && meta.totalParts) {
+                    // Parçalı yedek
+                    for (let i = 1; i <= meta.totalParts; i++) {
+                        const partDoc = await db.collection('backups').doc(`${backupId}_part${i}`).get();
+                        if (partDoc.exists) {
+                            jsonString += partDoc.data().data || '';
+                        }
                     }
+                } else if (meta.data) {
+                    jsonString = meta.data;
                 }
-            } else if (meta.data) {
-                jsonString = meta.data;
+                
+                if (jsonString) {
+                    const parsed = JSON.parse(jsonString);
+                    const key = meta.date + (meta.hour !== undefined ? `_${meta.hour}` : '');
+                    allBackups[key] = parsed;
+                }
+            } catch (e) {
+                console.warn(`[Backup] ${backupId} okunamadı:`, e.message);
             }
             
-            if (jsonString) {
-                try {
-                    allBackups[meta.date] = JSON.parse(jsonString);
-                } catch (e) {
-                    allBackups[meta.date] = { error: 'Parse hatası', raw: jsonString.substring(0, 100) };
-                }
+            processed++;
+            if (processed % 5 === 0) {
+                toast(`${processed}/${backupDocs.length} yedek işlendi...`, 'info');
             }
         }
         
@@ -15446,29 +15460,39 @@ async function loadBackupsList() {
     container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tx3)">Yükleniyor...</div>';
     
     try {
-        // Sadece son 20 yedek (part olmayan)
-        const snapshot = await db.collection('backups')
-            .orderBy('createdAt', 'desc')
-            .limit(30)
-            .get();
+        // Basit sorgu - index gerektirmez
+        const snapshot = await db.collection('backups').get();
         
         if (snapshot.empty) {
             container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx3)">Henüz yedek yok</div>';
             return;
         }
         
+        // Part olmayan yedekleri filtrele ve client-side sırala
+        const backups = [];
+        snapshot.forEach(doc => {
+            if (doc.id.includes('_part')) return; // Part'ları atla
+            const d = doc.data();
+            backups.push({ id: doc.id, ...d });
+        });
+        
+        // Tarihe göre sırala (yeniden eskiye)
+        backups.sort((a, b) => {
+            const dateA = a.date || '';
+            const dateB = b.date || '';
+            if (dateA !== dateB) return dateB.localeCompare(dateA);
+            // Aynı gün ise saate göre sırala
+            return (b.hour || 0) - (a.hour || 0);
+        });
+        
+        // Max 20 göster
+        const displayBackups = backups.slice(0, 20);
+        
         let html = '<div style="display:flex;flex-direction:column;gap:8px">';
         const canDownload = currentUser?.role === 'yonetici';
-        let count = 0;
         
-        snapshot.forEach(doc => {
-            // Part dökümanlarını atla
-            if (doc.id.includes('_part')) return;
-            if (count >= 20) return; // Max 20 göster
-            count++;
-            
-            const d = doc.data();
-            const dateStr = d.date || doc.id;
+        displayBackups.forEach(d => {
+            const dateStr = d.date || d.id;
             const hourStr = d.hour !== undefined ? ` ${String(d.hour).padStart(2,'0')}:00` : '';
             const datetime = dateStr + hourStr;
             const sizeKB = d.totalSize ? (d.totalSize / 1024).toFixed(1) : '?';
@@ -15476,7 +15500,7 @@ async function loadBackupsList() {
             const createdBy = d.createdBy || 'Sistem';
             
             const downloadBtn = canDownload 
-                ? `<button class="btn btn-sm" style="background:#008c95;color:#fff" onclick="downloadBackupFile('${doc.id}')">
+                ? `<button class="btn btn-sm" style="background:#008c95;color:#fff" onclick="downloadBackupFile('${d.id}')">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     İndir
                 </button>`
@@ -15492,11 +15516,11 @@ async function loadBackupsList() {
         });
         
         // Tümünü indir butonu
-        if (canDownload) {
+        if (canDownload && backups.length > 0) {
             html += `<div style="margin-top:12px;text-align:center">
                 <button class="btn btn-primary" onclick="downloadAllBackups()">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    Tüm Yedekleri İndir
+                    Tüm Yedekleri İndir (${backups.length})
                 </button>
             </div>`;
         }
@@ -15505,6 +15529,7 @@ async function loadBackupsList() {
         
         container.innerHTML = html;
     } catch (e) {
+        console.error('[Backup] Liste hatası:', e);
         container.innerHTML = '<div style="color:#e74c3c;padding:20px">Hata: ' + e.message + '</div>';
     }
 }
