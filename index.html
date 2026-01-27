@@ -1723,14 +1723,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <button class="admin-tab" id="tab-tumCheckler" onclick="showAdminTab('tumCheckler',this)">Tüm Checkler</button>
                     <button class="admin-tab admin-only-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)" style="display:none">Pozisyonlar ve Yetkiler</button>
                     <button class="admin-tab admin-only-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)" style="display:none">Oturumlar & Aktiviteler</button>
-                    <button class="admin-tab" id="tab-magazaSaatleri" onclick="showAdminTab('magazaSaatleri',this)">Mağaza Saatleri</button>
-                    <button class="admin-tab" id="tab-checkKurallari" onclick="showAdminTab('checkKurallari',this)">Check & Puantaj Kuralları</button>
-                    <button class="admin-tab" id="tab-checklistTurleri" onclick="showAdminTab('checklistTurleri',this)">Checklist Türleri</button>
-                    <button class="admin-tab" id="tab-subeler" onclick="showAdminTab('subeler',this)">Şubeler</button>
-                    <button class="admin-tab" id="tab-ihlaller" onclick="showAdminTab('ihlaller',this)">İhlaller</button>
-                    <button class="admin-tab" id="tab-sablonlar" onclick="showAdminTab('sablonlar',this)">Sözleşme Şablonları</button>
-                    <button class="admin-tab" id="tab-belgeler" onclick="showAdminTab('belgeler',this)">Belge Şablonları</button>
-                    <button class="admin-tab" id="tab-yedekler" onclick="showAdminTab('yedekler',this)">Yedekler</button>
+                    <button class="admin-tab" id="tab-magazaSaatleri" onclick="showAdminTab('magazaSaatleri',this)" style="display:none">Mağaza Saatleri</button>
+                    <button class="admin-tab" id="tab-checkKurallari" onclick="showAdminTab('checkKurallari',this)" style="display:none">Check & Puantaj Kuralları</button>
+                    <button class="admin-tab" id="tab-checklistTurleri" onclick="showAdminTab('checklistTurleri',this)" style="display:none">Checklist Türleri</button>
+                    <button class="admin-tab" id="tab-subeler" onclick="showAdminTab('subeler',this)" style="display:none">Şubeler</button>
+                    <button class="admin-tab" id="tab-ihlaller" onclick="showAdminTab('ihlaller',this)" style="display:none">İhlaller</button>
+                    <button class="admin-tab" id="tab-sablonlar" onclick="showAdminTab('sablonlar',this)" style="display:none">Sözleşme Şablonları</button>
+                    <button class="admin-tab" id="tab-belgeler" onclick="showAdminTab('belgeler',this)" style="display:none">Belge Şablonları</button>
+                    <button class="admin-tab" id="tab-yedekler" onclick="showAdminTab('yedekler',this)" style="display:none">Yedekler</button>
                 </div>
                 
                 <!-- Tüm Checkler Özet -->
@@ -13785,8 +13785,12 @@ async function loadUserAvatar() {
 
 // Kullanıcı girişinde izinleri yükle
 async function loadUserAdvancedPermissions() {
-    if (!currentUser || currentUser.role === 'yonetici') {
+    if (!currentUser) return;
+    
+    // Yönetici için de applyAdvancedPermissions çağrılmalı (tab'ları açmak için)
+    if (currentUser.role === 'yonetici') {
         window.userAdvancedPermissions = null;
+        applyAdvancedPermissions();
         return;
     }
     
