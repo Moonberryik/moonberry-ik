@@ -557,9 +557,9 @@ body {
         
         // ==================== SAYFA YÜKLENDİĞİNDE ====================
         document.addEventListener('DOMContentLoaded', () => {
-            // Zaten giriş yapmışsa yönlendir
+            // Zaten giriş yapmışsa ve localStorage'da user varsa yönlendir
             auth.onAuthStateChanged(user => {
-                if (user) {
+                if (user && localStorage.getItem('mb_user')) {
                     window.location.replace('index.html');
                 }
             });
