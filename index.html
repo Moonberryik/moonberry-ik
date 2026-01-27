@@ -15257,26 +15257,31 @@ async function loadBackupsList() {
     container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tx3)">Yükleniyor...</div>';
     
     try {
-        const snapshot = await db.collection('backups').get();
+        // Sadece son 10 yedek (limit ile - index gerektirmez)
+        const snapshot = await db.collection('backups').limit(15).get();
         
         if (snapshot.empty) {
-            container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx3)">Henüz yedek yok. "Manuel Yedek Al" butonuna tıklayın.</div>';
+            container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx3)">Henüz yedek yok.</div>';
             return;
         }
         
-        // Yedekleri topla ve sırala
+        // Part olmayanları filtrele ve sırala
         const backups = [];
         snapshot.forEach(doc => {
             if (doc.id.includes('_part')) return;
             backups.push({ id: doc.id, ...doc.data() });
         });
         
+        // Tarihe göre sırala (yeniden eskiye)
         backups.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.time || '').localeCompare(a.time || ''));
+        
+        // Max 10 göster
+        const displayList = backups.slice(0, 10);
         
         let html = '<div style="display:flex;flex-direction:column;gap:8px">';
         const canDownload = currentUser?.role === 'yonetici';
         
-        backups.slice(0, 20).forEach(d => {
+        displayList.forEach(d => {
             const datetime = d.date + (d.time ? ' ' + d.time : '');
             const sizeKB = d.totalSize ? (d.totalSize / 1024).toFixed(0) + ' KB' : '-';
             
@@ -15291,6 +15296,7 @@ async function loadBackupsList() {
         
         html += '</div>';
         container.innerHTML = html;
+        console.log('[Backup] Liste yüklendi:', displayList.length, 'yedek');
     } catch (e) {
         console.error('[Backup] Liste hatası:', e);
         container.innerHTML = '<div style="color:#e74c3c;padding:20px">Hata: ' + e.message + '</div>';
