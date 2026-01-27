@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>Moonberry Coffee | Yönetim Paneli v2.7</title>
+    <title>Moonberry Coffee | Yönetim Paneli v2.8</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%23008c95'/%3E%3Ctext x='50' y='68' text-anchor='middle' font-family='Arial,sans-serif' font-weight='bold' font-size='60' fill='white'%3EM%3C/text%3E%3C/svg%3E">
     <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/760af2_0e846222ae5b4021930a757e498f30e9~mv2.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -298,6 +298,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 /* Admin Panel */
 .admin-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
 .admin-tab{padding:10px 20px;background:var(--surface2);border:1.5px solid var(--surface3);border-radius:var(--radiusSm);color:var(--txdark2);font-size:.85rem;font-weight:600;cursor:pointer;transition:var(--transition)}
+.admin-tab.tab-hidden{display:none!important}
 .admin-tab:hover{border-color:var(--accent);color:var(--accent);background:rgba(255,134,116,.05)}
 .admin-tab.active{background:linear-gradient(135deg,var(--accent),#ff6b5b);border-color:var(--accent);color:#fff;box-shadow:0 2px 12px rgba(255,134,116,.25)}
 .admin-section{display:none;animation:fadeUp .3s}
@@ -1721,16 +1722,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 <div class="admin-tabs" id="adminTabsContainer">
                     <button class="admin-tab active" id="tab-genel" onclick="showAdminTab('genel',this)">Genel</button>
                     <button class="admin-tab" id="tab-tumCheckler" onclick="showAdminTab('tumCheckler',this)">Tüm Checkler</button>
-                    <button class="admin-tab admin-only-tab" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)" style="display:none">Pozisyonlar ve Yetkiler</button>
-                    <button class="admin-tab admin-only-tab" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)" style="display:none">Oturumlar & Aktiviteler</button>
-                    <button class="admin-tab" id="tab-magazaSaatleri" onclick="showAdminTab('magazaSaatleri',this)" style="display:none">Mağaza Saatleri</button>
-                    <button class="admin-tab" id="tab-checkKurallari" onclick="showAdminTab('checkKurallari',this)" style="display:none">Check & Puantaj Kuralları</button>
-                    <button class="admin-tab" id="tab-checklistTurleri" onclick="showAdminTab('checklistTurleri',this)" style="display:none">Checklist Türleri</button>
-                    <button class="admin-tab" id="tab-subeler" onclick="showAdminTab('subeler',this)" style="display:none">Şubeler</button>
-                    <button class="admin-tab" id="tab-ihlaller" onclick="showAdminTab('ihlaller',this)" style="display:none">İhlaller</button>
-                    <button class="admin-tab" id="tab-sablonlar" onclick="showAdminTab('sablonlar',this)" style="display:none">Sözleşme Şablonları</button>
-                    <button class="admin-tab" id="tab-belgeler" onclick="showAdminTab('belgeler',this)" style="display:none">Belge Şablonları</button>
-                    <button class="admin-tab" id="tab-yedekler" onclick="showAdminTab('yedekler',this)" style="display:none">Yedekler</button>
+                    <button class="admin-tab tab-hidden" id="tab-kullanicilar" onclick="showAdminTab('kullanicilar',this)">Pozisyonlar ve Yetkiler</button>
+                    <button class="admin-tab tab-hidden" id="tab-oturumlar" onclick="showAdminTab('oturumlar',this)">Oturumlar & Aktiviteler</button>
+                    <button class="admin-tab tab-hidden" id="tab-magazaSaatleri" onclick="showAdminTab('magazaSaatleri',this)">Mağaza Saatleri</button>
+                    <button class="admin-tab tab-hidden" id="tab-checkKurallari" onclick="showAdminTab('checkKurallari',this)">Check & Puantaj Kuralları</button>
+                    <button class="admin-tab tab-hidden" id="tab-checklistTurleri" onclick="showAdminTab('checklistTurleri',this)">Checklist Türleri</button>
+                    <button class="admin-tab tab-hidden" id="tab-subeler" onclick="showAdminTab('subeler',this)">Şubeler</button>
+                    <button class="admin-tab tab-hidden" id="tab-ihlaller" onclick="showAdminTab('ihlaller',this)">İhlaller</button>
+                    <button class="admin-tab tab-hidden" id="tab-sablonlar" onclick="showAdminTab('sablonlar',this)">Sözleşme Şablonları</button>
+                    <button class="admin-tab tab-hidden" id="tab-belgeler" onclick="showAdminTab('belgeler',this)">Belge Şablonları</button>
+                    <button class="admin-tab tab-hidden" id="tab-yedekler" onclick="showAdminTab('yedekler',this)">Yedekler</button>
                 </div>
                 
                 <!-- Tüm Checkler Özet -->
@@ -2514,7 +2515,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.7 yüklendi');
+console.log('🔷 Moonberry İK v2.8 yüklendi - CLASS TABANLI TAB KONTROLÜ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -7310,20 +7311,20 @@ function renderAdminLists() {
     const adminOnlySections = ['admin-kullanicilar', 'admin-oturumlar'];
     
     if (currentUser?.role === 'yonetici') {
-        // Yönetici için göster
+        // Yönetici için göster (class kaldır)
         adminOnlyTabs.forEach(tabId => {
             const tab = document.getElementById(tabId);
-            if (tab) tab.style.display = '';
+            if (tab) tab.classList.remove('tab-hidden');
         });
         adminOnlySections.forEach(sectionId => {
             const section = document.getElementById(sectionId);
             if (section) section.style.display = '';
         });
     } else {
-        // Yönetici HARİÇ herkes için gizle
+        // Yönetici HARİÇ herkes için gizle (class ekle)
         adminOnlyTabs.forEach(tabId => {
             const tab = document.getElementById(tabId);
-            if (tab) tab.style.display = 'none';
+            if (tab) tab.classList.add('tab-hidden');
         });
         adminOnlySections.forEach(sectionId => {
             const section = document.getElementById(sectionId);
@@ -13811,11 +13812,11 @@ function applyAdvancedPermissions() {
     // Yönetici her şeyi görür - early return
     if (currentUser?.role === 'yonetici') {
         console.log('[Yetkiler] Yönetici - tüm yetkiler açık');
-        // Tüm admin sekmelerini görünür yap
+        // Tüm admin sekmelerini görünür yap (tab-hidden class'ını kaldır)
         const allAdminTabs = ['tab-kullanicilar', 'tab-oturumlar', 'tab-subeler', 'tab-ihlaller', 'tab-sablonlar', 'tab-belgeler', 'tab-yedekler', 'tab-magazaSaatleri', 'tab-checkKurallari', 'tab-checklistTurleri'];
         allAdminTabs.forEach(tabId => {
             const tab = document.getElementById(tabId);
-            if (tab) tab.style.display = '';
+            if (tab) tab.classList.remove('tab-hidden');
         });
         return;
     }
@@ -13974,11 +13975,15 @@ function applyAdvancedPermissions() {
         'tab-oturumlar': perms.admin?.admin_oturumlar
     };
     
-    // Her sekme için görünürlük uygula
+    // Her sekme için görünürlük uygula (CLASS TABANLI)
     Object.entries(adminTabPermissions).forEach(([tabId, hasPermission]) => {
         const tab = document.getElementById(tabId);
         if (tab) {
-            tab.style.display = hasPermission ? '' : 'none';
+            if (hasPermission) {
+                tab.classList.remove('tab-hidden');
+            } else {
+                tab.classList.add('tab-hidden');
+            }
         }
     });
     
