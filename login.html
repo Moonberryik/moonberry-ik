@@ -754,6 +754,16 @@ body {
                     credentialDocId: emailDocId,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
+                
+                // Admin ise users koleksiyonuna da kaydet (Firestore Rules için)
+                if (isAdmin) {
+                    await db.collection('users').doc(uid).set({
+                        email: email,
+                        role: 'yonetici',
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    console.log('   ✓ Admin users kaydı oluşturuldu');
+                }
                 console.log('   ✓ authMapping kaydedildi');
                 
                 // ========== ADIM 5: localStorage ve yönlendirme ==========
