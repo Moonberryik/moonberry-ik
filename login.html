@@ -654,57 +654,20 @@ body {
             hideError();
             
             try {
-                // ========== ADIM 1: Önce Firebase Auth dene ==========
-                try {
-                    await auth.signInWithEmailAndPassword(email, password);
-                    
-                    // Auth başarılı - Personel kontrolü
-                    const personelCheck = await db.collection('personel')
-                        .where('email', '==', email)
-                        .limit(1)
-                        .get();
-                    
-                    if (personelCheck.empty) {
-                        await auth.signOut();
-                        await logLoginAttempt(email, false, 'personel_not_found');
-                        showError('Bu hesap artık aktif değil.');
-                        btn.classList.remove('loading');
-                        btn.disabled = false;
-                        return;
-                    }
-                    
-                    // Personel bilgisini localStorage'a kaydet
-                    const personelData = personelCheck.docs[0].data();
-                    const userData = {
-                        email: email,
-                        name: personelData.name,
-                        role: personelData.role,
-                        branch: personelData.branch,
-                        uniqueId: personelData.uniqueId,
-                        position: personelData.position,
-                        authType: 'email'
-                    };
-                    localStorage.setItem('mb_user', JSON.stringify(userData));
-                    
-                    await logLoginAttempt(email, true, 'auth');
-                    clearLockout();
-                    showToast('Giriş başarılı!', 'success');
-                    
-                    setTimeout(() => {
-                        window.location.replace('index.html');
-                    }, 800);
-                    return;
-                    
-                } catch (authError) {
-                    console.log('Firebase Auth hatası:', authError.code);
-                    // Auth başarısız - Credentials ile devam et
-                }
+                // ========== ADIM 1: Anonymous Auth (Firestore erişimi için) ==========
+                console.log('1. Anonymous Auth başlatılıyor...');
+                await auth.signInAnonymously();
+                console.log('   ✓ Anonymous Auth başarılı');
                 
                 // ========== ADIM 2: Credentials kontrolü ==========
                 const emailDocId = email.replace(/[@.]/g, '_');
+                console.log('2. Credentials kontrol:', emailDocId);
+                
                 const credDoc = await db.collection('credentials').doc(emailDocId).get();
                 
                 if (!credDoc.exists) {
+                    console.log('   ✗ Credentials yok');
+                    await auth.signOut();
                     await logLoginAttempt(email, false, 'no_credentials');
                     showError('Bu hesap için şifre tanımlanmamış.');
                     btn.classList.remove('loading');
@@ -714,8 +677,11 @@ body {
                 
                 const credData = credDoc.data();
                 const storedPassword = decodeCredential(credData);
+                console.log('   Kayıtlı:', storedPassword, '| Girilen:', password);
                 
                 if (!storedPassword || storedPassword !== password) {
+                    console.log('   ✗ Şifre eşleşmiyor');
+                    await auth.signOut();
                     await logLoginAttempt(email, false, 'wrong_password');
                     loginAttempts++;
                     localStorage.setItem('mb_login_attempts', loginAttempts);
@@ -731,13 +697,18 @@ body {
                     return;
                 }
                 
-                // ========== ADIM 3: Şifre DOĞRU - Personel kontrolü ==========
+                console.log('   ✓ Şifre doğru');
+                
+                // ========== ADIM 3: Personel kontrolü ==========
+                console.log('3. Personel kontrol...');
                 const personelSnap = await db.collection('personel')
                     .where('email', '==', email)
                     .limit(1)
                     .get();
                 
                 if (personelSnap.empty) {
+                    console.log('   ✗ Personel bulunamadı');
+                    await auth.signOut();
                     await logLoginAttempt(email, false, 'personel_not_found');
                     showError('Bu hesap artık aktif değil.');
                     btn.classList.remove('loading');
@@ -745,21 +716,19 @@ body {
                     return;
                 }
                 
-                // ========== ADIM 4: Anonymous Auth ile giriş ==========
-                console.log('Credentials doğru, Anonymous Auth ile giriş yapılıyor...');
+                console.log('   ✓ Personel bulundu');
                 
-                await auth.signInAnonymously();
-                
-                // authMapping'e uid → email eşleşmesi kaydet (şifre değiştirme için)
+                // ========== ADIM 4: authMapping kaydet ==========
+                console.log('4. authMapping kaydediliyor...');
                 const uid = auth.currentUser.uid;
-                const credentialDocId = email.replace(/[@.]/g, '_');
                 await db.collection('authMapping').doc(uid).set({
                     email: email,
-                    credentialDocId: credentialDocId,
+                    credentialDocId: emailDocId,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
+                console.log('   ✓ authMapping kaydedildi');
                 
-                // Personel bilgisini localStorage'a kaydet
+                // ========== ADIM 5: localStorage ve yönlendirme ==========
                 const personelData = personelSnap.docs[0].data();
                 const userData = {
                     email: email,
@@ -774,6 +743,7 @@ body {
                 
                 await logLoginAttempt(email, true, 'credentials_anonymous');
                 clearLockout();
+                console.log('5. ✓ Giriş başarılı, yönlendiriliyor...');
                 showToast('Giriş başarılı!', 'success');
                 
                 setTimeout(() => {
@@ -781,7 +751,8 @@ body {
                 }, 800);
                 
             } catch (error) {
-                console.error('Giriş hatası:', error);
+                console.error('❌ Giriş hatası:', error);
+                if (auth.currentUser) await auth.signOut();
                 await logLoginAttempt(email, false, 'error');
                 showError('Giriş yapılamadı. Tekrar deneyin.');
                 btn.classList.remove('loading');
