@@ -15168,30 +15168,45 @@ async function checkAndRunBackupWithCatchup() {
     }
 }
 
-// Eksik günleri telafi et
+// Eksik günleri telafi et (yavaş ve güvenli)
 async function catchupMissingBackups() {
     try {
         const now = new Date();
         const catchupDays = BACKUP_CONFIG.catchupDays;
+        let catchupCount = 0;
+        const maxCatchupPerSession = 2; // Her oturumda max 2 telafi yedek
         
-        for (let i = 1; i <= catchupDays; i++) {
+        for (let i = 1; i <= catchupDays && catchupCount < maxCatchupPerSession; i++) {
             const pastDate = new Date(now);
             pastDate.setDate(pastDate.getDate() - i);
             const dateStr = formatDateLocal(pastDate);
-            const backupIdBase = `backup_${dateStr.replace(/-/g, '')}`;
             
             // O gün için herhangi bir yedek var mı?
-            const snapshot = await db.collection('backups')
-                .where('date', '==', dateStr)
-                .limit(1)
-                .get();
-            
-            if (snapshot.empty) {
-                // O gün yedek yok, şimdi al (gece 00 saati olarak)
-                const catchupId = `${backupIdBase}_00`;
-                await runAutoBackup(catchupId, dateStr, 0);
-                console.log(`[Backup] Telafi yedek alındı: ${dateStr}`);
+            try {
+                const snapshot = await db.collection('backups')
+                    .where('date', '==', dateStr)
+                    .limit(1)
+                    .get();
+                
+                if (snapshot.empty) {
+                    // O gün yedek yok, şimdi al
+                    const catchupId = `backup_${dateStr.replace(/-/g, '')}_00`;
+                    await runAutoBackup(catchupId, dateStr, 0);
+                    console.log(`[Backup] Telafi yedek alındı: ${dateStr}`);
+                    catchupCount++;
+                    
+                    // Her yedek arasında 3 saniye bekle
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                }
+            } catch (e) {
+                // Hata olursa dur, sonraki girişte devam eder
+                console.warn('[Backup] Telafi sorgu hatası, durduruluyor:', e.message);
+                break;
             }
+        }
+        
+        if (catchupCount > 0) {
+            console.log(`[Backup] ${catchupCount} telafi yedek tamamlandı`);
         }
     } catch (e) {
         console.error('[Backup] Telafi hatası:', e.message);
@@ -15337,9 +15352,10 @@ async function downloadAllBackups() {
     try {
         toast('Tüm yedekler hazırlanıyor...', 'info');
         
+        // Basit sorgu - son 30 yedek
         const snapshot = await db.collection('backups')
-            .where('isMultiPart', 'in', [true, false])
-            .orderBy('date', 'desc')
+            .orderBy('createdAt', 'desc')
+            .limit(50)
             .get();
         
         if (snapshot.empty) {
@@ -15430,7 +15446,11 @@ async function loadBackupsList() {
     container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tx3)">Yükleniyor...</div>';
     
     try {
-        const snapshot = await db.collection('backups').orderBy('createdAt', 'desc').limit(50).get();
+        // Sadece son 20 yedek (part olmayan)
+        const snapshot = await db.collection('backups')
+            .orderBy('createdAt', 'desc')
+            .limit(30)
+            .get();
         
         if (snapshot.empty) {
             container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx3)">Henüz yedek yok</div>';
@@ -15439,12 +15459,15 @@ async function loadBackupsList() {
         
         let html = '<div style="display:flex;flex-direction:column;gap:8px">';
         const canDownload = currentUser?.role === 'yonetici';
+        let count = 0;
         
         snapshot.forEach(doc => {
-            const d = doc.data();
             // Part dökümanlarını atla
             if (doc.id.includes('_part')) return;
+            if (count >= 20) return; // Max 20 göster
+            count++;
             
+            const d = doc.data();
             const dateStr = d.date || doc.id;
             const hourStr = d.hour !== undefined ? ` ${String(d.hour).padStart(2,'0')}:00` : '';
             const datetime = dateStr + hourStr;
