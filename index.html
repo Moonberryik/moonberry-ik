@@ -4302,9 +4302,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Giriş aktivitesini logla
                     logActivity('login', { device: navigator.userAgent });
                     
-                    // G15: Yönetici ve Müdürler girince 30sn sonra otomatik yedekleme
+                    // G15: Yönetici ve Müdürler girince 30sn sonra günlük yedekleme kontrolü
                     if (['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role)) {
-                        setTimeout(() => runAutoBackup(), 30000);
+                        setTimeout(() => checkAndRunDailyBackup(), 30000);
                     }
                 } catch (error) {
                     console.error('Error loading user data:', error);
@@ -15130,48 +15130,49 @@ renderAdminLists = function() {
     }
 };
 
-// ==================== G15: OTOMATİK YEDEKLEME ====================
+// ==================== G15: OTOMATİK YEDEKLEME (PARÇALI) ====================
 const BACKUP_CONFIG = {
     collections: [
         'personel', 'shifts', 'checklists', 'checklistSubmissions',
         'puantajNotes', 'managerNotes', 'weeklyTaskAssignments',
-        'dailyTaskAssignments', 'users', 'sessions', 'activityLogs', 'config'
+        'dailyTaskAssignments', 'users', 'sessions', 'config', 'systemConfig', 
+        'permissions', 'positions', 'branches', 'credentials'
     ],
-    intervalHours: 3,
+    maxPartSizeBytes: 900000, // 900KB güvenli limit (Firestore 1MB)
     retentionDays: 30
 };
+
+// Günlük yedekleme kontrolü - sayfa açıldığında çalışır
+async function checkAndRunDailyBackup() {
+    const today = formatDateLocal(new Date()).replace(/-/g, '');
+    const backupId = `backup_${today}`;
+    
+    try {
+        // Bugün için yedek var mı?
+        const existingDoc = await db.collection('backups').doc(backupId).get();
+        if (existingDoc.exists) {
+            // Aynı gün zaten yedeklendi, sessizce atla
+            return;
+        }
+        
+        // Yedek yok, al
+        await runAutoBackup();
+    } catch (e) {
+        console.error('[Backup] Kontrol hatası:', e.message);
+    }
+}
 
 async function runAutoBackup() {
     const now = new Date();
     const dateStr = formatDateLocal(now);
-    const timeStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
-    
-    // Son 3 saat içinde yedek var mı?
-    try {
-        const threeHoursAgo = new Date(now.getTime() - (BACKUP_CONFIG.intervalHours * 60 * 60 * 1000));
-        const snapshot = await db.collection('backups').orderBy('createdAt', 'desc').limit(1).get();
-        
-        if (!snapshot.empty) {
-            const lastBackup = snapshot.docs[0].data();
-            const lastTime = lastBackup.createdAt?.toDate?.() || new Date(0);
-            if (lastTime > threeHoursAgo) {
-                console.log('[Backup] Son 3 saat içinde yedek var, atlanıyor');
-                return;
-            }
-        }
-    } catch (e) {
-        console.log('[Backup] Kontrol hatası, devam ediliyor');
-    }
-    
-    const backupId = 'backup_' + dateStr.replace(/-/g, '') + '_' + timeStr.replace(':', '');
-    console.log('[Backup] Otomatik yedekleme başlıyor:', backupId);
+    const today = dateStr.replace(/-/g, '');
+    const backupId = `backup_${today}`;
     
     try {
+        // Tüm koleksiyonları topla
         const backupData = {
             date: dateStr,
-            time: timeStr,
-            datetime: dateStr + ' ' + timeStr,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdAt: now.toISOString(),
             createdBy: currentUser?.name || 'Sistem',
             collections: {}
         };
@@ -15187,11 +15188,164 @@ async function runAutoBackup() {
             }
         }
         
-        await db.collection('backups').doc(backupId).set(backupData);
-        console.log('[Backup] ✓ Yedekleme tamamlandı:', backupId);
+        // JSON string'e çevir ve boyut hesapla
+        const jsonString = JSON.stringify(backupData);
+        const sizeBytes = new Blob([jsonString]).size;
+        const maxSize = BACKUP_CONFIG.maxPartSizeBytes;
+        
+        if (sizeBytes <= maxSize) {
+            // Tek parça - doğrudan kaydet
+            await db.collection('backups').doc(backupId).set({
+                date: dateStr,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdBy: currentUser?.name || 'Sistem',
+                data: jsonString,
+                totalParts: 1,
+                totalSize: sizeBytes,
+                isMultiPart: false
+            });
+        } else {
+            // Çok parçalı yedekleme
+            const parts = [];
+            for (let i = 0; i < jsonString.length; i += maxSize) {
+                parts.push(jsonString.slice(i, i + maxSize));
+            }
+            
+            // Her parçayı ayrı döküman olarak kaydet
+            for (let i = 0; i < parts.length; i++) {
+                await db.collection('backups').doc(`${backupId}_part${i + 1}`).set({
+                    date: dateStr,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    partNumber: i + 1,
+                    totalParts: parts.length,
+                    data: parts[i]
+                });
+            }
+            
+            // Ana backup dökümanı (metadata - veri yok)
+            await db.collection('backups').doc(backupId).set({
+                date: dateStr,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdBy: currentUser?.name || 'Sistem',
+                totalParts: parts.length,
+                totalSize: sizeBytes,
+                isMultiPart: true
+            });
+        }
+        
+        console.log(`[Backup] ✓ ${dateStr} yedeklendi (${(sizeBytes/1024/1024).toFixed(2)} MB)`);
         await cleanOldBackups();
     } catch (e) {
-        console.error('[Backup] Hata:', e);
+        console.error('[Backup] Hata:', e.message);
+    }
+}
+
+// Yedek indirme - parçaları birleştirir
+async function downloadBackup(date) {
+    const backupId = `backup_${date.replace(/-/g, '')}`;
+    
+    try {
+        const mainDoc = await db.collection('backups').doc(backupId).get();
+        if (!mainDoc.exists) {
+            toast('Yedek bulunamadı', 'error');
+            return;
+        }
+        
+        const meta = mainDoc.data();
+        let jsonString = '';
+        
+        if (meta.isMultiPart) {
+            // Parçaları birleştir
+            toast('Parçalar birleştiriliyor...', 'info');
+            for (let i = 1; i <= meta.totalParts; i++) {
+                const partDoc = await db.collection('backups').doc(`${backupId}_part${i}`).get();
+                if (partDoc.exists) {
+                    jsonString += partDoc.data().data;
+                }
+            }
+        } else {
+            jsonString = meta.data;
+        }
+        
+        // İndir
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `moonberry_backup_${date}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        toast('Yedek indirildi!', 'success');
+    } catch (e) {
+        console.error('[Backup] İndirme hatası:', e);
+        toast('İndirme hatası: ' + e.message, 'error');
+    }
+}
+
+// Tüm yedekleri tek JSON olarak indir
+async function downloadAllBackups() {
+    try {
+        toast('Tüm yedekler hazırlanıyor...', 'info');
+        
+        const snapshot = await db.collection('backups')
+            .where('isMultiPart', 'in', [true, false])
+            .orderBy('date', 'desc')
+            .get();
+        
+        if (snapshot.empty) {
+            toast('Yedek bulunamadı', 'error');
+            return;
+        }
+        
+        const allBackups = {};
+        
+        for (const doc of snapshot.docs) {
+            const meta = doc.data();
+            const backupId = doc.id;
+            
+            // Part dökümanlarını atla
+            if (backupId.includes('_part')) continue;
+            
+            let jsonString = '';
+            
+            if (meta.isMultiPart) {
+                for (let i = 1; i <= meta.totalParts; i++) {
+                    const partDoc = await db.collection('backups').doc(`${backupId}_part${i}`).get();
+                    if (partDoc.exists) {
+                        jsonString += partDoc.data().data;
+                    }
+                }
+            } else if (meta.data) {
+                jsonString = meta.data;
+            }
+            
+            if (jsonString) {
+                try {
+                    allBackups[meta.date] = JSON.parse(jsonString);
+                } catch (e) {
+                    allBackups[meta.date] = { error: 'Parse hatası', raw: jsonString.substring(0, 100) };
+                }
+            }
+        }
+        
+        // İndir
+        const blob = new Blob([JSON.stringify(allBackups, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `moonberry_all_backups_${formatDateLocal(new Date())}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        toast(`${Object.keys(allBackups).length} yedek indirildi!`, 'success');
+    } catch (e) {
+        console.error('[Backup] Toplu indirme hatası:', e);
+        toast('İndirme hatası: ' + e.message, 'error');
     }
 }
 
@@ -15241,10 +15395,12 @@ async function loadBackupsList() {
         
         snapshot.forEach(doc => {
             const d = doc.data();
-            const datetime = d.datetime || d.date || doc.id;
-            const colCount = Object.keys(d.collections || {}).length;
-            let totalDocs = 0;
-            Object.values(d.collections || {}).forEach(arr => totalDocs += (arr?.length || 0));
+            // Part dökümanlarını atla
+            if (doc.id.includes('_part')) return;
+            
+            const datetime = d.date || doc.id;
+            const sizeKB = d.totalSize ? (d.totalSize / 1024).toFixed(1) : '?';
+            const partsInfo = d.isMultiPart ? ` (${d.totalParts} parça)` : '';
             const createdBy = d.createdBy || 'Sistem';
             
             const downloadBtn = canDownload 
@@ -15257,11 +15413,22 @@ async function loadBackupsList() {
             html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg2);border-radius:10px;border:1px solid var(--bg4)">
                 <div>
                     <div style="font-weight:600;color:var(--tx)">${datetime}</div>
-                    <div style="font-size:.75rem;color:var(--tx3)">${colCount} koleksiyon • ${totalDocs} kayıt • ${createdBy}</div>
+                    <div style="font-size:.75rem;color:var(--tx3)">${sizeKB} KB${partsInfo} • ${createdBy}</div>
                 </div>
                 ${downloadBtn}
             </div>`;
         });
+        
+        // Tümünü indir butonu
+        if (canDownload) {
+            html += `<div style="margin-top:12px;text-align:center">
+                <button class="btn btn-primary" onclick="downloadAllBackups()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Tüm Yedekleri İndir
+                </button>
+            </div>`;
+        }
+        
         html += '</div>';
         
         container.innerHTML = html;
@@ -15278,20 +15445,36 @@ async function downloadBackupFile(backupId) {
     
     try {
         toast('Yedek hazırlanıyor...', 'info');
-        const doc = await db.collection('backups').doc(backupId).get();
-        if (!doc.exists) {
+        const mainDoc = await db.collection('backups').doc(backupId).get();
+        if (!mainDoc.exists) {
             toast('Yedek bulunamadı', 'error');
             return;
         }
         
-        const data = doc.data();
-        const json = JSON.stringify(data, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
+        const meta = mainDoc.data();
+        let jsonString = '';
+        
+        if (meta.isMultiPart) {
+            // Parçaları birleştir
+            for (let i = 1; i <= meta.totalParts; i++) {
+                const partDoc = await db.collection('backups').doc(`${backupId}_part${i}`).get();
+                if (partDoc.exists) {
+                    jsonString += partDoc.data().data;
+                }
+            }
+        } else if (meta.data) {
+            jsonString = meta.data;
+        } else {
+            // Eski format - doğrudan data içeriyor
+            jsonString = JSON.stringify(meta, null, 2);
+        }
+        
+        const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'moonberry_backup_' + data.date + '_' + data.time.replace(':', '') + '.json';
+        a.download = 'moonberry_backup_' + meta.date + '.json';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
