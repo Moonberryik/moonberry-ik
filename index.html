@@ -6984,6 +6984,28 @@ function copyIban() {
     });
 }
 
+// Personel modal IBAN kopyala
+function copyPersonelIban() {
+    const ibanInput = document.getElementById('personelIBAN');
+    if (!ibanInput || !ibanInput.value) {
+        toast('Kopyalanacak IBAN yok', 'error');
+        return;
+    }
+    
+    navigator.clipboard.writeText(ibanInput.value).then(() => {
+        toast('IBAN kopyalandı!', 'success');
+    }).catch(err => {
+        // Fallback
+        const textarea = document.createElement('textarea');
+        textarea.value = ibanInput.value;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        toast('IBAN kopyalandı!', 'success');
+    });
+}
+
 // ========== PERSONEL MODAL İÇİN BANKA DROPDOWN ==========
 function showPersonelBankDropdown() {
     const dropdown = document.getElementById('personelBankDropdown');
@@ -9710,6 +9732,9 @@ async function loadPersonelList() {
                         </div>
                         ${canEdit ? `
                         <div style="display:flex;gap:4px">
+                            <button onclick="showPersonelPreview('${docId}')" style="padding:5px 8px;background:var(--bg3);border:none;border-radius:5px;color:var(--accent);cursor:pointer;display:flex;align-items:center;transition:all .15s" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'" title="Önizleme">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
                             <button onclick="editPersonel('${docId}')" style="padding:5px 10px;background:var(--bg3);border:none;border-radius:5px;color:var(--tx);cursor:pointer;font-size:.75rem;display:flex;align-items:center;gap:4px;transition:all .15s" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">
                                 ${ICONS.edit} Düzenle
                             </button>
@@ -9815,10 +9840,19 @@ function showAddPersonelModal(editId = null) {
                     <div id="personelBankDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg);border:1px solid var(--bg4);border-radius:8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.15);margin-top:4px"></div>
                 </div>
             </div>
-            <div class="form-group"><label class="form-label">IBAN</label><input type="text" id="personelIBAN" class="form-input" placeholder="TR00 0000 0000 0000 0000 0000 00" oninput="formatIbanInput(this)"></div>
+            <div class="form-group"><label class="form-label">İşe Başlama</label><input type="date" id="personelStartDate" class="form-input"></div>
+            <div class="form-group full">
+                <label class="form-label">IBAN</label>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <input type="text" id="personelIBAN" class="form-input" style="flex:1" placeholder="TR00 0000 0000 0000 0000 0000 00" oninput="formatIbanInput(this)">
+                    <button type="button" onclick="copyPersonelIban()" style="background:var(--bg3);border:1px solid var(--bg4);border-radius:6px;padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:4px;color:var(--tx2);font-size:.75rem;transition:all .15s;white-space:nowrap" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'" title="IBAN'ı kopyala">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        Kopyala
+                    </button>
+                </div>
+            </div>
             ${branchField}
             ${positionField}
-            <div class="form-group"><label class="form-label">İşe Başlama</label><input type="date" id="personelStartDate" class="form-input"></div>
             ${salaryField}
         </div>
         
@@ -10238,6 +10272,192 @@ function editPersonel(id) {
         return;
     }
     showAddPersonelModal(id);
+}
+
+// Personel Önizleme Modalı
+async function showPersonelPreview(docId) {
+    if (!docId) {
+        toast('Geçersiz personel ID!', 'error');
+        return;
+    }
+    
+    try {
+        const doc = await db.collection('personel').doc(docId).get();
+        if (!doc.exists) {
+            toast('Personel bulunamadı!', 'error');
+            return;
+        }
+        
+        const p = doc.data();
+        
+        // Yetki kontrolleri (dinamik - rol bazlı)
+        const isYonetici = currentUser?.role === 'yonetici';
+        const isBolgeMuduru = currentUser?.role === 'bolge_muduru';
+        const canViewPassword = isYonetici; // Sadece yönetici şifre görebilir
+        const canChangePassword = isYonetici || isBolgeMuduru; // Yönetici veya bölge müdürü değiştirebilir
+        
+        // Şifre bilgisi (sadece admin için)
+        let passwordHtml = '';
+        if (canViewPassword && p.email) {
+            try {
+                const credPassword = await getCredential(p.email);
+                if (credPassword) {
+                    passwordHtml = `
+                        <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:rgba(231,76,60,.08);border-radius:8px;border:1px solid rgba(231,76,60,.15)">
+                            <svg width="16" height="16" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                            <span style="flex:1;font-family:monospace;font-size:.85rem;color:#e74c3c">${credPassword}</span>
+                            <button onclick="copyToClipboard('${credPassword}', 'Şifre')" style="background:none;border:none;cursor:pointer;color:#e74c3c;padding:4px;display:flex;opacity:.7;transition:opacity .2s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.7'" title="Şifreyi Kopyala">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            </button>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                console.log('Şifre alınamadı:', e);
+            }
+        }
+        
+        // Rol bilgisi
+        const roleNames = {
+            'yonetici': 'Yönetici',
+            'bolge_muduru': 'Bölge Müdürü',
+            'magaza_muduru': 'Mağaza Müdürü',
+            'magaza_mudur_yardimcisi': 'Müdür Yardımcısı',
+            'barista': 'Barista'
+        };
+        
+        const body = `
+            <div style="display:flex;flex-direction:column;gap:16px">
+                <!-- Header -->
+                <div style="display:flex;align-items:center;gap:14px;padding-bottom:16px;border-bottom:1px solid var(--bg4)">
+                    <div style="width:60px;height:60px;background:linear-gradient(135deg,#008c95,#00a8a8);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.4rem;font-weight:600;overflow:hidden">
+                        ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover">` : (p.name || 'P').charAt(0).toUpperCase()}
+                    </div>
+                    <div style="flex:1">
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <span style="font-size:1.1rem;font-weight:600;color:var(--tx)">${p.name || '-'}</span>
+                            <button onclick="copyToClipboard('${(p.name || '').replace(/'/g, "\\'")}', 'Ad Soyad')" style="background:none;border:none;cursor:pointer;color:var(--tx3);padding:2px;display:flex;opacity:.6;transition:opacity .2s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.6'" title="Adı Kopyala">
+                                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            </button>
+                        </div>
+                        <div style="font-size:.85rem;color:var(--tx2)">${p.position || roleNames[p.role] || 'Personel'}</div>
+                        <div style="font-size:.75rem;color:var(--tx3)">${p.branch || '-'}</div>
+                    </div>
+                </div>
+                
+                <!-- Bilgiler Grid -->
+                <div style="display:grid;gap:12px">
+                    <!-- İletişim -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <div style="padding:10px 12px;background:var(--bg3);border-radius:8px">
+                            <div style="font-size:.65rem;color:var(--tx3);margin-bottom:4px;text-transform:uppercase">Telefon</div>
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <span style="font-size:.85rem;color:var(--tx);flex:1">${p.phone || '-'}</span>
+                                ${p.phone ? `<button onclick="copyToClipboard('${p.phone}', 'Telefon')" style="background:none;border:none;cursor:pointer;color:var(--tx3);padding:2px;display:flex;opacity:.6;transition:opacity .2s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.6'" title="Kopyala"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>` : ''}
+                            </div>
+                        </div>
+                        <div style="padding:10px 12px;background:var(--bg3);border-radius:8px">
+                            <div style="font-size:.65rem;color:var(--tx3);margin-bottom:4px;text-transform:uppercase">E-posta</div>
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <span style="font-size:.85rem;color:var(--tx);flex:1;overflow:hidden;text-overflow:ellipsis">${p.email || '-'}</span>
+                                ${p.email ? `<button onclick="copyToClipboard('${p.email}', 'E-posta')" style="background:none;border:none;cursor:pointer;color:var(--tx3);padding:2px;display:flex;opacity:.6;transition:opacity .2s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.6'" title="Kopyala"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- TC ve Adres -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <div style="padding:10px 12px;background:var(--bg3);border-radius:8px">
+                            <div style="font-size:.65rem;color:var(--tx3);margin-bottom:4px;text-transform:uppercase">T.C. Kimlik No</div>
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <span style="font-size:.85rem;color:var(--tx);flex:1">${p.tc || '-'}</span>
+                                ${p.tc ? `<button onclick="copyToClipboard('${p.tc}', 'TC')" style="background:none;border:none;cursor:pointer;color:var(--tx3);padding:2px;display:flex;opacity:.6;transition:opacity .2s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.6'" title="Kopyala"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>` : ''}
+                            </div>
+                        </div>
+                        <div style="padding:10px 12px;background:var(--bg3);border-radius:8px">
+                            <div style="font-size:.65rem;color:var(--tx3);margin-bottom:4px;text-transform:uppercase">İşe Başlama</div>
+                            <span style="font-size:.85rem;color:var(--tx)">${p.startDate || '-'}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Adres (Full Width) -->
+                    <div style="padding:10px 12px;background:var(--bg3);border-radius:8px">
+                        <div style="font-size:.65rem;color:var(--tx3);margin-bottom:4px;text-transform:uppercase">Adres</div>
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <span style="font-size:.85rem;color:var(--tx);flex:1">${p.address || '-'}</span>
+                            ${p.address ? `<button onclick="copyToClipboard('${(p.address || '').replace(/'/g, "\\'")}', 'Adres')" style="background:none;border:none;cursor:pointer;color:var(--tx3);padding:2px;display:flex;opacity:.6;transition:opacity .2s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.6'" title="Kopyala"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>` : ''}
+                        </div>
+                    </div>
+                    
+                    <!-- Banka Bilgileri -->
+                    <div style="padding:12px;background:linear-gradient(135deg,rgba(0,140,149,.06),rgba(0,140,149,.02));border:1px solid rgba(0,140,149,.15);border-radius:10px">
+                        <div style="font-size:.7rem;font-weight:600;color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                            Banka Bilgileri
+                        </div>
+                        <div style="display:grid;gap:8px">
+                            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border-radius:6px">
+                                <span style="font-size:.7rem;color:var(--tx3);width:50px">Banka</span>
+                                <span style="font-size:.85rem;color:var(--tx);flex:1;font-weight:500">${p.bankName || '-'}</span>
+                                ${p.bankName ? `<button onclick="copyToClipboard('${(p.bankName || '').replace(/'/g, "\\'")}', 'Banka')" style="background:none;border:none;cursor:pointer;color:var(--tx3);padding:2px;display:flex;opacity:.6;transition:opacity .2s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.6'" title="Kopyala"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>` : ''}
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border-radius:6px">
+                                <span style="font-size:.7rem;color:var(--tx3);width:50px">IBAN</span>
+                                <span style="font-size:.85rem;color:var(--tx);flex:1;font-family:monospace;letter-spacing:.5px">${p.iban || '-'}</span>
+                                ${p.iban ? `<button onclick="copyToClipboard('${p.iban}', 'IBAN')" style="background:none;border:none;cursor:pointer;color:var(--tx3);padding:2px;display:flex;opacity:.6;transition:opacity .2s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.6'" title="Kopyala"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Şifre (Sadece Admin) -->
+                    ${canViewPassword ? `
+                    <div>
+                        <div style="font-size:.7rem;font-weight:600;color:#e74c3c;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                            Şifre (Sadece Yönetici Görebilir)
+                        </div>
+                        ${passwordHtml || '<div style="padding:10px 12px;background:var(--bg3);border-radius:8px;font-size:.85rem;color:var(--tx3)">Şifre atanmamış</div>'}
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        
+        const footer = `
+            <button class="btn btn-ghost" onclick="closeModal()">Kapat</button>
+            <button class="btn btn-primary" onclick="closeModal(); editPersonel('${docId}')">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Düzenle
+            </button>
+        `;
+        
+        showModal(`${p.name || 'Personel'} - Önizleme`, body, footer);
+        
+    } catch (error) {
+        console.error('Önizleme hatası:', error);
+        toast('Önizleme yüklenemedi: ' + error.message, 'error');
+    }
+}
+
+// Genel kopyalama fonksiyonu
+function copyToClipboard(text, label = 'Metin') {
+    if (!text) {
+        toast('Kopyalanacak veri yok', 'error');
+        return;
+    }
+    
+    navigator.clipboard.writeText(text).then(() => {
+        toast(`${label} kopyalandı!`, 'success');
+    }).catch(err => {
+        // Fallback
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        toast(`${label} kopyalandı!`, 'success');
+    });
 }
 
 async function deletePersonel(id) {
