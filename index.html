@@ -19144,15 +19144,7 @@ async function loadTodayChecks() {
                 }
             }
             
-            // Eski periods desteği (geriye uyumluluk)
-            if (temizlikRules.periods && temizlikRules.periods.length > 0) {
-                const isSabahTemizlik = currentHour >= 6 && currentHour < 16;
-                const period = temizlikRules.periods.find(p => p.shift === (isSabahTemizlik ? 'acilis' : 'kapanis'));
-                if (period) {
-                    temizlikActiveFrom = period.start || temizlikActiveFrom;
-                    temizlikDeadline = period.end || temizlikDeadline;
-                }
-            }
+            // NOT: Eski periods desteği kaldırıldı - artık shifts ve dinamik mağaza saatleri kullanılıyor
             
             const temizlikSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_aylik_${todayStr}_${currentShiftType}`;
             let temizlikCompleted = false;
