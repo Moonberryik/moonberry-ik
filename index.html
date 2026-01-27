@@ -2499,9 +2499,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                 Otomatik Yedekler
                             </div>
-                            <button class="btn btn-sm" style="background:#008c95;color:#fff" onclick="manualBackupNow()">+ Manuel Yedek Al</button>
+                            <button class="btn btn-sm" style="background:#008c95;color:#fff" onclick="takeManualBackup()">+ Manuel Yedek Al</button>
                         </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Her 6 saatte otomatik yedek (00:00, 06:00, 12:00, 18:00) • 30 günden eski silinir</p>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Manuel yedek alın ve indirin • 30 günden eski yedekler otomatik silinir</p>
                         <div id="backupsListContainer">
                             <p style="color:var(--tx2);text-align:center;padding:40px">Yedekler yükleniyor...</p>
                         </div>
@@ -4302,8 +4302,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Giriş aktivitesini logla
                     logActivity('login', { device: navigator.userAgent });
                     
-                    // G15: Herkes girince 30sn sonra yedekleme kontrolü (eksik günleri de telafi eder)
-                    setTimeout(() => checkAndRunBackupWithCatchup(), 30000);
+                    // NOT: Otomatik yedekleme devre dışı - manuel yedekleme kullanın
                 } catch (error) {
                     console.error('Error loading user data:', error);
                 }
@@ -15128,110 +15127,31 @@ renderAdminLists = function() {
     }
 };
 
-// ==================== G15: OTOMATİK YEDEKLEME (PARÇALI + SAATLIK + TELAFİ) ====================
+// ==================== G15: MANUEL YEDEKLEME SİSTEMİ ====================
 const BACKUP_CONFIG = {
     collections: [
         'personel', 'shifts', 'checklists', 'checklistSubmissions',
         'puantajNotes', 'managerNotes', 'weeklyTaskAssignments',
-        'dailyTaskAssignments', 'users', 'sessions', 'config', 'systemConfig', 
+        'dailyTaskAssignments', 'users', 'config', 'systemConfig', 
         'permissions', 'positions', 'branches', 'credentials'
     ],
-    maxPartSizeBytes: 900000, // 900KB güvenli limit (Firestore 1MB)
-    retentionDays: 30,
-    intervalHours: 6, // 6 saatte bir yedek
-    catchupDays: 7 // Son 7 gün içindeki eksik yedekleri telafi et
+    maxPartSizeBytes: 900000,
+    retentionDays: 30
 };
 
-// Ana yedekleme kontrolü - saatlik (telafi kapalı - performans için)
-async function checkAndRunBackupWithCatchup() {
+// Manuel yedek al butonu için
+async function takeManualBackup() {
     const now = new Date();
-    const todayStr = formatDateLocal(now);
-    const currentHour = now.getHours();
+    const dateStr = formatDateLocal(now);
+    const timeStr = String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
+    const backupId = `backup_${dateStr.replace(/-/g, '')}_${timeStr}`;
     
-    // Hangi saat diliminde yedek alınmalı? (0, 6, 12, 18)
-    const backupHours = [0, 6, 12, 18];
-    const targetHour = backupHours.filter(h => h <= currentHour).pop() || 0;
-    const backupId = `backup_${todayStr.replace(/-/g, '')}_${String(targetHour).padStart(2, '0')}`;
+    toast('Yedek alınıyor...', 'info');
     
     try {
-        // Bu saat dilimi için yedek var mı?
-        const existingDoc = await db.collection('backups').doc(backupId).get();
-        if (!existingDoc.exists) {
-            // Yedek yok, al
-            await runAutoBackup(backupId, todayStr, targetHour);
-        }
-        
-        // NOT: Telafi yedeklemesi performans sorunları nedeniyle devre dışı
-        // Manuel olarak catchupMissingBackups() çağrılabilir
-    } catch (e) {
-        console.error('[Backup] Kontrol hatası:', e.message);
-    }
-}
-
-// Eksik günleri telafi et (yavaş ve güvenli)
-async function catchupMissingBackups() {
-    try {
-        const now = new Date();
-        const catchupDays = BACKUP_CONFIG.catchupDays;
-        let catchupCount = 0;
-        const maxCatchupPerSession = 2; // Her oturumda max 2 telafi yedek
-        
-        for (let i = 1; i <= catchupDays && catchupCount < maxCatchupPerSession; i++) {
-            const pastDate = new Date(now);
-            pastDate.setDate(pastDate.getDate() - i);
-            const dateStr = formatDateLocal(pastDate);
-            
-            // O gün için herhangi bir yedek var mı?
-            try {
-                const snapshot = await db.collection('backups')
-                    .where('date', '==', dateStr)
-                    .limit(1)
-                    .get();
-                
-                if (snapshot.empty) {
-                    // O gün yedek yok, şimdi al
-                    const catchupId = `backup_${dateStr.replace(/-/g, '')}_00`;
-                    await runAutoBackup(catchupId, dateStr, 0);
-                    console.log(`[Backup] Telafi yedek alındı: ${dateStr}`);
-                    catchupCount++;
-                    
-                    // Her yedek arasında 3 saniye bekle
-                    await new Promise(resolve => setTimeout(resolve, 3000));
-                }
-            } catch (e) {
-                // Hata olursa dur, sonraki girişte devam eder
-                console.warn('[Backup] Telafi sorgu hatası, durduruluyor:', e.message);
-                break;
-            }
-        }
-        
-        if (catchupCount > 0) {
-            console.log(`[Backup] ${catchupCount} telafi yedek tamamlandı`);
-        }
-    } catch (e) {
-        console.error('[Backup] Telafi hatası:', e.message);
-    }
-}
-
-// Eski fonksiyon uyumluluğu için
-async function checkAndRunDailyBackup() {
-    await checkAndRunBackupWithCatchup();
-}
-
-async function runAutoBackup(backupId = null, dateStr = null, hour = null) {
-    const now = new Date();
-    if (!dateStr) dateStr = formatDateLocal(now);
-    if (hour === null) hour = now.getHours();
-    if (!backupId) {
-        const targetHour = [0, 6, 12, 18].filter(h => h <= hour).pop() || 0;
-        backupId = `backup_${dateStr.replace(/-/g, '')}_${String(targetHour).padStart(2, '0')}`;
-    }
-    
-    try {
-        // Tüm koleksiyonları topla
         const backupData = {
             date: dateStr,
-            hour: hour,
+            time: timeStr,
             createdAt: now.toISOString(),
             createdBy: currentUser?.name || 'Sistem',
             collections: {}
@@ -15248,59 +15168,31 @@ async function runAutoBackup(backupId = null, dateStr = null, hour = null) {
             }
         }
         
-        // JSON string'e çevir ve boyut hesapla
         const jsonString = JSON.stringify(backupData);
         const sizeBytes = new Blob([jsonString]).size;
-        const maxSize = BACKUP_CONFIG.maxPartSizeBytes;
         
-        if (sizeBytes <= maxSize) {
-            // Tek parça - doğrudan kaydet
-            await db.collection('backups').doc(backupId).set({
-                date: dateStr,
-                hour: hour,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                createdBy: currentUser?.name || 'Sistem',
-                data: jsonString,
-                totalParts: 1,
-                totalSize: sizeBytes,
-                isMultiPart: false
-            });
-        } else {
-            // Çok parçalı yedekleme
-            const parts = [];
-            for (let i = 0; i < jsonString.length; i += maxSize) {
-                parts.push(jsonString.slice(i, i + maxSize));
-            }
-            
-            // Her parçayı ayrı döküman olarak kaydet
-            for (let i = 0; i < parts.length; i++) {
-                await db.collection('backups').doc(`${backupId}_part${i + 1}`).set({
-                    date: dateStr,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    partNumber: i + 1,
-                    totalParts: parts.length,
-                    data: parts[i]
-                });
-            }
-            
-            // Ana backup dökümanı (metadata - veri yok)
-            await db.collection('backups').doc(backupId).set({
-                date: dateStr,
-                hour: hour,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                createdBy: currentUser?.name || 'Sistem',
-                totalParts: parts.length,
-                totalSize: sizeBytes,
-                isMultiPart: true
-            });
-        }
+        await db.collection('backups').doc(backupId).set({
+            date: dateStr,
+            time: timeStr,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdBy: currentUser?.name || 'Sistem',
+            data: jsonString,
+            totalSize: sizeBytes
+        });
         
-        console.log(`[Backup] ✓ ${dateStr} (${String(hour).padStart(2,'0')}:00) yedeklendi (${(sizeBytes/1024/1024).toFixed(2)} MB)`);
-        await cleanOldBackups();
+        toast(`✅ Yedek alındı! (${(sizeBytes/1024).toFixed(0)} KB)`, 'success');
+        loadBackupsList();
     } catch (e) {
-        console.error('[Backup] Hata:', e.message);
+        console.error('[Backup] Hata:', e);
+        toast('Yedekleme hatası: ' + e.message, 'error');
     }
 }
+
+// Eski fonksiyonlar - boş bırak (hata vermemesi için)
+async function checkAndRunBackupWithCatchup() { }
+async function checkAndRunDailyBackup() { }
+async function catchupMissingBackups() { }
+async function runAutoBackup() { }
 
 // Yedek indirme - parçaları birleştirir
 async function downloadBackup(date) {
@@ -15347,110 +15239,13 @@ async function downloadBackup(date) {
     }
 }
 
-// Tüm yedekleri tek JSON olarak indir
+// Tüm yedekleri tek JSON olarak indir - BASİT VERSİYON
 async function downloadAllBackups() {
-    try {
-        toast('Tüm yedekler hazırlanıyor...', 'info');
-        
-        // Basit sorgu
-        const snapshot = await db.collection('backups').get();
-        
-        if (snapshot.empty) {
-            toast('Yedek bulunamadı', 'error');
-            return;
-        }
-        
-        // Part olmayan yedekleri topla
-        const backupDocs = [];
-        snapshot.forEach(doc => {
-            if (!doc.id.includes('_part')) {
-                backupDocs.push({ id: doc.id, ...doc.data() });
-            }
-        });
-        
-        if (backupDocs.length === 0) {
-            toast('İndirilebilir yedek bulunamadı', 'error');
-            return;
-        }
-        
-        const allBackups = {};
-        let processed = 0;
-        
-        for (const meta of backupDocs) {
-            const backupId = meta.id;
-            let jsonString = '';
-            
-            try {
-                if (meta.isMultiPart && meta.totalParts) {
-                    // Parçalı yedek
-                    for (let i = 1; i <= meta.totalParts; i++) {
-                        const partDoc = await db.collection('backups').doc(`${backupId}_part${i}`).get();
-                        if (partDoc.exists) {
-                            jsonString += partDoc.data().data || '';
-                        }
-                    }
-                } else if (meta.data) {
-                    jsonString = meta.data;
-                }
-                
-                if (jsonString) {
-                    const parsed = JSON.parse(jsonString);
-                    const key = meta.date + (meta.hour !== undefined ? `_${meta.hour}` : '');
-                    allBackups[key] = parsed;
-                }
-            } catch (e) {
-                console.warn(`[Backup] ${backupId} okunamadı:`, e.message);
-            }
-            
-            processed++;
-            if (processed % 5 === 0) {
-                toast(`${processed}/${backupDocs.length} yedek işlendi...`, 'info');
-            }
-        }
-        
-        // İndir
-        const blob = new Blob([JSON.stringify(allBackups, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `moonberry_all_backups_${formatDateLocal(new Date())}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        toast(`${Object.keys(allBackups).length} yedek indirildi!`, 'success');
-    } catch (e) {
-        console.error('[Backup] Toplu indirme hatası:', e);
-        toast('İndirme hatası: ' + e.message, 'error');
-    }
+    toast('Bu özellik devre dışı. Yedekleri tek tek indirin.', 'info');
 }
 
 async function cleanOldBackups() {
-    try {
-        const snapshot = await db.collection('backups').get();
-        const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - BACKUP_CONFIG.retentionDays);
-        
-        const batch = db.batch();
-        let deleteCount = 0;
-        
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const createdAt = data.createdAt?.toDate?.();
-            if (createdAt && createdAt < cutoff) {
-                batch.delete(doc.ref);
-                deleteCount++;
-            }
-        });
-        
-        if (deleteCount > 0) {
-            await batch.commit();
-            console.log('[Backup] 🗑️ ' + deleteCount + ' eski yedek silindi');
-        }
-    } catch (e) {
-        console.warn('[Backup] Temizlik hatası:', e);
-    }
+    // Eski yedek temizleme devre dışı - manuel silinebilir
 }
 
 async function loadBackupsList() {
@@ -15460,73 +15255,39 @@ async function loadBackupsList() {
     container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tx3)">Yükleniyor...</div>';
     
     try {
-        // Basit sorgu - index gerektirmez
         const snapshot = await db.collection('backups').get();
         
         if (snapshot.empty) {
-            container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx3)">Henüz yedek yok</div>';
+            container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx3)">Henüz yedek yok. "Manuel Yedek Al" butonuna tıklayın.</div>';
             return;
         }
         
-        // Part olmayan yedekleri filtrele ve client-side sırala
+        // Yedekleri topla ve sırala
         const backups = [];
         snapshot.forEach(doc => {
-            if (doc.id.includes('_part')) return; // Part'ları atla
-            const d = doc.data();
-            backups.push({ id: doc.id, ...d });
+            if (doc.id.includes('_part')) return;
+            backups.push({ id: doc.id, ...doc.data() });
         });
         
-        // Tarihe göre sırala (yeniden eskiye)
-        backups.sort((a, b) => {
-            const dateA = a.date || '';
-            const dateB = b.date || '';
-            if (dateA !== dateB) return dateB.localeCompare(dateA);
-            // Aynı gün ise saate göre sırala
-            return (b.hour || 0) - (a.hour || 0);
-        });
-        
-        // Max 20 göster
-        const displayBackups = backups.slice(0, 20);
+        backups.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.time || '').localeCompare(a.time || ''));
         
         let html = '<div style="display:flex;flex-direction:column;gap:8px">';
         const canDownload = currentUser?.role === 'yonetici';
         
-        displayBackups.forEach(d => {
-            const dateStr = d.date || d.id;
-            const hourStr = d.hour !== undefined ? ` ${String(d.hour).padStart(2,'0')}:00` : '';
-            const datetime = dateStr + hourStr;
-            const sizeKB = d.totalSize ? (d.totalSize / 1024).toFixed(1) : '?';
-            const partsInfo = d.isMultiPart ? ` (${d.totalParts} parça)` : '';
-            const createdBy = d.createdBy || 'Sistem';
-            
-            const downloadBtn = canDownload 
-                ? `<button class="btn btn-sm" style="background:#008c95;color:#fff" onclick="downloadBackupFile('${d.id}')">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    İndir
-                </button>`
-                : '<span style="font-size:.75rem;color:var(--tx3)">✓</span>';
+        backups.slice(0, 20).forEach(d => {
+            const datetime = d.date + (d.time ? ' ' + d.time : '');
+            const sizeKB = d.totalSize ? (d.totalSize / 1024).toFixed(0) + ' KB' : '-';
             
             html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg2);border-radius:10px;border:1px solid var(--bg4)">
                 <div>
                     <div style="font-weight:600;color:var(--tx)">${datetime}</div>
-                    <div style="font-size:.75rem;color:var(--tx3)">${sizeKB} KB${partsInfo} • ${createdBy}</div>
+                    <div style="font-size:.75rem;color:var(--tx3)">${sizeKB} • ${d.createdBy || 'Sistem'}</div>
                 </div>
-                ${downloadBtn}
+                ${canDownload ? `<button class="btn btn-sm" style="background:#008c95;color:#fff" onclick="downloadBackupFile('${d.id}')">İndir</button>` : ''}
             </div>`;
         });
         
-        // Tümünü indir butonu
-        if (canDownload && backups.length > 0) {
-            html += `<div style="margin-top:12px;text-align:center">
-                <button class="btn btn-primary" onclick="downloadAllBackups()">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    Tüm Yedekleri İndir (${backups.length})
-                </button>
-            </div>`;
-        }
-        
         html += '</div>';
-        
         container.innerHTML = html;
     } catch (e) {
         console.error('[Backup] Liste hatası:', e);
@@ -15578,47 +15339,6 @@ async function downloadBackupFile(backupId) {
         URL.revokeObjectURL(url);
         
         toast('İndirildi ✓', 'success');
-    } catch (e) {
-        toast('Hata: ' + e.message, 'error');
-    }
-}
-
-async function manualBackupNow() {
-    if (currentUser?.role !== 'yonetici') {
-        toast('Manuel yedek alma yetkisi sadece yöneticiye ait', 'error');
-        return;
-    }
-    
-    const now = new Date();
-    const dateStr = formatDateLocal(now);
-    const timeStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
-    const backupId = 'backup_' + dateStr.replace(/-/g, '') + '_' + timeStr.replace(':', '') + '_manual';
-    
-    toast('Manuel yedekleme başladı...', 'info');
-    
-    try {
-        const backupData = {
-            date: dateStr,
-            time: timeStr,
-            datetime: dateStr + ' ' + timeStr,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            createdBy: currentUser?.name || 'Sistem',
-            isManual: true,
-            collections: {}
-        };
-        
-        for (const col of BACKUP_CONFIG.collections) {
-            try {
-                const snap = await db.collection(col).get();
-                const docs = [];
-                snap.forEach(doc => docs.push({ id: doc.id, ...doc.data() }));
-                backupData.collections[col] = docs;
-            } catch (e) {}
-        }
-        
-        await db.collection('backups').doc(backupId).set(backupData);
-        toast('Yedekleme tamamlandı ✓', 'success');
-        loadBackupsList();
     } catch (e) {
         toast('Hata: ' + e.message, 'error');
     }
