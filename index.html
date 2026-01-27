@@ -19122,6 +19122,14 @@ async function loadTodayChecks() {
             let temizlikDeadline = shiftConfig.window?.end || shiftConfig.deadline || '18:00';
             let temizlikLateWindow = temizlikRules.lateWindow || 30;
             
+            // Kapanışçı için deadline = Mağaza kapanış saati (dinamik)
+            if (currentShiftType === 'kapanisci') {
+                const branchClosingTime = getBranchClosingTime(branch);
+                if (branchClosingTime) {
+                    temizlikDeadline = branchClosingTime;
+                }
+            }
+            
             // Eski periods desteği (geriye uyumluluk)
             if (temizlikRules.periods && temizlikRules.periods.length > 0) {
                 const isSabahTemizlik = currentHour >= 6 && currentHour < 16;
@@ -19308,7 +19316,9 @@ async function loadTodayChecks() {
         {
             const kapanisRules = CHECK_RULES.kapanis || {};
             const kapanisActiveFrom = kapanisRules.activeFrom || '22:00';
-            const kapanisDeadline = kapanisRules.deadline || '02:00';
+            // Kapanış deadline = Mağaza kapanış saati (dinamik)
+            const branchClosingTime = getBranchClosingTime(branch);
+            const kapanisDeadline = branchClosingTime || kapanisRules.deadline || '02:00';
             const kapanisLateWindow = kapanisRules.lateWindow || 30;
             
             const kapanisSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_kapanis_${todayStr}`;
@@ -19622,7 +19632,9 @@ async function loadTodayChecks() {
             // CHECK_RULES'dan aktiflik saatlerini al
             const mudurRules = CHECK_RULES.mudur || {};
             const mudurActiveFrom = mudurRules.activeFrom || '18:00';
-            const mudurDeadlineRule = mudurRules.deadline || '23:00';
+            // Müdür deadline = Mağaza kapanış saati (dinamik)
+            const mudurBranchClosingTime = getBranchClosingTime(branch);
+            const mudurDeadlineRule = mudurBranchClosingTime || mudurRules.deadline || '23:00';
             const [activeH, activeM] = mudurActiveFrom.split(':').map(Number);
             const [deadlineRuleH, deadlineRuleM] = mudurDeadlineRule.split(':').map(Number);
             
