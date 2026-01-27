@@ -4146,36 +4146,62 @@ document.addEventListener('DOMContentLoaded', () => {
                         const userData = JSON.parse(storedUser);
                         console.log('✅ Anonymous Auth - localStorage\'dan kullanıcı:', userData.name);
                         
-                        // Personel hala aktif mi kontrol et
-                        const personelCheck = await db.collection('personel')
-                            .where('email', '==', userData.email)
-                            .limit(1)
-                            .get();
-                        
-                        if (personelCheck.empty) {
-                            console.log('🚫 Personel kaydı silinmiş - logout');
-                            localStorage.removeItem('mb_user');
-                            await firebase.auth().signOut();
-                            alert('Bu hesap artık aktif değil.');
-                            window.location.replace('login.html');
-                            return;
+                        // Admin kontrolü - systemConfig'den
+                        let isAdmin = false;
+                        try {
+                            const configDoc = await db.collection('systemConfig').doc('main').get();
+                            if (configDoc.exists) {
+                                const adminEmails = configDoc.data().adminEmails || [];
+                                isAdmin = adminEmails.includes(userData.email);
+                            }
+                        } catch (e) {
+                            console.log('Config okunamadı:', e);
                         }
                         
-                        // Güncel personel verisini al (rol değişmiş olabilir)
-                        const personelData = personelCheck.docs[0].data();
-                        
-                        currentUser = {
-                            id: user.uid,
-                            personelId: personelCheck.docs[0].id,
-                            email: userData.email,
-                            name: personelData.name || userData.name,
-                            codeName: personelData.codeName || '',
-                            uniqueId: personelData.uniqueId || userData.uniqueId,
-                            role: personelData.role || userData.role,
-                            branch: personelData.branch || userData.branch || 'all',
-                            position: personelData.position || userData.position,
-                            authType: 'anonymous'
-                        };
+                        if (isAdmin) {
+                            // Admin kullanıcı - personel kontrolü atla
+                            console.log('✅ Admin kullanıcı tanındı');
+                            currentUser = {
+                                id: user.uid,
+                                email: userData.email,
+                                name: userData.name || 'Yönetici',
+                                role: 'yonetici',
+                                branch: 'all',
+                                uniqueId: 'admin',
+                                authType: 'anonymous'
+                            };
+                        } else {
+                            // Personel hala aktif mi kontrol et
+                            const personelCheck = await db.collection('personel')
+                                .where('email', '==', userData.email)
+                                .limit(1)
+                                .get();
+                            
+                            if (personelCheck.empty) {
+                                console.log('🚫 Personel kaydı silinmiş - logout');
+                                localStorage.removeItem('mb_user');
+                                await firebase.auth().signOut();
+                                alert('Bu hesap artık aktif değil.');
+                                window.location.replace('login.html');
+                                return;
+                            }
+                            
+                            // Güncel personel verisini al (rol değişmiş olabilir)
+                            const personelData = personelCheck.docs[0].data();
+                            
+                            currentUser = {
+                                id: user.uid,
+                                personelId: personelCheck.docs[0].id,
+                                email: userData.email,
+                                name: personelData.name || userData.name,
+                                codeName: personelData.codeName || '',
+                                uniqueId: personelData.uniqueId || userData.uniqueId,
+                                role: personelData.role || userData.role,
+                                branch: personelData.branch || userData.branch || 'all',
+                                position: personelData.position || userData.position,
+                                authType: 'anonymous'
+                            };
+                        }
                         
                         // localStorage'ı güncelle (rol/branch değişmiş olabilir)
                         localStorage.setItem('mb_user', JSON.stringify(currentUser));
