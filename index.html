@@ -28901,7 +28901,7 @@ async function getAssignmentPool(branch) {
     return pool;
 }
 
-// Haftalık atama oluştur veya mevcut atamayı al
+// Haftalık atama oluştur veya mevcut atamayı al (shift değişikliklerini sync eder)
 async function getOrCreateWeeklyAssignments(branch) {
     const weekId = getWeekId();
     const docId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekId}`;
@@ -28912,7 +28912,40 @@ async function getOrCreateWeeklyAssignments(branch) {
         
         if (doc.exists) {
             console.log('[Haftalık] Mevcut atama bulundu:', docId);
-            return doc.data();
+            const existingData = doc.data();
+            
+            // Shift değişikliği kontrolü - havuzu güncel al
+            const currentPool = await getAssignmentPool(branch);
+            const currentPoolIds = new Set(currentPool.map(p => p.uniqueId?.toLowerCase() || p.id?.toLowerCase()));
+            
+            // Mevcut atamalardaki personel ID'leri
+            const assignedIds = new Set();
+            (existingData.assignments || []).forEach(a => {
+                const pid = (a.personnelId || '').toLowerCase();
+                if (pid) assignedIds.add(pid);
+            });
+            
+            // Havuzdaki personel ID'lerini normalize et
+            const poolPersonnelMap = {};
+            currentPool.forEach(p => {
+                const id = (p.uniqueId || p.id || '').toLowerCase();
+                poolPersonnelMap[id] = p;
+            });
+            
+            // Çıkan ve giren personeli tespit et
+            const removedPersonnel = [...assignedIds].filter(id => !currentPoolIds.has(id));
+            const addedPersonnel = [...currentPoolIds].filter(id => !assignedIds.has(id));
+            
+            // Değişiklik varsa sync yap
+            if (removedPersonnel.length > 0 || addedPersonnel.length > 0) {
+                console.log('[Haftalık] Shift değişikliği tespit edildi!');
+                console.log('   Çıkan:', removedPersonnel);
+                console.log('   Giren:', addedPersonnel);
+                
+                return await syncWeeklyAssignmentsWithShift(branch, existingData, currentPool, removedPersonnel, addedPersonnel);
+            }
+            
+            return existingData;
         }
         
         // Yeni atama oluştur
@@ -28923,6 +28956,158 @@ async function getOrCreateWeeklyAssignments(branch) {
         console.error('[Haftalık] Atama alınamadı:', e);
         return null;
     }
+}
+
+// Shift değişikliklerinde atamaları sync et
+async function syncWeeklyAssignmentsWithShift(branch, existingData, currentPool, removedPersonnel, addedPersonnel) {
+    const weekId = getWeekId();
+    const docId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekId}`;
+    
+    let assignments = [...(existingData.assignments || [])];
+    
+    // Havuzdaki personel map
+    const poolMap = {};
+    currentPool.forEach(p => {
+        const id = (p.uniqueId || p.id || '').toLowerCase();
+        poolMap[id] = p;
+    });
+    
+    // 1. Çıkan personelin görevlerini yeniden dağıt
+    if (removedPersonnel.length > 0) {
+        // Çıkan personele ait görevleri bul
+        const tasksToReassign = assignments.filter(a => {
+            const pid = (a.personnelId || '').toLowerCase();
+            return removedPersonnel.includes(pid);
+        });
+        
+        if (tasksToReassign.length > 0) {
+            console.log('[Haftalık] Yeniden dağıtılacak görev sayısı:', tasksToReassign.length);
+            
+            // Havuzdaki aktif personele eşit dağıt
+            const activePoolIds = currentPool.map(p => (p.uniqueId || p.id || '').toLowerCase());
+            
+            if (activePoolIds.length > 0) {
+                // Her personelin mevcut görev sayısını hesapla
+                const taskCounts = {};
+                activePoolIds.forEach(id => taskCounts[id] = 0);
+                
+                assignments.forEach(a => {
+                    const pid = (a.personnelId || '').toLowerCase();
+                    if (activePoolIds.includes(pid)) {
+                        taskCounts[pid] = (taskCounts[pid] || 0) + 1;
+                    }
+                });
+                
+                // Yeniden atanacak görevleri en az görevi olana ver
+                tasksToReassign.forEach(task => {
+                    // En az görevi olan personeli bul
+                    let minId = activePoolIds[0];
+                    let minCount = taskCounts[minId] || 0;
+                    
+                    activePoolIds.forEach(id => {
+                        if ((taskCounts[id] || 0) < minCount) {
+                            minCount = taskCounts[id] || 0;
+                            minId = id;
+                        }
+                    });
+                    
+                    // Görevi yeniden ata
+                    const assignee = poolMap[minId];
+                    if (assignee) {
+                        task.personnelId = assignee.id;
+                        task.personnelName = assignee.codeName || assignee.displayName || assignee.name;
+                        task.personnelFullName = assignee.name;
+                        task.reassignedAt = new Date().toISOString();
+                        task.reassignReason = 'shift_removed';
+                        
+                        taskCounts[minId] = (taskCounts[minId] || 0) + 1;
+                        console.log(`[Haftalık] Görev yeniden atandı: "${task.itemText?.substring(0, 30)}" → ${assignee.codeName || assignee.name}`);
+                    }
+                });
+            }
+        }
+    }
+    
+    // 2. Giren personele görev aktar (en çok görevi olanlardan)
+    if (addedPersonnel.length > 0 && currentPool.length > 1) {
+        const activePoolIds = currentPool.map(p => (p.uniqueId || p.id || '').toLowerCase());
+        
+        // Her personelin görev sayısını hesapla
+        const taskCounts = {};
+        activePoolIds.forEach(id => taskCounts[id] = 0);
+        
+        assignments.forEach(a => {
+            const pid = (a.personnelId || '').toLowerCase();
+            if (taskCounts.hasOwnProperty(pid)) {
+                taskCounts[pid]++;
+            }
+        });
+        
+        // Hedef: eşit dağılım
+        const totalTasks = assignments.length;
+        const targetPerPerson = Math.floor(totalTasks / activePoolIds.length);
+        
+        addedPersonnel.forEach(newPersonId => {
+            const newPerson = poolMap[newPersonId];
+            if (!newPerson) return;
+            
+            // Bu kişiye kaç görev verilmeli?
+            const tasksToGive = Math.max(1, targetPerPerson);
+            let given = 0;
+            
+            // En çok görevi olanlardan al
+            while (given < tasksToGive) {
+                // En çok görevi olan personeli bul
+                let maxId = null;
+                let maxCount = 0;
+                
+                Object.entries(taskCounts).forEach(([id, count]) => {
+                    if (id !== newPersonId && count > maxCount) {
+                        maxCount = count;
+                        maxId = id;
+                    }
+                });
+                
+                if (!maxId || maxCount <= targetPerPerson) break;
+                
+                // Bu personelden bir görev al
+                const taskToMove = assignments.find(a => {
+                    const pid = (a.personnelId || '').toLowerCase();
+                    return pid === maxId && a.status !== 'completed';
+                });
+                
+                if (taskToMove) {
+                    taskToMove.personnelId = newPerson.id;
+                    taskToMove.personnelName = newPerson.codeName || newPerson.displayName || newPerson.name;
+                    taskToMove.personnelFullName = newPerson.name;
+                    taskToMove.reassignedAt = new Date().toISOString();
+                    taskToMove.reassignReason = 'shift_added';
+                    
+                    taskCounts[maxId]--;
+                    taskCounts[newPersonId] = (taskCounts[newPersonId] || 0) + 1;
+                    given++;
+                    
+                    console.log(`[Haftalık] Görev aktarıldı: "${taskToMove.itemText?.substring(0, 30)}" → ${newPerson.codeName || newPerson.name}`);
+                } else {
+                    break;
+                }
+            }
+        });
+    }
+    
+    // Firebase'e güncelle
+    const updatedData = {
+        ...existingData,
+        assignments,
+        pool: currentPool.map(p => ({ id: p.uniqueId || p.id, name: p.codeName || p.displayName || p.name })),
+        lastSyncAt: firebase.firestore.FieldValue.serverTimestamp(),
+        syncReason: removedPersonnel.length > 0 ? 'personnel_removed' : 'personnel_added'
+    };
+    
+    await db.collection('weeklyAssignments').doc(docId).update(updatedData);
+    console.log('[Haftalık] Atamalar sync edildi:', docId);
+    
+    return updatedData;
 }
 
 // Yeni haftalık atama oluştur (round-robin)
