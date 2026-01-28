@@ -28805,7 +28805,39 @@ async function getAssignmentPool(branch) {
     const pool = [];
     
     try {
-        // Tüm aktif personeli al
+        // Bu haftanın shift planından personel havuzunu al
+        const weekStart = getWeekStart(new Date());
+        const weekKey = formatDateLocal(weekStart);
+        const shiftDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekKey}`;
+        
+        // Shift planında olan personel ID'lerini topla
+        const personnelInShift = new Set();
+        
+        try {
+            const shiftDoc = await db.collection('shiftPlans').doc(shiftDocId).get();
+            if (shiftDoc.exists) {
+                const plan = shiftDoc.data();
+                // Tüm günlerdeki personeli topla
+                Object.keys(plan).filter(k => k.match(/^\d{4}-\d{2}-\d{2}$/)).forEach(day => {
+                    const dayPlan = plan[day];
+                    if (dayPlan && typeof dayPlan === 'object') {
+                        Object.keys(dayPlan).forEach(personId => {
+                            // Geçerli shift kaydı varsa ekle
+                            if (dayPlan[personId]?.start || dayPlan[personId]?.startTime) {
+                                personnelInShift.add(personId);
+                            }
+                        });
+                    }
+                });
+                console.log('[Haftalık] Bu hafta shiftte olan personel:', [...personnelInShift]);
+            } else {
+                console.log('[Haftalık] Shift planı bulunamadı, tüm aktif personel kullanılacak');
+            }
+        } catch (e) {
+            console.warn('[Haftalık] Shift planı okunamadı:', e.message);
+        }
+        
+        // Tüm personeli al
         const snap = await db.collection('personel')
             .where('branch', '==', branch)
             .get();
@@ -28832,9 +28864,16 @@ async function getAssignmentPool(branch) {
         
         snap.forEach(doc => {
             const d = doc.data();
+            const personId = d.uniqueId || doc.id;
+            
+            // Bu hafta shiftte yoksa atla (shift planı varsa)
+            if (personnelInShift.size > 0 && !personnelInShift.has(personId) && !personnelInShift.has(doc.id)) {
+                console.log('[Haftalık] Shiftte yok, atlanıyor:', d.displayName || d.name);
+                return;
+            }
             
             // Aktif olmayan personeli atla
-            if (d.aktif === false || d.active === false) return;
+            if (d.aktif === false || d.active === false || d.isActive === false) return;
             
             // Yöneticileri hariç tut
             if (['yonetici', 'bolge_muduru'].includes(d.role)) return;
@@ -28858,14 +28897,17 @@ async function getAssignmentPool(branch) {
                 id: doc.id,
                 uniqueId: d.uniqueId || doc.id,
                 name: d.name,
-                codeName: d.codeName || d.name,
+                displayName: d.displayName,
+                codeName: d.codeName || d.displayName || d.name,
                 role: d.role,
                 position: d.position
             });
         });
         
         // İsme göre sırala (tutarlı sıralama için)
-        pool.sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+        pool.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr'));
+        
+        console.log('[Haftalık] Final havuz:', pool.map(p => p.displayName || p.name));
         
     } catch (e) {
         console.error('[Haftalık] Personel havuzu alınamadı:', e);
