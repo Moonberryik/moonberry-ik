@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -17912,6 +17911,23 @@ function minutesToTime(minutes) {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 }
 
+// İş günü bitiş saatini hesapla (tüm şubelerin en geç kapanışı)
+function getBusinessDayEndHour() {
+    let maxClosingHour = 2; // varsayılan
+    const allBranches = STATE.branches || ['Tuzla Port'];
+    for (const br of allBranches) {
+        const closingTime = getBranchClosingTime(br);
+        if (closingTime) {
+            const [h] = closingTime.split(':').map(Number);
+            // Gece saati ise (00:00-06:00 arası)
+            if (h >= 0 && h <= 6 && h > maxClosingHour) {
+                maxClosingHour = h;
+            }
+        }
+    }
+    return maxClosingHour;
+}
+
 // Kapanış shift başlangıç saatini hesapla
 function getClosingShiftStart(branch, date = new Date()) {
     const closingTime = getBranchClosingTime(branch, date);
@@ -18627,7 +18643,8 @@ async function loadTodayChecks() {
     container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--tx3)"><div style="width:24px;height:24px;border:3px solid var(--bg4);border-top-color:#008c95;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px"></div>Görevler yükleniyor...</div>';
     
     // GÜN SONU SAATİ: 02:00 - Bu saatten önce önceki gün sayılır
-    const DAY_END_HOUR = 2;
+    // İş günü bitiş saati = Mağaza kapanış saati (dinamik)
+    const DAY_END_HOUR = getBusinessDayEndHour();
     
     const now = new Date();
     let today = new Date(now);
@@ -18893,8 +18910,9 @@ async function loadTodayChecks() {
         let isPlatformLate = false;
         let isPlatformMissed = false;
         
-        // Gece 00:00-06:00 arası için özel mantık
-        const isLateNightPlatform = currentHour >= 0 && currentHour < 6;
+        // Gece saatlerinde özel mantık (mağaza kapanışına kadar)
+        const dayEndHourPlatform = getBusinessDayEndHour();
+        const isLateNightPlatform = currentHour >= 0 && currentHour < dayEndHourPlatform;
         const nowMinutesPlatform = currentHour * 60 + currentMinutes;
         
         // 00:00 slotunu bul
@@ -19177,7 +19195,8 @@ async function loadTodayChecks() {
                 lateEndMin += 24 * 60;
             }
             let adjustedNow = nowMin;
-            if (currentHour < 6 && tafH > 12) {
+            const dayEndHourTemizlik = getBusinessDayEndHour();
+            if (currentHour < dayEndHourTemizlik && tafH > 12) {
                 adjustedNow += 24 * 60;
             }
             
@@ -19370,7 +19389,8 @@ async function loadTodayChecks() {
             let kapanisLateEndMin = kapanisDeadlineMin + kapanisLateWindow;
             
             let adjustedNow = nowMin;
-            if (currentHour < 6) {
+            const dayEndHourKapanis = getBusinessDayEndHour();
+            if (currentHour < dayEndHourKapanis) {
                 adjustedNow += 24 * 60;
             }
             
@@ -19462,8 +19482,9 @@ async function loadTodayChecks() {
         let isGunlukLate = false;
         let isGunlukMissed = false;
         
-        // Gece 00:00-06:00 arası için - SON slot'un gece geçişini kontrol et
-        const isLateNight = currentHour >= 0 && currentHour < 6;
+        // Gece saatlerinde (mağaza kapanışına kadar) - SON slot'un gece geçişini kontrol et
+        const dayEndHourGunluk = getBusinessDayEndHour();
+        const isLateNight = currentHour >= 0 && currentHour < dayEndHourGunluk;
         const nowMinutesTotal = currentHour * 60 + currentMinutes;
         
         if (isLateNight) {
@@ -19676,7 +19697,8 @@ async function loadTodayChecks() {
                 tempDeadlineRuleMinutes += 24 * 60;
             }
             let tempAdjustedNowMinutes = nowMinutesOfDay;
-            if (currentHour < activeH && currentHour < 6) {
+            const dayEndHourMudur = getBusinessDayEndHour();
+            if (currentHour < activeH && currentHour < dayEndHourMudur) {
                 tempAdjustedNowMinutes += 24 * 60;
             }
             
@@ -19753,7 +19775,7 @@ async function loadTodayChecks() {
                 // Gece geçişi kontrolü
                 if (dh < activeH) deadlineMinutes += 24 * 60;
                 let adjustedNowForMissed = nowMinutes;
-                if (currentHour < activeH && currentHour < 6) adjustedNowForMissed += 24 * 60;
+                if (currentHour < activeH && currentHour < dayEndHourMudur) adjustedNowForMissed += 24 * 60;
                 
                 // Late window dahil deadline kontrolü
                 const deadlineWithLate = deadlineMinutes + mudurLateWindow;
@@ -19775,7 +19797,7 @@ async function loadTodayChecks() {
             if (realDH < activeH) realDeadlineMinutes += 24 * 60; // Gece geçişi
             
             let adjustedNowForActive = currentHour * 60 + currentMinutes;
-            if (currentHour < activeH && currentHour < 6) adjustedNowForActive += 24 * 60;
+            if (currentHour < activeH && currentHour < dayEndHourMudur) adjustedNowForActive += 24 * 60;
             
             isMudurTimeActive = adjustedNowForActive >= realActiveFromMinutes && adjustedNowForActive <= realDeadlineMinutes;
             
@@ -19786,9 +19808,9 @@ async function loadTodayChecks() {
                 const [dh, dm] = mudurDeadline.split(':').map(Number);
                 let deadlineMin = dh * 60 + dm;
                 // Gece geçişi
-                if (dh < 6) deadlineMin += 24 * 60;
+                if (dh < dayEndHourMudur) deadlineMin += 24 * 60;
                 let adjustedNow = nowMin;
-                if (currentHour < 6) adjustedNow += 24 * 60;
+                if (currentHour < dayEndHourMudur) adjustedNow += 24 * 60;
                 mudurRemainingMinutes = Math.max(0, deadlineMin - adjustedNow);
             } else if (isMudurCheckMissed) {
                 mudurRemainingMinutes = 0;
@@ -19914,9 +19936,10 @@ async function loadTodayChecks() {
                 deadlineMinutes += 24 * 60; // Ertesi güne taşı
             }
             
-            // Gece yarısından sonra kontrol (00:00-03:00 arası)
+            // Gece yarısından sonra kontrol (mağaza kapanışına kadar)
             // Eğer şu an gece yarısından sonra ve deadline ertesi günde ise
-            if (currentHour < 3 && deadlineH < activeH) {
+            const dayEndHourForHaftalik = getBusinessDayEndHour();
+            if (currentHour < dayEndHourForHaftalik && deadlineH < activeH) {
                 nowMinutes += 24 * 60; // Şu anı da ertesi güne taşı
             }
             
@@ -23770,9 +23793,10 @@ async function loadChecklist() {
     if (timeSlots.length > 0) {
         const currentHour = now.getHours();
         const currentMinutes = currentHour * 60 + now.getMinutes();
-        const isLateNight = currentHour >= 0 && currentHour < 2;
+        const dayEndHour = getBusinessDayEndHour();
+        const isLateNight = currentHour >= 0 && currentHour < dayEndHour;
         
-        // Gece 00:00-02:00 arası için 22:00 slot'unu zorla seç
+        // Gece saatlerinde son slot'u zorla seç
         if (isLateNight && timeSlots.includes('22:00')) {
             autoTimeSlot = '22:00';
             console.log('[Checklist] Gece saati - 22:00 slotu seçildi');
@@ -23947,9 +23971,10 @@ async function loadChecklist() {
             const weekStart = getWeekStart(new Date(date));
             const weekKey = formatDateLocal(weekStart);
             const currentHour = new Date().getHours();
-            const isLateNight = currentHour >= 0 && currentHour < 2;
+            const dayEndHour = getBusinessDayEndHour();
+            const isLateNight = currentHour >= 0 && currentHour < dayEndHour;
             
-            // Gece saatlerinde 22:00 slotunu kullan
+            // Gece saatlerinde son slotu kullan
             let checkHour = timeSlot ? parseInt(timeSlot.split(':')[0]) : currentHour;
             if (isLateNight && !timeSlot && ['gunluk', 'guncel'].includes(type)) {
                 checkHour = 22; // Gece saatlerinde 22:00 slotu aktif
@@ -26670,8 +26695,9 @@ async function renderPlatformChecklistWithStatus(container, branch, date, active
     // Dashboard'dan gelen timeSlot kullan veya otomatik belirle
     let selectedTimeSlot = activeTimeSlot;
     if (!selectedTimeSlot) {
-        // Gece 00:00-02:00 arası
-        const isLateNight = currentHour >= 0 && currentHour < 2;
+        // Gece saatlerinde (mağaza kapanışına kadar)
+        const dayEndHour = getBusinessDayEndHour();
+        const isLateNight = currentHour >= 0 && currentHour < dayEndHour;
         if (isLateNight) {
             selectedTimeSlot = '00:00';
         } else {
