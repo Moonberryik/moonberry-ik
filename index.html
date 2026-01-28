@@ -19727,6 +19727,14 @@ async function loadTodayChecks() {
                 // Shift verisinden OFF durumlarını kontrol et
                 const rawData = rawShiftData[branch];
                 
+                // DEBUG LOG
+                console.log('[Müdür Kontrolü]', branch, {
+                    rawDataExists: !!rawData,
+                    mudur: mudur ? mudur.name : null,
+                    yardimci: yardimci ? yardimci.name : null,
+                    bolgeMuduru: bolgeMuduru ? bolgeMuduru.name : null
+                });
+                
                 // Helper: personelin bugün OFF olup olmadığını kontrol et
                 const isPersonOff = (person) => {
                     if (!person || !rawData) return false;
@@ -19749,18 +19757,30 @@ async function loadTodayChecks() {
                 const mudurOff = isPersonOff(mudur);
                 const yardimciOff = isPersonOff(yardimci);
                 
+                // DEBUG LOG
+                console.log('[Müdür Kontrolü] OFF durumları:', {
+                    mudurOff,
+                    yardimciOff,
+                    mudurName: mudur?.name,
+                    yardimciName: yardimci?.name
+                });
+                
                 if (mudur && !mudurOff) {
                     mudurPersonnel = mudur.codeName || formatDisplayName(mudur.name);
+                    console.log('[Müdür Kontrolü] Sorumlu: Müdür -', mudurPersonnel);
                 } else if (yardimci && !yardimciOff) {
                     mudurPersonnel = yardimci.codeName || formatDisplayName(yardimci.name);
                     mudurSubLabel = 'Müdür izinli';
+                    console.log('[Müdür Kontrolü] Sorumlu: Yardımcı -', mudurPersonnel);
                 } else if (bolgeMuduru) {
                     mudurPersonnel = bolgeMuduru.codeName || formatDisplayName(bolgeMuduru.name);
                     mudurSubLabel = 'Bölge müdürüne devredildi';
+                    console.log('[Müdür Kontrolü] Sorumlu: Bölge Müdürü -', mudurPersonnel);
                 } else {
                     canFillMudurCheck = false;
                     mudurPersonnel = 'Doldurulamaz';
                     mudurSubLabel = 'Müdür/yardımcı izinli';
+                    console.log('[Müdür Kontrolü] Sorumlu: YOK - Doldurulamaz');
                 }
                 
                 // Şu anki saat deadline'ı geçti mi kontrol et
