@@ -28914,35 +28914,46 @@ async function getOrCreateWeeklyAssignments(branch) {
             console.log('[Haftalık] Mevcut atama bulundu:', docId);
             const existingData = doc.data();
             
+            // Personel koleksiyonundan docId ↔ uniqueId map'i oluştur
+            const personnelSnap = await db.collection('personel')
+                .where('branch', '==', branch)
+                .get();
+            
+            const docIdToUniqueId = {};
+            const uniqueIdToDocId = {};
+            personnelSnap.docs.forEach(pDoc => {
+                const pData = pDoc.data();
+                const uniqueId = (pData.uniqueId || pDoc.id || '').toLowerCase();
+                const docIdLower = pDoc.id.toLowerCase();
+                docIdToUniqueId[docIdLower] = uniqueId;
+                docIdToUniqueId[pDoc.id] = uniqueId; // Original case
+                uniqueIdToDocId[uniqueId] = pDoc.id;
+            });
+            
             // Shift değişikliği kontrolü - havuzu güncel al
             const currentPool = await getAssignmentPool(branch);
-            const currentPoolIds = new Set(currentPool.map(p => p.uniqueId?.toLowerCase() || p.id?.toLowerCase()));
+            const currentPoolUniqueIds = new Set(currentPool.map(p => (p.uniqueId || p.id || '').toLowerCase()));
             
-            // Mevcut atamalardaki personel ID'leri
-            const assignedIds = new Set();
+            // Mevcut atamalardaki personel uniqueId'lerini topla (docId'yi uniqueId'ye çevir)
+            const assignedUniqueIds = new Set();
             (existingData.assignments || []).forEach(a => {
-                const pid = (a.personnelId || '').toLowerCase();
-                if (pid) assignedIds.add(pid);
+                const pid = a.personnelId || '';
+                // Önce docId olarak dene, yoksa direkt uniqueId olarak kullan
+                const uniqueId = docIdToUniqueId[pid] || docIdToUniqueId[pid.toLowerCase()] || pid.toLowerCase();
+                assignedUniqueIds.add(uniqueId);
             });
             
-            // Havuzdaki personel ID'lerini normalize et
-            const poolPersonnelMap = {};
-            currentPool.forEach(p => {
-                const id = (p.uniqueId || p.id || '').toLowerCase();
-                poolPersonnelMap[id] = p;
-            });
-            
-            // Çıkan ve giren personeli tespit et
-            const removedPersonnel = [...assignedIds].filter(id => !currentPoolIds.has(id));
-            const addedPersonnel = [...currentPoolIds].filter(id => !assignedIds.has(id));
+            // Çıkan ve giren personeli tespit et (uniqueId bazında)
+            const removedUniqueIds = [...assignedUniqueIds].filter(id => !currentPoolUniqueIds.has(id));
+            const addedUniqueIds = [...currentPoolUniqueIds].filter(id => !assignedUniqueIds.has(id));
             
             // Değişiklik varsa sync yap
-            if (removedPersonnel.length > 0 || addedPersonnel.length > 0) {
+            if (removedUniqueIds.length > 0 || addedUniqueIds.length > 0) {
                 console.log('[Haftalık] Shift değişikliği tespit edildi!');
-                console.log('   Çıkan:', removedPersonnel);
-                console.log('   Giren:', addedPersonnel);
+                console.log('   Çıkan:', removedUniqueIds);
+                console.log('   Giren:', addedUniqueIds);
                 
-                return await syncWeeklyAssignmentsWithShift(branch, existingData, currentPool, removedPersonnel, addedPersonnel);
+                return await syncWeeklyAssignmentsWithShift(branch, existingData, currentPool, removedUniqueIds, addedUniqueIds, docIdToUniqueId, uniqueIdToDocId);
             }
             
             return existingData;
@@ -28959,68 +28970,71 @@ async function getOrCreateWeeklyAssignments(branch) {
 }
 
 // Shift değişikliklerinde atamaları sync et
-async function syncWeeklyAssignmentsWithShift(branch, existingData, currentPool, removedPersonnel, addedPersonnel) {
+async function syncWeeklyAssignmentsWithShift(branch, existingData, currentPool, removedUniqueIds, addedUniqueIds, docIdToUniqueId, uniqueIdToDocId) {
     const weekId = getWeekId();
     const docId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekId}`;
     
     let assignments = [...(existingData.assignments || [])];
     
-    // Havuzdaki personel map
-    const poolMap = {};
+    // Havuzdaki personel map (uniqueId bazında)
+    const poolByUniqueId = {};
     currentPool.forEach(p => {
-        const id = (p.uniqueId || p.id || '').toLowerCase();
-        poolMap[id] = p;
+        const uniqueId = (p.uniqueId || p.id || '').toLowerCase();
+        poolByUniqueId[uniqueId] = p;
     });
     
     // 1. Çıkan personelin görevlerini yeniden dağıt
-    if (removedPersonnel.length > 0) {
+    if (removedUniqueIds.length > 0) {
         // Çıkan personele ait görevleri bul
         const tasksToReassign = assignments.filter(a => {
-            const pid = (a.personnelId || '').toLowerCase();
-            return removedPersonnel.includes(pid);
+            const pid = a.personnelId || '';
+            const uniqueId = docIdToUniqueId[pid] || docIdToUniqueId[pid.toLowerCase()] || pid.toLowerCase();
+            return removedUniqueIds.includes(uniqueId);
         });
         
         if (tasksToReassign.length > 0) {
             console.log('[Haftalık] Yeniden dağıtılacak görev sayısı:', tasksToReassign.length);
             
-            // Havuzdaki aktif personele eşit dağıt
-            const activePoolIds = currentPool.map(p => (p.uniqueId || p.id || '').toLowerCase());
+            // Havuzdaki aktif personel uniqueId'leri
+            const activeUniqueIds = currentPool.map(p => (p.uniqueId || p.id || '').toLowerCase());
             
-            if (activePoolIds.length > 0) {
-                // Her personelin mevcut görev sayısını hesapla
+            if (activeUniqueIds.length > 0) {
+                // Her personelin mevcut görev sayısını hesapla (uniqueId bazında)
                 const taskCounts = {};
-                activePoolIds.forEach(id => taskCounts[id] = 0);
+                activeUniqueIds.forEach(id => taskCounts[id] = 0);
                 
                 assignments.forEach(a => {
-                    const pid = (a.personnelId || '').toLowerCase();
-                    if (activePoolIds.includes(pid)) {
-                        taskCounts[pid] = (taskCounts[pid] || 0) + 1;
+                    const pid = a.personnelId || '';
+                    const uniqueId = docIdToUniqueId[pid] || docIdToUniqueId[pid.toLowerCase()] || pid.toLowerCase();
+                    if (activeUniqueIds.includes(uniqueId)) {
+                        taskCounts[uniqueId] = (taskCounts[uniqueId] || 0) + 1;
                     }
                 });
                 
                 // Yeniden atanacak görevleri en az görevi olana ver
                 tasksToReassign.forEach(task => {
                     // En az görevi olan personeli bul
-                    let minId = activePoolIds[0];
-                    let minCount = taskCounts[minId] || 0;
+                    let minUniqueId = activeUniqueIds[0];
+                    let minCount = taskCounts[minUniqueId] || 0;
                     
-                    activePoolIds.forEach(id => {
-                        if ((taskCounts[id] || 0) < minCount) {
-                            minCount = taskCounts[id] || 0;
-                            minId = id;
+                    activeUniqueIds.forEach(uid => {
+                        if ((taskCounts[uid] || 0) < minCount) {
+                            minCount = taskCounts[uid] || 0;
+                            minUniqueId = uid;
                         }
                     });
                     
                     // Görevi yeniden ata
-                    const assignee = poolMap[minId];
+                    const assignee = poolByUniqueId[minUniqueId];
                     if (assignee) {
-                        task.personnelId = assignee.id;
+                        // uniqueId'yi kullan (tutarlılık için)
+                        task.personnelId = assignee.uniqueId || assignee.id;
                         task.personnelName = assignee.codeName || assignee.displayName || assignee.name;
                         task.personnelFullName = assignee.name;
                         task.reassignedAt = new Date().toISOString();
                         task.reassignReason = 'shift_removed';
                         
-                        taskCounts[minId] = (taskCounts[minId] || 0) + 1;
+                        taskCounts[minUniqueId] = (taskCounts[minUniqueId] || 0) + 1;
                         console.log(`[Haftalık] Görev yeniden atandı: "${task.itemText?.substring(0, 30)}" → ${assignee.codeName || assignee.name}`);
                     }
                 });
@@ -29029,26 +29043,27 @@ async function syncWeeklyAssignmentsWithShift(branch, existingData, currentPool,
     }
     
     // 2. Giren personele görev aktar (en çok görevi olanlardan)
-    if (addedPersonnel.length > 0 && currentPool.length > 1) {
-        const activePoolIds = currentPool.map(p => (p.uniqueId || p.id || '').toLowerCase());
+    if (addedUniqueIds.length > 0 && currentPool.length > 1) {
+        const activeUniqueIds = currentPool.map(p => (p.uniqueId || p.id || '').toLowerCase());
         
-        // Her personelin görev sayısını hesapla
+        // Her personelin görev sayısını hesapla (uniqueId bazında)
         const taskCounts = {};
-        activePoolIds.forEach(id => taskCounts[id] = 0);
+        activeUniqueIds.forEach(id => taskCounts[id] = 0);
         
         assignments.forEach(a => {
-            const pid = (a.personnelId || '').toLowerCase();
-            if (taskCounts.hasOwnProperty(pid)) {
-                taskCounts[pid]++;
+            const pid = a.personnelId || '';
+            const uniqueId = docIdToUniqueId[pid] || docIdToUniqueId[pid.toLowerCase()] || pid.toLowerCase();
+            if (taskCounts.hasOwnProperty(uniqueId)) {
+                taskCounts[uniqueId]++;
             }
         });
         
         // Hedef: eşit dağılım
         const totalTasks = assignments.length;
-        const targetPerPerson = Math.floor(totalTasks / activePoolIds.length);
+        const targetPerPerson = Math.floor(totalTasks / activeUniqueIds.length);
         
-        addedPersonnel.forEach(newPersonId => {
-            const newPerson = poolMap[newPersonId];
+        addedUniqueIds.forEach(newUniqueId => {
+            const newPerson = poolByUniqueId[newUniqueId];
             if (!newPerson) return;
             
             // Bu kişiye kaç görev verilmeli?
@@ -29058,33 +29073,35 @@ async function syncWeeklyAssignmentsWithShift(branch, existingData, currentPool,
             // En çok görevi olanlardan al
             while (given < tasksToGive) {
                 // En çok görevi olan personeli bul
-                let maxId = null;
+                let maxUniqueId = null;
                 let maxCount = 0;
                 
-                Object.entries(taskCounts).forEach(([id, count]) => {
-                    if (id !== newPersonId && count > maxCount) {
+                Object.entries(taskCounts).forEach(([uid, count]) => {
+                    if (uid !== newUniqueId && count > maxCount) {
                         maxCount = count;
-                        maxId = id;
+                        maxUniqueId = uid;
                     }
                 });
                 
-                if (!maxId || maxCount <= targetPerPerson) break;
+                if (!maxUniqueId || maxCount <= targetPerPerson) break;
                 
                 // Bu personelden bir görev al
                 const taskToMove = assignments.find(a => {
-                    const pid = (a.personnelId || '').toLowerCase();
-                    return pid === maxId && a.status !== 'completed';
+                    const pid = a.personnelId || '';
+                    const uniqueId = docIdToUniqueId[pid] || docIdToUniqueId[pid.toLowerCase()] || pid.toLowerCase();
+                    return uniqueId === maxUniqueId && a.status !== 'completed';
                 });
                 
                 if (taskToMove) {
-                    taskToMove.personnelId = newPerson.id;
+                    // uniqueId'yi kullan (tutarlılık için)
+                    taskToMove.personnelId = newPerson.uniqueId || newPerson.id;
                     taskToMove.personnelName = newPerson.codeName || newPerson.displayName || newPerson.name;
                     taskToMove.personnelFullName = newPerson.name;
                     taskToMove.reassignedAt = new Date().toISOString();
                     taskToMove.reassignReason = 'shift_added';
                     
-                    taskCounts[maxId]--;
-                    taskCounts[newPersonId] = (taskCounts[newPersonId] || 0) + 1;
+                    taskCounts[maxUniqueId]--;
+                    taskCounts[newUniqueId] = (taskCounts[newUniqueId] || 0) + 1;
                     given++;
                     
                     console.log(`[Haftalık] Görev aktarıldı: "${taskToMove.itemText?.substring(0, 30)}" → ${newPerson.codeName || newPerson.name}`);
@@ -29101,7 +29118,7 @@ async function syncWeeklyAssignmentsWithShift(branch, existingData, currentPool,
         assignments,
         pool: currentPool.map(p => ({ id: p.uniqueId || p.id, name: p.codeName || p.displayName || p.name })),
         lastSyncAt: firebase.firestore.FieldValue.serverTimestamp(),
-        syncReason: removedPersonnel.length > 0 ? 'personnel_removed' : 'personnel_added'
+        syncReason: removedUniqueIds.length > 0 ? 'personnel_removed' : 'personnel_added'
     };
     
     await db.collection('weeklyAssignments').doc(docId).update(updatedData);
@@ -29186,8 +29203,8 @@ async function createWeeklyAssignments(branch, weekId) {
             assignments.push({
                 itemId: item.id || `item_${idx}`,
                 itemText: item.text || '',
-                personnelId: assignee.id, // doc.id kullan - currentUser.personelId ile eşleşir
-                personnelName: assignee.codeName,
+                personnelId: assignee.uniqueId || assignee.id, // uniqueId kullan (tutarlılık için)
+                personnelName: assignee.codeName || assignee.displayName || assignee.name,
                 personnelFullName: assignee.name,
                 assignedAt: new Date().toISOString(),
                 cooldownHours: cooldownHours,
@@ -29203,7 +29220,7 @@ async function createWeeklyAssignments(branch, weekId) {
             weekStart: weekId,
             rotationIndex,
             assignments,
-            pool: pool.map(p => ({ id: p.uniqueId, name: p.codeName })),
+            pool: pool.map(p => ({ id: p.uniqueId || p.id, name: p.codeName || p.displayName || p.name })),
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
