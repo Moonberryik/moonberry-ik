@@ -28826,6 +28826,221 @@ function getWeekId(date = new Date()) {
     return weekStart.toISOString().split('T')[0]; // YYYY-MM-DD
 }
 
+// ==================== ROL VE SORUMLULUK SİSTEMİ ====================
+
+/**
+ * Verilen zaman diliminde personelin TEK BAŞINA olup olmadığını tespit eder
+ * @param {Object} shiftData - Shift verisi (personelShifts, dayIndex içermeli)
+ * @param {string} personId - Kontrol edilecek personel ID
+ * @param {string} timeSlot - Zaman dilimi: 'acilis', 'kapanis', 'araci', 'all'
+ * @param {Object} personnelRoles - Personel rolleri map'i {personId: role}
+ * @returns {boolean} Tek başına ise true
+ */
+function isPersonAloneInShift(shiftData, personId, timeSlot, personnelRoles = {}) {
+    if (!shiftData || !shiftData.personelShifts) return false;
+    
+    const dayIndex = shiftData.dayIndex ?? ((new Date().getDay() + 6) % 7);
+    const personelShifts = shiftData.personelShifts;
+    
+    // Bu zaman diliminde çalışan personeli bul
+    const workingPersonnel = [];
+    
+    Object.entries(personelShifts).forEach(([pId, shifts]) => {
+        const todayShift = shifts[dayIndex] || '';
+        if (!todayShift || todayShift === '-') return;
+        
+        const shiftUpper = todayShift.replace(/\*/g, '').trim().toUpperCase();
+        
+        // OFF kontrolü
+        if (shiftUpper === 'OFF' || shiftUpper === 'İ' || shiftUpper === 'Y.İ' || shiftUpper === 'X') return;
+        
+        // Bölge müdürü kontrolü - saat yoksa dahil etme
+        const role = personnelRoles[pId];
+        if (role === 'bolge_muduru') {
+            // Sadece "BÖLGE MÜDÜRÜ" yazıyorsa (saat yok) - dahil etme
+            if (shiftUpper.includes('BÖLGE') || shiftUpper.includes('BOLGE')) {
+                if (!/\d{1,2}:\d{2}/.test(todayShift)) return; // Saat yoksa atla
+            }
+        }
+        
+        // Zaman dilimine göre filtrele
+        if (timeSlot === 'all') {
+            workingPersonnel.push(pId);
+        } else if (timeSlot === 'acilis' && (shiftUpper.includes('AÇILIŞ') || shiftUpper.includes('ACILIS'))) {
+            workingPersonnel.push(pId);
+        } else if (timeSlot === 'kapanis' && (shiftUpper.includes('KAPANIŞ') || shiftUpper.includes('KAPANIS'))) {
+            workingPersonnel.push(pId);
+        } else if (timeSlot === 'araci') {
+            // Aracı = ne açılış ne kapanış (ara saatler veya saat formatı)
+            if (!shiftUpper.includes('AÇILIŞ') && !shiftUpper.includes('ACILIS') && 
+                !shiftUpper.includes('KAPANIŞ') && !shiftUpper.includes('KAPANIS') &&
+                !shiftUpper.includes('BÖLGE') && !shiftUpper.includes('BOLGE')) {
+                if (/\d{1,2}:\d{2}/.test(todayShift) || shiftUpper === 'ARA' || shiftUpper.includes('ARA')) {
+                    workingPersonnel.push(pId);
+                }
+            }
+        }
+    });
+    
+    // Tek başına kontrolü
+    return workingPersonnel.length === 1 && workingPersonnel[0] === personId;
+}
+
+/**
+ * O gün shiftte hiç başka personel var mı kontrol eder (tüm zaman dilimleri)
+ * @param {Object} shiftData - Shift verisi
+ * @param {string} excludePersonId - Hariç tutulacak personel (kendisi)
+ * @param {Object} personnelRoles - Personel rolleri map'i
+ * @returns {boolean} Başka personel yoksa true (tek başına)
+ */
+function isPersonAloneAllDay(shiftData, excludePersonId, personnelRoles = {}) {
+    if (!shiftData || !shiftData.personelShifts) return true;
+    
+    const dayIndex = shiftData.dayIndex ?? ((new Date().getDay() + 6) % 7);
+    const personelShifts = shiftData.personelShifts;
+    
+    let otherWorkingCount = 0;
+    
+    Object.entries(personelShifts).forEach(([pId, shifts]) => {
+        if (pId === excludePersonId) return; // Kendisini say ma
+        
+        const todayShift = shifts[dayIndex] || '';
+        if (!todayShift || todayShift === '-') return;
+        
+        const shiftUpper = todayShift.replace(/\*/g, '').trim().toUpperCase();
+        
+        // OFF kontrolü
+        if (shiftUpper === 'OFF' || shiftUpper === 'İ' || shiftUpper === 'Y.İ' || shiftUpper === 'X' || /^\*+$/.test(shiftUpper)) return;
+        
+        // Bölge müdürü - saat yoksa sayma
+        const role = personnelRoles[pId];
+        if (role === 'bolge_muduru') {
+            if ((shiftUpper.includes('BÖLGE') || shiftUpper.includes('BOLGE')) && !/\d{1,2}:\d{2}/.test(todayShift)) {
+                return;
+            }
+        }
+        
+        otherWorkingCount++;
+    });
+    
+    return otherWorkingCount === 0;
+}
+
+/**
+ * Puan görünürlüğü kontrolü
+ * @param {string} viewerRole - Puanı görmeye çalışan kişinin rolü
+ * @param {string} targetRole - Puanı görülecek kişinin rolü
+ * @param {string} viewerId - Görmeye çalışan kişinin ID'si
+ * @param {string} targetId - Puanı görülecek kişinin ID'si
+ * @param {string} pointType - 'positive' veya 'negative'
+ * @returns {boolean} Görülebilir ise true
+ */
+function canViewPoints(viewerRole, targetRole, viewerId, targetId, pointType = 'all') {
+    // Herkes kendi puanını görebilir
+    if (viewerId === targetId) return true;
+    
+    // Rol hiyerarşisi: yonetici > bolge_muduru > magaza_muduru > mudur_yardimcisi > barista
+    const roleHierarchy = {
+        'yonetici': 5,
+        'bolge_muduru': 4,
+        'magaza_muduru': 3,
+        'mudur_yardimcisi': 2,
+        'barista': 1
+    };
+    
+    const viewerLevel = roleHierarchy[viewerRole] || 0;
+    const targetLevel = roleHierarchy[targetRole] || 0;
+    
+    // Bölge müdürü puanı sadece yönetici görebilir
+    if (targetRole === 'bolge_muduru') {
+        return viewerRole === 'yonetici';
+    }
+    
+    // Mağaza müdürü eksi puanı sadece üstleri görebilir (bolge_muduru, yonetici)
+    if (targetRole === 'magaza_muduru' && pointType === 'negative') {
+        return viewerLevel >= roleHierarchy['bolge_muduru'];
+    }
+    
+    // Diğer durumlarda üstler astların puanını görebilir
+    return viewerLevel > targetLevel;
+}
+
+/**
+ * Bölge müdürü eksi puan alabilir mi?
+ * @param {string} role - Kişinin rolü
+ * @returns {boolean} Eksi puan alabilirse true
+ */
+function canReceiveNegativePoints(role) {
+    // Bölge müdürü eksi puan ALAMAZ
+    if (role === 'bolge_muduru') return false;
+    return true;
+}
+
+/**
+ * Müdür yardımcısının sorumluluğunu belirle
+ * @param {Object} shiftData - Shift verisi
+ * @param {Object} mudur - Müdür bilgisi {uniqueId, ...}
+ * @param {Object} yardimci - Yardımcı bilgisi {uniqueId, ...}
+ * @param {Object} personnelRoles - Personel rolleri
+ * @returns {string} 'barista_like' | 'mudur_like' | 'all_responsible'
+ */
+function getMudurYardimcisiResponsibility(shiftData, mudur, yardimci, personnelRoles = {}) {
+    if (!shiftData || !yardimci) return 'barista_like';
+    
+    const dayIndex = shiftData.dayIndex ?? ((new Date().getDay() + 6) % 7);
+    const personelShifts = shiftData.personelShifts || {};
+    
+    // Yardımcı shiftte mi?
+    const yardimciId = yardimci.uniqueId || yardimci.id;
+    const yardimciShift = personelShifts[yardimciId]?.[dayIndex] || '';
+    const yardimciShiftClean = yardimciShift.replace(/\*/g, '').trim().toUpperCase();
+    
+    if (!yardimciShift || yardimciShiftClean === 'OFF' || yardimciShiftClean === 'İ') {
+        return 'not_working'; // Yardımcı çalışmıyor
+    }
+    
+    // Yardımcı tek başına mı?
+    if (isPersonAloneAllDay(shiftData, yardimciId, personnelRoles)) {
+        return 'all_responsible'; // TÜM checklistlerden sorumlu
+    }
+    
+    // Müdür shiftte mi?
+    if (!mudur) return 'mudur_like'; // Müdür yok, yardımcı müdür gibi
+    
+    const mudurId = mudur.uniqueId || mudur.id;
+    const mudurShift = personelShifts[mudurId]?.[dayIndex] || '';
+    const mudurShiftClean = mudurShift.replace(/\*/g, '').trim().toUpperCase();
+    
+    if (!mudurShift || mudurShiftClean === 'OFF' || mudurShiftClean === 'İ') {
+        return 'mudur_like'; // Müdür izinli, yardımcı müdür gibi
+    }
+    
+    // Müdür de yardımcı da çalışıyor - yardımcı barista gibi
+    return 'barista_like';
+}
+
+/**
+ * Mağaza müdürünün sorumluluğunu belirle
+ * @param {Object} shiftData - Shift verisi
+ * @param {Object} mudur - Müdür bilgisi {uniqueId, ...}
+ * @param {Object} personnelRoles - Personel rolleri
+ * @returns {string} 'mudur_only' | 'all_responsible'
+ */
+function getMudurResponsibility(shiftData, mudur, personnelRoles = {}) {
+    if (!shiftData || !mudur) return 'mudur_only';
+    
+    const mudurId = mudur.uniqueId || mudur.id;
+    
+    // Müdür tek başına mı?
+    if (isPersonAloneAllDay(shiftData, mudurId, personnelRoles)) {
+        return 'all_responsible'; // TÜM checklistlerden sorumlu
+    }
+    
+    return 'mudur_only'; // Sadece müdür checklistinden sorumlu
+}
+
+// ==================== HAFTALIK GÖREV SİSTEMİ ====================
+
 // Atama havuzundaki personeli al (yöneticiler ve müdürler hariç)
 async function getAssignmentPool(branch) {
     const pool = [];
