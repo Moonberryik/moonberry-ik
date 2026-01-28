@@ -128,23 +128,25 @@ body {
 }
 
 .password-wrapper .form-input {
-    padding-right: 48px;
+    padding-right: 40px;
 }
 
 .password-toggle {
     position: absolute;
-    right: 14px;
+    right: 4px;
     top: 50%;
     transform: translateY(-50%);
-    background: none;
+    width: 32px;
+    height: 32px;
+    background: transparent;
     border: none;
     cursor: pointer;
-    padding: 4px;
     color: var(--gray);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: color 0.2s;
+    border-radius: 4px;
+    transition: all 0.12s;
 }
 
 .password-toggle:hover {
@@ -152,8 +154,8 @@ body {
 }
 
 .password-toggle svg {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
 }
 
 .login-btn {
@@ -654,43 +656,35 @@ body {
             hideError();
             
             try {
-                // ========== ADIM 1: Anonymous Auth (Firestore erişimi için) ==========
-                console.log('1. Anonymous Auth başlatılıyor...');
-                await auth.signInAnonymously();
-                console.log('   ✓ Anonymous Auth başarılı');
+                // ========== ADIM 1: Cloud Function ile şifre doğrulama ==========
+                console.log('1. Cloud Function ile doğrulama...');
                 
-                // ========== ADIM 2: Credentials kontrolü ==========
-                const emailDocId = email.replace(/[@.]/g, '_');
-                console.log('2. Credentials kontrol:', emailDocId);
+                const verifyResponse = await fetch('https://europe-west1-moonberry-ik.cloudfunctions.net/verifyLogin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
                 
-                const credDoc = await db.collection('credentials').doc(emailDocId).get();
+                const verifyResult = await verifyResponse.json();
+                console.log('   Sonuç:', verifyResult);
                 
-                if (!credDoc.exists) {
-                    console.log('   ✗ Credentials yok');
-                    await auth.signOut();
-                    await logLoginAttempt(email, false, 'no_credentials');
-                    showError('Bu hesap için şifre tanımlanmamış.');
-                    btn.classList.remove('loading');
-                    btn.disabled = false;
-                    return;
-                }
-                
-                const credData = credDoc.data();
-                const storedPassword = decodeCredential(credData);
-                console.log('   Kayıtlı:', storedPassword, '| Girilen:', password);
-                
-                if (!storedPassword || storedPassword !== password) {
-                    console.log('   ✗ Şifre eşleşmiyor');
-                    await auth.signOut();
-                    await logLoginAttempt(email, false, 'wrong_password');
+                if (!verifyResult.success) {
+                    console.log('   ✗ Doğrulama başarısız:', verifyResult.error);
+                    await logLoginAttempt(email, false, verifyResult.error || 'verify_failed');
                     loginAttempts++;
                     localStorage.setItem('mb_login_attempts', loginAttempts);
                     
                     if (loginAttempts >= MAX_ATTEMPTS) {
                         setLockout();
                         showError('Çok fazla hatalı deneme! Bekleyin.');
-                    } else {
+                    } else if (verifyResult.error === 'no_credentials') {
+                        showError('Bu hesap için şifre tanımlanmamış.');
+                    } else if (verifyResult.error === 'wrong_password') {
                         showError('Şifre hatalı.');
+                    } else if (verifyResult.error === 'personel_not_found') {
+                        showError('Bu hesap artık aktif değil.');
+                    } else {
+                        showError('Giriş yapılamadı.');
                     }
                     btn.classList.remove('loading');
                     btn.disabled = false;
@@ -698,57 +692,18 @@ body {
                 }
                 
                 console.log('   ✓ Şifre doğru');
+                const personelData = verifyResult.user;
                 
-                // ========== ADIM 3: Personel kontrolü ==========
-                console.log('3. Personel kontrol...');
+                // ========== ADIM 2: Anonymous Auth (Firestore erişimi için) ==========
+                console.log('2. Anonymous Auth başlatılıyor...');
+                await auth.signInAnonymously();
+                console.log('   ✓ Anonymous Auth başarılı');
                 
-                // Admin email listesini systemConfig'den çek
-                let isAdmin = false;
-                try {
-                    const configDoc = await db.collection('systemConfig').doc('main').get();
-                    if (configDoc.exists) {
-                        const adminEmails = configDoc.data().adminEmails || [];
-                        isAdmin = adminEmails.includes(email);
-                        console.log('   Admin emails:', adminEmails);
-                    }
-                } catch (e) {
-                    console.log('   Config okunamadı:', e.code);
-                }
-                
-                let personelData = null;
-                
-                if (isAdmin) {
-                    console.log('   ✓ Admin kullanıcı - personel kontrolü atlandı');
-                    personelData = {
-                        name: 'Yönetici',
-                        role: 'yonetici',
-                        branch: 'all',
-                        uniqueId: 'admin',
-                        position: 'Yönetici'
-                    };
-                } else {
-                    const personelSnap = await db.collection('personel')
-                        .where('email', '==', email)
-                        .limit(1)
-                        .get();
-                    
-                    if (personelSnap.empty) {
-                        console.log('   ✗ Personel bulunamadı');
-                        await auth.signOut();
-                        await logLoginAttempt(email, false, 'personel_not_found');
-                        showError('Bu hesap artık aktif değil.');
-                        btn.classList.remove('loading');
-                        btn.disabled = false;
-                        return;
-                    }
-                    
-                    personelData = personelSnap.docs[0].data();
-                    console.log('   ✓ Personel bulundu');
-                }
-                
-                // ========== ADIM 4: authMapping kaydet ==========
-                console.log('4. authMapping kaydediliyor...');
+                // ========== ADIM 3: authMapping kaydet ==========
+                console.log('3. authMapping kaydediliyor...');
                 const uid = auth.currentUser.uid;
+                const emailDocId = email.replace(/[@.]/g, '_');
+                
                 await db.collection('authMapping').doc(uid).set({
                     email: email,
                     credentialDocId: emailDocId,
@@ -756,7 +711,7 @@ body {
                 });
                 
                 // Admin ise users koleksiyonuna da kaydet (Firestore Rules için)
-                if (isAdmin) {
+                if (personelData.role === 'yonetici') {
                     await db.collection('users').doc(uid).set({
                         email: email,
                         role: 'yonetici',
@@ -766,7 +721,7 @@ body {
                 }
                 console.log('   ✓ authMapping kaydedildi');
                 
-                // ========== ADIM 5: localStorage ve yönlendirme ==========
+                // ========== ADIM 4: localStorage ve yönlendirme ==========
                 const userData = {
                     email: email,
                     name: personelData.name,
@@ -778,9 +733,9 @@ body {
                 };
                 localStorage.setItem('mb_user', JSON.stringify(userData));
                 
-                await logLoginAttempt(email, true, 'credentials_anonymous');
+                await logLoginAttempt(email, true, 'cloud_function');
                 clearLockout();
-                console.log('5. ✓ Giriş başarılı, yönlendiriliyor...');
+                console.log('4. ✓ Giriş başarılı, yönlendiriliyor...');
                 showToast('Giriş başarılı!', 'success');
                 
                 setTimeout(() => {
