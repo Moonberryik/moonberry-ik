@@ -18915,9 +18915,10 @@ async function loadTodayChecks() {
         const isLateNightPlatform = currentHour >= 0 && currentHour < dayEndHourPlatform;
         const nowMinutesPlatform = currentHour * 60 + currentMinutes;
         
-        // 00:00 slotunu bul
+        // 00:00 slotunu bul (gece için)
         const midnightSlot = platformSlots.find(s => s.start === '00:00');
         
+        // Gece saatlerinde ve 00:00 slotu varsa özel kontrol
         if (isLateNightPlatform && midnightSlot) {
             // 00:00 slotunun late window kontrolü
             const [endH, endM] = midnightSlot.end.split(':').map(Number);
@@ -18939,9 +18940,10 @@ async function loadTodayChecks() {
                 isPlatformMissed = true;
                 platformRemainingMinutes = 0;
             }
-        } else if (!isLateNightPlatform) {
+        } else {
+            // Gündüz veya gece ama 00:00 slotu yok - tüm slotları kontrol et
             for (const slot of platformSlots) {
-                if (slot.start === '00:00') continue; // 00:00 ayrı ele alındı
+                if (slot.start === '00:00' && !isLateNightPlatform) continue; // 00:00 gece için ayrı
                 
                 const [startH, startM] = slot.start.split(':').map(Number);
                 const [endH, endM] = slot.end.split(':').map(Number);
@@ -18976,12 +18978,23 @@ async function loadTodayChecks() {
             }
         }
         
-        // Display için slot seç
-        const displayPlatformSlot = activePlatformSlot || nextPlatformSlot;
+        // Display için slot seç - her zaman bir slot göster
+        let displayPlatformSlot = activePlatformSlot || nextPlatformSlot;
+        
+        // Hiç slot bulunamadıysa (gece tüm slotlar geçmişse), ilk slotu göster (pasif)
+        if (!displayPlatformSlot && platformSlots.length > 0) {
+            displayPlatformSlot = platformSlots[0];
+            // Gece saatlerinde ve slot yoksa - bugünün slotları bitti
+            if (isLateNightPlatform) {
+                isPlatformMissed = false; // Kaçırılmadı, sadece bugün bitti
+            }
+        }
+        
         const activePlatformTime = displayPlatformSlot?.start || null;
         const nextPlatformTime = nextPlatformSlot?.start || null;
         
-        if (activePlatformTime || nextPlatformTime) {
+        // Platform kartı HER ZAMAN görünür
+        {
             const platformSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_platform_${todayStr}_${(activePlatformTime || '').replace(':', '')}`;
             let platformCompleted = false;
             try {
