@@ -19116,7 +19116,7 @@ async function loadTodayChecks() {
         // 2. Temizlik Check
         {
             // CHECK_RULES'dan ayarları al
-            const temizlikRules = CHECK_RULES.temizlik || CHECK_RULES.aylik || {};
+            const temizlikRules = CHECK_RULES.aylik || CHECK_RULES.temizlik || {};
             const temizlikShifts = temizlikRules.shifts || {
                 acilisci: { deadline: '15:00', window: { start: '10:00', end: '15:00' } },
                 araci: { deadline: '19:00', window: { start: '11:00', end: '19:00' } },
@@ -19236,7 +19236,7 @@ async function loadTodayChecks() {
                 remainingMinutes: temizlikRemainingMinutes,
                 remainingText: '',
                 personnel: temizlikPersonnel,
-                points: CHECK_RULES.temizlik?.points || CHECK_RULES.aylik?.points || { onTime: 1, late: 0, missed: -1 },
+                points: CHECK_RULES.aylik?.points || CHECK_RULES.temizlik?.points || { onTime: 1, late: 0, missed: -1 },
                 priority: temizlikCompleted ? 90 : (isTemizlikMissed ? 99 : (isTemizlikActive ? 15 : 70)),
                 onClick: isTemizlikMissed ? '' : `goToChecklist('${branch}', 'aylik', '${currentShiftType}')`
             });
