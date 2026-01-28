@@ -19155,17 +19155,7 @@ async function loadTodayChecks() {
             let temizlikLateWindow = temizlikRules.lateWindow || 30;
             
             // NOT: Saatler Check & Puantaj Kuralları'ndan (shifts) geliyor
-            // Mağaza kapanış saati sadece iş günü hesabı için kullanılıyor
-            
-            // Eski periods desteği (geriye uyumluluk)
-            if (temizlikRules.periods && temizlikRules.periods.length > 0) {
-                const isSabahTemizlik = currentHour >= 6 && currentHour < 16;
-                const period = temizlikRules.periods.find(p => p.shift === (isSabahTemizlik ? 'acilis' : 'kapanis'));
-                if (period) {
-                    temizlikActiveFrom = period.start || temizlikActiveFrom;
-                    temizlikDeadline = period.end || temizlikDeadline;
-                }
-            }
+            // periods eski yapı - artık kullanılmıyor, shifts öncelikli
             
             const temizlikSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_aylik_${todayStr}_${currentShiftType}`;
             let temizlikCompleted = false;
