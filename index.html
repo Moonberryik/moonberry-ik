@@ -19141,27 +19141,8 @@ async function loadTodayChecks() {
             let temizlikDeadline = shiftConfig.window?.end || shiftConfig.deadline || '18:00';
             let temizlikLateWindow = temizlikRules.lateWindow || 30;
             
-            // Kapanışçı için saatler mağaza kapanış saatinden dinamik hesaplanır
-            if (currentShiftType === 'kapanisci') {
-                const branchClosingTime = getBranchClosingTime(branch);
-                if (branchClosingTime) {
-                    // Deadline = Mağaza kapanış saati
-                    temizlikDeadline = branchClosingTime;
-                    
-                    // ActiveFrom = Mağaza kapanış - SHIFT_DURATION
-                    const [closeH, closeM] = branchClosingTime.split(':').map(Number);
-                    let closeMinutes = closeH * 60 + closeM;
-                    // Gece saati ise (00:00-06:00), 24 saat ekle
-                    if (closeH < 6) closeMinutes += 24 * 60;
-                    const shiftDuration = SHIFT_DURATION || 9;
-                    let startMinutes = closeMinutes - (shiftDuration * 60);
-                    // 24 saati geçerse normalize et
-                    if (startMinutes >= 24 * 60) startMinutes -= 24 * 60;
-                    const startH = Math.floor(startMinutes / 60) % 24;
-                    const startM = startMinutes % 60;
-                    temizlikActiveFrom = `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
-                }
-            }
+            // NOT: Saatler Check & Puantaj Kuralları'ndan (shifts) geliyor
+            // Mağaza kapanış saati sadece iş günü hesabı için kullanılıyor
             
             // Eski periods desteği (geriye uyumluluk)
             if (temizlikRules.periods && temizlikRules.periods.length > 0) {
@@ -19349,23 +19330,9 @@ async function loadTodayChecks() {
         // 4. Kapanış Hazırlıkları
         {
             const kapanisRules = CHECK_RULES.kapanis || {};
-            // Kapanış saatleri mağaza kapanış saatinden dinamik hesaplanır
-            const branchClosingTime = getBranchClosingTime(branch);
-            const kapanisDeadline = branchClosingTime || kapanisRules.deadline || '02:00';
-            
-            // ActiveFrom = Mağaza kapanış - SHIFT_DURATION (kapanışçı shift başlangıcı)
-            let kapanisActiveFrom = kapanisRules.activeFrom || '22:00';
-            if (branchClosingTime) {
-                const [closeH, closeM] = branchClosingTime.split(':').map(Number);
-                let closeMinutes = closeH * 60 + closeM;
-                if (closeH < 6) closeMinutes += 24 * 60;
-                const shiftDuration = SHIFT_DURATION || 9;
-                let startMinutes = closeMinutes - (shiftDuration * 60);
-                if (startMinutes >= 24 * 60) startMinutes -= 24 * 60;
-                const startH = Math.floor(startMinutes / 60) % 24;
-                const startM = startMinutes % 60;
-                kapanisActiveFrom = `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
-            }
+            // Saatler Check & Puantaj Kuralları'ndan geliyor
+            const kapanisActiveFrom = kapanisRules.activeFrom || '22:00';
+            const kapanisDeadline = kapanisRules.deadline || '02:00';
             const kapanisLateWindow = kapanisRules.lateWindow || 30;
             
             const kapanisSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_kapanis_${todayStr}`;
@@ -19681,9 +19648,8 @@ async function loadTodayChecks() {
             // CHECK_RULES'dan aktiflik saatlerini al
             const mudurRules = CHECK_RULES.mudur || {};
             const mudurActiveFrom = mudurRules.activeFrom || '18:00';
-            // Müdür deadline = Mağaza kapanış saati (dinamik)
-            const mudurBranchClosingTime = getBranchClosingTime(branch);
-            const mudurDeadlineRule = mudurBranchClosingTime || mudurRules.deadline || '23:00';
+            // Saatler Check & Puantaj Kuralları'ndan geliyor
+            const mudurDeadlineRule = mudurRules.deadline || '23:00';
             const [activeH, activeM] = mudurActiveFrom.split(':').map(Number);
             const [deadlineRuleH, deadlineRuleM] = mudurDeadlineRule.split(':').map(Number);
             
