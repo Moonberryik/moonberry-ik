@@ -19719,7 +19719,8 @@ async function loadTodayChecks() {
                 managersSnap.forEach(doc => {
                     const d = doc.data();
                     if (d.role === 'magaza_muduru' && d.branch === branch) mudur = { ...d, id: doc.id };
-                    if (d.role === 'magaza_mudur_yardimcisi' && d.branch === branch) yardimci = { ...d, id: doc.id };
+                    // Müdür yardımcısı: her iki format da destekleniyor
+                    if ((d.role === 'magaza_mudur_yardimcisi' || d.role === 'mudur_yardimcisi') && d.branch === branch) yardimci = { ...d, id: doc.id };
                     if (d.role === 'bolge_muduru') bolgeMuduru = { ...d, id: doc.id };
                 });
                 
