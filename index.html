@@ -16072,18 +16072,43 @@ async function reorderShiftPersonel(docId, fromIdx, toIdx) {
         if (!doc.exists) return;
         
         const shift = doc.data();
-        const order = shift.personelOrder || Object.keys(shift.personelShifts || {});
+        const personelShifts = shift.personelShifts || {};
+        let order = shift.personelOrder || Object.keys(personelShifts);
+        
+        // HTML'deki gibi filter et - personelShifts'te olmayan kişileri çıkar
+        const filteredOrder = order.filter(name => personelShifts[name]);
+        
+        // Taşınacak kişiyi filteredOrder'dan al
+        const movedPerson = filteredOrder[fromIdx];
+        if (!movedPerson) {
+            console.error('[Sıralama] Geçersiz fromIdx:', fromIdx);
+            return;
+        }
+        
+        // Hedef kişiyi bul
+        const targetPerson = filteredOrder[toIdx];
+        
+        // Ana order dizisinde gerçek pozisyonları bul
+        const realFromIdx = order.indexOf(movedPerson);
+        const realToIdx = order.indexOf(targetPerson);
+        
+        if (realFromIdx === -1 || realToIdx === -1) {
+            console.error('[Sıralama] Pozisyon bulunamadı:', movedPerson, targetPerson);
+            return;
+        }
         
         // Taşı
-        const [moved] = order.splice(fromIdx, 1);
-        order.splice(toIdx, 0, moved);
+        const [moved] = order.splice(realFromIdx, 1);
+        // realToIdx'in yeni pozisyonunu hesapla (splice sonrası kayma)
+        const adjustedToIdx = realFromIdx < realToIdx ? realToIdx : realToIdx;
+        order.splice(adjustedToIdx, 0, moved);
         
         // Kaydet
         await db.collection('shifts').doc(docId).update({
             personelOrder: order
         });
         
-        console.log(`[Sıralama] ${moved} taşındı: ${fromIdx} → ${toIdx}`);
+        console.log(`[Sıralama] ${moved} taşındı: ${fromIdx} → ${toIdx} (gerçek: ${realFromIdx} → ${adjustedToIdx})`);
         toast('Sıralama güncellendi ✓', 'success');
         
         // Tabloyu yenile
