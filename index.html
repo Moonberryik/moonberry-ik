@@ -7513,8 +7513,8 @@ async function confirmDeleteDuplicateShifts(idsJson) {
 
 // Sadece Puanları Sıfırla - Checklist geçmişi korunur
 async function resetAllPoints() {
-    // Sadece admin
-    if (currentUser?.role !== 'admin') {
+    // Sadece admin (dinamik kontrol)
+    if (!isAdminUser()) {
         toast('Bu işlem için yetkiniz yok', 'error');
         return;
     }
@@ -7589,8 +7589,8 @@ async function resetAllPoints() {
 
 // Tüm Check ve Puan Geçmişini Sil - SADECE ADMIN
 async function deleteAllHistory() {
-    // Sadece admin
-    if (currentUser?.role !== 'admin') {
+    // Sadece admin (dinamik kontrol)
+    if (!isAdminUser()) {
         toast('Bu işlem için yetkiniz yok', 'error');
         return;
     }
@@ -15502,6 +15502,12 @@ function updateLogos(theme) {
 
 // ==================== ADMIN ŞİFRE DEĞİŞTİRME ====================
 async function updateAdminCredentials() {
+    // Sadece admin
+    if (!isAdminUser()) {
+        toast('Bu işlem için yetkiniz yok', 'error');
+        return;
+    }
+    
     const newUsername = document.getElementById('admin_new_username').value.trim();
     const newPassword = document.getElementById('admin_new_password').value;
     const confirmPassword = document.getElementById('admin_confirm_password').value;
@@ -15511,42 +15517,46 @@ async function updateAdminCredentials() {
     if (newPassword && newPassword.length < 6) { toast('Şifre en az 6 karakter olmalı', 'error'); return; }
     
     try {
-        const user = firebase.auth().currentUser;
-        if (!user) { toast('Oturum bulunamadı, tekrar giriş yapın', 'error'); return; }
+        const email = currentUser?.email;
+        if (!email) { toast('Oturum bulunamadı, tekrar giriş yapın', 'error'); return; }
         
-        // Firebase Auth şifresini güncelle
+        // 1. Şifre değişikliği - credentials koleksiyonunu güncelle
         if (newPassword) {
-            await user.updatePassword(newPassword);
-            console.log('Firebase Auth şifresi güncellendi');
+            const saved = await saveCredential(email, newPassword);
+            if (saved) {
+                console.log('✅ Credentials güncellendi');
+            } else {
+                toast('Şifre güncellenemedi', 'error');
+                return;
+            }
         }
         
-        // Firestore'daki kullanıcı bilgilerini güncelle
-        const updateData = { updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
-        if (newUsername) updateData.name = newUsername;
-        
-        // users koleksiyonunda güncelle (email ile bul)
-        const userDoc = await db.collection('users').where('email', '==', user.email).get();
-        if (!userDoc.empty) {
-            await db.collection('users').doc(userDoc.docs[0].id).update(updateData);
+        // 2. İsim değişikliği - users ve localStorage güncelle
+        if (newUsername) {
+            const uid = firebase.auth().currentUser?.uid;
+            if (uid) {
+                await db.collection('users').doc(uid).update({ 
+                    name: newUsername,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp() 
+                });
+            }
+            
+            // localStorage güncelle
+            if (currentUser) {
+                currentUser.name = newUsername;
+                localStorage.setItem('mb_user', JSON.stringify(currentUser));
+            }
+            console.log('✅ İsim güncellendi');
         }
         
-        // personel koleksiyonunda da güncelle
-        const personelDoc = await db.collection('personel').where('email', '==', user.email).get();
-        if (!personelDoc.empty && newPassword) {
-            await db.collection('personel').doc(personelDoc.docs[0].id).update({ password: newPassword });
-        }
-        
-        toast('Giriş bilgileri güncellendi', 'success');
+        toast('Giriş bilgileri güncellendi ✓', 'success');
         document.getElementById('admin_new_username').value = '';
         document.getElementById('admin_new_password').value = '';
         document.getElementById('admin_confirm_password').value = '';
+        
     } catch (e) { 
-        console.error('Şifre güncelleme hatası:', e); 
-        if (e.code === 'auth/requires-recent-login') {
-            toast('Güvenlik için tekrar giriş yapmanız gerekiyor', 'error');
-        } else {
-            toast('Güncelleme hatası: ' + e.message, 'error'); 
-        }
+        console.error('Güncelleme hatası:', e); 
+        toast('Güncelleme hatası: ' + e.message, 'error'); 
     }
 }
 
@@ -22855,6 +22865,13 @@ let personnelMapping = [];
 // ==================== ADMIN EMAIL KONTROLÜ ====================
 // Config'den dinamik admin listesi - varsayılan fallback
 let _adminEmails = ['admin@moonberrycoffee.com', 'tamer@moonberrycoffee.com'];
+
+// Helper: Mevcut kullanıcı admin mi? (email bazlı, dinamik)
+function isAdminUser() {
+    const email = currentUser?.email?.toLowerCase();
+    if (!email) return false;
+    return _adminEmails.includes(email) || currentUser?.role === 'yonetici';
+}
 
 async function checkAdminEmail(email) {
     if (!email) return false;
