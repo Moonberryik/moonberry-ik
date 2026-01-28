@@ -28901,7 +28901,7 @@ async function getAssignmentPool(branch) {
     return pool;
 }
 
-// Haftalık atama oluştur veya mevcut atamayı al (shift değişikliklerini sync eder)
+// Haftalık atama oluştur veya mevcut atamayı al (migration + shift sync)
 async function getOrCreateWeeklyAssignments(branch) {
     const weekId = getWeekId();
     const docId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekId}`;
@@ -28912,7 +28912,7 @@ async function getOrCreateWeeklyAssignments(branch) {
         
         if (doc.exists) {
             console.log('[Haftalık] Mevcut atama bulundu:', docId);
-            const existingData = doc.data();
+            let existingData = doc.data();
             
             // Personel koleksiyonundan docId ↔ uniqueId map'i oluştur
             const personnelSnap = await db.collection('personel')
@@ -28921,25 +28921,71 @@ async function getOrCreateWeeklyAssignments(branch) {
             
             const docIdToUniqueId = {};
             const uniqueIdToDocId = {};
+            const uniqueIdToPersonnel = {};
+            
             personnelSnap.docs.forEach(pDoc => {
                 const pData = pDoc.data();
                 const uniqueId = (pData.uniqueId || pDoc.id || '').toLowerCase();
-                const docIdLower = pDoc.id.toLowerCase();
-                docIdToUniqueId[docIdLower] = uniqueId;
-                docIdToUniqueId[pDoc.id] = uniqueId; // Original case
+                docIdToUniqueId[pDoc.id] = uniqueId;
+                docIdToUniqueId[pDoc.id.toLowerCase()] = uniqueId;
                 uniqueIdToDocId[uniqueId] = pDoc.id;
+                uniqueIdToPersonnel[uniqueId] = {
+                    id: pDoc.id,
+                    uniqueId: pData.uniqueId || pDoc.id,
+                    name: pData.name,
+                    displayName: pData.displayName,
+                    codeName: pData.codeName || pData.displayName || pData.name
+                };
             });
             
+            // === MIGRATION: docId → uniqueId ===
+            let needsMigration = false;
+            const migratedAssignments = (existingData.assignments || []).map(a => {
+                const pid = a.personnelId || '';
+                
+                // Bu ID bir docId mi? (uniqueId genelde underscore içerir, docId uzun random string)
+                const isDocId = pid.length > 15 && !pid.includes('_');
+                
+                if (isDocId && docIdToUniqueId[pid]) {
+                    const newUniqueId = docIdToUniqueId[pid];
+                    const personnel = uniqueIdToPersonnel[newUniqueId];
+                    
+                    console.log(`[Migration] ${pid} → ${newUniqueId}`);
+                    needsMigration = true;
+                    
+                    return {
+                        ...a,
+                        personnelId: personnel?.uniqueId || newUniqueId,
+                        personnelName: personnel?.codeName || a.personnelName,
+                        personnelFullName: personnel?.name || a.personnelFullName,
+                        migratedAt: new Date().toISOString()
+                    };
+                }
+                return a;
+            });
+            
+            // Migration gerekiyorsa kaydet
+            if (needsMigration) {
+                console.log('[Migration] ID\'ler migrate ediliyor...');
+                existingData = {
+                    ...existingData,
+                    assignments: migratedAssignments,
+                    lastMigrationAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                await db.collection('weeklyAssignments').doc(docId).update(existingData);
+                console.log('[Migration] Tamamlandı!');
+            }
+            
+            // === SHIFT SYNC ===
             // Shift değişikliği kontrolü - havuzu güncel al
             const currentPool = await getAssignmentPool(branch);
             const currentPoolUniqueIds = new Set(currentPool.map(p => (p.uniqueId || p.id || '').toLowerCase()));
             
-            // Mevcut atamalardaki personel uniqueId'lerini topla (docId'yi uniqueId'ye çevir)
+            // Mevcut atamalardaki personel uniqueId'lerini topla
             const assignedUniqueIds = new Set();
             (existingData.assignments || []).forEach(a => {
                 const pid = a.personnelId || '';
-                // Önce docId olarak dene, yoksa direkt uniqueId olarak kullan
-                const uniqueId = docIdToUniqueId[pid] || docIdToUniqueId[pid.toLowerCase()] || pid.toLowerCase();
+                const uniqueId = (pid.includes('_') ? pid : docIdToUniqueId[pid] || pid).toLowerCase();
                 assignedUniqueIds.add(uniqueId);
             });
             
@@ -28953,7 +28999,7 @@ async function getOrCreateWeeklyAssignments(branch) {
                 console.log('   Çıkan:', removedUniqueIds);
                 console.log('   Giren:', addedUniqueIds);
                 
-                return await syncWeeklyAssignmentsWithShift(branch, existingData, currentPool, removedUniqueIds, addedUniqueIds, docIdToUniqueId, uniqueIdToDocId);
+                return await syncWeeklyAssignmentsWithShift(branch, existingData, currentPool, removedUniqueIds, addedUniqueIds, docIdToUniqueId, uniqueIdToDocId, uniqueIdToPersonnel);
             }
             
             return existingData;
@@ -28970,7 +29016,7 @@ async function getOrCreateWeeklyAssignments(branch) {
 }
 
 // Shift değişikliklerinde atamaları sync et
-async function syncWeeklyAssignmentsWithShift(branch, existingData, currentPool, removedUniqueIds, addedUniqueIds, docIdToUniqueId, uniqueIdToDocId) {
+async function syncWeeklyAssignmentsWithShift(branch, existingData, currentPool, removedUniqueIds, addedUniqueIds, docIdToUniqueId, uniqueIdToDocId, uniqueIdToPersonnel) {
     const weekId = getWeekId();
     const docId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekId}`;
     
@@ -28983,29 +29029,32 @@ async function syncWeeklyAssignmentsWithShift(branch, existingData, currentPool,
         poolByUniqueId[uniqueId] = p;
     });
     
+    // Helper: personnelId'den uniqueId'ye çevir
+    const toUniqueId = (pid) => {
+        if (!pid) return '';
+        if (pid.includes('_')) return pid.toLowerCase();
+        return (docIdToUniqueId[pid] || docIdToUniqueId[pid.toLowerCase()] || pid).toLowerCase();
+    };
+    
     // 1. Çıkan personelin görevlerini yeniden dağıt
     if (removedUniqueIds.length > 0) {
-        // Çıkan personele ait görevleri bul
         const tasksToReassign = assignments.filter(a => {
-            const pid = a.personnelId || '';
-            const uniqueId = docIdToUniqueId[pid] || docIdToUniqueId[pid.toLowerCase()] || pid.toLowerCase();
+            const uniqueId = toUniqueId(a.personnelId);
             return removedUniqueIds.includes(uniqueId);
         });
         
         if (tasksToReassign.length > 0) {
             console.log('[Haftalık] Yeniden dağıtılacak görev sayısı:', tasksToReassign.length);
             
-            // Havuzdaki aktif personel uniqueId'leri
             const activeUniqueIds = currentPool.map(p => (p.uniqueId || p.id || '').toLowerCase());
             
             if (activeUniqueIds.length > 0) {
-                // Her personelin mevcut görev sayısını hesapla (uniqueId bazında)
+                // Her personelin mevcut görev sayısını hesapla
                 const taskCounts = {};
                 activeUniqueIds.forEach(id => taskCounts[id] = 0);
                 
                 assignments.forEach(a => {
-                    const pid = a.personnelId || '';
-                    const uniqueId = docIdToUniqueId[pid] || docIdToUniqueId[pid.toLowerCase()] || pid.toLowerCase();
+                    const uniqueId = toUniqueId(a.personnelId);
                     if (activeUniqueIds.includes(uniqueId)) {
                         taskCounts[uniqueId] = (taskCounts[uniqueId] || 0) + 1;
                     }
@@ -29013,7 +29062,6 @@ async function syncWeeklyAssignmentsWithShift(branch, existingData, currentPool,
                 
                 // Yeniden atanacak görevleri en az görevi olana ver
                 tasksToReassign.forEach(task => {
-                    // En az görevi olan personeli bul
                     let minUniqueId = activeUniqueIds[0];
                     let minCount = taskCounts[minUniqueId] || 0;
                     
@@ -29024,10 +29072,8 @@ async function syncWeeklyAssignmentsWithShift(branch, existingData, currentPool,
                         }
                     });
                     
-                    // Görevi yeniden ata
                     const assignee = poolByUniqueId[minUniqueId];
                     if (assignee) {
-                        // uniqueId'yi kullan (tutarlılık için)
                         task.personnelId = assignee.uniqueId || assignee.id;
                         task.personnelName = assignee.codeName || assignee.displayName || assignee.name;
                         task.personnelFullName = assignee.name;
@@ -29046,19 +29092,16 @@ async function syncWeeklyAssignmentsWithShift(branch, existingData, currentPool,
     if (addedUniqueIds.length > 0 && currentPool.length > 1) {
         const activeUniqueIds = currentPool.map(p => (p.uniqueId || p.id || '').toLowerCase());
         
-        // Her personelin görev sayısını hesapla (uniqueId bazında)
         const taskCounts = {};
         activeUniqueIds.forEach(id => taskCounts[id] = 0);
         
         assignments.forEach(a => {
-            const pid = a.personnelId || '';
-            const uniqueId = docIdToUniqueId[pid] || docIdToUniqueId[pid.toLowerCase()] || pid.toLowerCase();
+            const uniqueId = toUniqueId(a.personnelId);
             if (taskCounts.hasOwnProperty(uniqueId)) {
                 taskCounts[uniqueId]++;
             }
         });
         
-        // Hedef: eşit dağılım
         const totalTasks = assignments.length;
         const targetPerPerson = Math.floor(totalTasks / activeUniqueIds.length);
         
@@ -29066,13 +29109,10 @@ async function syncWeeklyAssignmentsWithShift(branch, existingData, currentPool,
             const newPerson = poolByUniqueId[newUniqueId];
             if (!newPerson) return;
             
-            // Bu kişiye kaç görev verilmeli?
             const tasksToGive = Math.max(1, targetPerPerson);
             let given = 0;
             
-            // En çok görevi olanlardan al
             while (given < tasksToGive) {
-                // En çok görevi olan personeli bul
                 let maxUniqueId = null;
                 let maxCount = 0;
                 
@@ -29085,15 +29125,12 @@ async function syncWeeklyAssignmentsWithShift(branch, existingData, currentPool,
                 
                 if (!maxUniqueId || maxCount <= targetPerPerson) break;
                 
-                // Bu personelden bir görev al
                 const taskToMove = assignments.find(a => {
-                    const pid = a.personnelId || '';
-                    const uniqueId = docIdToUniqueId[pid] || docIdToUniqueId[pid.toLowerCase()] || pid.toLowerCase();
+                    const uniqueId = toUniqueId(a.personnelId);
                     return uniqueId === maxUniqueId && a.status !== 'completed';
                 });
                 
                 if (taskToMove) {
-                    // uniqueId'yi kullan (tutarlılık için)
                     taskToMove.personnelId = newPerson.uniqueId || newPerson.id;
                     taskToMove.personnelName = newPerson.codeName || newPerson.displayName || newPerson.name;
                     taskToMove.personnelFullName = newPerson.name;
