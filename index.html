@@ -19235,25 +19235,9 @@ async function loadTodayChecks() {
         // 3. Açılış Hazırlıkları
         {
             const acilisRules = CHECK_RULES.acilis || {};
+            const acilisActiveFrom = acilisRules.activeFrom || '09:00';
+            const acilisDeadline = acilisRules.deadline || '11:00';
             const acilisLateWindow = acilisRules.lateWindow || 30;
-            
-            // Açılış saatleri mağaza açılış saatinden dinamik hesaplanır
-            const branchOpeningTime = getBranchOpeningTime(branch);
-            const acilisActiveFrom = branchOpeningTime || acilisRules.activeFrom || '09:00';
-            
-            // Deadline = Mağaza açılış + SHIFT_DURATION
-            let acilisDeadline = acilisRules.deadline || '11:00';
-            if (branchOpeningTime) {
-                const [openH, openM] = branchOpeningTime.split(':').map(Number);
-                let openMinutes = openH * 60 + openM;
-                const shiftDuration = SHIFT_DURATION || 9;
-                let deadlineMinutes = openMinutes + (shiftDuration * 60);
-                // 24 saati geçerse normalize et
-                if (deadlineMinutes >= 24 * 60) deadlineMinutes -= 24 * 60;
-                const deadlineH = Math.floor(deadlineMinutes / 60) % 24;
-                const deadlineM = deadlineMinutes % 60;
-                acilisDeadline = `${String(deadlineH).padStart(2, '0')}:${String(deadlineM).padStart(2, '0')}`;
-            }
             
             const acilisSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_acilis_${todayStr}`;
             let acilisCompleted = false;
@@ -19666,24 +19650,10 @@ async function loadTodayChecks() {
             
             // CHECK_RULES'dan aktiflik saatlerini al
             const mudurRules = CHECK_RULES.mudur || {};
-            // Müdür saatleri mağaza kapanış saatinden dinamik hesaplanır
+            const mudurActiveFrom = mudurRules.activeFrom || '18:00';
+            // Müdür deadline = Mağaza kapanış saati (dinamik)
             const mudurBranchClosingTime = getBranchClosingTime(branch);
             const mudurDeadlineRule = mudurBranchClosingTime || mudurRules.deadline || '23:00';
-            
-            // ActiveFrom = Mağaza kapanış - SHIFT_DURATION (kapanışçı shift başlangıcı)
-            let mudurActiveFrom = mudurRules.activeFrom || '18:00';
-            if (mudurBranchClosingTime) {
-                const [closeH, closeM] = mudurBranchClosingTime.split(':').map(Number);
-                let closeMinutes = closeH * 60 + closeM;
-                if (closeH < 6) closeMinutes += 24 * 60;
-                const shiftDuration = SHIFT_DURATION || 9;
-                let startMinutes = closeMinutes - (shiftDuration * 60);
-                if (startMinutes >= 24 * 60) startMinutes -= 24 * 60;
-                const startH = Math.floor(startMinutes / 60) % 24;
-                const startM = startMinutes % 60;
-                mudurActiveFrom = `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
-            }
-            
             const [activeH, activeM] = mudurActiveFrom.split(':').map(Number);
             const [deadlineRuleH, deadlineRuleM] = mudurDeadlineRule.split(':').map(Number);
             
@@ -19847,13 +19817,9 @@ async function loadTodayChecks() {
         // 7. Haftalık Görevler (Round-Robin - Personel Bazlı)
         {
             const haftalikRules = CHECK_RULES.haftalik || DEFAULT_CHECK_RULES.haftalik || {};
+            const haftalikActiveFrom = haftalikRules.activeFrom || '09:00';
+            const haftalikDeadline = haftalikRules.deadline || '23:00';
             const haftalikLateWindow = haftalikRules.lateWindow || 30;
-            
-            // Haftalık saatleri mağaza saatlerinden dinamik hesaplanır
-            const haftalikBranchOpening = getBranchOpeningTime(branch);
-            const haftalikBranchClosing = getBranchClosingTime(branch);
-            const haftalikActiveFrom = haftalikBranchOpening || haftalikRules.activeFrom || '09:00';
-            const haftalikDeadline = haftalikBranchClosing || haftalikRules.deadline || '23:00';
             
             // Personel ID'sini belirle
             let personnelId = currentUser?.personelId || currentUser?.uniqueId || currentUser?.id;
