@@ -10070,6 +10070,10 @@ async function savePersonel() {
     // Banka adı
     const bankName = document.getElementById('personelBankName')?.value?.trim() || '';
     
+    // Bölge müdürü ve yönetici için branch otomatik 'all'
+    const formBranch = document.getElementById('personelBranch').value;
+    const finalBranch = (role === 'bolge_muduru' || role === 'yonetici') ? 'all' : formBranch;
+    
     const data = {
         name,
         codeName,
@@ -10080,7 +10084,7 @@ async function savePersonel() {
         address: document.getElementById('personelAddress').value.trim(),
         bankName,
         iban,
-        branch: document.getElementById('personelBranch').value,
+        branch: finalBranch,
         position,
         role,
         startDate: document.getElementById('personelStartDate').value,
