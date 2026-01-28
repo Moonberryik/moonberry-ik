@@ -10894,6 +10894,14 @@ async function loadPuantaj() {
             
             const primDurumu = toplamPuan <= -5 ? 'prim_yok' : 'prim_var';
             
+            // === PUAN GÖRÜNÜRLük KONTROLÜ ===
+            const viewerRole = currentUser?.role || 'barista';
+            const viewerId = currentUser?.uniqueId || currentUser?.id;
+            const targetRole = p.role || 'barista';
+            const targetId = p.uniqueId || doc.id;
+            const pointType = toplamPuan < 0 ? 'negative' : 'positive';
+            const canViewPuan = canViewPoints(viewerRole, targetRole, viewerId, targetId, pointType);
+            
             personelList.push({ 
                 id: doc.id, 
                 name: p.name,
@@ -10901,6 +10909,7 @@ async function loadPuantaj() {
                 displayName: getPersonelDisplayName(p),  // codeName varsa onu, yoksa "Büşra S."
                 tc: p.tc, 
                 position: p.position,
+                role: targetRole,
                 photoUrl: p.photoUrl || '',
                 toplamPuan,
                 manuelPuan,
@@ -10913,7 +10922,8 @@ async function loadPuantaj() {
                 autoLate,
                 autoOnTime,
                 puanlar,
-                otomatikPuanlar
+                otomatikPuanlar,
+                canViewPuan
             });
         });
         
@@ -11004,37 +11014,49 @@ async function loadPuantaj() {
         
         // === EKİP DURUMU (Toplam puana göre sıralı) ===
         const sortedPersonelList = [...personelList].sort((a, b) => b.toplamPuan - a.toplamPuan);
+        
+        // Kilit ikonu SVG (maskeleme için)
+        const lockIcon = `<svg width="14" height="14" fill="none" stroke="var(--tx3)" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`;
+        
         html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:20px">`;
         sortedPersonelList.forEach(p => {
-            const isRisk = p.toplamPuan <= -3;
-            const isDanger = p.primDurumu === 'prim_yok';
-            const puanColor = p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx)');
-            const puanSign = p.toplamPuan > 0 ? '+' : '';
-            const cardBorder = isDanger ? '#e74c3c' : (isRisk ? '#f39c12' : brandColor);
+            // Maskeleme kontrolü
+            const isMasked = !p.canViewPuan;
             
-            // Yıldız gösterimi - BÜYÜTÜLDÜ
-            const yildizlar = '★'.repeat(p.performansYildiz || 3) + '☆'.repeat(5 - (p.performansYildiz || 3));
+            const isRisk = !isMasked && p.toplamPuan <= -3;
+            const isDanger = !isMasked && p.primDurumu === 'prim_yok';
+            const puanColor = isMasked ? 'var(--tx3)' : (p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx)'));
+            const puanSign = !isMasked && p.toplamPuan > 0 ? '+' : '';
+            const cardBorder = isMasked ? 'var(--tx3)' : (isDanger ? '#e74c3c' : (isRisk ? '#f39c12' : brandColor));
+            
+            // Yıldız gösterimi - maskelenmişse kilit
+            const yildizlar = isMasked ? '' : ('★'.repeat(p.performansYildiz || 3) + '☆'.repeat(5 - (p.performansYildiz || 3)));
             const yildizColor = p.performansYildiz >= 4 ? '#f1c40f' : (p.performansYildiz >= 3 ? '#95a5a6' : '#e74c3c');
             
+            // Maskelenmiş değerler
+            const toplamDisplay = isMasked ? lockIcon : `${puanSign}${p.toplamPuan}`;
+            const manuelDisplay = isMasked ? lockIcon : `${p.manuelPuan > 0 ? '+' : ''}${p.manuelPuan || 0}`;
+            const otomatikDisplay = isMasked ? lockIcon : `${p.otomatikPuan > 0 ? '+' : ''}${p.otomatikPuan || 0}`;
+            
             html += `
-                <div style="background:linear-gradient(135deg,${brandBg},var(--cardBg));border:2px solid ${cardBorder}30;border-left:4px solid ${cardBorder};border-radius:12px;padding:16px;transition:all .2s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                <div style="background:linear-gradient(135deg,${isMasked ? 'var(--bg3)' : brandBg},var(--cardBg));border:2px solid ${cardBorder}30;border-left:4px solid ${cardBorder};border-radius:12px;padding:16px;transition:all .2s;${isMasked ? 'opacity:.85;' : ''}" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
                     <!-- Header - TIKLANABİLİR -->
-                    <div onclick="showPersonelPuanDetay('${p.id}', '${p.name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;cursor:pointer;padding:8px;margin:-8px;border-radius:8px;transition:background .15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
+                    <div onclick="${isMasked ? '' : `showPersonelPuanDetay('${p.id}', '${p.name.replace(/'/g, "\\'")}')`}" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;${isMasked ? '' : 'cursor:pointer;'}padding:8px;margin:-8px;border-radius:8px;transition:background .15s" ${isMasked ? '' : `onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"`}>
                         <div style="display:flex;align-items:center;gap:10px">
-                            <div style="width:36px;height:36px;background:linear-gradient(135deg,${brandColor},${brandColor}99);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;overflow:hidden">
-                                ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover">` : p.name.charAt(0).toUpperCase()}
+                            <div style="width:36px;height:36px;background:linear-gradient(135deg,${isMasked ? 'var(--tx3)' : brandColor},${isMasked ? 'var(--tx3)' : brandColor}99);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;overflow:hidden">
+                                ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover;${isMasked ? 'filter:grayscale(50%);' : ''}">` : p.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
                                 <div style="display:flex;align-items:center;gap:8px">
                                     <span style="font-weight:600;font-size:.95rem;color:var(--tx)">${p.displayName}</span>
-                                    <span style="font-size:.9rem;color:${yildizColor};letter-spacing:1px">${yildizlar}</span>
+                                    ${isMasked ? lockIcon : `<span style="font-size:.9rem;color:${yildizColor};letter-spacing:1px">${yildizlar}</span>`}
                                 </div>
                                 <div style="font-size:.75rem;color:var(--tx3)">${p.position || 'Barista'}</div>
                             </div>
                         </div>
                         <div style="text-align:right">
-                            <div style="font-size:1.4rem;font-weight:800;color:${puanColor};line-height:1">${puanSign}${p.toplamPuan}</div>
-                            <div style="font-size:.65rem;color:var(--tx3);text-transform:uppercase">toplam</div>
+                            <div style="font-size:${isMasked ? '1rem' : '1.4rem'};font-weight:800;color:${puanColor};line-height:1;display:flex;align-items:center;justify-content:flex-end">${toplamDisplay}</div>
+                            <div style="font-size:.65rem;color:var(--tx3);text-transform:uppercase">${isMasked ? 'gizli' : 'toplam'}</div>
                         </div>
                     </div>
                     
@@ -11042,34 +11064,36 @@ async function loadPuantaj() {
                     <div style="display:flex;gap:8px;margin-bottom:12px;background:var(--bg3);padding:10px;border-radius:8px">
                         <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
                             <div style="font-size:.65rem;color:var(--tx3);margin-bottom:2px">Manuel</div>
-                            <div style="font-size:.9rem;font-weight:700;color:${p.manuelPuan > 0 ? '#27ae60' : p.manuelPuan < 0 ? '#e74c3c' : 'var(--tx2)'}">
-                                ${p.manuelPuan > 0 ? '+' : ''}${p.manuelPuan || 0}
+                            <div style="font-size:.9rem;font-weight:700;color:${isMasked ? 'var(--tx3)' : (p.manuelPuan > 0 ? '#27ae60' : p.manuelPuan < 0 ? '#e74c3c' : 'var(--tx2)')};display:flex;align-items:center;justify-content:center">
+                                ${manuelDisplay}
                             </div>
                         </div>
                         <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
                             <div style="font-size:.65rem;color:var(--tx3);margin-bottom:2px">Otomatik</div>
-                            <div style="font-size:.9rem;font-weight:700;color:${p.otomatikPuan > 0 ? '#27ae60' : p.otomatikPuan < 0 ? '#e74c3c' : 'var(--tx2)'}">
-                                ${p.otomatikPuan > 0 ? '+' : ''}${p.otomatikPuan || 0}
+                            <div style="font-size:.9rem;font-weight:700;color:${isMasked ? 'var(--tx3)' : (p.otomatikPuan > 0 ? '#27ae60' : p.otomatikPuan < 0 ? '#e74c3c' : 'var(--tx2)')};display:flex;align-items:center;justify-content:center">
+                                ${otomatikDisplay}
                             </div>
                         </div>
                         <div style="flex:1;text-align:center">
                             <div style="font-size:.65rem;color:var(--tx3);margin-bottom:2px">Toplam</div>
-                            <div style="font-size:.9rem;font-weight:700;color:${puanColor}">
-                                ${puanSign}${p.toplamPuan}
+                            <div style="font-size:.9rem;font-weight:700;color:${puanColor};display:flex;align-items:center;justify-content:center">
+                                ${toplamDisplay}
                             </div>
                         </div>
                     </div>
                     
                     <!-- Mini Stats - Marka Renkleri ile -->
                     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+                        ${isMasked ? `<span style="font-size:.65rem;padding:3px 6px;background:var(--bg3);color:var(--tx3);border-radius:4px;display:flex;align-items:center;gap:4px">${lockIcon} Detaylar gizli</span>` : `
                         ${p.autoMissed > 0 ? `<span style="font-size:.65rem;padding:3px 6px;background:rgba(231,76,60,.12);color:#c0392b;border-radius:4px">${p.autoMissed} eksik check</span>` : ''}
                         ${p.autoOnTime > 0 ? `<span style="font-size:.65rem;padding:3px 6px;background:rgba(39,174,96,.12);color:#1e8449;border-radius:4px">${p.autoOnTime} tam check</span>` : ''}
                         ${p.negatifOlay > 0 && p.kayitSayisi > 0 ? `<span style="font-size:.65rem;padding:3px 6px;background:rgba(231,76,60,.12);color:#c0392b;border-radius:4px">${p.kayitSayisi} manuel</span>` : ''}
                         ${p.negatifOlay === 0 && p.pozitifOlay === 0 ? `<span style="font-size:.65rem;padding:3px 6px;background:${brandBg};color:var(--tx3);border-radius:4px">Henüz kayıt yok</span>` : ''}
+                        `}
                     </div>
                     
                     <!-- Action Button - Animasyonlu -->
-                    ${!isBarista ? `
+                    ${!isBarista && !isMasked ? `
                     <div style="display:flex;gap:8px">
                         <button class="btn-evaluate-pulse" style="flex:1;padding:10px;background:linear-gradient(135deg,${brandBg},${brandBg});border:1px solid ${brandColor}40;color:${brandColor};border-radius:8px;font-weight:500;font-size:.8rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px" onclick="showPuantajModal('${p.id}', '${p.name}')" onmouseover="this.style.background='linear-gradient(135deg,${brandColor}20,${brandColor}10)';this.style.borderColor='${brandColor}'" onmouseout="this.style.background='linear-gradient(135deg,${brandBg},${brandBg})';this.style.borderColor='${brandColor}40'">
                             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -11088,42 +11112,58 @@ async function loadPuantaj() {
         
         
         let hasRecords = false;
+        const lockIconSmall = `<svg width="12" height="12" fill="none" stroke="var(--tx3)" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`;
+        
         personelList.forEach(p => {
             if (p.puanlar && p.puanlar.length > 0) {
                 hasRecords = true;
+                const isMasked = !p.canViewPuan;
+                
                 html += `<div style="margin-bottom:16px">`;
-                html += `<div style="font-size:.9rem;font-weight:600;color:var(--tx);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--cardBorder)">${p.name}</div>`;
-                p.puanlar.forEach(puan => {
-                    if (puan.type === 'prim_reset') return; // Prim sıfırlama kayıtlarını atla
-                    const tarih = puan.createdAt?.toDate?.() ? puan.createdAt.toDate().toLocaleDateString('tr-TR') : '-';
-                    const yildiz = puan.score || 3;
-                    const stars = '★'.repeat(yildiz) + '☆'.repeat(5 - yildiz);
-                    const puanDegeri = yildiz - 3; // 1★=-2, 2★=-1, 3★=0, 4★=+1, 5★=+2
-                    const isNegative = puanDegeri < 0;
-                    const puanEtki = puanDegeri > 0 ? `+${puanDegeri}` : `${puanDegeri}`;
-                    const bgColor = isNegative ? 'rgba(231,76,60,.08)' : (puanDegeri > 0 ? 'rgba(39,174,96,.08)' : 'var(--bg3)');
-                    const borderColor = isNegative ? 'rgba(231,76,60,.2)' : (puanDegeri > 0 ? 'rgba(39,174,96,.2)' : 'var(--cardBorder)');
-                    
-                    // Yönetici adını göster
-                    const yonetici = puan.createdBy || 'Bilinmiyor';
-                    const yoneticiKisa = yonetici.includes('@') ? yonetici.split('@')[0] : yonetici;
-                    
+                html += `<div style="font-size:.9rem;font-weight:600;color:var(--tx);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--cardBorder);display:flex;align-items:center;gap:8px">${p.name} ${isMasked ? lockIconSmall : ''}</div>`;
+                
+                if (isMasked) {
+                    // Maskelenmiş görünüm
                     html += `
-                        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:${bgColor};border:1px solid ${borderColor};border-radius:10px;margin-bottom:8px">
-                            <div style="display:flex;align-items:center;gap:12px">
-                                <span style="font-size:.85rem;color:#f1c40f">${stars}</span>
-                                <div>
-                                    <div style="color:var(--tx);font-size:.85rem;font-weight:500">${puan.note || '-'}</div>
-                                    <div style="color:var(--tx3);font-size:.7rem">${tarih} · ${yoneticiKisa}</div>
-                                </div>
-                            </div>
-                            <div style="display:flex;align-items:center;gap:10px">
-                                <span style="font-weight:600;color:${isNegative ? '#e74c3c' : '#27ae60'};font-size:.9rem">${puanEtki}</span>
-                                ${!isBarista ? `<button onclick="deletePuantajEntry('${puan.id}')" style="background:rgba(255,107,107,.1);border:none;color:#e74c3c;cursor:pointer;font-size:.75rem;padding:6px 10px;border-radius:6px;transition:all .2s" onmouseover="this.style.background='rgba(255,107,107,.2)'" onmouseout="this.style.background='rgba(255,107,107,.1)'">Sil</button>` : ''}
-                            </div>
+                        <div style="display:flex;align-items:center;gap:8px;padding:12px;background:var(--bg3);border:1px solid var(--cardBorder);border-radius:10px;color:var(--tx3);font-size:.8rem">
+                            ${lockIconSmall}
+                            <span>${p.puanlar.filter(x => x.type !== 'prim_reset').length} kayıt · Detaylar gizli</span>
                         </div>
                     `;
-                });
+                } else {
+                    // Normal görünüm
+                    p.puanlar.forEach(puan => {
+                        if (puan.type === 'prim_reset') return; // Prim sıfırlama kayıtlarını atla
+                        const tarih = puan.createdAt?.toDate?.() ? puan.createdAt.toDate().toLocaleDateString('tr-TR') : '-';
+                        const yildiz = puan.score || 3;
+                        const stars = '★'.repeat(yildiz) + '☆'.repeat(5 - yildiz);
+                        const puanDegeri = yildiz - 3; // 1★=-2, 2★=-1, 3★=0, 4★=+1, 5★=+2
+                        const isNegative = puanDegeri < 0;
+                        const puanEtki = puanDegeri > 0 ? `+${puanDegeri}` : `${puanDegeri}`;
+                        const bgColor = isNegative ? 'rgba(231,76,60,.08)' : (puanDegeri > 0 ? 'rgba(39,174,96,.08)' : 'var(--bg3)');
+                        const borderColor = isNegative ? 'rgba(231,76,60,.2)' : (puanDegeri > 0 ? 'rgba(39,174,96,.2)' : 'var(--cardBorder)');
+                        
+                        // Yönetici adını göster
+                        const yonetici = puan.createdBy || 'Bilinmiyor';
+                        const yoneticiKisa = yonetici.includes('@') ? yonetici.split('@')[0] : yonetici;
+                        
+                        html += `
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:${bgColor};border:1px solid ${borderColor};border-radius:10px;margin-bottom:8px">
+                                <div style="display:flex;align-items:center;gap:12px">
+                                    <span style="font-size:.85rem;color:#f1c40f">${stars}</span>
+                                    <div>
+                                        <div style="color:var(--tx);font-size:.85rem;font-weight:500">${puan.note || '-'}</div>
+                                        <div style="color:var(--tx3);font-size:.7rem">${tarih} · ${yoneticiKisa}</div>
+                                    </div>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:10px">
+                                    <span style="font-weight:600;color:${isNegative ? '#e74c3c' : '#27ae60'};font-size:.9rem">${puanEtki}</span>
+                                    ${!isBarista ? `<button onclick="deletePuantajEntry('${puan.id}')" style="background:rgba(255,107,107,.1);border:none;color:#e74c3c;cursor:pointer;font-size:.75rem;padding:6px 10px;border-radius:6px;transition:all .2s" onmouseover="this.style.background='rgba(255,107,107,.2)'" onmouseout="this.style.background='rgba(255,107,107,.1)'">Sil</button>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
                 html += `</div>`;
             }
         });
