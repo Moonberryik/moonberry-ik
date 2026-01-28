@@ -28983,7 +28983,7 @@ function canViewPoints(viewerRole, targetRole, viewerId, targetId, pointType = '
     // Herkes kendi puanını görebilir
     if (viewerId === targetId) return true;
     
-    // Rol hiyerarşisi: yonetici > bolge_muduru > magaza_muduru > mudur_yardimcisi > barista
+    // Rol hiyerarşisi
     const roleHierarchy = {
         'yonetici': 5,
         'bolge_muduru': 4,
@@ -28993,20 +28993,20 @@ function canViewPoints(viewerRole, targetRole, viewerId, targetId, pointType = '
     };
     
     const viewerLevel = roleHierarchy[viewerRole] || 0;
-    const targetLevel = roleHierarchy[targetRole] || 0;
     
-    // Bölge müdürü puanı sadece yönetici görebilir
+    // Bölge müdürü puanı → SADECE yönetici görebilir
     if (targetRole === 'bolge_muduru') {
         return viewerRole === 'yonetici';
     }
     
-    // Mağaza müdürü eksi puanı sadece üstleri görebilir (bolge_muduru, yonetici)
+    // Mağaza müdürü EKSİ puanı → Sadece üstleri (bolge_muduru, yonetici)
     if (targetRole === 'magaza_muduru' && pointType === 'negative') {
         return viewerLevel >= roleHierarchy['bolge_muduru'];
     }
     
-    // Diğer durumlarda üstler astların puanını görebilir
-    return viewerLevel > targetLevel;
+    // Diğer tüm durumlar → Herkes görebilir (aynı şubede)
+    // Barista↔Barista, Yardımcı→Müdür(artı), vs.
+    return true;
 }
 
 /**
