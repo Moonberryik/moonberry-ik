@@ -28805,36 +28805,48 @@ async function getAssignmentPool(branch) {
     const pool = [];
     
     try {
-        // Bu haftanın shift planından personel havuzunu al
+        // Bu haftanın shift verisinden personel havuzunu al
         const weekStart = getWeekStart(new Date());
         const weekKey = formatDateLocal(weekStart);
-        const shiftDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekKey}`;
         
-        // Shift planında olan personel ID'lerini topla
+        // Shift'te olan personel ID'lerini topla
         const personnelInShift = new Set();
         
         try {
-            const shiftDoc = await db.collection('shiftPlans').doc(shiftDocId).get();
-            if (shiftDoc.exists) {
-                const plan = shiftDoc.data();
-                // Tüm günlerdeki personeli topla
-                Object.keys(plan).filter(k => k.match(/^\d{4}-\d{2}-\d{2}$/)).forEach(day => {
-                    const dayPlan = plan[day];
-                    if (dayPlan && typeof dayPlan === 'object') {
-                        Object.keys(dayPlan).forEach(personId => {
-                            // Geçerli shift kaydı varsa ekle
-                            if (dayPlan[personId]?.start || dayPlan[personId]?.startTime) {
-                                personnelInShift.add(personId);
-                            }
+            // shifts koleksiyonundan bu haftanın verisini çek
+            const shiftSnap = await db.collection('shifts')
+                .where('branch', '==', branch)
+                .where('weekStart', '==', weekKey)
+                .limit(1)
+                .get();
+            
+            if (!shiftSnap.empty) {
+                const shiftData = shiftSnap.docs[0].data();
+                const personelShifts = shiftData.personelShifts || {};
+                
+                // Her personel için en az bir çalışma günü var mı kontrol et
+                Object.entries(personelShifts).forEach(([personId, days]) => {
+                    if (days && typeof days === 'object') {
+                        // En az bir gün çalışıyor mu? (OFF, ****, boş değil)
+                        const hasWorkDay = Object.values(days).some(shift => {
+                            if (!shift || shift === '') return false;
+                            const normalizedShift = shift.replace(/^\*+/, '').trim().toUpperCase(); // Yıldızları kaldır
+                            if (normalizedShift === 'OFF' || normalizedShift === '****' || normalizedShift === '') return false;
+                            return true;
                         });
+                        
+                        if (hasWorkDay) {
+                            personnelInShift.add(personId);
+                        }
                     }
                 });
+                
                 console.log('[Haftalık] Bu hafta shiftte olan personel:', [...personnelInShift]);
             } else {
-                console.log('[Haftalık] Shift planı bulunamadı, tüm aktif personel kullanılacak');
+                console.log('[Haftalık] Bu haftanın shift verisi bulunamadı:', weekKey);
             }
         } catch (e) {
-            console.warn('[Haftalık] Shift planı okunamadı:', e.message);
+            console.warn('[Haftalık] Shift verisi okunamadı:', e.message);
         }
         
         // Tüm personeli al
@@ -28846,30 +28858,28 @@ async function getAssignmentPool(branch) {
         const todayStr = new Date().toISOString().split('T')[0];
         let isMudurOnShift = false;
         
-        try {
-            const shiftSnap = await db.collection('shifts')
-                .where('branch', '==', branch)
-                .where('date', '==', todayStr)
-                .get();
-            
-            shiftSnap.forEach(doc => {
-                const d = doc.data();
-                if (d.role === 'magaza_muduru' || d.position?.includes('Müdür') && !d.position?.includes('Yardımcısı')) {
-                    isMudurOnShift = true;
-                }
-            });
-        } catch (e) {
-            console.warn('[Haftalık] Shift kontrolü yapılamadı:', e.message);
-        }
-        
         snap.forEach(doc => {
             const d = doc.data();
             const personId = d.uniqueId || doc.id;
+            // Personel adı ile de eşleştirmeye çalış (eski veriler için)
+            const personName = (d.displayName || d.name || '').toLowerCase().replace(/\s+/g, '_');
+            const personNameUpper = (d.displayName || d.name || '').toUpperCase();
             
-            // Bu hafta shiftte yoksa atla (shift planı varsa)
-            if (personnelInShift.size > 0 && !personnelInShift.has(personId) && !personnelInShift.has(doc.id)) {
-                console.log('[Haftalık] Shiftte yok, atlanıyor:', d.displayName || d.name);
-                return;
+            // Bu hafta shiftte yoksa atla (shift verisi varsa)
+            if (personnelInShift.size > 0) {
+                const isInShift = personnelInShift.has(personId) || 
+                                  personnelInShift.has(doc.id) ||
+                                  personnelInShift.has(personName) ||
+                                  personnelInShift.has(personNameUpper) ||
+                                  [...personnelInShift].some(id => 
+                                      id.toLowerCase().includes(personName.split('_')[0]) ||
+                                      personName.includes(id.toLowerCase().split('_')[0])
+                                  );
+                
+                if (!isInShift) {
+                    console.log('[Haftalık] Shiftte yok, atlanıyor:', d.displayName || d.name, '(ID:', personId, ')');
+                    return;
+                }
             }
             
             // Aktif olmayan personeli atla
@@ -28881,15 +28891,12 @@ async function getAssignmentPool(branch) {
             // Mağaza müdürünü hariç tut
             if (d.role === 'magaza_muduru') return;
             
-            // Müdür yardımcısı kontrolü - müdür shiftte değilse dahil etme
+            // Müdür yardımcısı kontrolü
             const isMudurYardimcisi = d.position?.includes('Müdür Yardımcısı') || 
                                       d.role === 'magaza_mudur_yardimcisi' ||
                                       d.role === 'mudur_yardimcisi';
             
-            if (isMudurYardimcisi && isMudurOnShift) {
-                // Müdür shiftte ise, müdür yardımcısı normal personel gibi havuza dahil
-            } else if (isMudurYardimcisi && !isMudurOnShift) {
-                // Müdür shiftte değilse, müdür yardımcısı yöneticilik yapıyor, hariç tut
+            if (isMudurYardimcisi && !isMudurOnShift) {
                 return;
             }
             
