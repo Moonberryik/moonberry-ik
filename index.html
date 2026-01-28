@@ -28830,13 +28830,13 @@ async function getAssignmentPool(branch) {
                         // En az bir gün çalışıyor mu? (OFF, ****, boş değil)
                         const hasWorkDay = Object.values(days).some(shift => {
                             if (!shift || shift === '') return false;
-                            const normalizedShift = shift.replace(/^\*+/, '').trim().toUpperCase(); // Yıldızları kaldır
+                            const normalizedShift = shift.replace(/^\*+/, '').trim().toUpperCase();
                             if (normalizedShift === 'OFF' || normalizedShift === '****' || normalizedShift === '') return false;
                             return true;
                         });
                         
                         if (hasWorkDay) {
-                            personnelInShift.add(personId);
+                            personnelInShift.add(personId.toLowerCase());
                         }
                     }
                 });
@@ -28854,30 +28854,15 @@ async function getAssignmentPool(branch) {
             .where('branch', '==', branch)
             .get();
         
-        // Bugünkü müdür shift'ini kontrol et (müdür yardımcısı için)
-        const todayStr = new Date().toISOString().split('T')[0];
-        let isMudurOnShift = false;
-        
         snap.forEach(doc => {
             const d = doc.data();
-            const personId = d.uniqueId || doc.id;
-            // Personel adı ile de eşleştirmeye çalış (eski veriler için)
-            const personName = (d.displayName || d.name || '').toLowerCase().replace(/\s+/g, '_');
-            const personNameUpper = (d.displayName || d.name || '').toUpperCase();
+            const uniqueId = (d.uniqueId || doc.id || '').toLowerCase();
             
             // Bu hafta shiftte yoksa atla (shift verisi varsa)
             if (personnelInShift.size > 0) {
-                const isInShift = personnelInShift.has(personId) || 
-                                  personnelInShift.has(doc.id) ||
-                                  personnelInShift.has(personName) ||
-                                  personnelInShift.has(personNameUpper) ||
-                                  [...personnelInShift].some(id => 
-                                      id.toLowerCase().includes(personName.split('_')[0]) ||
-                                      personName.includes(id.toLowerCase().split('_')[0])
-                                  );
-                
-                if (!isInShift) {
-                    console.log('[Haftalık] Shiftte yok, atlanıyor:', d.displayName || d.name, '(ID:', personId, ')');
+                // Sadece uniqueId ile tam eşleşme
+                if (!personnelInShift.has(uniqueId)) {
+                    console.log('[Haftalık] Shiftte yok, atlanıyor:', d.displayName || d.name, '(uniqueId:', uniqueId, ')');
                     return;
                 }
             }
@@ -28885,20 +28870,13 @@ async function getAssignmentPool(branch) {
             // Aktif olmayan personeli atla
             if (d.aktif === false || d.active === false || d.isActive === false) return;
             
-            // Yöneticileri hariç tut
+            // Yöneticileri hariç tut (bölge müdürü, genel yönetici)
             if (['yonetici', 'bolge_muduru'].includes(d.role)) return;
             
             // Mağaza müdürünü hariç tut
             if (d.role === 'magaza_muduru') return;
             
-            // Müdür yardımcısı kontrolü
-            const isMudurYardimcisi = d.position?.includes('Müdür Yardımcısı') || 
-                                      d.role === 'magaza_mudur_yardimcisi' ||
-                                      d.role === 'mudur_yardimcisi';
-            
-            if (isMudurYardimcisi && !isMudurOnShift) {
-                return;
-            }
+            // NOT: Müdür yardımcısı normal personel gibi havuza dahil edilir
             
             pool.push({
                 id: doc.id,
