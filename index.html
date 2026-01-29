@@ -10925,23 +10925,8 @@ async function loadPuantaj() {
         // Şubeye ait puantaj verilerini çek
         const puantajSnapshot = await db.collection('puantaj').where('period', '==', puantajKey).where('branch', '==', sube).get();
         
-        // Bölge müdürü puantajlarını da çek - personelId ile (branch fark etmez)
-        // Bölge müdürlerinin doc.id'lerini topla
-        const bolgeMuduruDocIds = allPersonelDocs
-            .filter(doc => doc.data().role === 'bolge_muduru' || doc.data().branch === 'all')
-            .map(doc => doc.id);
-        
-        let bolgeMuduruPuantajSnapshot = { docs: [] };
-        if (bolgeMuduruDocIds.length > 0) {
-            // Her bölge müdürü için puantaj çek
-            for (const bmId of bolgeMuduruDocIds) {
-                const bmPuantaj = await db.collection('puantaj')
-                    .where('period', '==', puantajKey)
-                    .where('personelId', '==', bmId)
-                    .get();
-                bolgeMuduruPuantajSnapshot.docs.push(...bmPuantaj.docs);
-            }
-        }
+        // Bölge müdürü puantajlarını da çek (branch='all')
+        const bolgeMuduruPuantajSnapshot = await db.collection('puantaj').where('period', '==', puantajKey).where('branch', '==', 'all').get();
         
         // === PERSONEL ID MAPPING OLUŞTUR ===
         // Farklı dönemlerde farklı personelId formatları kullanılmış olabilir
@@ -11022,10 +11007,9 @@ async function loadPuantaj() {
                     totalAutoRecords++;
                 }
             });
-            console.log(`[Puantaj] ${sube} için ${totalAutoRecords} otomatik kayıt bulundu`);
-            console.log('[Puantaj] autoNotesData keys:', Object.keys(autoNotesData));
+            }
         } catch (e) {
-            console.error('Otomatik puanlar yüklenemedi:', e);
+            // Otomatik puanlar yüklenemedi
         }
         
         let html = '';
@@ -11374,8 +11358,8 @@ async function loadPuantaj() {
                         ${p.negatifOlay === 0 && p.pozitifOlay === 0 ? `<span style="font-size:.65rem;padding:3px 6px;background:${brandBg};color:var(--tx3);border-radius:4px">Henüz kayıt yok</span>` : ''}
                     </div>
                     
-                    <!-- Action Button - Animasyonlu -->
-                    ${!isBarista ? `
+                    <!-- Action Button - Bölge müdürü hariç -->
+                    ${!isBarista && p.role !== 'bolge_muduru' ? `
                     <div style="display:flex;gap:8px">
                         <button class="btn-evaluate-pulse" style="flex:1;padding:10px;background:linear-gradient(135deg,${brandBg},${brandBg});border:1px solid ${brandColor}40;color:${brandColor};border-radius:8px;font-weight:500;font-size:.8rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px" onclick="showPuantajModal('${p.id}', '${p.name}')" onmouseover="this.style.background='linear-gradient(135deg,${brandColor}20,${brandColor}10)';this.style.borderColor='${brandColor}'" onmouseout="this.style.background='linear-gradient(135deg,${brandBg},${brandBg})';this.style.borderColor='${brandColor}40'">
                             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -11878,8 +11862,11 @@ function showPersonelPuanDetay(personelId, personName) {
     
     body += `</div>`;
     
+    // Bölge müdürü için değerlendir butonu gösterme
+    const isBolgeMuduru = personelData?.role === 'bolge_muduru';
+    
     let footer = `<button class="btn btn-ghost" onclick="closeModal()">Kapat</button>`;
-    if (canManage) {
+    if (canManage && !isBolgeMuduru) {
         footer = `
             <button class="btn btn-ghost" onclick="closeModal()">Kapat</button>
             <button class="btn btn-primary" onclick="closeModal();showPuantajModal('${personelId}','${personName.replace(/'/g, "\\'")}')">Değerlendir</button>
@@ -11994,10 +11981,10 @@ function showPuantajRulesDetail() {
 }
 
 function showPuantajModal(personelId, name, type = 'all') {
-    // Bölge müdürünü sadece yönetici değerlendirebilir
+    // Bölge müdürüne puan verilemez
     const personelData = window.puantajPersonelCache?.find(p => p.id === personelId);
-    if (personelData?.role === 'bolge_muduru' && currentUser?.role !== 'yonetici') {
-        toast('Bölge müdürünü sadece yöneticiler değerlendirebilir', 'warning');
+    if (personelData?.role === 'bolge_muduru') {
+        toast('Bölge müdürüne puan verilemez', 'info');
         return;
     }
     
@@ -12341,15 +12328,11 @@ async function savePuantajFromModal() {
     const sube = document.getElementById('puantajSube').value;
     const puantajKey = `${yil}-${ay}`;
     
-    // Personelin gerçek branch'ini bul (bölge müdürü için 'all')
-    const personelData = window.puantajPersonelCache?.find(p => p.id === personelId);
-    const personelBranch = personelData?.role === 'bolge_muduru' ? 'all' : sube;
-    
     try {
         await db.collection('puantaj').add({
             personelId,
             period: puantajKey,
-            branch: personelBranch,
+            branch: sube,
             score,
             note,
             eventDate,
