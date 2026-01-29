@@ -10824,7 +10824,8 @@ async function loadPuantaj() {
         
         personelSnapshot.forEach(doc => {
             const p = doc.data();
-            const puanlar = puantajData[doc.id] || [];
+            // uniqueId öncelikli, sonra doc.id dene (CF uniqueId kullanıyor)
+            const puanlar = puantajData[p.uniqueId] || puantajData[doc.id] || [];
             
             // Otomatik puanları bul - ÇOKLU FORMAT EŞLEŞTİRME
             const firstName = p.name?.split(' ')[0] || '';
