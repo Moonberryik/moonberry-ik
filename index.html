@@ -1789,37 +1789,120 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                     <!-- Admin Şifre Değiştirme - Sadece admin görecek -->
                     <div class="admin-card" id="adminPasswordCard" style="margin-top:20px;display:none">
-                        <div class="admin-card-header"><div class="admin-card-title">🔐 Yönetici Giriş Bilgileri</div></div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Yönetici hesabının kullanıcı adı ve şifresini değiştirin.</p>
-                        <div class="form-grid">
-                            <div class="form-group"><label class="form-label">Yeni Kullanıcı Adı</label><input type="text" id="admin_new_username" class="form-input" placeholder="Mevcut: admin"></div>
-                            <div class="form-group"><label class="form-label">Yeni Şifre</label><input type="password" id="admin_new_password" class="form-input" placeholder="Yeni şifre girin"></div>
-                            <div class="form-group"><label class="form-label">Şifre Tekrar</label><input type="password" id="admin_confirm_password" class="form-input" placeholder="Şifreyi tekrar girin"></div>
+                        <div class="admin-card-header">
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                Hesap Ayarları
+                            </div>
                         </div>
-                        <div class="btn-group"><button class="btn btn-primary btn-sm" onclick="updateAdminCredentials()">🔑 Güncelle</button></div>
+                        <p style="color:var(--tx3);font-size:.8rem;margin-bottom:20px">Yönetici hesap bilgilerinizi güncelleyin.</p>
+                        
+                        <div style="display:grid;gap:20px">
+                            <!-- E-posta Değiştirme -->
+                            <div style="padding:16px;background:var(--bg3);border-radius:10px">
+                                <div style="font-weight:500;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:.9rem">
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                                    E-posta Adresi
+                                </div>
+                                <div class="form-grid" style="gap:12px">
+                                    <div class="form-group">
+                                        <label class="form-label">Mevcut E-posta</label>
+                                        <input type="email" id="admin_current_email" class="form-input" readonly style="opacity:.7;cursor:not-allowed">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Yeni E-posta</label>
+                                        <input type="email" id="admin_new_email" class="form-input" placeholder="yeni@email.com">
+                                    </div>
+                                </div>
+                                <button class="btn btn-sm" style="margin-top:12px;background:var(--bg4);color:var(--tx);border:none" onclick="updateAdminEmail()">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:6px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                    E-postayı Güncelle
+                                </button>
+                            </div>
+                            
+                            <!-- Şifre Değiştirme -->
+                            <div style="padding:16px;background:var(--bg3);border-radius:10px">
+                                <div style="font-weight:500;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:.9rem">
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                                    Şifre
+                                </div>
+                                <div class="form-grid" style="gap:12px">
+                                    <div class="form-group">
+                                        <label class="form-label">Yeni Şifre</label>
+                                        <input type="password" id="admin_new_password" class="form-input" placeholder="••••••••">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Şifre Tekrar</label>
+                                        <input type="password" id="admin_confirm_password" class="form-input" placeholder="••••••••">
+                                    </div>
+                                </div>
+                                <div style="margin-top:8px;font-size:.7rem;color:var(--tx3)">Min 6 karakter</div>
+                                <button class="btn btn-sm" style="margin-top:12px;background:var(--bg4);color:var(--tx);border:none" onclick="updateAdminPassword()">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:6px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                                    Şifreyi Güncelle
+                                </button>
+                            </div>
+                            
+                            <!-- İsim Değiştirme -->
+                            <div style="padding:16px;background:var(--bg3);border-radius:10px">
+                                <div style="font-weight:500;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:.9rem">
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                    Görünen İsim
+                                </div>
+                                <div class="form-group" style="margin-bottom:0">
+                                    <input type="text" id="admin_new_username" class="form-input" placeholder="Yönetici">
+                                </div>
+                                <button class="btn btn-sm" style="margin-top:12px;background:var(--bg4);color:var(--tx);border:none" onclick="updateAdminName()">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:6px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                    İsmi Güncelle
+                                </button>
+                            </div>
+                        </div>
                     </div>
                     <!-- Admin Email Listesi - Sadece admin görecek -->
                     <div class="admin-card" id="adminEmailsCard" style="margin-top:20px;display:none">
-                        <div class="admin-card-header"><div class="admin-card-title">👑 Yönetici E-posta Listesi</div></div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Bu listedeki e-postalar personel kaydı olmasa bile sisteme erişebilir.</p>
+                        <div class="admin-card-header">
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                Yönetici E-posta Listesi
+                            </div>
+                        </div>
+                        <p style="color:var(--tx3);font-size:.8rem;margin-bottom:16px">Bu listedeki e-postalar personel kaydı olmasa bile sisteme erişebilir.</p>
                         <div class="form-group">
                             <label class="form-label">Admin E-postalar (her satıra bir tane)</label>
-                            <textarea id="adminEmailsList" class="form-input" rows="5" placeholder="admin@moonberrycoffee.com&#10;tamer@moonberrycoffee.com" style="font-family:monospace;font-size:.85rem"></textarea>
+                            <textarea id="adminEmailsList" class="form-input" rows="4" placeholder="admin@moonberrycoffee.com" style="font-family:monospace;font-size:.85rem"></textarea>
                         </div>
-                        <div class="btn-group">
-                            <button class="btn btn-ghost btn-sm" onclick="loadAdminEmailsToUI()">↻ Yenile</button>
-                            <button class="btn btn-primary btn-sm" onclick="saveAdminEmailsFromUI()">💾 Kaydet</button>
+                        <div class="btn-group" style="gap:8px">
+                            <button class="btn btn-ghost btn-sm" onclick="loadAdminEmailsToUI()" style="display:flex;align-items:center;gap:6px">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                                Yenile
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="saveAdminEmailsFromUI()" style="display:flex;align-items:center;gap:6px">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                Kaydet
+                            </button>
                         </div>
                     </div>
                     <!-- Puan Sıfırlama - Sadece admin görecek -->
                     <div class="admin-card" id="dataCleanupCard" style="margin-top:20px;display:none">
-                        <div class="admin-card-header"><div class="admin-card-title">🔄 Puan Yönetimi</div></div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Personel puanlarını sıfırlayın.</p>
+                        <div class="admin-card-header">
+                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                                Puan Yönetimi
+                            </div>
+                        </div>
+                        <p style="color:var(--tx3);font-size:.8rem;margin-bottom:16px">Personel puanlarını sıfırlayın.</p>
                         
-                        <div style="padding:16px;background:rgba(231,76,60,.05);border:1px solid rgba(231,76,60,.2);border-radius:10px">
-                            <div style="font-weight:600;color:#e74c3c;margin-bottom:8px">⚠️ Dikkat</div>
+                        <div style="padding:16px;background:rgba(231,76,60,.05);border:1px solid rgba(231,76,60,.15);border-radius:10px">
+                            <div style="font-weight:500;color:#e74c3c;margin-bottom:8px;display:flex;align-items:center;gap:8px;font-size:.85rem">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                Dikkat
+                            </div>
                             <p style="color:var(--tx2);font-size:.8rem;margin-bottom:12px">Bu işlem tüm personelin puanlarını sıfırlar. Checklist geçmişi korunur.</p>
-                            <button class="btn btn-sm" style="background:#e74c3c;border-color:#e74c3c;color:#fff" onclick="resetAllPoints()">🗑️ Tüm Puanları Sıfırla</button>
+                            <button class="btn btn-sm" style="background:#e74c3c;border-color:#e74c3c;color:#fff;display:flex;align-items:center;gap:6px" onclick="resetAllPoints()">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                Tüm Puanları Sıfırla
+                            </button>
                         </div>
                         <div id="cleanupResults" style="margin-top:12px;padding:12px;background:var(--bg3);border-radius:8px;display:none"></div>
                     </div>
@@ -7338,7 +7421,10 @@ function renderAdminLists() {
     const dataCleanupCard = document.getElementById('dataCleanupCard');
     const rolePreviewCard = document.getElementById('rolePreviewCard');
     if (currentUser?.role === 'yonetici') {
-        if (adminPasswordCard) adminPasswordCard.style.display = 'block';
+        if (adminPasswordCard) {
+            adminPasswordCard.style.display = 'block';
+            loadAdminSettingsToUI(); // Mevcut değerleri yükle
+        }
         if (adminEmailsCard) {
             adminEmailsCard.style.display = 'block';
             loadAdminEmailsToUI(); // Listeyi yükle
@@ -15501,63 +15587,201 @@ function updateLogos(theme) {
 })();
 
 // ==================== ADMIN ŞİFRE DEĞİŞTİRME ====================
-async function updateAdminCredentials() {
-    // Sadece admin
+// ==================== ADMIN HESAP YÖNETİMİ ====================
+
+// Admin e-postasını güncelle
+async function updateAdminEmail() {
     if (!isAdminUser()) {
         toast('Bu işlem için yetkiniz yok', 'error');
         return;
     }
     
-    const newUsername = document.getElementById('admin_new_username').value.trim();
-    const newPassword = document.getElementById('admin_new_password').value;
-    const confirmPassword = document.getElementById('admin_confirm_password').value;
+    const currentEmail = currentUser?.email?.toLowerCase();
+    const newEmail = document.getElementById('admin_new_email')?.value?.trim()?.toLowerCase();
     
-    if (!newUsername && !newPassword) { toast('En az bir alan doldurun', 'error'); return; }
-    if (newPassword && newPassword !== confirmPassword) { toast('Şifreler eşleşmiyor', 'error'); return; }
-    if (newPassword && newPassword.length < 6) { toast('Şifre en az 6 karakter olmalı', 'error'); return; }
+    if (!newEmail) {
+        toast('Yeni e-posta girin', 'error');
+        return;
+    }
     
-    try {
-        const email = currentUser?.email;
-        if (!email) { toast('Oturum bulunamadı, tekrar giriş yapın', 'error'); return; }
-        
-        // 1. Şifre değişikliği - credentials koleksiyonunu güncelle
-        if (newPassword) {
-            const saved = await saveCredential(email, newPassword);
-            if (saved) {
-                console.log('✅ Credentials güncellendi');
-            } else {
-                toast('Şifre güncellenemedi', 'error');
+    if (!newEmail.includes('@')) {
+        toast('Geçerli bir e-posta girin', 'error');
+        return;
+    }
+    
+    if (newEmail === currentEmail) {
+        toast('Yeni e-posta mevcut ile aynı', 'error');
+        return;
+    }
+    
+    // Onay al
+    confirmModal('E-posta Değiştir', `
+        <div style="text-align:center">
+            <div style="margin-bottom:16px">
+                <svg width="48" height="48" fill="none" stroke="#008c95" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            </div>
+            <div style="color:var(--tx2);margin-bottom:8px">E-posta adresiniz değiştirilecek:</div>
+            <div style="font-size:.85rem;color:var(--tx3);margin-bottom:4px">${currentEmail}</div>
+            <div style="color:var(--tx);font-weight:500">↓</div>
+            <div style="font-size:.85rem;color:#008c95;font-weight:500">${newEmail}</div>
+            <div style="margin-top:16px;padding:12px;background:rgba(231,76,60,.1);border-radius:8px;font-size:.8rem;color:#e74c3c">
+                Değişiklikten sonra yeni e-posta ile giriş yapmanız gerekecek.
+            </div>
+        </div>
+    `, async () => {
+        try {
+            toast('E-posta güncelleniyor...', 'info');
+            
+            // 1. Mevcut credentials'ı al
+            const oldCredential = await getCredential(currentEmail);
+            if (!oldCredential) {
+                toast('Mevcut şifre bilgisi alınamadı', 'error');
                 return;
             }
-        }
-        
-        // 2. İsim değişikliği - users ve localStorage güncelle
-        if (newUsername) {
+            
+            // 2. Yeni email için credentials oluştur
+            const saved = await saveCredential(newEmail, oldCredential);
+            if (!saved) {
+                toast('Yeni credentials oluşturulamadı', 'error');
+                return;
+            }
+            
+            // 3. Eski credentials'ı sil
+            await deleteCredential(currentEmail);
+            
+            // 4. adminEmails listesini güncelle
+            const newAdminEmails = _adminEmails.map(e => e === currentEmail ? newEmail : e);
+            await saveAdminEmails(newAdminEmails);
+            
+            // 5. users koleksiyonunu güncelle
             const uid = firebase.auth().currentUser?.uid;
             if (uid) {
                 await db.collection('users').doc(uid).update({ 
-                    name: newUsername,
+                    email: newEmail,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp() 
                 });
             }
             
-            // localStorage güncelle
-            if (currentUser) {
-                currentUser.name = newUsername;
-                localStorage.setItem('mb_user', JSON.stringify(currentUser));
-            }
-            console.log('✅ İsim güncellendi');
+            toast('E-posta güncellendi. Yeniden giriş yapın.', 'success');
+            
+            // 6. Çıkış yap
+            setTimeout(async () => {
+                localStorage.removeItem('mb_user');
+                await firebase.auth().signOut();
+                window.location.href = 'login.html';
+            }, 2000);
+            
+        } catch (e) {
+            console.error('E-posta güncelleme hatası:', e);
+            toast('E-posta güncellenemedi: ' + e.message, 'error');
+        }
+    });
+}
+
+// Admin şifresini güncelle
+async function updateAdminPassword() {
+    if (!isAdminUser()) {
+        toast('Bu işlem için yetkiniz yok', 'error');
+        return;
+    }
+    
+    const newPassword = document.getElementById('admin_new_password')?.value;
+    const confirmPassword = document.getElementById('admin_confirm_password')?.value;
+    
+    if (!newPassword) {
+        toast('Yeni şifre girin', 'error');
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        toast('Şifre en az 6 karakter olmalı', 'error');
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        toast('Şifreler eşleşmiyor', 'error');
+        return;
+    }
+    
+    try {
+        const email = currentUser?.email;
+        const saved = await saveCredential(email, newPassword);
+        
+        if (saved) {
+            toast('Şifre güncellendi', 'success');
+            document.getElementById('admin_new_password').value = '';
+            document.getElementById('admin_confirm_password').value = '';
+        } else {
+            toast('Şifre güncellenemedi', 'error');
+        }
+    } catch (e) {
+        console.error('Şifre güncelleme hatası:', e);
+        toast('Şifre güncellenemedi: ' + e.message, 'error');
+    }
+}
+
+// Admin ismini güncelle
+async function updateAdminName() {
+    if (!isAdminUser()) {
+        toast('Bu işlem için yetkiniz yok', 'error');
+        return;
+    }
+    
+    const newName = document.getElementById('admin_new_username')?.value?.trim();
+    
+    if (!newName) {
+        toast('Yeni isim girin', 'error');
+        return;
+    }
+    
+    try {
+        const uid = firebase.auth().currentUser?.uid;
+        if (uid) {
+            await db.collection('users').doc(uid).update({ 
+                name: newName,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp() 
+            });
         }
         
-        toast('Giriş bilgileri güncellendi ✓', 'success');
-        document.getElementById('admin_new_username').value = '';
-        document.getElementById('admin_new_password').value = '';
-        document.getElementById('admin_confirm_password').value = '';
+        // localStorage güncelle
+        if (currentUser) {
+            currentUser.name = newName;
+            localStorage.setItem('mb_user', JSON.stringify(currentUser));
+        }
         
-    } catch (e) { 
-        console.error('Güncelleme hatası:', e); 
-        toast('Güncelleme hatası: ' + e.message, 'error'); 
+        toast('İsim güncellendi', 'success');
+        document.getElementById('admin_new_username').value = '';
+        
+        // UI güncelle
+        const nameElements = document.querySelectorAll('[data-admin-name]');
+        nameElements.forEach(el => el.textContent = newName);
+        
+    } catch (e) {
+        console.error('İsim güncelleme hatası:', e);
+        toast('İsim güncellenemedi: ' + e.message, 'error');
     }
+}
+
+// Admin ayarlarını UI'a yükle
+function loadAdminSettingsToUI() {
+    const emailInput = document.getElementById('admin_current_email');
+    if (emailInput) {
+        emailInput.value = currentUser?.email || '';
+    }
+    
+    const nameInput = document.getElementById('admin_new_username');
+    if (nameInput) {
+        nameInput.placeholder = currentUser?.name || 'Yönetici';
+    }
+}
+
+// Eski fonksiyon (geriye uyumluluk)
+async function updateAdminCredentials() {
+    const newPassword = document.getElementById('admin_new_password')?.value;
+    const newName = document.getElementById('admin_new_username')?.value?.trim();
+    
+    if (newPassword) await updateAdminPassword();
+    if (newName) await updateAdminName();
 }
 
 // ==================== ADMIN EMAIL YÖNETİMİ ====================
