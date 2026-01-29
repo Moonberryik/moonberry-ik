@@ -10745,33 +10745,45 @@ async function loadPuantajRules() {
  * Puantaj Görünürlük Kontrolü - Ast-Üst İlişkisi
  * 
  * Hiyerarşi:
- * - barista: kendini + diğer baristaları görür
+ * - barista: kendini + diğer baristaları + müdür yardımcısını görür
  * - mudur_yardimcisi: kendini + baristaları görür
  * - magaza_muduru: kendini + yardımcıyı + baristaları görür
- * - bolge_muduru: yönetici hariç herkesi görür (tüm şubeler)
+ * - bolge_muduru: yönetici hariç herkesi görür (tüm şubeler) - KARTI KİLİTLİ (sadece yönetici görebilir)
  * - yonetici: herkesi görür
  */
 function canViewPersonnelPuan(viewerRole, targetRole) {
-    const hierarchy = {
-        'barista': 1,
-        'mudur_yardimcisi': 2,
-        'magaza_mudur_yardimcisi': 2,
-        'magaza_muduru': 3,
-        'bolge_muduru': 4,
-        'yonetici': 5
-    };
-    
-    const viewerLevel = hierarchy[viewerRole] || 1;
-    const targetLevel = hierarchy[targetRole] || 1;
-    
     // Yönetici herkesi görür
     if (viewerRole === 'yonetici') return true;
     
-    // Bölge müdürü yönetici hariç herkesi görür
+    // BÖLGE MÜDÜRÜ KARTI: Sadece yönetici görebilir
+    if (targetRole === 'bolge_muduru') return false;
+    
+    // Bölge müdürü yönetici hariç herkesi görür (kendi kartı hariç - yukarıda engellendi)
     if (viewerRole === 'bolge_muduru') return targetRole !== 'yonetici';
     
-    // Diğerleri: kendisi ve altındakileri görür
-    return targetLevel <= viewerLevel;
+    // Barista: kendisi + diğer baristalar + müdür yardımcısı
+    if (viewerRole === 'barista') {
+        return targetRole === 'barista' || 
+               targetRole === 'mudur_yardimcisi' || 
+               targetRole === 'magaza_mudur_yardimcisi';
+    }
+    
+    // Müdür Yardımcısı: kendisi + baristalar
+    if (viewerRole === 'mudur_yardimcisi' || viewerRole === 'magaza_mudur_yardimcisi') {
+        return targetRole === 'barista' || 
+               targetRole === 'mudur_yardimcisi' || 
+               targetRole === 'magaza_mudur_yardimcisi';
+    }
+    
+    // Mağaza Müdürü: kendisi + yardımcılar + baristalar
+    if (viewerRole === 'magaza_muduru') {
+        return targetRole === 'barista' || 
+               targetRole === 'mudur_yardimcisi' || 
+               targetRole === 'magaza_mudur_yardimcisi' ||
+               targetRole === 'magaza_muduru';
+    }
+    
+    return false;
 }
 
 // Kilit SVG ikonu (puantaj için)
@@ -10795,18 +10807,39 @@ async function loadPuantaj() {
     await loadPuantajRules();
     
     try {
+        // Şubeye ait personeli çek
         const personelSnapshot = await db.collection('personel').where('branch', '==', sube).get();
         
-        if (personelSnapshot.empty) {
+        // BÖLGE MÜDÜRLERİNİ DE ÇEK (branch='all' olanlar - tüm şubelerde görünürler)
+        const bolgeMuduruSnapshot = await db.collection('personel').where('branch', '==', 'all').get();
+        
+        // İki sorguyu birleştir
+        const allPersonelDocs = [...personelSnapshot.docs, ...bolgeMuduruSnapshot.docs];
+        
+        if (allPersonelDocs.length === 0) {
             container.innerHTML = '<div style="text-align:center;padding:60px;color:var(--tx2)"><div style="margin-bottom:16px;opacity:.5"><svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>Bu şubede kayıtlı personel yok.</div>';
             return;
         }
         
         const puantajKey = `${yil}-${ay}`;
+        
+        // Şubeye ait puantaj verilerini çek
         const puantajSnapshot = await db.collection('puantaj').where('period', '==', puantajKey).where('branch', '==', sube).get();
         
+        // Bölge müdürü puantajlarını da çek (branch='all' veya tüm şubeler)
+        const bolgeMuduruPuantajSnapshot = await db.collection('puantaj').where('period', '==', puantajKey).where('branch', '==', 'all').get();
+        
         const puantajData = {};
+        
+        // Şube puantajları
         puantajSnapshot.forEach(doc => {
+            const d = doc.data();
+            if (!puantajData[d.personelId]) puantajData[d.personelId] = [];
+            puantajData[d.personelId].push({ id: doc.id, ...d });
+        });
+        
+        // Bölge müdürü puantajları
+        bolgeMuduruPuantajSnapshot.forEach(doc => {
             const d = doc.data();
             if (!puantajData[d.personelId]) puantajData[d.personelId] = [];
             puantajData[d.personelId].push({ id: doc.id, ...d });
@@ -10858,7 +10891,7 @@ async function loadPuantaj() {
         let html = '';
         const personelList = [];
         
-        personelSnapshot.forEach(doc => {
+        allPersonelDocs.forEach(doc => {
             const p = doc.data();
             // uniqueId öncelikli, sonra doc.id dene (CF uniqueId kullanıyor)
             const puanlar = puantajData[p.uniqueId] || puantajData[doc.id] || [];
@@ -11195,7 +11228,7 @@ async function loadPuantaj() {
                     <div style="display:flex;gap:8px;flex-wrap:wrap">
                         <span style="font-size:.65rem;padding:3px 6px;background:rgba(108,117,125,.12);color:#6c757d;border-radius:4px;display:flex;align-items:center;gap:4px">
                             <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                            Üst düzey personel
+                            Sadece yöneticiler görebilir
                         </span>
                     </div>
                 </div>
