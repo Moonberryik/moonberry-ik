@@ -11516,6 +11516,31 @@ async function loadPuantaj() {
             const roleColor = roleStyle.color;
             const isPremium = roleStyle.premium;
             
+            // BÖLGE MÜDÜRÜ - ÖZEL KART (Puan/yıldız yok)
+            if (p.role === 'bolge_muduru') {
+                html += `
+                <div style="background:linear-gradient(135deg,rgba(184,134,11,.12),rgba(218,165,32,.06),rgba(255,215,0,.03));border:2px solid rgba(184,134,11,.2);border-left:4px solid #b8860b;border-radius:12px;padding:16px;box-shadow:0 2px 12px rgba(184,134,11,.15)">
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <div style="width:44px;height:44px;background:linear-gradient(135deg,#b8860b,#daa520,#ffd700);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1rem;color:#fff;font-weight:600;box-shadow:0 2px 8px rgba(184,134,11,.4)">
+                            ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">` : p.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div style="flex:1">
+                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                                <span style="font-weight:700;font-size:1rem;color:var(--tx)">${p.displayName}</span>
+                                <span style="font-size:.6rem;background:linear-gradient(135deg,#b8860b,#daa520);color:#fff;padding:3px 8px;border-radius:4px;font-weight:700;box-shadow:0 2px 6px rgba(184,134,11,.3)">👑 BÖLGE MÜDÜRÜ</span>
+                            </div>
+                            <div style="font-size:.75rem;color:#b8860b;font-weight:500;margin-top:4px">${p.position || 'Bölge Müdürü'}</div>
+                        </div>
+                        <div style="text-align:right;padding:8px 12px;background:rgba(184,134,11,.1);border-radius:8px">
+                            <div style="font-size:.7rem;color:#b8860b;font-weight:600">Yönetici Kadro</div>
+                            <div style="font-size:.6rem;color:var(--tx3)">Performans değerlendirmesi yapılmaz</div>
+                        </div>
+                    </div>
+                </div>
+                `;
+                return;
+            }
+            
             const isRisk = p.toplamPuan <= -3;
             const isDanger = p.primDurumu === 'prim_yok';
             const puanColor = p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx)');
