@@ -10928,20 +10928,46 @@ async function loadPuantaj() {
         // Bölge müdürü puantajlarını da çek (branch='all' veya tüm şubeler)
         const bolgeMuduruPuantajSnapshot = await db.collection('puantaj').where('period', '==', puantajKey).where('branch', '==', 'all').get();
         
+        // === PERSONEL ID MAPPING OLUŞTUR ===
+        // Farklı dönemlerde farklı personelId formatları kullanılmış olabilir
+        // Her personel için tüm olası ID'leri map'le
+        const personelIdMapping = {}; // personelId -> Firebase doc.id
+        allPersonelDocs.forEach(doc => {
+            const p = doc.data();
+            const docId = doc.id;
+            
+            // Bu personel için kullanılabilecek tüm ID'ler
+            const possibleIds = [
+                docId,
+                p.uniqueId,
+                normalizePersonelId(p.name),
+                p.name?.toLowerCase().replace(/\s+/g, '_'),
+                p.name?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''),
+            ].filter(k => k);
+            
+            // Her olası ID'yi doc.id'ye map'le
+            possibleIds.forEach(pid => {
+                personelIdMapping[pid] = docId;
+            });
+        });
+        
         const puantajData = {};
         
-        // Şube puantajları
+        // Şube puantajları - mapping kullanarak doğru personele ata
         puantajSnapshot.forEach(doc => {
             const d = doc.data();
-            if (!puantajData[d.personelId]) puantajData[d.personelId] = [];
-            puantajData[d.personelId].push({ id: doc.id, ...d });
+            // personelId'yi gerçek doc.id'ye çevir
+            const realDocId = personelIdMapping[d.personelId] || d.personelId;
+            if (!puantajData[realDocId]) puantajData[realDocId] = [];
+            puantajData[realDocId].push({ id: doc.id, ...d });
         });
         
         // Bölge müdürü puantajları
         bolgeMuduruPuantajSnapshot.forEach(doc => {
             const d = doc.data();
-            if (!puantajData[d.personelId]) puantajData[d.personelId] = [];
-            puantajData[d.personelId].push({ id: doc.id, ...d });
+            const realDocId = personelIdMapping[d.personelId] || d.personelId;
+            if (!puantajData[realDocId]) puantajData[realDocId] = [];
+            puantajData[realDocId].push({ id: doc.id, ...d });
         });
         
         // === OTOMATİK PUANLARI DA ÇEK (Check Sisteminden) ===
@@ -10993,30 +11019,8 @@ async function loadPuantaj() {
         allPersonelDocs.forEach(doc => {
             const p = doc.data();
             
-            // === PUANTAJ VERİSİ EŞLEŞTİRME ===
-            // Farklı dönemlerde farklı personelId formatları kullanılmış olabilir
-            // Tüm olası key'leri dene
-            const possiblePersonelIds = [
-                doc.id,                                    // Firebase doc ID (yeni kayıtlar)
-                p.uniqueId,                                // uniqueId (varsa)
-                normalizePersonelId(p.name),               // normalize format (tuana_yasar)
-                p.name?.toLowerCase().replace(/\s+/g, '_'), // basit lowercase (tuana_yaşar → tuana_yaşar)
-            ].filter(k => k);
-            
-            let puanlar = [];
-            for (const key of possiblePersonelIds) {
-                if (puantajData[key] && puantajData[key].length > 0) {
-                    // Birden fazla key'de veri olabilir, hepsini birleştir
-                    puanlar = [...puanlar, ...puantajData[key]];
-                }
-            }
-            // Duplicate'leri temizle (aynı doc.id)
-            const seenIds = new Set();
-            puanlar = puanlar.filter(x => {
-                if (seenIds.has(x.id)) return false;
-                seenIds.add(x.id);
-                return true;
-            });
+            // Puantaj verilerini doc.id ile al (mapping zaten yapıldı)
+            const puanlar = puantajData[doc.id] || [];
             
             // Otomatik puanları bul - ÇOKLU FORMAT EŞLEŞTİRME
             const firstName = p.name?.split(' ')[0] || '';
