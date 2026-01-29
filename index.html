@@ -9614,14 +9614,23 @@ async function loadPersonelList() {
         const myLevel = getHierarchyLevel(currentUser?.role, null);
         
         let query = db.collection('personel').orderBy('name');
+        let bolgeMuduruDocs = []; // branch='all' olanlar için
+        
         // Mağaza müdürü sadece kendi şubesinin personelini görebilir
         if (!isFullAdmin && userBranch && userBranch !== 'all') {
             query = db.collection('personel').where('branch', '==', userBranch);
+            
+            // Bölge müdürlerini de çek (branch='all' - tüm şubelerde görünürler)
+            const bolgeMuduruSnap = await db.collection('personel').where('branch', '==', 'all').get();
+            bolgeMuduruDocs = bolgeMuduruSnap.docs;
         }
         
         const snapshot = await query.get();
         
-        if (snapshot.empty) {
+        // Şube personeli + bölge müdürleri birleştir
+        const allDocs = [...snapshot.docs, ...bolgeMuduruDocs];
+        
+        if (allDocs.length === 0) {
             container.innerHTML = '<p style="color:var(--tx2);text-align:center;padding:40px">Henüz personel kaydı yok. "Yeni Personel" butonuna tıklayarak ekleyin.</p>';
             return;
         }
@@ -9662,7 +9671,7 @@ async function loadPersonelList() {
         let headerHtml = '';
         
         // Personelleri sırala: 1) Hiyerarşi seviyesi (yüksek önce), 2) Giriş tarihi (eski önce)
-        const sortedDocs = snapshot.docs.sort((a, b) => {
+        const sortedDocs = allDocs.sort((a, b) => {
             const pA = a.data();
             const pB = b.data();
             
@@ -11765,6 +11774,13 @@ function showPuantajRulesDetail() {
 }
 
 function showPuantajModal(personelId, name, type = 'all') {
+    // Bölge müdürünü sadece yönetici değerlendirebilir
+    const personelData = window.puantajPersonelCache?.find(p => p.id === personelId);
+    if (personelData?.role === 'bolge_muduru' && currentUser?.role !== 'yonetici') {
+        toast('Bölge müdürünü sadece yöneticiler değerlendirebilir', 'warning');
+        return;
+    }
+    
     const title = `${name} - Manuel Değerlendirme`;
     
     // Tüm kurallar (cache'ten)
@@ -21571,12 +21587,26 @@ async function loadPersonelForManualCheck(branch) {
     if (!select) return;
     
     try {
+        // Şube personeli
         const snapshot = await db.collection('personel').where('branch', '==', branch).get();
+        
+        // Bölge müdürleri (branch='all' - tüm şubelerde görünürler)
+        const bolgeMuduruSnap = await db.collection('personel').where('branch', '==', 'all').get();
+        
         let options = '<option value="">-- Seçin --</option>';
+        
+        // Şube personeli
         snapshot.forEach(doc => {
             const p = doc.data();
             options += `<option value="${doc.id}" data-name="${p.name}">${p.name}</option>`;
         });
+        
+        // Bölge müdürleri
+        bolgeMuduruSnap.forEach(doc => {
+            const p = doc.data();
+            options += `<option value="${doc.id}" data-name="${p.name}">${p.name} (Bölge Md.)</option>`;
+        });
+        
         select.innerHTML = options;
     } catch (e) {
         console.error('Personel yüklenemedi:', e);
