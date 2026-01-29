@@ -19415,13 +19415,15 @@ async function loadTodayChecks() {
                 temizlikSubLabel = 'Kaçırıldı';
             }
             
-            // Personel listesi - vardiya tipine göre
+            // Personel listesi - vardiya tipine göre + ROL FİLTRELEMESİ
             const shiftToPersonnelType = {
                 acilisci: 'acilis',
                 araci: 'all', // Aracılar için tüm personel
                 kapanisci: 'kapanis'
             };
-            const temizlikPersonnel = getShiftPersonnel(branch, shiftToPersonnelType[currentShiftType] || 'all');
+            const temizlikPersonnelRaw = getShiftPersonnel(branch, shiftToPersonnelType[currentShiftType] || 'all');
+            // ROL FİLTRELEMESİ: Barista varsa müdür görünmez
+            const temizlikPersonnel = filterPersonnelForCheck(rawShiftData[branch]?.allActive || [], 'temizlik');
             
             branchChecks.push({
                 id: 'temizlik',
