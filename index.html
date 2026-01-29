@@ -18948,8 +18948,8 @@ async function loadTodayChecks() {
                             name: displayName, 
                             shift: todayShift,
                             role: role, // ROL EKLENDİ
-                            shiftStart: shiftTime?.startHour || 10,
-                            shiftEnd: shiftTime?.endHour || 19
+                            shiftStart: shiftTime?.startHour ?? 10,
+                            shiftEnd: shiftTime?.endHour ?? 19
                         };
                         
                         if (cleanShift === 'A' || cleanShift.includes('AÇILI')) {
@@ -19001,8 +19001,8 @@ async function loadTodayChecks() {
         const nowTotalMinutes = nowHour * 60 + nowMinute;
         
         const currentlyWorking = allActiveList.filter(p => {
-            const startHour = p.shiftStart || 10;
-            const endHour = p.shiftEnd || 19;
+            const startHour = p.shiftStart ?? 10;
+            const endHour = p.shiftEnd ?? 19;
             const startMinutes = startHour * 60;
             let endMinutes = endHour * 60;
             
@@ -19536,8 +19536,8 @@ async function loadTodayChecks() {
             }
             
             const acilisPersonnelRaw = getShiftPersonnel(branch, 'acilis');
-            // ROL FİLTRELEMESİ: Barista varsa müdür görünmez
-            const acilisPersonnel = filterPersonnelForCheck(rawShiftData[branch]?.allActive?.filter(p => p.type === 'acilis') || [], 'acilis');
+            // ROL + SHIFT SAATİ FİLTRELEMESİ: Şu an aktif ve barista öncelikli
+            const acilisPersonnel = filterPersonnelForCheck(rawShiftData[branch]?.allActive || [], 'acilis');
             
             branchChecks.push({
                 id: 'acilis',
@@ -19622,8 +19622,8 @@ async function loadTodayChecks() {
             }
             
             const kapanisPersonnelRaw = getShiftPersonnel(branch, 'kapanis');
-            // ROL FİLTRELEMESİ: Barista varsa müdür görünmez
-            const kapanisPersonnel = filterPersonnelForCheck(rawShiftData[branch]?.allActive?.filter(p => p.type === 'kapanis') || [], 'kapanis');
+            // ROL + SHIFT SAATİ FİLTRELEMESİ: Şu an aktif ve barista öncelikli
+            const kapanisPersonnel = filterPersonnelForCheck(rawShiftData[branch]?.allActive || [], 'kapanis');
             
             branchChecks.push({
                 id: 'kapanis',
@@ -19791,11 +19791,11 @@ async function loadTodayChecks() {
             
             // Gece saatlerinde (00:00-02:00) kapanışçılara ata
             if (isLateNight) {
-                gunlukPersonnel = filterPersonnelForCheck(rawShiftData[branch]?.allActive?.filter(p => p.type === 'kapanis') || [], 'gunluk');
+                gunlukPersonnel = filterPersonnelForCheck(rawShiftData[branch]?.allActive || [], 'gunluk');
                 gunlukSubLabel = 'Kapanışçı';
-                console.log('[Günlük] Gece saati - kapanışçılara atandı:', gunlukPersonnel);
+                console.log('[Günlük] Gece saati - aktif personele atandı:', gunlukPersonnel);
             } else if (rawData?.allActive) {
-                // ROL FİLTRELEMESİ: Barista varsa müdür görünmez
+                // ROL + SHIFT SAATİ FİLTRELEMESİ: Barista varsa müdür görünmez
                 const filteredActive = filterPersonnelForCheck(rawData.allActive, 'gunluk')
                     .map(name => rawData.allActive.find(p => p.name === name))
                     .filter(Boolean);
