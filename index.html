@@ -1778,120 +1778,50 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                     </div>
                     
-                    <!-- Admin Şifre Değiştirme - Sadece admin görecek -->
-                    <div class="admin-card" id="adminPasswordCard" style="margin-top:20px;display:none">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
-                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                                Hesap Ayarları
-                            </div>
-                        </div>
-                        <p style="color:var(--tx3);font-size:.8rem;margin-bottom:20px">Yönetici hesap bilgilerinizi güncelleyin.</p>
-                        
-                        <div style="display:grid;gap:20px">
-                            <!-- E-posta Değiştirme -->
-                            <div style="padding:16px;background:var(--bg3);border-radius:10px">
-                                <div style="font-weight:500;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:.9rem">
-                                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                                    E-posta Adresi
-                                </div>
-                                <div class="form-grid" style="gap:12px">
-                                    <div class="form-group">
-                                        <label class="form-label">Mevcut E-posta</label>
-                                        <input type="email" id="admin_current_email" class="form-input" readonly style="opacity:.7;cursor:not-allowed">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Yeni E-posta</label>
-                                        <input type="email" id="admin_new_email" class="form-input" placeholder="yeni@email.com">
-                                    </div>
-                                </div>
-                                <button class="btn btn-sm" style="margin-top:12px;background:var(--bg4);color:var(--tx);border:none" onclick="updateAdminEmail()">
-                                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:6px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                                    E-postayı Güncelle
-                                </button>
-                            </div>
-                            
-                            <!-- Şifre Değiştirme -->
-                            <div style="padding:16px;background:var(--bg3);border-radius:10px">
-                                <div style="font-weight:500;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:.9rem">
-                                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                                    Şifre
-                                </div>
-                                <div class="form-grid" style="gap:12px">
-                                    <div class="form-group">
-                                        <label class="form-label">Yeni Şifre</label>
-                                        <input type="password" id="admin_new_password" class="form-input" placeholder="••••••••">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Şifre Tekrar</label>
-                                        <input type="password" id="admin_confirm_password" class="form-input" placeholder="••••••••">
-                                    </div>
-                                </div>
-                                <div style="margin-top:8px;font-size:.7rem;color:var(--tx3)">Min 6 karakter</div>
-                                <button class="btn btn-sm" style="margin-top:12px;background:var(--bg4);color:var(--tx);border:none" onclick="updateAdminPassword()">
-                                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:6px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                                    Şifreyi Güncelle
-                                </button>
-                            </div>
-                            
-                            <!-- İsim Değiştirme -->
-                            <div style="padding:16px;background:var(--bg3);border-radius:10px">
-                                <div style="font-weight:500;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:.9rem">
-                                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                    Görünen İsim
-                                </div>
-                                <div class="form-group" style="margin-bottom:0">
-                                    <input type="text" id="admin_new_username" class="form-input" placeholder="Yönetici">
-                                </div>
-                                <button class="btn btn-sm" style="margin-top:12px;background:var(--bg4);color:var(--tx);border:none" onclick="updateAdminName()">
-                                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:6px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                                    İsmi Güncelle
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Puan Sıfırlama - Sadece admin görecek -->
-                    <div class="admin-card" id="dataCleanupCard" style="margin-top:20px;display:none">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
-                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-                                Puan Yönetimi
-                            </div>
-                        </div>
-                        <p style="color:var(--tx3);font-size:.8rem;margin-bottom:16px">Personel puanlarını sıfırlayın.</p>
-                        
-                        <div style="padding:16px;background:rgba(231,76,60,.05);border:1px solid rgba(231,76,60,.15);border-radius:10px">
-                            <div style="font-weight:500;color:#e74c3c;margin-bottom:8px;display:flex;align-items:center;gap:8px;font-size:.85rem">
-                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                                Dikkat
-                            </div>
-                            <p style="color:var(--tx2);font-size:.8rem;margin-bottom:12px">Bu işlem tüm personelin puanlarını sıfırlar. Checklist geçmişi korunur.</p>
-                            <button class="btn btn-sm" style="background:#e74c3c;border-color:#e74c3c;color:#fff;display:flex;align-items:center;gap:6px" onclick="resetAllPoints()">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                                Tüm Puanları Sıfırla
-                            </button>
-                        </div>
-                        <div id="cleanupResults" style="margin-top:12px;padding:12px;background:var(--bg3);border-radius:8px;display:none"></div>
-                    </div>
-                    <!-- Şirket Bilgileri - En alta -->
-                    <div class="admin-card" id="companySettingsCard" style="margin-top:20px">
-                        <div class="admin-card-header">
-                            <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
-                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                                Şirket Bilgileri
-                            </div>
-                        </div>
-                        <div class="form-grid" style="margin-top:16px">
+                    <div class="admin-card" id="companySettingsCard">
+                        <div class="admin-card-header"><div class="admin-card-title">Şirket Bilgileri</div></div>
+                        <div class="form-grid">
                             <div class="form-group full"><label class="form-label">Şirket Adı</label><input type="text" id="admin_company_name" class="form-input"></div>
                             <div class="form-group"><label class="form-label">MERSİS No</label><input type="text" id="admin_mersis" class="form-input"></div>
                             <div class="form-group full"><label class="form-label">Adres</label><input type="text" id="admin_address" class="form-input"></div>
                         </div>
-                        <div class="btn-group" style="margin-top:16px">
-                            <button class="btn btn-primary btn-sm" onclick="saveCompany()" style="display:flex;align-items:center;gap:6px">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                                Kaydet
-                            </button>
+                        <div class="btn-group"><button class="btn btn-primary btn-sm" onclick="saveCompany()">Kaydet</button></div>
+                    </div>
+                    <!-- Admin Şifre Değiştirme - Sadece admin görecek -->
+                    <div class="admin-card" id="adminPasswordCard" style="margin-top:20px;display:none">
+                        <div class="admin-card-header"><div class="admin-card-title">🔐 Yönetici Giriş Bilgileri</div></div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Yönetici hesabının kullanıcı adı ve şifresini değiştirin.</p>
+                        <div class="form-grid">
+                            <div class="form-group"><label class="form-label">Yeni Kullanıcı Adı</label><input type="text" id="admin_new_username" class="form-input" placeholder="Mevcut: admin"></div>
+                            <div class="form-group"><label class="form-label">Yeni Şifre</label><input type="password" id="admin_new_password" class="form-input" placeholder="Yeni şifre girin"></div>
+                            <div class="form-group"><label class="form-label">Şifre Tekrar</label><input type="password" id="admin_confirm_password" class="form-input" placeholder="Şifreyi tekrar girin"></div>
                         </div>
+                        <div class="btn-group"><button class="btn btn-primary btn-sm" onclick="updateAdminCredentials()">🔑 Güncelle</button></div>
+                    </div>
+                    <!-- Admin Email Listesi - Sadece admin görecek -->
+                    <div class="admin-card" id="adminEmailsCard" style="margin-top:20px;display:none">
+                        <div class="admin-card-header"><div class="admin-card-title">👑 Yönetici E-posta Listesi</div></div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Bu listedeki e-postalar personel kaydı olmasa bile sisteme erişebilir.</p>
+                        <div class="form-group">
+                            <label class="form-label">Admin E-postalar (her satıra bir tane)</label>
+                            <textarea id="adminEmailsList" class="form-input" rows="5" placeholder="admin@moonberrycoffee.com&#10;tamer@moonberrycoffee.com" style="font-family:monospace;font-size:.85rem"></textarea>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-ghost btn-sm" onclick="loadAdminEmailsToUI()">↻ Yenile</button>
+                            <button class="btn btn-primary btn-sm" onclick="saveAdminEmailsFromUI()">💾 Kaydet</button>
+                        </div>
+                    </div>
+                    <!-- Puan Sıfırlama - Sadece admin görecek -->
+                    <div class="admin-card" id="dataCleanupCard" style="margin-top:20px;display:none">
+                        <div class="admin-card-header"><div class="admin-card-title">🔄 Puan Yönetimi</div></div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Personel puanlarını sıfırlayın.</p>
+                        
+                        <div style="padding:16px;background:rgba(231,76,60,.05);border:1px solid rgba(231,76,60,.2);border-radius:10px">
+                            <div style="font-weight:600;color:#e74c3c;margin-bottom:8px">⚠️ Dikkat</div>
+                            <p style="color:var(--tx2);font-size:.8rem;margin-bottom:12px">Bu işlem tüm personelin puanlarını sıfırlar. Checklist geçmişi korunur.</p>
+                            <button class="btn btn-sm" style="background:#e74c3c;border-color:#e74c3c;color:#fff" onclick="resetAllPoints()">🗑️ Tüm Puanları Sıfırla</button>
+                        </div>
+                        <div id="cleanupResults" style="margin-top:12px;padding:12px;background:var(--bg3);border-radius:8px;display:none"></div>
                     </div>
                 </div>
 
@@ -6254,14 +6184,7 @@ function loadAdminFields() {
 // ==================== PROFİLİM ====================
 async function loadMyProfile() {
     const container = document.getElementById('myProfileContainer');
-    const myProfileCard = document.getElementById('myProfileCard');
     if (!container) return;
-    
-    // Admin için Profilim kartını gizle (Hesap Ayarları kullanılacak)
-    if (isAdminUser() && myProfileCard) {
-        myProfileCard.style.display = 'none';
-        return;
-    }
     
     container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tx2)">Yükleniyor...</div>';
     
@@ -6276,6 +6199,118 @@ async function loadMyProfile() {
         const personelSnap = await db.collection('personel').where('email', '==', email).limit(1).get();
         
         if (personelSnap.empty) {
+            // Admin kontrolü - systemConfig'den
+            let isAdmin = false;
+            try {
+                const configDoc = await db.collection('systemConfig').doc('main').get();
+                if (configDoc.exists) {
+                    const adminEmails = configDoc.data().adminEmails || [];
+                    isAdmin = adminEmails.includes(email);
+                }
+            } catch (e) {
+                console.log('Config okunamadı:', e);
+            }
+            
+            if (isAdmin) {
+                // Admin profil sayfası
+                container.innerHTML = `
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                        <!-- Sol: Admin Bilgileri -->
+                        <div>
+                            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--bg4)">
+                                <div style="width:70px;height:70px;background:linear-gradient(135deg,#008c95,#00a8a8);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem;font-weight:600;overflow:hidden">
+                                    <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15c-3.87 0-7 1.79-7 4v2h14v-2c0-2.21-3.13-4-7-4zM12 12a4 4 0 100-8 4 4 0 000 8z"/><path d="M17 11l2 2 4-4"/></svg>
+                                </div>
+                                <div>
+                                    <div style="font-weight:600;font-size:1.1rem;color:var(--tx)">Yönetici</div>
+                                    <div style="font-size:.85rem;color:var(--tx2)">Sistem Yöneticisi</div>
+                                </div>
+                            </div>
+                            
+                            <div style="display:grid;gap:10px">
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2" style="flex-shrink:0"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                                    <span style="color:var(--tx2);opacity:.7;flex:1">${email}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sağ: Şifre Değiştirme -->
+                        <div style="background:var(--bg3);padding:16px;border-radius:12px">
+                            <div style="font-weight:600;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                                Şifre Değiştir
+                            </div>
+                            
+                            <div style="display:grid;gap:10px">
+                                <div>
+                                    <label style="font-size:.75rem;color:var(--tx3);display:block;margin-bottom:4px">Mevcut Şifre</label>
+                                    <div style="position:relative">
+                                        <input type="password" id="adminCurrentPassword" class="form-input" style="padding-right:40px;width:100%" placeholder="••••••••">
+                                        <button type="button" onclick="togglePasswordVisibility('adminCurrentPassword', this)" 
+                                            style="position:absolute;right:4px;top:50%;transform:translateY(-50%);width:32px;height:32px;background:transparent;border:none;cursor:pointer;color:var(--tx3);display:flex;align-items:center;justify-content:center;border-radius:4px;transition:all .12s"
+                                            onmouseover="this.style.color='var(--tx)'"
+                                            onmouseout="this.style.color='var(--tx3)'"
+                                            title="Şifreyi Göster/Gizle">
+                                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style="font-size:.75rem;color:var(--tx3);display:block;margin-bottom:4px">Yeni Şifre</label>
+                                    <div style="position:relative">
+                                        <input type="password" id="adminNewPassword" class="form-input" style="padding-right:40px;width:100%" placeholder="••••••••">
+                                        <button type="button" onclick="togglePasswordVisibility('adminNewPassword', this)" 
+                                            style="position:absolute;right:4px;top:50%;transform:translateY(-50%);width:32px;height:32px;background:transparent;border:none;cursor:pointer;color:var(--tx3);display:flex;align-items:center;justify-content:center;border-radius:4px;transition:all .12s"
+                                            onmouseover="this.style.color='var(--tx)'"
+                                            onmouseout="this.style.color='var(--tx3)'"
+                                            title="Şifreyi Göster/Gizle">
+                                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style="font-size:.75rem;color:var(--tx3);display:block;margin-bottom:4px">Yeni Şifre (Tekrar)</label>
+                                    <div style="position:relative">
+                                        <input type="password" id="adminConfirmPassword" class="form-input" style="padding-right:40px;width:100%" placeholder="••••••••">
+                                        <button type="button" onclick="togglePasswordVisibility('adminConfirmPassword', this)" 
+                                            style="position:absolute;right:4px;top:50%;transform:translateY(-50%);width:32px;height:32px;background:transparent;border:none;cursor:pointer;color:var(--tx3);display:flex;align-items:center;justify-content:center;border-radius:4px;transition:all .12s"
+                                            onmouseover="this.style.color='var(--tx)'"
+                                            onmouseout="this.style.color='var(--tx3)'"
+                                            title="Şifreyi Göster/Gizle">
+                                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top:10px;padding:10px;background:var(--bg);border-radius:8px;font-size:.75rem;color:var(--tx3)">
+                                <div style="font-weight:500;margin-bottom:4px;color:var(--tx2)">Şifre gereksinimleri:</div>
+                                <div style="display:flex;flex-wrap:wrap;gap:8px">
+                                    <span>• En az 8 karakter</span>
+                                    <span>• Büyük harf</span>
+                                    <span>• Küçük harf</span>
+                                    <span>• Rakam</span>
+                                    <span>• Özel karakter (!@#$...)</span>
+                                </div>
+                            </div>
+                            
+                            <button onclick="changeAdminPassword()" class="btn btn-sm" style="margin-top:12px;background:#008c95;color:#fff;border:none;display:flex;align-items:center;gap:6px;transition:background .2s" onmouseover="this.style.background='#006d73'" onmouseout="this.style.background='#008c95'">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                                Şifremi Değiştir
+                            </button>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
             container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tx3)">Personel kaydı bulunamadı</div>';
             return;
         }
@@ -7299,12 +7334,14 @@ function renderAdminLists() {
     
     // Yönetici için özel kartları göster
     const adminPasswordCard = document.getElementById('adminPasswordCard');
+    const adminEmailsCard = document.getElementById('adminEmailsCard');
     const dataCleanupCard = document.getElementById('dataCleanupCard');
     const rolePreviewCard = document.getElementById('rolePreviewCard');
     if (currentUser?.role === 'yonetici') {
-        if (adminPasswordCard) {
-            adminPasswordCard.style.display = 'block';
-            loadAdminSettingsToUI(); // Mevcut değerleri yükle
+        if (adminPasswordCard) adminPasswordCard.style.display = 'block';
+        if (adminEmailsCard) {
+            adminEmailsCard.style.display = 'block';
+            loadAdminEmailsToUI(); // Listeyi yükle
         }
         if (dataCleanupCard) dataCleanupCard.style.display = 'block';
         if (rolePreviewCard) rolePreviewCard.style.display = 'block';
@@ -7476,8 +7513,8 @@ async function confirmDeleteDuplicateShifts(idsJson) {
 
 // Sadece Puanları Sıfırla - Checklist geçmişi korunur
 async function resetAllPoints() {
-    // Sadece admin (dinamik kontrol)
-    if (!isAdminUser()) {
+    // Sadece admin
+    if (currentUser?.role !== 'admin') {
         toast('Bu işlem için yetkiniz yok', 'error');
         return;
     }
@@ -7545,14 +7582,15 @@ async function resetAllPoints() {
                 toast('Hata: ' + err.message, 'error');
             }
         },
-        'danger'
+        'Sıfırla',
+        'btn-danger'
     );
 }
 
 // Tüm Check ve Puan Geçmişini Sil - SADECE ADMIN
 async function deleteAllHistory() {
-    // Sadece admin (dinamik kontrol)
-    if (!isAdminUser()) {
+    // Sadece admin
+    if (currentUser?.role !== 'admin') {
         toast('Bu işlem için yetkiniz yok', 'error');
         return;
     }
@@ -10756,15 +10794,7 @@ async function loadPuantaj() {
         const autoNotesData = {};
         let totalAutoRecords = 0;
         try {
-            // Hem eski puantajNotes hem yeni puantaj koleksiyonunu oku (geriye uyumluluk + CF)
-            const [autoSnapshot, puantajAutoSnapshot] = await Promise.all([
-                db.collection('puantajNotes').get(),
-                db.collection('puantaj').get()
-            ]);
-            
-            const seenIds = new Set();
-            
-            // Eski puantajNotes kayıtları
+            const autoSnapshot = await db.collection('puantajNotes').get();
             autoSnapshot.forEach(doc => {
                 const note = doc.data();
                 const branchMatch = note.branch === sube || 
@@ -10774,42 +10804,15 @@ async function loadPuantaj() {
                 if (branchMatch && note.date >= startDate && note.date <= endDate) {
                     const pid = note.personelId;
                     
+                    // personelId ile kaydet
                     if (pid) {
                         if (!autoNotesData[pid]) autoNotesData[pid] = [];
                         autoNotesData[pid].push({ id: doc.id, ...note });
-                        seenIds.add(doc.id);
                     }
                     
                     totalAutoRecords++;
                 }
             });
-            
-            // Yeni puantaj kayıtları (CF'den gelen)
-            puantajAutoSnapshot.forEach(doc => {
-                if (seenIds.has(doc.id)) return; // Duplicate önle
-                const note = doc.data();
-                const branchMatch = note.branch === sube || 
-                                   (note.branch && note.branch.includes(sube.split(' ')[1])) ||
-                                   (sube && sube.includes(note.branch));
-                
-                const noteDate = note.eventDate || note.date;
-                if (branchMatch && noteDate >= startDate && noteDate <= endDate) {
-                    const pid = note.personelId;
-                    
-                    if (pid) {
-                        if (!autoNotesData[pid]) autoNotesData[pid] = [];
-                        autoNotesData[pid].push({ 
-                            id: doc.id, 
-                            ...note,
-                            date: noteDate,
-                            points: note.score || note.points || 0
-                        });
-                    }
-                    
-                    totalAutoRecords++;
-                }
-            });
-            
             console.log(`[Puantaj] ${sube} için ${totalAutoRecords} otomatik kayıt bulundu`);
             console.log('[Puantaj] autoNotesData keys:', Object.keys(autoNotesData));
         } catch (e) {
@@ -10880,7 +10883,7 @@ async function loadPuantaj() {
             // Otomatik puanlar (Check sisteminden)
             let autoMissed = 0, autoLate = 0, autoOnTime = 0;
             otomatikPuanlar.forEach(n => {
-                otomatikPuan += n.score || n.points || 0;
+                otomatikPuan += n.points || 0;
                 if (n.status === 'missed') { autoMissed++; negatifOlay++; }
                 else if (n.status === 'late') { autoLate++; negatifOlay++; }
                 else { autoOnTime++; pozitifOlay++; }
@@ -10891,14 +10894,6 @@ async function loadPuantaj() {
             
             const primDurumu = toplamPuan <= -5 ? 'prim_yok' : 'prim_var';
             
-            // === PUAN GÖRÜNÜRLük KONTROLÜ ===
-            const viewerRole = currentUser?.role || 'barista';
-            const viewerId = currentUser?.uniqueId || currentUser?.id;
-            const targetRole = p.role || 'barista';
-            const targetId = p.uniqueId || doc.id;
-            const pointType = toplamPuan < 0 ? 'negative' : 'positive';
-            const canViewPuan = canViewPoints(viewerRole, targetRole, viewerId, targetId, pointType);
-            
             personelList.push({ 
                 id: doc.id, 
                 name: p.name,
@@ -10906,7 +10901,6 @@ async function loadPuantaj() {
                 displayName: getPersonelDisplayName(p),  // codeName varsa onu, yoksa "Büşra S."
                 tc: p.tc, 
                 position: p.position,
-                role: targetRole,
                 photoUrl: p.photoUrl || '',
                 toplamPuan,
                 manuelPuan,
@@ -10919,8 +10913,7 @@ async function loadPuantaj() {
                 autoLate,
                 autoOnTime,
                 puanlar,
-                otomatikPuanlar,
-                canViewPuan
+                otomatikPuanlar
             });
         });
         
@@ -11011,49 +11004,37 @@ async function loadPuantaj() {
         
         // === EKİP DURUMU (Toplam puana göre sıralı) ===
         const sortedPersonelList = [...personelList].sort((a, b) => b.toplamPuan - a.toplamPuan);
-        
-        // Kilit ikonu SVG (maskeleme için)
-        const lockIcon = `<svg width="14" height="14" fill="none" stroke="var(--tx3)" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`;
-        
         html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:20px">`;
         sortedPersonelList.forEach(p => {
-            // Maskeleme kontrolü
-            const isMasked = !p.canViewPuan;
+            const isRisk = p.toplamPuan <= -3;
+            const isDanger = p.primDurumu === 'prim_yok';
+            const puanColor = p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx)');
+            const puanSign = p.toplamPuan > 0 ? '+' : '';
+            const cardBorder = isDanger ? '#e74c3c' : (isRisk ? '#f39c12' : brandColor);
             
-            const isRisk = !isMasked && p.toplamPuan <= -3;
-            const isDanger = !isMasked && p.primDurumu === 'prim_yok';
-            const puanColor = isMasked ? 'var(--tx3)' : (p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx)'));
-            const puanSign = !isMasked && p.toplamPuan > 0 ? '+' : '';
-            const cardBorder = isMasked ? 'var(--tx3)' : (isDanger ? '#e74c3c' : (isRisk ? '#f39c12' : brandColor));
-            
-            // Yıldız gösterimi - maskelenmişse kilit
-            const yildizlar = isMasked ? '' : ('★'.repeat(p.performansYildiz || 3) + '☆'.repeat(5 - (p.performansYildiz || 3)));
+            // Yıldız gösterimi - BÜYÜTÜLDÜ
+            const yildizlar = '★'.repeat(p.performansYildiz || 3) + '☆'.repeat(5 - (p.performansYildiz || 3));
             const yildizColor = p.performansYildiz >= 4 ? '#f1c40f' : (p.performansYildiz >= 3 ? '#95a5a6' : '#e74c3c');
             
-            // Maskelenmiş değerler
-            const toplamDisplay = isMasked ? lockIcon : `${puanSign}${p.toplamPuan}`;
-            const manuelDisplay = isMasked ? lockIcon : `${p.manuelPuan > 0 ? '+' : ''}${p.manuelPuan || 0}`;
-            const otomatikDisplay = isMasked ? lockIcon : `${p.otomatikPuan > 0 ? '+' : ''}${p.otomatikPuan || 0}`;
-            
             html += `
-                <div style="background:linear-gradient(135deg,${isMasked ? 'var(--bg3)' : brandBg},var(--cardBg));border:2px solid ${cardBorder}30;border-left:4px solid ${cardBorder};border-radius:12px;padding:16px;transition:all .2s;${isMasked ? 'opacity:.85;' : ''}" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                <div style="background:linear-gradient(135deg,${brandBg},var(--cardBg));border:2px solid ${cardBorder}30;border-left:4px solid ${cardBorder};border-radius:12px;padding:16px;transition:all .2s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
                     <!-- Header - TIKLANABİLİR -->
-                    <div onclick="${isMasked ? '' : `showPersonelPuanDetay('${p.id}', '${p.name.replace(/'/g, "\\'")}')`}" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;${isMasked ? '' : 'cursor:pointer;'}padding:8px;margin:-8px;border-radius:8px;transition:background .15s" ${isMasked ? '' : `onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"`}>
+                    <div onclick="showPersonelPuanDetay('${p.id}', '${p.name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;cursor:pointer;padding:8px;margin:-8px;border-radius:8px;transition:background .15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
                         <div style="display:flex;align-items:center;gap:10px">
-                            <div style="width:36px;height:36px;background:linear-gradient(135deg,${isMasked ? 'var(--tx3)' : brandColor},${isMasked ? 'var(--tx3)' : brandColor}99);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;overflow:hidden">
-                                ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover;${isMasked ? 'filter:grayscale(50%);' : ''}">` : p.name.charAt(0).toUpperCase()}
+                            <div style="width:36px;height:36px;background:linear-gradient(135deg,${brandColor},${brandColor}99);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;overflow:hidden">
+                                ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover">` : p.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
                                 <div style="display:flex;align-items:center;gap:8px">
                                     <span style="font-weight:600;font-size:.95rem;color:var(--tx)">${p.displayName}</span>
-                                    ${isMasked ? lockIcon : `<span style="font-size:.9rem;color:${yildizColor};letter-spacing:1px">${yildizlar}</span>`}
+                                    <span style="font-size:.9rem;color:${yildizColor};letter-spacing:1px">${yildizlar}</span>
                                 </div>
                                 <div style="font-size:.75rem;color:var(--tx3)">${p.position || 'Barista'}</div>
                             </div>
                         </div>
                         <div style="text-align:right">
-                            <div style="font-size:${isMasked ? '1rem' : '1.4rem'};font-weight:800;color:${puanColor};line-height:1;display:flex;align-items:center;justify-content:flex-end">${toplamDisplay}</div>
-                            <div style="font-size:.65rem;color:var(--tx3);text-transform:uppercase">${isMasked ? 'gizli' : 'toplam'}</div>
+                            <div style="font-size:1.4rem;font-weight:800;color:${puanColor};line-height:1">${puanSign}${p.toplamPuan}</div>
+                            <div style="font-size:.65rem;color:var(--tx3);text-transform:uppercase">toplam</div>
                         </div>
                     </div>
                     
@@ -11061,36 +11042,34 @@ async function loadPuantaj() {
                     <div style="display:flex;gap:8px;margin-bottom:12px;background:var(--bg3);padding:10px;border-radius:8px">
                         <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
                             <div style="font-size:.65rem;color:var(--tx3);margin-bottom:2px">Manuel</div>
-                            <div style="font-size:.9rem;font-weight:700;color:${isMasked ? 'var(--tx3)' : (p.manuelPuan > 0 ? '#27ae60' : p.manuelPuan < 0 ? '#e74c3c' : 'var(--tx2)')};display:flex;align-items:center;justify-content:center">
-                                ${manuelDisplay}
+                            <div style="font-size:.9rem;font-weight:700;color:${p.manuelPuan > 0 ? '#27ae60' : p.manuelPuan < 0 ? '#e74c3c' : 'var(--tx2)'}">
+                                ${p.manuelPuan > 0 ? '+' : ''}${p.manuelPuan || 0}
                             </div>
                         </div>
                         <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
                             <div style="font-size:.65rem;color:var(--tx3);margin-bottom:2px">Otomatik</div>
-                            <div style="font-size:.9rem;font-weight:700;color:${isMasked ? 'var(--tx3)' : (p.otomatikPuan > 0 ? '#27ae60' : p.otomatikPuan < 0 ? '#e74c3c' : 'var(--tx2)')};display:flex;align-items:center;justify-content:center">
-                                ${otomatikDisplay}
+                            <div style="font-size:.9rem;font-weight:700;color:${p.otomatikPuan > 0 ? '#27ae60' : p.otomatikPuan < 0 ? '#e74c3c' : 'var(--tx2)'}">
+                                ${p.otomatikPuan > 0 ? '+' : ''}${p.otomatikPuan || 0}
                             </div>
                         </div>
                         <div style="flex:1;text-align:center">
                             <div style="font-size:.65rem;color:var(--tx3);margin-bottom:2px">Toplam</div>
-                            <div style="font-size:.9rem;font-weight:700;color:${puanColor};display:flex;align-items:center;justify-content:center">
-                                ${toplamDisplay}
+                            <div style="font-size:.9rem;font-weight:700;color:${puanColor}">
+                                ${puanSign}${p.toplamPuan}
                             </div>
                         </div>
                     </div>
                     
                     <!-- Mini Stats - Marka Renkleri ile -->
                     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-                        ${isMasked ? `<span style="font-size:.65rem;padding:3px 6px;background:var(--bg3);color:var(--tx3);border-radius:4px;display:flex;align-items:center;gap:4px">${lockIcon} Detaylar gizli</span>` : `
                         ${p.autoMissed > 0 ? `<span style="font-size:.65rem;padding:3px 6px;background:rgba(231,76,60,.12);color:#c0392b;border-radius:4px">${p.autoMissed} eksik check</span>` : ''}
                         ${p.autoOnTime > 0 ? `<span style="font-size:.65rem;padding:3px 6px;background:rgba(39,174,96,.12);color:#1e8449;border-radius:4px">${p.autoOnTime} tam check</span>` : ''}
                         ${p.negatifOlay > 0 && p.kayitSayisi > 0 ? `<span style="font-size:.65rem;padding:3px 6px;background:rgba(231,76,60,.12);color:#c0392b;border-radius:4px">${p.kayitSayisi} manuel</span>` : ''}
                         ${p.negatifOlay === 0 && p.pozitifOlay === 0 ? `<span style="font-size:.65rem;padding:3px 6px;background:${brandBg};color:var(--tx3);border-radius:4px">Henüz kayıt yok</span>` : ''}
-                        `}
                     </div>
                     
                     <!-- Action Button - Animasyonlu -->
-                    ${!isBarista && !isMasked ? `
+                    ${!isBarista ? `
                     <div style="display:flex;gap:8px">
                         <button class="btn-evaluate-pulse" style="flex:1;padding:10px;background:linear-gradient(135deg,${brandBg},${brandBg});border:1px solid ${brandColor}40;color:${brandColor};border-radius:8px;font-weight:500;font-size:.8rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px" onclick="showPuantajModal('${p.id}', '${p.name}')" onmouseover="this.style.background='linear-gradient(135deg,${brandColor}20,${brandColor}10)';this.style.borderColor='${brandColor}'" onmouseout="this.style.background='linear-gradient(135deg,${brandBg},${brandBg})';this.style.borderColor='${brandColor}40'">
                             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -11109,58 +11088,42 @@ async function loadPuantaj() {
         
         
         let hasRecords = false;
-        const lockIconSmall = `<svg width="12" height="12" fill="none" stroke="var(--tx3)" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`;
-        
         personelList.forEach(p => {
             if (p.puanlar && p.puanlar.length > 0) {
                 hasRecords = true;
-                const isMasked = !p.canViewPuan;
-                
                 html += `<div style="margin-bottom:16px">`;
-                html += `<div style="font-size:.9rem;font-weight:600;color:var(--tx);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--cardBorder);display:flex;align-items:center;gap:8px">${p.name} ${isMasked ? lockIconSmall : ''}</div>`;
-                
-                if (isMasked) {
-                    // Maskelenmiş görünüm
+                html += `<div style="font-size:.9rem;font-weight:600;color:var(--tx);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--cardBorder)">${p.name}</div>`;
+                p.puanlar.forEach(puan => {
+                    if (puan.type === 'prim_reset') return; // Prim sıfırlama kayıtlarını atla
+                    const tarih = puan.createdAt?.toDate?.() ? puan.createdAt.toDate().toLocaleDateString('tr-TR') : '-';
+                    const yildiz = puan.score || 3;
+                    const stars = '★'.repeat(yildiz) + '☆'.repeat(5 - yildiz);
+                    const puanDegeri = yildiz - 3; // 1★=-2, 2★=-1, 3★=0, 4★=+1, 5★=+2
+                    const isNegative = puanDegeri < 0;
+                    const puanEtki = puanDegeri > 0 ? `+${puanDegeri}` : `${puanDegeri}`;
+                    const bgColor = isNegative ? 'rgba(231,76,60,.08)' : (puanDegeri > 0 ? 'rgba(39,174,96,.08)' : 'var(--bg3)');
+                    const borderColor = isNegative ? 'rgba(231,76,60,.2)' : (puanDegeri > 0 ? 'rgba(39,174,96,.2)' : 'var(--cardBorder)');
+                    
+                    // Yönetici adını göster
+                    const yonetici = puan.createdBy || 'Bilinmiyor';
+                    const yoneticiKisa = yonetici.includes('@') ? yonetici.split('@')[0] : yonetici;
+                    
                     html += `
-                        <div style="display:flex;align-items:center;gap:8px;padding:12px;background:var(--bg3);border:1px solid var(--cardBorder);border-radius:10px;color:var(--tx3);font-size:.8rem">
-                            ${lockIconSmall}
-                            <span>${p.puanlar.filter(x => x.type !== 'prim_reset').length} kayıt · Detaylar gizli</span>
-                        </div>
-                    `;
-                } else {
-                    // Normal görünüm
-                    p.puanlar.forEach(puan => {
-                        if (puan.type === 'prim_reset') return; // Prim sıfırlama kayıtlarını atla
-                        const tarih = puan.createdAt?.toDate?.() ? puan.createdAt.toDate().toLocaleDateString('tr-TR') : '-';
-                        const yildiz = puan.score || 3;
-                        const stars = '★'.repeat(yildiz) + '☆'.repeat(5 - yildiz);
-                        const puanDegeri = yildiz - 3; // 1★=-2, 2★=-1, 3★=0, 4★=+1, 5★=+2
-                        const isNegative = puanDegeri < 0;
-                        const puanEtki = puanDegeri > 0 ? `+${puanDegeri}` : `${puanDegeri}`;
-                        const bgColor = isNegative ? 'rgba(231,76,60,.08)' : (puanDegeri > 0 ? 'rgba(39,174,96,.08)' : 'var(--bg3)');
-                        const borderColor = isNegative ? 'rgba(231,76,60,.2)' : (puanDegeri > 0 ? 'rgba(39,174,96,.2)' : 'var(--cardBorder)');
-                        
-                        // Yönetici adını göster
-                        const yonetici = puan.createdBy || 'Bilinmiyor';
-                        const yoneticiKisa = yonetici.includes('@') ? yonetici.split('@')[0] : yonetici;
-                        
-                        html += `
-                            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:${bgColor};border:1px solid ${borderColor};border-radius:10px;margin-bottom:8px">
-                                <div style="display:flex;align-items:center;gap:12px">
-                                    <span style="font-size:.85rem;color:#f1c40f">${stars}</span>
-                                    <div>
-                                        <div style="color:var(--tx);font-size:.85rem;font-weight:500">${puan.note || '-'}</div>
-                                        <div style="color:var(--tx3);font-size:.7rem">${tarih} · ${yoneticiKisa}</div>
-                                    </div>
-                                </div>
-                                <div style="display:flex;align-items:center;gap:10px">
-                                    <span style="font-weight:600;color:${isNegative ? '#e74c3c' : '#27ae60'};font-size:.9rem">${puanEtki}</span>
-                                    ${!isBarista ? `<button onclick="deletePuantajEntry('${puan.id}')" style="background:rgba(255,107,107,.1);border:none;color:#e74c3c;cursor:pointer;font-size:.75rem;padding:6px 10px;border-radius:6px;transition:all .2s" onmouseover="this.style.background='rgba(255,107,107,.2)'" onmouseout="this.style.background='rgba(255,107,107,.1)'">Sil</button>` : ''}
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:${bgColor};border:1px solid ${borderColor};border-radius:10px;margin-bottom:8px">
+                            <div style="display:flex;align-items:center;gap:12px">
+                                <span style="font-size:.85rem;color:#f1c40f">${stars}</span>
+                                <div>
+                                    <div style="color:var(--tx);font-size:.85rem;font-weight:500">${puan.note || '-'}</div>
+                                    <div style="color:var(--tx3);font-size:.7rem">${tarih} · ${yoneticiKisa}</div>
                                 </div>
                             </div>
-                        `;
-                    });
-                }
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <span style="font-weight:600;color:${isNegative ? '#e74c3c' : '#27ae60'};font-size:.9rem">${puanEtki}</span>
+                                ${!isBarista ? `<button onclick="deletePuantajEntry('${puan.id}')" style="background:rgba(255,107,107,.1);border:none;color:#e74c3c;cursor:pointer;font-size:.75rem;padding:6px 10px;border-radius:6px;transition:all .2s" onmouseover="this.style.background='rgba(255,107,107,.2)'" onmouseout="this.style.background='rgba(255,107,107,.1)'">Sil</button>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
                 html += `</div>`;
             }
         });
@@ -11190,36 +11153,15 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
         const endDay = new Date(yil, parseInt(ay), 0).getDate();
         const endDate = `${yil}-${ay}-${endDay.toString().padStart(2, '0')}`;
         
-        // Hem eski puantajNotes hem yeni puantaj koleksiyonunu oku (geriye uyumluluk + CF)
-        const [notesSnapshot, puantajSnapshot] = await Promise.all([
-            db.collection('puantajNotes').where('branch', '==', sube).get(),
-            db.collection('puantaj').where('branch', '==', sube).get()
-        ]);
+        const notesSnapshot = await db.collection('puantajNotes')
+            .where('branch', '==', sube)
+            .get();
         
         const filteredDocs = [];
-        const seenIds = new Set();
-        
-        // Eski puantajNotes kayıtları
         notesSnapshot.forEach(doc => {
             const note = doc.data();
             if (note.date >= startDate && note.date <= endDate) {
                 filteredDocs.push({ id: doc.id, ...note });
-                seenIds.add(doc.id);
-            }
-        });
-        
-        // Yeni puantaj kayıtları (CF'den gelen)
-        puantajSnapshot.forEach(doc => {
-            if (seenIds.has(doc.id)) return; // Duplicate önle
-            const note = doc.data();
-            const noteDate = note.eventDate || note.date;
-            if (noteDate >= startDate && noteDate <= endDate) {
-                filteredDocs.push({ 
-                    id: doc.id, 
-                    ...note, 
-                    date: noteDate,
-                    points: note.score || note.points || 0
-                });
             }
         });
         
@@ -11231,14 +11173,14 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
         let totalAutoPoints = 0;
         
         filteredDocs.forEach(note => {
-            const date = note.eventDate || note.date || 'unknown';
+            const date = note.date || 'unknown';
             if (!notesByDate[date]) notesByDate[date] = [];
             notesByDate[date].push(note);
             
             if (!notesByPerson[note.personelId]) notesByPerson[note.personelId] = [];
             notesByPerson[note.personelId].push(note);
             
-            totalAutoPoints += note.score || note.points || 0;
+            totalAutoPoints += note.points || 0;
         });
         
         // Cache'e kaydet (detay modal için)
@@ -11276,7 +11218,7 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
             
             let personTotal = 0, missed = 0, late = 0, onTime = 0;
             notes.forEach(n => {
-                personTotal += n.score || n.points || 0;
+                personTotal += n.points || 0;
                 if (n.status === 'missed') missed++;
                 else if (n.status === 'late') late++;
                 else onTime++;
@@ -11316,13 +11258,12 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
             notes.forEach(note => {
                 const person = personelList.find(p => p.id === note.personelId);
                 const personName = person?.name || note.personelName || 'Bilinmeyen';
-                const notePoints = note.score || note.points || 0;
-                const noteColor = notePoints > 0 ? '#27ae60' : (notePoints < 0 ? '#e74c3c' : 'var(--tx3)');
+                const noteColor = note.points > 0 ? '#27ae60' : (note.points < 0 ? '#e74c3c' : 'var(--tx3)');
                 
                 // Detaylı açıklama oluştur
                 let aciklama = '';
-                const checkSaat = note.eventTime || note.checkTime || '';
-                const checkTip = note.checklistType || note.checkType || note.note || 'Check';
+                const checkSaat = note.checkTime || '';
+                const checkTip = note.checkType || note.note || 'Check';
                 
                 if (note.status === 'missed') {
                     aciklama = `${checkSaat ? checkSaat + ' ' : ''}${checkTip} tamamlanmadı`;
@@ -11337,7 +11278,7 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
                 html += `
                     <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${statusBg};border-radius:8px;margin-bottom:6px">
                         <div style="width:28px;height:28px;min-width:28px;background:${noteColor}15;border-radius:50%;display:flex;align-items:center;justify-content:center">
-                            <span style="font-size:.75rem;font-weight:700;color:${noteColor}">${notePoints > 0 ? '+' : ''}${notePoints}</span>
+                            <span style="font-size:.75rem;font-weight:700;color:${noteColor}">${note.points > 0 ? '+' : ''}${note.points}</span>
                         </div>
                         <div style="flex:1;min-width:0">
                             <div style="font-size:.8rem;font-weight:600;color:var(--tx)">${personName}</div>
@@ -11433,18 +11374,16 @@ function showPersonelPuanDetay(personelId, personName) {
     `;
     
     // Tarihe göre sırala ve göster
-    const sortedNotes = [...notes].sort((a, b) => (b.date || b.eventDate || '').localeCompare(a.date || a.eventDate || ''));
+    const sortedNotes = [...notes].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     sortedNotes.forEach(note => {
-        const noteDate = note.eventDate || note.date;
-        const dateObj = new Date(noteDate);
+        const dateObj = new Date(note.date);
         const gun = gunAdi[dateObj.getDay()];
         const tarih = `${dateObj.getDate()} ${ayAdi[dateObj.getMonth() + 1]}`;
-        const notePoints = note.score || note.points || 0;
-        const noteColor = notePoints > 0 ? '#27ae60' : (notePoints < 0 ? '#e74c3c' : 'var(--tx3)');
+        const noteColor = note.points > 0 ? '#27ae60' : (note.points < 0 ? '#e74c3c' : 'var(--tx3)');
         const statusBg = note.status === 'onTime' ? 'rgba(39,174,96,.08)' : (note.status === 'late' ? 'rgba(243,156,18,.08)' : 'rgba(231,76,60,.08)');
         const statusText = note.status === 'onTime' ? 'Vaktinde' : (note.status === 'late' ? 'Geç' : 'Eksik');
-        const checkSaat = note.eventTime || note.checkTime || '';
-        const checkTip = note.checklistType || note.checkType || 'Platform Check';
+        const checkSaat = note.checkTime || '';
+        const checkTip = note.checkType || 'Platform Check';
         
         body += `
             <div style="display:flex;align-items:center;gap:10px;padding:10px;background:${statusBg};border-radius:8px;margin-bottom:6px">
@@ -11453,7 +11392,7 @@ function showPersonelPuanDetay(personelId, personName) {
                     <div style="font-size:.8rem;color:var(--tx);font-weight:500">${checkTip} ${checkSaat ? '· ' + checkSaat : ''}</div>
                     <div style="font-size:.7rem;color:var(--tx2)">${statusText}</div>
                 </div>
-                <div style="font-weight:700;color:${noteColor};font-size:.85rem">${notePoints > 0 ? '+' : ''}${notePoints}</div>
+                <div style="font-weight:700;color:${noteColor};font-size:.85rem">${note.points > 0 ? '+' : ''}${note.points}</div>
                 ${canManage ? `<button onclick="deleteAutoNote('${note.id}');closeModal();setTimeout(loadPuantaj,500)" style="background:rgba(231,76,60,.1);border:none;color:#e74c3c;cursor:pointer;padding:4px 8px;border-radius:4px;font-size:.65rem">Sil</button>` : ''}
             </div>
         `;
@@ -15522,201 +15461,53 @@ function updateLogos(theme) {
 })();
 
 // ==================== ADMIN ŞİFRE DEĞİŞTİRME ====================
-// ==================== ADMIN HESAP YÖNETİMİ ====================
-
-// Admin e-postasını güncelle
-async function updateAdminEmail() {
-    if (!isAdminUser()) {
-        toast('Bu işlem için yetkiniz yok', 'error');
-        return;
-    }
-    
-    const currentEmail = currentUser?.email?.toLowerCase();
-    const newEmail = document.getElementById('admin_new_email')?.value?.trim()?.toLowerCase();
-    
-    if (!newEmail) {
-        toast('Yeni e-posta girin', 'error');
-        return;
-    }
-    
-    if (!newEmail.includes('@')) {
-        toast('Geçerli bir e-posta girin', 'error');
-        return;
-    }
-    
-    if (newEmail === currentEmail) {
-        toast('Yeni e-posta mevcut ile aynı', 'error');
-        return;
-    }
-    
-    // Onay al
-    confirmModal('E-posta Değiştir', `
-        <div style="text-align:center">
-            <div style="margin-bottom:16px">
-                <svg width="48" height="48" fill="none" stroke="#008c95" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-            </div>
-            <div style="color:var(--tx2);margin-bottom:8px">E-posta adresiniz değiştirilecek:</div>
-            <div style="font-size:.85rem;color:var(--tx3);margin-bottom:4px">${currentEmail}</div>
-            <div style="color:var(--tx);font-weight:500">↓</div>
-            <div style="font-size:.85rem;color:#008c95;font-weight:500">${newEmail}</div>
-            <div style="margin-top:16px;padding:12px;background:rgba(231,76,60,.1);border-radius:8px;font-size:.8rem;color:#e74c3c">
-                Değişiklikten sonra yeni e-posta ile giriş yapmanız gerekecek.
-            </div>
-        </div>
-    `, async () => {
-        try {
-            toast('E-posta güncelleniyor...', 'info');
-            
-            // 1. Mevcut credentials'ı al
-            const oldCredential = await getCredential(currentEmail);
-            if (!oldCredential) {
-                toast('Mevcut şifre bilgisi alınamadı', 'error');
-                return;
-            }
-            
-            // 2. Yeni email için credentials oluştur
-            const saved = await saveCredential(newEmail, oldCredential);
-            if (!saved) {
-                toast('Yeni credentials oluşturulamadı', 'error');
-                return;
-            }
-            
-            // 3. Eski credentials'ı sil
-            await deleteCredential(currentEmail);
-            
-            // 4. adminEmails listesini güncelle
-            const newAdminEmails = _adminEmails.map(e => e === currentEmail ? newEmail : e);
-            await saveAdminEmails(newAdminEmails);
-            
-            // 5. users koleksiyonunu güncelle
-            const uid = firebase.auth().currentUser?.uid;
-            if (uid) {
-                await db.collection('users').doc(uid).update({ 
-                    email: newEmail,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp() 
-                });
-            }
-            
-            toast('E-posta güncellendi. Yeniden giriş yapın.', 'success');
-            
-            // 6. Çıkış yap
-            setTimeout(async () => {
-                localStorage.removeItem('mb_user');
-                await firebase.auth().signOut();
-                window.location.href = 'login.html';
-            }, 2000);
-            
-        } catch (e) {
-            console.error('E-posta güncelleme hatası:', e);
-            toast('E-posta güncellenemedi: ' + e.message, 'error');
-        }
-    });
-}
-
-// Admin şifresini güncelle
-async function updateAdminPassword() {
-    if (!isAdminUser()) {
-        toast('Bu işlem için yetkiniz yok', 'error');
-        return;
-    }
-    
-    const newPassword = document.getElementById('admin_new_password')?.value;
-    const confirmPassword = document.getElementById('admin_confirm_password')?.value;
-    
-    if (!newPassword) {
-        toast('Yeni şifre girin', 'error');
-        return;
-    }
-    
-    if (newPassword.length < 6) {
-        toast('Şifre en az 6 karakter olmalı', 'error');
-        return;
-    }
-    
-    if (newPassword !== confirmPassword) {
-        toast('Şifreler eşleşmiyor', 'error');
-        return;
-    }
-    
-    try {
-        const email = currentUser?.email;
-        const saved = await saveCredential(email, newPassword);
-        
-        if (saved) {
-            toast('Şifre güncellendi', 'success');
-            document.getElementById('admin_new_password').value = '';
-            document.getElementById('admin_confirm_password').value = '';
-        } else {
-            toast('Şifre güncellenemedi', 'error');
-        }
-    } catch (e) {
-        console.error('Şifre güncelleme hatası:', e);
-        toast('Şifre güncellenemedi: ' + e.message, 'error');
-    }
-}
-
-// Admin ismini güncelle
-async function updateAdminName() {
-    if (!isAdminUser()) {
-        toast('Bu işlem için yetkiniz yok', 'error');
-        return;
-    }
-    
-    const newName = document.getElementById('admin_new_username')?.value?.trim();
-    
-    if (!newName) {
-        toast('Yeni isim girin', 'error');
-        return;
-    }
-    
-    try {
-        const uid = firebase.auth().currentUser?.uid;
-        if (uid) {
-            await db.collection('users').doc(uid).update({ 
-                name: newName,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp() 
-            });
-        }
-        
-        // localStorage güncelle
-        if (currentUser) {
-            currentUser.name = newName;
-            localStorage.setItem('mb_user', JSON.stringify(currentUser));
-        }
-        
-        toast('İsim güncellendi', 'success');
-        document.getElementById('admin_new_username').value = '';
-        
-        // UI güncelle
-        const nameElements = document.querySelectorAll('[data-admin-name]');
-        nameElements.forEach(el => el.textContent = newName);
-        
-    } catch (e) {
-        console.error('İsim güncelleme hatası:', e);
-        toast('İsim güncellenemedi: ' + e.message, 'error');
-    }
-}
-
-// Admin ayarlarını UI'a yükle
-function loadAdminSettingsToUI() {
-    const emailInput = document.getElementById('admin_current_email');
-    if (emailInput) {
-        emailInput.value = currentUser?.email || '';
-    }
-    
-    const nameInput = document.getElementById('admin_new_username');
-    if (nameInput) {
-        nameInput.placeholder = currentUser?.name || 'Yönetici';
-    }
-}
-
-// Eski fonksiyon (geriye uyumluluk)
 async function updateAdminCredentials() {
-    const newPassword = document.getElementById('admin_new_password')?.value;
-    const newName = document.getElementById('admin_new_username')?.value?.trim();
+    const newUsername = document.getElementById('admin_new_username').value.trim();
+    const newPassword = document.getElementById('admin_new_password').value;
+    const confirmPassword = document.getElementById('admin_confirm_password').value;
     
-    if (newPassword) await updateAdminPassword();
-    if (newName) await updateAdminName();
+    if (!newUsername && !newPassword) { toast('En az bir alan doldurun', 'error'); return; }
+    if (newPassword && newPassword !== confirmPassword) { toast('Şifreler eşleşmiyor', 'error'); return; }
+    if (newPassword && newPassword.length < 6) { toast('Şifre en az 6 karakter olmalı', 'error'); return; }
+    
+    try {
+        const user = firebase.auth().currentUser;
+        if (!user) { toast('Oturum bulunamadı, tekrar giriş yapın', 'error'); return; }
+        
+        // Firebase Auth şifresini güncelle
+        if (newPassword) {
+            await user.updatePassword(newPassword);
+            console.log('Firebase Auth şifresi güncellendi');
+        }
+        
+        // Firestore'daki kullanıcı bilgilerini güncelle
+        const updateData = { updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+        if (newUsername) updateData.name = newUsername;
+        
+        // users koleksiyonunda güncelle (email ile bul)
+        const userDoc = await db.collection('users').where('email', '==', user.email).get();
+        if (!userDoc.empty) {
+            await db.collection('users').doc(userDoc.docs[0].id).update(updateData);
+        }
+        
+        // personel koleksiyonunda da güncelle
+        const personelDoc = await db.collection('personel').where('email', '==', user.email).get();
+        if (!personelDoc.empty && newPassword) {
+            await db.collection('personel').doc(personelDoc.docs[0].id).update({ password: newPassword });
+        }
+        
+        toast('Giriş bilgileri güncellendi', 'success');
+        document.getElementById('admin_new_username').value = '';
+        document.getElementById('admin_new_password').value = '';
+        document.getElementById('admin_confirm_password').value = '';
+    } catch (e) { 
+        console.error('Şifre güncelleme hatası:', e); 
+        if (e.code === 'auth/requires-recent-login') {
+            toast('Güvenlik için tekrar giriş yapmanız gerekiyor', 'error');
+        } else {
+            toast('Güncelleme hatası: ' + e.message, 'error'); 
+        }
+    }
 }
 
 // ==================== ADMIN EMAIL YÖNETİMİ ====================
@@ -18487,6 +18278,18 @@ async function findPersonelByDisplayName(displayName, branch) {
 }
 
 async function createAutoPuantajNote(personelId, personelName, checkType, checkTime, status, points, branch, date) {
+    // === CF AKTİF KONTROLÜ ===
+    // frontendAutoPuanEnabled false ise yazma yapma (CF hallediyor)
+    try {
+        const cfConfigDoc = await db.collection('config').doc('system').get();
+        if (cfConfigDoc.exists && cfConfigDoc.data()?.frontendAutoPuanEnabled === false) {
+            console.log('[AutoPuan] ⏸️ Frontend yazması devre dışı (CF aktif). Atlanıyor:', checkType, checkTime);
+            return;
+        }
+    } catch (e) {
+        console.warn('[AutoPuan] Config kontrolü başarısız:', e.message);
+    }
+    
     const rules = CHECK_RULES[checkType];
     const checkName = rules?.name || checkType;
     
@@ -23024,13 +22827,6 @@ let personnelMapping = [];
 // ==================== ADMIN EMAIL KONTROLÜ ====================
 // Config'den dinamik admin listesi - varsayılan fallback
 let _adminEmails = ['admin@moonberrycoffee.com', 'tamer@moonberrycoffee.com'];
-
-// Helper: Mevcut kullanıcı admin mi? (email bazlı, dinamik)
-function isAdminUser() {
-    const email = currentUser?.email?.toLowerCase();
-    if (!email) return false;
-    return _adminEmails.includes(email) || currentUser?.role === 'yonetici';
-}
 
 async function checkAdminEmail(email) {
     if (!email) return false;
@@ -29159,18 +28955,30 @@ function canViewPoints(viewerRole, targetRole, viewerId, targetId, pointType = '
     // Herkes kendi puanını görebilir
     if (viewerId === targetId) return true;
     
-    // Bölge müdürü puanı → SADECE yönetici görebilir
+    // Rol hiyerarşisi: yonetici > bolge_muduru > magaza_muduru > mudur_yardimcisi > barista
+    const roleHierarchy = {
+        'yonetici': 5,
+        'bolge_muduru': 4,
+        'magaza_muduru': 3,
+        'mudur_yardimcisi': 2,
+        'barista': 1
+    };
+    
+    const viewerLevel = roleHierarchy[viewerRole] || 0;
+    const targetLevel = roleHierarchy[targetRole] || 0;
+    
+    // Bölge müdürü puanı sadece yönetici görebilir
     if (targetRole === 'bolge_muduru') {
         return viewerRole === 'yonetici';
     }
     
-    // Mağaza müdürü puanı → Üstleri + yardımcı görebilir (barista göremez)
-    if (targetRole === 'magaza_muduru') {
-        return viewerRole === 'yonetici' || viewerRole === 'bolge_muduru' || viewerRole === 'mudur_yardimcisi';
+    // Mağaza müdürü eksi puanı sadece üstleri görebilir (bolge_muduru, yonetici)
+    if (targetRole === 'magaza_muduru' && pointType === 'negative') {
+        return viewerLevel >= roleHierarchy['bolge_muduru'];
     }
     
-    // Diğer herkes (yardımcı, barista) → Herkes görebilir
-    return true;
+    // Diğer durumlarda üstler astların puanını görebilir
+    return viewerLevel > targetLevel;
 }
 
 /**
