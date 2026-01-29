@@ -10862,6 +10862,7 @@ async function loadPuantaj() {
             let negatifOlay = 0;
             let pozitifOlay = 0;
             let primResetBonus = 0;
+            let autoMissed = 0, autoLate = 0, autoOnTime = 0;
             
             // Manuel puanlar (yıldız sistemi - CF puanları hariç)
             puanlar.forEach(x => {
@@ -10876,7 +10877,7 @@ async function loadPuantaj() {
                     otomatikPuan += x.score || x.points || 0;
                     if (x.status === 'missed') { autoMissed++; negatifOlay++; }
                     else if (x.status === 'late') { autoLate++; negatifOlay++; }
-                    else if (x.score < 0 || x.points < 0) { negatifOlay++; } // CF missed için status olmayabilir
+                    else if (x.score < 0 || x.points < 0) { autoMissed++; negatifOlay++; } // CF missed için status olmayabilir
                     return;
                 }
                 
@@ -10891,8 +10892,7 @@ async function loadPuantaj() {
                 }
             });
             
-            // Otomatik puanlar (Check sisteminden)
-            let autoMissed = 0, autoLate = 0, autoOnTime = 0;
+            // Otomatik puanlar (eski puantajNotes'tan - varsa)
             otomatikPuanlar.forEach(n => {
                 otomatikPuan += n.points || 0;
                 if (n.status === 'missed') { autoMissed++; negatifOlay++; }
