@@ -10925,8 +10925,23 @@ async function loadPuantaj() {
         // Şubeye ait puantaj verilerini çek
         const puantajSnapshot = await db.collection('puantaj').where('period', '==', puantajKey).where('branch', '==', sube).get();
         
-        // Bölge müdürü puantajlarını da çek (branch='all' veya tüm şubeler)
-        const bolgeMuduruPuantajSnapshot = await db.collection('puantaj').where('period', '==', puantajKey).where('branch', '==', 'all').get();
+        // Bölge müdürü puantajlarını da çek - personelId ile (branch fark etmez)
+        // Bölge müdürlerinin doc.id'lerini topla
+        const bolgeMuduruDocIds = allPersonelDocs
+            .filter(doc => doc.data().role === 'bolge_muduru' || doc.data().branch === 'all')
+            .map(doc => doc.id);
+        
+        let bolgeMuduruPuantajSnapshot = { docs: [] };
+        if (bolgeMuduruDocIds.length > 0) {
+            // Her bölge müdürü için puantaj çek
+            for (const bmId of bolgeMuduruDocIds) {
+                const bmPuantaj = await db.collection('puantaj')
+                    .where('period', '==', puantajKey)
+                    .where('personelId', '==', bmId)
+                    .get();
+                bolgeMuduruPuantajSnapshot.docs.push(...bmPuantaj.docs);
+            }
+        }
         
         // === PERSONEL ID MAPPING OLUŞTUR ===
         // Farklı dönemlerde farklı personelId formatları kullanılmış olabilir
@@ -12326,11 +12341,15 @@ async function savePuantajFromModal() {
     const sube = document.getElementById('puantajSube').value;
     const puantajKey = `${yil}-${ay}`;
     
+    // Personelin gerçek branch'ini bul (bölge müdürü için 'all')
+    const personelData = window.puantajPersonelCache?.find(p => p.id === personelId);
+    const personelBranch = personelData?.role === 'bolge_muduru' ? 'all' : sube;
+    
     try {
         await db.collection('puantaj').add({
             personelId,
             period: puantajKey,
-            branch: sube,
+            branch: personelBranch,
             score,
             note,
             eventDate,
