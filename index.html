@@ -18358,6 +18358,16 @@ async function createAutoPuantajNote(personelId, personelName, checkType, checkT
 async function checkAndProcessMissedChecks() {
     if (!currentUser) return;
     
+    // === CF AKTİF KONTROLÜ - EN BAŞTA ===
+    // CF aktifse bu fonksiyon hiç çalışmasın (gereksiz işlem önleme)
+    try {
+        const cfCheck = await db.collection('config').doc('system').get();
+        if (cfCheck.exists && cfCheck.data()?.frontendAutoPuanEnabled === false) {
+            // Sessizce çık - console log bile basma
+            return;
+        }
+    } catch (e) { /* Config okunamazsa devam et */ }
+    
     // Yönetici her zaman çalıştırabilir
     if (currentUser.role !== 'yonetici') {
         // Firebase'den run_autopuan yetkisini kontrol et
