@@ -23315,80 +23315,117 @@ function selectCheckFromPanel(branch, type, timeSlot) {
 }
 
 // Checklist türlerini yükle
+let _checklistTypesLoading = false;
+let _checklistTypesLoadId = 0;
+
 async function loadChecklistTypes() {
     const branch = document.getElementById('checklistSube')?.value;
     const typeSelect = document.getElementById('checklistType');
     const buttonsContainer = document.getElementById('checklistTypeButtons');
-    if (!typeSelect || !branch) return;
     
-    // Şube değişti - real-time listener'ı güncelle
-    setupShiftListener(branch);
+    if (!typeSelect || !branch) {
+        console.warn('[Checklist] typeSelect veya branch yok:', { typeSelect: !!typeSelect, branch });
+        return;
+    }
     
-    // Config'i HER ZAMAN yükle (şube değişikliğinde güncel veri için)
+    // Race condition önleme
+    const loadId = ++_checklistTypesLoadId;
+    
+    // Eğer zaten yükleniyor ve aynı şube değilse bekle
+    if (_checklistTypesLoading) {
+        console.log('[Checklist] Yükleme devam ediyor, bekleniyor...');
+        await new Promise(r => setTimeout(r, 100));
+        if (loadId !== _checklistTypesLoadId) {
+            console.log('[Checklist] Yeni istek geldi, bu istek iptal');
+            return;
+        }
+    }
+    
+    _checklistTypesLoading = true;
+    
     try {
+        // Şube değişti - real-time listener'ı güncelle
+        setupShiftListener(branch);
+        
+        // Config'i yükle
         await loadSystemConfig();
-    } catch (e) {
-        console.warn('[Checklist] Config yüklenemedi:', e);
-    }
-    
-    const types = CHECKLIST_TYPES[branch] || [];
-    const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
-    
-    // Debug log
-    console.log('[Checklist] Türleri yüklendi:', branch, types.length, 'adet');
-    
-    // Duplicate önleme için seen set
-    const seenIds = new Set();
-    
-    // Hidden select güncelle
-    let selectHtml = '<option value="">-- Checklist Seçin --</option>';
-    types.forEach(t => {
-        if (t.managerOnly && !isManager) return;
-        const canonId = canonicalChecklistTypeId(t.id);
-        if (seenIds.has(canonId)) return; // Duplicate atla
-        seenIds.add(canonId);
-        selectHtml += `<option value="${canonId}">${t.name}</option>`;
-    });
-    typeSelect.innerHTML = selectHtml;
-    
-    // Butonlar için tekrar reset
-    seenIds.clear();
-    
-    // Butonları oluştur - Modern SVG ikonlar
-    let buttonsHtml = '';
-    types.forEach(t => {
-        if (t.managerOnly && !isManager) return;
-        const canonId = canonicalChecklistTypeId(t.id);
-        if (seenIds.has(canonId)) return; // Duplicate atla
-        seenIds.add(canonId);
-        const iconSvg = getIcon(t.icon || 'clipboard-check');
-        buttonsHtml += `
-            <button type="button" class="checklist-type-btn" data-type="${canonId}"
-                onclick="selectChecklistType('${canonId}')"
-                style="padding:12px 18px;border:1px solid var(--cardBorder);background:var(--bg2);color:var(--tx);border-radius:10px;cursor:pointer;font-size:.9rem;font-weight:500;transition:all .2s;display:flex;align-items:center;gap:10px">
-                <span style="opacity:.7">${iconSvg}</span>
-                ${t.name}
-            </button>
+        
+        // Race condition kontrolü - bu istek hala geçerli mi?
+        if (loadId !== _checklistTypesLoadId) {
+            console.log('[Checklist] İstek iptal (yeni istek geldi)');
+            return;
+        }
+        
+        const types = CHECKLIST_TYPES[branch] || [];
+        const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
+        
+        // Debug log
+        console.log('[Checklist] Türleri yüklendi:', branch, types.length, 'adet', 'CHECKLIST_TYPES keys:', Object.keys(CHECKLIST_TYPES));
+        
+        if (types.length === 0) {
+            console.warn('[Checklist] ⚠️ Bu şube için tür bulunamadı:', branch);
+            console.log('[Checklist] Mevcut CHECKLIST_TYPES:', JSON.stringify(CHECKLIST_TYPES, null, 2));
+        }
+        
+        // Duplicate önleme için seen set
+        const seenIds = new Set();
+        
+        // Hidden select güncelle
+        let selectHtml = '<option value="">-- Checklist Seçin --</option>';
+        types.forEach(t => {
+            if (t.managerOnly && !isManager) return;
+            const canonId = canonicalChecklistTypeId(t.id);
+            if (seenIds.has(canonId)) return;
+            seenIds.add(canonId);
+            selectHtml += `<option value="${canonId}">${t.name}</option>`;
+        });
+        typeSelect.innerHTML = selectHtml;
+        
+        // Butonlar için tekrar reset
+        seenIds.clear();
+        
+        // Butonları oluştur
+        let buttonsHtml = '';
+        types.forEach(t => {
+            if (t.managerOnly && !isManager) return;
+            const canonId = canonicalChecklistTypeId(t.id);
+            if (seenIds.has(canonId)) return;
+            seenIds.add(canonId);
+            const iconSvg = getIcon(t.icon || 'clipboard-check');
+            buttonsHtml += `
+                <button type="button" class="checklist-type-btn" data-type="${canonId}"
+                    onclick="selectChecklistType('${canonId}')"
+                    style="padding:12px 18px;border:1px solid var(--cardBorder);background:var(--bg2);color:var(--tx);border-radius:10px;cursor:pointer;font-size:.9rem;font-weight:500;transition:all .2s;display:flex;align-items:center;gap:10px">
+                    <span style="opacity:.7">${iconSvg}</span>
+                    ${t.name}
+                </button>
+            `;
+        });
+        
+        if (!buttonsHtml) {
+            buttonsHtml = `<div style="color:var(--tx3);font-size:.9rem;padding:10px">Bu şube için checklist bulunamadı (${branch}). Lütfen seed.html ile verileri yükleyin.</div>`;
+        }
+        
+        buttonsContainer.innerHTML = buttonsHtml;
+        console.log('[Checklist] Butonlar render edildi:', document.querySelectorAll('.checklist-type-btn').length, 'adet');
+        
+        // Formu temizle
+        document.getElementById('checklistFormContainer').innerHTML = `
+            <div style="text-align:center;padding:60px;color:var(--tx2)">
+                <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="opacity:.4;margin-bottom:16px">
+                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+                    <rect x="9" y="3" width="6" height="4" rx="1"/>
+                    <path d="M9 14l2 2 4-4"/>
+                </svg>
+                <div style="font-size:1.1rem;margin-bottom:8px">Checklist Seçin</div>
+                <div style="font-size:.85rem;opacity:.6">Yukarıdan checklist türü seçerek başlayın</div>
+            </div>
         `;
-    });
-    
-    if (!buttonsHtml) {
-        buttonsHtml = '<div style="color:var(--tx3);font-size:.9rem;padding:10px">Bu şube için checklist bulunamadı. Lütfen seed.html ile verileri yükleyin.</div>';
+    } catch (e) {
+        console.error('[Checklist] Yükleme hatası:', e);
+    } finally {
+        _checklistTypesLoading = false;
     }
-    buttonsContainer.innerHTML = buttonsHtml;
-    
-    // Formu temizle
-    document.getElementById('checklistFormContainer').innerHTML = `
-        <div style="text-align:center;padding:60px;color:var(--tx2)">
-            <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="opacity:.4;margin-bottom:16px">
-                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
-                <rect x="9" y="3" width="6" height="4" rx="1"/>
-                <path d="M9 14l2 2 4-4"/>
-            </svg>
-            <div style="font-size:1.1rem;margin-bottom:8px">Checklist Seçin</div>
-            <div style="font-size:.85rem;opacity:.6">Yukarıdan checklist türü seçerek başlayın</div>
-        </div>
-    `;
 }
 
 // Checklist türü seç (buton)
