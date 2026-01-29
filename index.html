@@ -8546,15 +8546,23 @@ async function executeDeleteBranch(branchName, index) {
         }
         log(`✓ ${weeklySnap.size} haftalık atama silindi`);
         
-        // 7. Puantaj notları sil (80%)
-        setProgress(80, 'Puantaj notları siliniyor...');
-        const puantajSnap = await db.collection('puantajNotes')
+        // 7. Puantaj kayıtları sil (80%)
+        setProgress(80, 'Puantaj kayıtları siliniyor...');
+        // Eski puantajNotes
+        const puantajNotesSnap = await db.collection('puantajNotes')
+            .where('branch', '==', branchName).get();
+        for (const doc of puantajNotesSnap.docs) {
+            await doc.ref.delete();
+            totalDeleted++;
+        }
+        // Yeni puantaj
+        const puantajSnap = await db.collection('puantaj')
             .where('branch', '==', branchName).get();
         for (const doc of puantajSnap.docs) {
             await doc.ref.delete();
             totalDeleted++;
         }
-        log(`✓ ${puantajSnap.size} puantaj notu silindi`);
+        log(`✓ ${puantajNotesSnap.size + puantajSnap.size} puantaj kaydı silindi`);
         
         // 8. Manager notları sil (85%)
         setProgress(85, 'Yönetici notları siliniyor...');
@@ -10756,8 +10764,35 @@ async function loadPuantaj() {
         const autoNotesData = {};
         let totalAutoRecords = 0;
         try {
-            const autoSnapshot = await db.collection('puantajNotes').get();
-            autoSnapshot.forEach(doc => {
+            // 1. Yeni puantaj koleksiyonundan oku (CF tarafından yazılıyor)
+            const puantajSnapshot = await db.collection('puantaj').get();
+            puantajSnapshot.forEach(doc => {
+                const note = doc.data();
+                const branchMatch = note.branch === sube || 
+                                   (note.branch && note.branch.includes(sube.split(' ')[1])) ||
+                                   (sube && sube.includes(note.branch));
+                
+                const noteDate = note.eventDate || note.date;
+                if (branchMatch && noteDate >= startDate && noteDate <= endDate) {
+                    const pid = note.personelId;
+                    if (pid) {
+                        if (!autoNotesData[pid]) autoNotesData[pid] = [];
+                        // Alan adlarını normalize et
+                        autoNotesData[pid].push({ 
+                            id: doc.id, 
+                            ...note,
+                            date: note.eventDate || note.date,
+                            points: note.score || note.points || 0,
+                            checkType: note.checklistType || note.checkType || note.type
+                        });
+                    }
+                    totalAutoRecords++;
+                }
+            });
+            
+            // 2. Eski puantajNotes koleksiyonundan da oku (geriye uyumluluk)
+            const notesSnapshot = await db.collection('puantajNotes').get();
+            notesSnapshot.forEach(doc => {
                 const note = doc.data();
                 const branchMatch = note.branch === sube || 
                                    (note.branch && note.branch.includes(sube.split(' ')[1])) ||
@@ -10765,18 +10800,15 @@ async function loadPuantaj() {
                 
                 if (branchMatch && note.date >= startDate && note.date <= endDate) {
                     const pid = note.personelId;
-                    
-                    // personelId ile kaydet
                     if (pid) {
                         if (!autoNotesData[pid]) autoNotesData[pid] = [];
                         autoNotesData[pid].push({ id: doc.id, ...note });
                     }
-                    
                     totalAutoRecords++;
                 }
             });
+            
             console.log(`[Puantaj] ${sube} için ${totalAutoRecords} otomatik kayıt bulundu`);
-            console.log('[Puantaj] autoNotesData keys:', Object.keys(autoNotesData));
         } catch (e) {
             console.error('Otomatik puanlar yüklenemedi:', e);
         }
@@ -18427,365 +18459,73 @@ async function findPersonelByDisplayName(displayName, branch) {
     return null;
 }
 
+// Manuel check puanı oluştur - puantaj koleksiyonuna yazar (CF ile uyumlu format)
 async function createAutoPuantajNote(personelId, personelName, checkType, checkTime, status, points, branch, date) {
     const rules = CHECK_RULES[checkType];
     const checkName = rules?.name || checkType;
     
     // === TAM İSİM LOOKUP ===
-    // personelName kısa isim olabilir ("Büşra S."), tam personeli bul
     const personelInfo = await findPersonelByDisplayName(personelName, branch);
     
     let finalPersonelId, finalPersonelName;
     
     if (personelInfo) {
-        // Tam isim bulundu
         finalPersonelId = personelInfo.uniqueId;
         finalPersonelName = personelInfo.name;
-        console.log(`[PuantajNote] ${personelName} → ${finalPersonelName} (${finalPersonelId})`);
     } else {
-        // Bulunamadı, gelen değerleri kullan
         finalPersonelId = personelId;
         finalPersonelName = personelName;
-        console.warn(`[PuantajNote] ${personelName} için tam isim bulunamadı, gelen değer kullanılıyor`);
     }
     
-    let note = '';
+    let reason = '';
     if (status === 'onTime') {
-        note = `${checkTime} ${checkName} vaktinde dolduruldu`;
+        reason = `${checkTime} ${checkName} vaktinde tamamlandı`;
     } else if (status === 'late') {
-        note = `${checkTime} ${checkName} geç dolduruldu`;
+        reason = `${checkTime} ${checkName} geç tamamlandı`;
     } else if (status === 'missed') {
-        note = `${checkTime} ${checkName} doldurulmadı`;
+        reason = `${checkTime} ${checkName} tamamlanmadı`;
     }
     
-    const noteId = `auto_${finalPersonelId}_${date}_${checkType}_${checkTime.replace(':', '')}`;
+    // CF formatıyla uyumlu ID
+    const noteId = `manual_${finalPersonelId}_${date}_${checkType}_${checkTime.replace(':', '')}`;
     
     try {
         // Önce var mı kontrol et
-        const existing = await db.collection('puantajNotes').doc(noteId).get();
+        const existing = await db.collection('puantaj').doc(noteId).get();
         if (existing.exists) {
-            console.log('Puantaj notu zaten var:', noteId);
             return;
         }
         
-        await db.collection('puantajNotes').doc(noteId).set({
+        // puantaj koleksiyonuna yaz (CF formatıyla uyumlu)
+        await db.collection('puantaj').doc(noteId).set({
             personelId: finalPersonelId,
             personelName: finalPersonelName,
             branch,
-            date,
-            type: checkType,
-            checkType,
-            checkTime,
+            eventDate: date,
+            eventTime: checkTime,
+            checklistType: checkType,
+            checklistName: checkName,
+            type: 'checklist_manual',
             status,
-            points,
-            note,
-            autoGenerated: true,
-            createdBy: 'Sistem',
+            score: points,
+            reason,
+            note: reason,
+            createdBy: currentUser?.email || 'Frontend',
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        console.log('✅ Puantaj notu oluşturuldu:', noteId, points);
     } catch (e) {
-        console.error('❌ Puantaj notu oluşturulamadı:', e.message);
+        console.error('Puantaj kaydı oluşturulamadı:', e.message);
     }
 }
 
-// Yapılmayan checkler için otomatik puan işle
-// ==================== OTOMATİK KAÇIRILAN CHECK KONTROLÜ ====================
-// Dashboard/checklist yüklendiğinde geçmiş check'leri kontrol eder ve kaçırılanlar için puan keser
-async function checkAndProcessMissedChecks() {
-    if (!currentUser) return;
-    
-    // Yönetici her zaman çalıştırabilir
-    if (currentUser.role !== 'yonetici') {
-        // Firebase'den run_autopuan yetkisini kontrol et
-        try {
-            const permDoc = await db.collection('advancedPermissions').doc(currentUser.role).get();
-            const perms = permDoc.exists ? permDoc.data() : DEFAULT_ROLE_PERMISSIONS[currentUser.role];
-            
-            if (!perms?.special?.run_autopuan) {
-                console.log('[AutoPuan] Bu rol için yetki yok:', currentUser.role);
-                return;
-            }
-        } catch (e) {
-            console.warn('[AutoPuan] Yetki kontrolü başarısız, varsayılan kullanılıyor');
-            // Varsayılana göre kontrol et
-            const defaultPerms = DEFAULT_ROLE_PERMISSIONS[currentUser.role];
-            if (!defaultPerms?.special?.run_autopuan) {
-                return;
-            }
-        }
-    }
-    
-    console.log('[AutoPuan] Kaçırılan check kontrolü başlıyor...');
-    
-    const now = new Date();
-    const today = formatDateLocal(now);
-    
-    // Dün de kontrol et (gece vardiyası için)
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = formatDateLocal(yesterday);
-    
-    // Kontrol edilecek tarihler
-    const datesToCheck = [yesterdayStr, today];
-    
-    // Şubeler
-    const branches = STATE.branches || [];
-    const userBranch = currentUser?.branch;
-    const branchesToCheck = (userBranch && userBranch !== 'all') ? [userBranch] : branches;
-    
-    // Şube oluşturma tarihlerini al
-    let branchCreatedAt = {};
-    try {
-        const configDoc = await db.collection('systemConfig').doc('checkRules').get();
-        if (configDoc.exists) {
-            branchCreatedAt = configDoc.data().branchCreatedAt || {};
-        }
-    } catch (e) {
-        console.warn('[AutoPuan] branchCreatedAt alınamadı:', e);
-    }
-    
-    for (const branch of branchesToCheck) {
-        // Şubenin oluşturulma tarihi
-        const branchCreatedDate = branchCreatedAt[branch];
-        
-        for (const date of datesToCheck) {
-            // Eğer kontrol edilen tarih şubenin oluşturulma tarihinden ÖNCE ise atla
-            if (branchCreatedDate && date < branchCreatedDate) {
-                console.log(`[AutoPuan] ${branch} - ${date} atlandı (şube ${branchCreatedDate} tarihinde oluşturuldu)`);
-                continue;
-            }
-            
-            // Shift personelini al
-            let shiftPersonnel = [];
-            try {
-                const weekKey = getWeekKey(new Date(date));
-                
-                // DÜZELTME: ID ile değil, query ile shift bul
-                const shiftSnap = await db.collection('shifts')
-                    .where('branch', '==', branch)
-                    .where('weekStart', '==', weekKey)
-                    .limit(1)
-                    .get();
-                
-                if (!shiftSnap.empty) {
-                    const shiftData = shiftSnap.docs[0].data();
-                    // GÜN İNDEKSİ: Excel formatı - 0=Pazartesi, 6=Pazar
-                    let dayIndex = new Date(date).getDay() - 1;
-                    if (dayIndex < 0) dayIndex = 6; // Pazar için
-                    const dayIndexStr = String(dayIndex);
-                    
-                    // DÜZELTME: personnel yerine personelShifts + personelOrder kullan
-                    const personelShifts = shiftData.personelShifts || {};
-                    const personelOrder = shiftData.personelOrder || Object.keys(personelShifts);
-                    const personelFullNames = shiftData.personelFullNames || {};
-                    
-                    for (const personId of personelOrder) {
-                        const shifts = personelShifts[personId] || {};
-                        const dayShift = shifts[dayIndexStr];
-                        
-                        // OFF, boş veya '-' değilse çalışıyor demek
-                        if (dayShift && 
-                            dayShift.toUpperCase() !== 'OFF' && 
-                            !dayShift.includes('OFF') &&
-                            dayShift !== '-' && 
-                            dayShift.trim() !== '') {
-                            // Tam ismini al
-                            const fullName = personelFullNames[personId] || personId;
-                            shiftPersonnel.push(fullName);
-                        }
-                    }
-                }
-            } catch(e) {
-                console.error('[AutoPuan] Shift okuma hatası:', branch, date, e.message);
-            }
-            
-            if (shiftPersonnel.length === 0) continue;
-            
-            // Her check türü için kontrol et
-            const checkTypes = ['gunluk', 'acilis', 'kapanis'];
-            
-            for (const checkType of checkTypes) {
-                const rules = CHECK_RULES[checkType];
-                if (!rules || !rules.points?.missed) continue;
-                
-                // timeSlots varsa her biri için kontrol et
-                // Array kontrolü - object veya undefined olabilir
-                let timeSlots = rules.timeSlots;
-                if (!Array.isArray(timeSlots)) {
-                    timeSlots = [];
-                }
-                
-                if (timeSlots.length > 0) {
-                    for (const timeSlot of timeSlots) {
-                        await checkSingleTimeSlot(branch, checkType, timeSlot, date, shiftPersonnel, rules);
-                    }
-                } else if (rules.deadline) {
-                    // Deadline bazlı check (acilis, kapanis)
-                    await checkDeadlineBasedCheck(branch, checkType, date, shiftPersonnel, rules);
-                }
-            }
-        }
-    }
-    
-    console.log('[AutoPuan] Kaçırılan check kontrolü tamamlandı');
-}
+// ==================== OTOMATİK PUAN KONTROLÜ ====================
+// AutoPuan artık Cloud Function tarafından yönetiliyor (her 3 dakika)
+// CF "puantaj" koleksiyonuna yazıyor
+// Frontend otomatik kontrol fonksiyonları kaldırıldı (gereksiz, duplicate riski)
+// Manuel check işlemleri için createAutoPuantajNote() yukarıda tanımlı
 
-// Tek bir timeSlot için check kontrolü
-async function checkSingleTimeSlot(branch, checkType, timeSlot, date, shiftPersonnel, rules) {
-    const now = new Date();
-    
-    // timeSlot string veya object olabilir - normalize et
-    let timeStr = timeSlot;
-    if (typeof timeSlot === 'object' && timeSlot !== null) {
-        // Object formatı: {start: '14:00', end: '15:00'} veya {time: '14:00'}
-        timeStr = timeSlot.start || timeSlot.time || timeSlot.slot || timeSlot.value || null;
-    }
-    if (typeof timeStr !== 'string' || !timeStr.includes(':')) {
-        console.warn('[AutoPuan] Geçersiz timeSlot formatı:', timeSlot);
-        return;
-    }
-    
-    const [slotHour, slotMinute] = timeStr.split(':').map(Number);
-    
-    // Check zamanı geçmiş mi?
-    const checkTime = new Date(date);
-    checkTime.setHours(slotHour, slotMinute, 0, 0);
-    
-    // Geç doldurum penceresi
-    const lateWindow = rules.lateWindow || 30;
-    const deadline = new Date(checkTime.getTime() + (rules.window?.after || 30) * 60000 + lateWindow * 60000);
-    
-    // Henüz süresi dolmamış
-    if (now < deadline) return;
-    
-    // Bu check doldurulmuş mu?
-    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType}_${date}_${timeStr.replace(':', '')}`;
-    
-    try {
-        const existing = await db.collection('checklistSubmissions').doc(submissionId).get();
-        
-        // Doc varsa ve status=missed değilse, doldurulmuş sayılır
-        if (existing.exists) {
-            const data = existing.data();
-            // Status=missed ise (manuel kaçırıldı işaretlenmişse) puan verilmeli
-            if (data.status !== 'missed' && data.pointStatus !== 'missed') {
-                return; // Doldurulmuş
-            }
-        }
-        
-        // Doldurulmamış veya missed - puan notu var mı kontrol et
-        for (const personName of shiftPersonnel) {
-            const personId = normalizePersonelId(personName);
-            const noteId = `auto_${personId}_${date}_${checkType}_${timeStr.replace(':', '')}`;
-            
-            const noteExists = await db.collection('puantajNotes').doc(noteId).get();
-            if (!noteExists.exists) {
-                // Puan notu oluştur
-                console.log(`[AutoPuan] Kaçırılan: ${personName} - ${checkType} ${timeStr} (${date})`);
-                await createAutoPuantajNote(
-                    personId,
-                    personName,
-                    checkType,
-                    timeStr,
-                    'missed',
-                    rules.points.missed,
-                    branch,
-                    date
-                );
-            }
-        }
-    } catch(e) {
-        console.warn('[AutoPuan] Hata:', e);
-    }
-}
 
-// Deadline bazlı check kontrolü (açılış, kapanış)
-async function checkDeadlineBasedCheck(branch, checkType, date, shiftPersonnel, rules) {
-    const now = new Date();
-    const [deadlineHour, deadlineMinute] = (rules.deadline || '23:59').split(':').map(Number);
-    
-    const deadline = new Date(date);
-    deadline.setHours(deadlineHour, deadlineMinute, 0, 0);
-    
-    // Kapanış için ertesi gün
-    if (checkType === 'kapanis' && deadlineHour < 12) {
-        deadline.setDate(deadline.getDate() + 1);
-    }
-    
-    // Henüz süresi dolmamış
-    if (now < deadline) return;
-    
-    // Bu check doldurulmuş mu?
-    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType}_${date}`;
-    
-    try {
-        const existing = await db.collection('checklistSubmissions').doc(submissionId).get();
-        
-        // Doc varsa ve status=missed değilse, doldurulmuş sayılır
-        if (existing.exists) {
-            const data = existing.data();
-            if (data.status !== 'missed' && data.pointStatus !== 'missed') {
-                return; // Doldurulmuş
-            }
-        }
-        
-        // Doldurulmamış veya missed - puan notu oluştur
-        for (const personName of shiftPersonnel) {
-            const personId = normalizePersonelId(personName);
-            const noteId = `auto_${personId}_${date}_${checkType}`;
-            
-            const noteExists = await db.collection('puantajNotes').doc(noteId).get();
-            if (!noteExists.exists) {
-                console.log(`[AutoPuan] Kaçırılan: ${personName} - ${checkType} (${date})`);
-                await createAutoPuantajNote(
-                    personId,
-                    personName,
-                    checkType,
-                    rules.deadline || '23:59',
-                    'missed',
-                    rules.points.missed,
-                    branch,
-                    date
-                );
-            }
-        }
-    } catch(e) {
-        console.warn('[AutoPuan] Hata:', e);
-    }
-}
-
-async function processMissedChecks(branch, checkType, timeSlot, date, shiftPersonnel) {
-    // Sadece yönetici/müdür görünümünde işle (tekrarlı işlemi önlemek için)
-    if (!['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role)) {
-        return;
-    }
-    
-    const rules = CHECK_RULES[checkType];
-    if (!rules || !rules.points?.missed) return;
-    
-    const missedPoints = rules.points.missed;
-    
-    // Her sorumlu personel için puan notu oluştur
-    for (const personName of shiftPersonnel) {
-        // TAM İSİM'den normalize edilmiş ID oluştur
-        const personId = normalizePersonelId(personName);
-        
-        console.log(`[puantajNote] Kayıt: personName="${personName}" → personId="${personId}"`);
-        
-        await createAutoPuantajNote(
-            personId,
-            personName,
-            checkType,
-            timeSlot,
-            'missed',
-            missedPoints,
-            branch,
-            date
-        );
-    }
-}
 
 // ==================== DASHBOARD CHECK KARTLARI ====================
 async function updateDashboardCheckCards() {
@@ -18941,8 +18681,8 @@ async function loadTodayChecks() {
         loadKPIDashboard();
     }
     
-    // Otomatik kaçırılan check kontrolü (tüm kullanıcılar için çalışır - güvenlik açığı yok)
-    setTimeout(() => checkAndProcessMissedChecks(), 5000);
+    // AutoPuan artık Cloud Function tarafından yönetiliyor (her 3dk)
+    // Frontend kodu kaldırıldı - CF 'puantaj' koleksiyonuna yazıyor
     
     // Shift verilerini yükle
     const shiftData = {};
