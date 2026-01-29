@@ -9812,11 +9812,22 @@ function showAddPersonelModal(editId = null) {
     // Yetki kontrolleri (dinamik)
     const isYonetici = currentUser?.role === 'yonetici';
     const isBolgeMuduru = currentUser?.role === 'bolge_muduru';
+    const isMudur = currentUser?.role === 'magaza_muduru';
+    const isMudurYardimcisi = currentUser?.role === 'mudur_yardimcisi' || currentUser?.role === 'magaza_mudur_yardimcisi';
     const perms = window.userAdvancedPermissions;
     const canSeeSalary = isYonetici || perms?.special?.view_salary;
     const canViewPassword = isYonetici || perms?.special?.view_password;
     const canAssignPassword = isYonetici || perms?.special?.assign_password;
     const canChangePassword = isYonetici || perms?.special?.change_others_password;
+    
+    // Barista/personel kısıtlaması - sadece düzenleme modunda
+    // Yönetici, Bölge Müdürü, Mağaza Müdürü, Müdür Yardımcısı tüm alanları değiştirebilir
+    const canEditAllFields = isYonetici || isBolgeMuduru || isMudur || isMudurYardimcisi;
+    const isLimitedEdit = isEdit && !canEditAllFields;
+    
+    // Readonly stil
+    const readonlyStyle = 'background:var(--bg3);cursor:not-allowed;color:var(--tx2)';
+    const readonlyAttr = isLimitedEdit ? `readonly style="${readonlyStyle}"` : '';
     
     // Şube değiştirme yetkisi - Yönetici ve Bölge Müdürü değiştirebilir
     const canChangeBranch = isYonetici || isBolgeMuduru || perms?.special?.canViewAllBranches;
@@ -9829,24 +9840,31 @@ function showAddPersonelModal(editId = null) {
         : `<input type="hidden" id="personelSalary" value="">`;
     
     // Şube alanı - yetkisi olmayanlar değiştiremez (editId varsa ve kendi kartıysa readonly)
-    const branchField = canChangeBranch 
+    const branchField = (canChangeBranch && !isLimitedEdit)
         ? `<div class="form-group"><label class="form-label">Şube</label><select id="personelBranch" class="form-select">${STATE.branches.map(b => `<option value="${b}">${b}</option>`).join('')}</select></div>`
-        : `<div class="form-group"><label class="form-label">Şube</label><input type="text" id="personelBranchDisplay" class="form-input" readonly style="background:var(--bg3);cursor:not-allowed"><input type="hidden" id="personelBranch" value=""></div>`;
+        : `<div class="form-group"><label class="form-label">Şube</label><input type="text" id="personelBranchDisplay" class="form-input" readonly style="${readonlyStyle}"><input type="hidden" id="personelBranch" value=""></div>`;
     
     // Pozisyon alanı - sadece yetkili değiştirebilir
-    const canChangePosition = isYonetici || isBolgeMuduru || perms?.pages?.personel?.edit;
+    const canChangePosition = (isYonetici || isBolgeMuduru || perms?.pages?.personel?.edit) && !isLimitedEdit;
     const positionField = canChangePosition
         ? `<div class="form-group"><label class="form-label">Pozisyon</label><select id="personelPosition" class="form-select">${STATE.positions.map(p => `<option value="${p.name}">${p.name}</option>`).join('')}</select></div>`
-        : `<div class="form-group"><label class="form-label">Pozisyon</label><input type="text" id="personelPositionDisplay" class="form-input" readonly style="background:var(--bg3);cursor:not-allowed"><input type="hidden" id="personelPosition" value=""></div>`;
+        : `<div class="form-group"><label class="form-label">Pozisyon</label><input type="text" id="personelPositionDisplay" class="form-input" readonly style="${readonlyStyle}"><input type="hidden" id="personelPosition" value=""></div>`;
+    
+    // Barista için kısıtlı alanlar: Ad Soyad, TC, Adres, İşe Başlama (readonly)
+    // Değiştirebilecekleri: Kod Adı, Telefon, Banka, IBAN
     
     const body = `
         <input type="hidden" id="personelEditId" value="${editId || ''}">
+        ${isLimitedEdit ? `<div style="background:rgba(255,193,7,.1);border:1px solid rgba(255,193,7,.3);border-radius:8px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;gap:8px">
+            <svg width="16" height="16" fill="none" stroke="#f39c12" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span style="font-size:.8rem;color:#b7791f">Bazı alanlar sadece yöneticiler tarafından değiştirilebilir</span>
+        </div>` : ''}
         <div class="form-grid">
-            <div class="form-group"><label class="form-label">Ad Soyad</label><input type="text" id="personelName" class="form-input" placeholder="Personel adı soyadı" required></div>
+            <div class="form-group"><label class="form-label">Ad Soyad ${isLimitedEdit ? '<span style="color:var(--tx3);font-size:.7rem">(salt okunur)</span>' : ''}</label><input type="text" id="personelName" class="form-input" placeholder="Personel adı soyadı" ${readonlyAttr} required></div>
             <div class="form-group"><label class="form-label">Shift Kod Adı</label><input type="text" id="personelCodeName" class="form-input" placeholder="Örn: Esin İ."><small style="color:var(--tx2);font-size:.7rem">Boş bırakılırsa Ad S. formatı kullanılır</small></div>
-            <div class="form-group"><label class="form-label">T.C. Kimlik No</label><input type="text" id="personelTC" class="form-input" maxlength="11" placeholder="11 haneli TC kimlik no"></div>
+            <div class="form-group"><label class="form-label">T.C. Kimlik No ${isLimitedEdit ? '<span style="color:var(--tx3);font-size:.7rem">(salt okunur)</span>' : ''}</label><input type="text" id="personelTC" class="form-input" maxlength="11" placeholder="11 haneli TC kimlik no" ${readonlyAttr}></div>
             <div class="form-group"><label class="form-label">Telefon</label><input type="tel" id="personelPhone" class="form-input" placeholder="+90 5XX XXX XX XX" oninput="formatPhoneInput(this)"></div>
-            <div class="form-group full"><label class="form-label">Adres</label><input type="text" id="personelAddress" class="form-input" placeholder="Ev adresi"></div>
+            <div class="form-group full"><label class="form-label">Adres ${isLimitedEdit ? '<span style="color:var(--tx3);font-size:.7rem">(salt okunur)</span>' : ''}</label><input type="text" id="personelAddress" class="form-input" placeholder="Ev adresi" ${readonlyAttr}></div>
             <div class="form-group">
                 <label class="form-label">Banka</label>
                 <div style="position:relative">
@@ -9854,7 +9872,7 @@ function showAddPersonelModal(editId = null) {
                     <div id="personelBankDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg);border:1px solid var(--bg4);border-radius:8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.15);margin-top:4px"></div>
                 </div>
             </div>
-            <div class="form-group"><label class="form-label">İşe Başlama</label><input type="date" id="personelStartDate" class="form-input"></div>
+            <div class="form-group"><label class="form-label">İşe Başlama ${isLimitedEdit ? '<span style="color:var(--tx3);font-size:.7rem">(salt okunur)</span>' : ''}</label><input type="date" id="personelStartDate" class="form-input" ${isLimitedEdit ? `readonly style="${readonlyStyle}"` : ''}></div>
             <div class="form-group full">
                 <label class="form-label">IBAN</label>
                 <div style="display:flex;gap:8px;align-items:center">
@@ -11110,11 +11128,23 @@ async function loadPuantaj() {
             // === GÖRÜNÜRLİK KONTROLÜ ===
             const canView = canViewPersonnelPuan(viewerRole, p.role);
             
+            // === ROL RENKLERİ (Personel sayfasıyla aynı) ===
+            const roleColors = {
+                'yonetici': '#ff8674',
+                'bolge_muduru': '#9b59b6',
+                'magaza_muduru': '#008c95',
+                'mudur_yardimcisi': '#3498db',
+                'magaza_mudur_yardimcisi': '#3498db',
+                'barista': '#27ae60'
+            };
+            const roleColor = roleColors[p.role] || '#27ae60';
+            
             const isRisk = p.toplamPuan <= -3;
             const isDanger = p.primDurumu === 'prim_yok';
             const puanColor = p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx)');
             const puanSign = p.toplamPuan > 0 ? '+' : '';
-            const cardBorder = canView ? (isDanger ? '#e74c3c' : (isRisk ? '#f39c12' : brandColor)) : '#6c757d';
+            // Kart border: tehlike durumu > risk > rol rengi
+            const cardBorder = canView ? (isDanger ? '#e74c3c' : (isRisk ? '#f39c12' : roleColor)) : '#6c757d';
             
             // Yıldız gösterimi - BÜYÜTÜLDÜ
             const yildizlar = '★'.repeat(p.performansYildiz || 3) + '☆'.repeat(5 - (p.performansYildiz || 3));
@@ -11124,11 +11154,11 @@ async function loadPuantaj() {
             if (canView) {
                 // === NORMAL KART (GÖRÜNEBİLİR) ===
                 html += `
-                <div style="background:linear-gradient(135deg,${brandBg},var(--cardBg));border:2px solid ${cardBorder}30;border-left:4px solid ${cardBorder};border-radius:12px;padding:16px;transition:all .2s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                <div style="background:linear-gradient(135deg,${roleColor}08,var(--cardBg));border:2px solid ${cardBorder}30;border-left:4px solid ${cardBorder};border-radius:12px;padding:16px;transition:all .2s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
                     <!-- Header - TIKLANABİLİR -->
                     <div onclick="showPersonelPuanDetay('${p.id}', '${p.name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;cursor:pointer;padding:8px;margin:-8px;border-radius:8px;transition:background .15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
                         <div style="display:flex;align-items:center;gap:10px">
-                            <div style="width:36px;height:36px;background:linear-gradient(135deg,${brandColor},${brandColor}99);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;overflow:hidden">
+                            <div style="width:36px;height:36px;background:linear-gradient(135deg,${roleColor},${roleColor}99);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;overflow:hidden">
                                 ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover">` : p.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
@@ -11136,7 +11166,7 @@ async function loadPuantaj() {
                                     <span style="font-weight:600;font-size:.95rem;color:var(--tx)">${p.displayName}</span>
                                     <span style="font-size:.9rem;color:${yildizColor};letter-spacing:1px">${yildizlar}</span>
                                 </div>
-                                <div style="font-size:.75rem;color:var(--tx3)">${p.position || 'Barista'}</div>
+                                <div style="font-size:.75rem;color:${roleColor};font-weight:500">${p.position || 'Barista'}</div>
                             </div>
                         </div>
                         <div style="text-align:right">
@@ -11188,19 +11218,20 @@ async function loadPuantaj() {
             `;
             } else {
                 // === KİLİTLİ KART (GÖRÜNEMİYOR) ===
+                // Rol rengi hâlâ görünür, sadece puanlar gizli
                 html += `
-                <div style="background:linear-gradient(135deg,rgba(108,117,125,.08),var(--cardBg));border:2px solid #6c757d30;border-left:4px solid #6c757d;border-radius:12px;padding:16px;transition:all .2s;opacity:0.85">
+                <div style="background:linear-gradient(135deg,${roleColor}05,var(--cardBg));border:2px solid #6c757d30;border-left:4px solid ${roleColor}60;border-radius:12px;padding:16px;transition:all .2s;opacity:0.9">
                     <!-- Header - TIKLANABİLİR DEĞİL -->
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:8px;margin:-8px;border-radius:8px">
                         <div style="display:flex;align-items:center;gap:10px">
-                            <div style="width:36px;height:36px;background:linear-gradient(135deg,#6c757d,#6c757d99);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;overflow:hidden">
-                                ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover;filter:grayscale(50%)">` : p.name.charAt(0).toUpperCase()}
+                            <div style="width:36px;height:36px;background:linear-gradient(135deg,${roleColor}80,${roleColor}50);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;overflow:hidden">
+                                ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover;filter:grayscale(30%)">` : p.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
                                 <div style="display:flex;align-items:center;gap:8px">
                                     <span style="font-weight:600;font-size:.95rem;color:var(--tx)">${p.displayName}</span>
                                 </div>
-                                <div style="font-size:.75rem;color:var(--tx3)">${p.position || 'Personel'}</div>
+                                <div style="font-size:.75rem;color:${roleColor};font-weight:500">${p.position || 'Personel'}</div>
                             </div>
                         </div>
                         <div style="text-align:right">
