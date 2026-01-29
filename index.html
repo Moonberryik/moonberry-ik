@@ -23324,16 +23324,18 @@ async function loadChecklistTypes() {
     // Şube değişti - real-time listener'ı güncelle
     setupShiftListener(branch);
     
-    // Config yüklenmemişse yükle
-    if (Object.keys(CHECKLIST_TYPES).length === 0) {
+    // Config'i HER ZAMAN yükle (şube değişikliğinde güncel veri için)
+    try {
         await loadSystemConfig();
+    } catch (e) {
+        console.warn('[Checklist] Config yüklenemedi:', e);
     }
     
     const types = CHECKLIST_TYPES[branch] || [];
     const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
     
     // Debug log
-    console.log('Checklist türleri:', branch, types.length, 'adet');
+    console.log('[Checklist] Türleri yüklendi:', branch, types.length, 'adet');
     
     // Duplicate önleme için seen set
     const seenIds = new Set();
@@ -23345,7 +23347,7 @@ async function loadChecklistTypes() {
         const canonId = canonicalChecklistTypeId(t.id);
         if (seenIds.has(canonId)) return; // Duplicate atla
         seenIds.add(canonId);
-        selectHtml += `<option value="${canonId}" data-timeslots="${t.timeSlots ? t.timeSlots.join(',') : ''}">${t.name}</option>`;
+        selectHtml += `<option value="${canonId}">${t.name}</option>`;
     });
     typeSelect.innerHTML = selectHtml;
     
@@ -23361,7 +23363,7 @@ async function loadChecklistTypes() {
         seenIds.add(canonId);
         const iconSvg = getIcon(t.icon || 'clipboard-check');
         buttonsHtml += `
-            <button type="button" class="checklist-type-btn" data-type="${canonId}" data-timeslots="${t.timeSlots ? t.timeSlots.join(',') : ''}"
+            <button type="button" class="checklist-type-btn" data-type="${canonId}"
                 onclick="selectChecklistType('${canonId}')"
                 style="padding:12px 18px;border:1px solid var(--cardBorder);background:var(--bg2);color:var(--tx);border-radius:10px;cursor:pointer;font-size:.9rem;font-weight:500;transition:all .2s;display:flex;align-items:center;gap:10px">
                 <span style="opacity:.7">${iconSvg}</span>
@@ -23413,20 +23415,10 @@ function selectChecklistType(typeId) {
         }
     });
     
-    // Time slot güncelle
-    const selectedBtn = document.querySelector(`.checklist-type-btn[data-type="${typeId}"]`);
-    const timeSlots = selectedBtn?.dataset.timeslots?.split(',').filter(Boolean) || [];
+    // Saat seçimi tamamen kaldırıldı - sistem otomatik Türkiye saati kullanır
     const timeSlotGroup = document.getElementById('checklistTimeSlotGroup');
-    const timeSlotSelect = document.getElementById('checklistTimeSlot');
-    
-    if (timeSlots.length > 0) {
-        timeSlotGroup.style.display = 'block';
-        let tsHtml = '<option value="">-- Seçin --</option>';
-        timeSlots.forEach(ts => { tsHtml += `<option value="${ts}">${ts}</option>`; });
-        timeSlotSelect.innerHTML = tsHtml;
-    } else {
+    if (timeSlotGroup) {
         timeSlotGroup.style.display = 'none';
-        timeSlotSelect.innerHTML = '<option value="">-- Seçin --</option>';
     }
     
     loadChecklist();
