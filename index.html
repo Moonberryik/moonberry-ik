@@ -11128,16 +11128,20 @@ async function loadPuantaj() {
             // === GÖRÜNÜRLİK KONTROLÜ ===
             const canView = canViewPersonnelPuan(viewerRole, p.role);
             
-            // === ROL RENKLERİ (Personel sayfasıyla aynı) ===
+            // === ROL RENKLERİ (Marka Renkleri) ===
+            // Barista: Sunberry coral (#ff8674)
+            // Müdür/Yardımcı: Moonberry teal (#008c95)
+            // Bölge Müdürü: Premium gold (#b8860b → gradient)
             const roleColors = {
                 'yonetici': '#ff8674',
-                'bolge_muduru': '#9b59b6',
-                'magaza_muduru': '#008c95',
-                'mudur_yardimcisi': '#3498db',
-                'magaza_mudur_yardimcisi': '#3498db',
-                'barista': '#27ae60'
+                'bolge_muduru': '#b8860b',  // Premium gold
+                'magaza_muduru': '#008c95', // Moonberry teal
+                'mudur_yardimcisi': '#008c95', // Moonberry teal
+                'magaza_mudur_yardimcisi': '#008c95', // Moonberry teal
+                'barista': '#ff8674' // Sunberry coral
             };
-            const roleColor = roleColors[p.role] || '#27ae60';
+            const roleColor = roleColors[p.role] || '#ff8674';
+            const isBolgeMuduru = p.role === 'bolge_muduru';
             
             const isRisk = p.toplamPuan <= -3;
             const isDanger = p.primDurumu === 'prim_yok';
@@ -11150,20 +11154,29 @@ async function loadPuantaj() {
             const yildizlar = '★'.repeat(p.performansYildiz || 3) + '☆'.repeat(5 - (p.performansYildiz || 3));
             const yildizColor = p.performansYildiz >= 4 ? '#f1c40f' : (p.performansYildiz >= 3 ? '#95a5a6' : '#e74c3c');
             
+            // Bölge müdürü için premium gradient
+            const cardBg = isBolgeMuduru && canView
+                ? 'linear-gradient(135deg,rgba(184,134,11,.12),rgba(218,165,32,.06),rgba(255,215,0,.03))'
+                : `linear-gradient(135deg,${roleColor}08,var(--cardBg))`;
+            const avatarBg = isBolgeMuduru
+                ? 'linear-gradient(135deg,#b8860b,#daa520,#ffd700)'
+                : `linear-gradient(135deg,${roleColor},${roleColor}99)`;
+            
             // GÖRÜNÜRLİK DURUMUNA GÖRE KART
             if (canView) {
                 // === NORMAL KART (GÖRÜNEBİLİR) ===
                 html += `
-                <div style="background:linear-gradient(135deg,${roleColor}08,var(--cardBg));border:2px solid ${cardBorder}30;border-left:4px solid ${cardBorder};border-radius:12px;padding:16px;transition:all .2s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                <div style="background:${cardBg};border:2px solid ${cardBorder}30;border-left:4px solid ${cardBorder};border-radius:12px;padding:16px;transition:all .2s${isBolgeMuduru ? ';box-shadow:0 2px 12px rgba(184,134,11,.15)' : ''}" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='${isBolgeMuduru ? '0 2px 12px rgba(184,134,11,.15)' : 'none'}'">
                     <!-- Header - TIKLANABİLİR -->
                     <div onclick="showPersonelPuanDetay('${p.id}', '${p.name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;cursor:pointer;padding:8px;margin:-8px;border-radius:8px;transition:background .15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
                         <div style="display:flex;align-items:center;gap:10px">
-                            <div style="width:36px;height:36px;background:linear-gradient(135deg,${roleColor},${roleColor}99);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;overflow:hidden">
+                            <div style="width:36px;height:36px;background:${avatarBg};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;overflow:hidden${isBolgeMuduru ? ';box-shadow:0 2px 8px rgba(184,134,11,.4)' : ''}">
                                 ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover">` : p.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
                                 <div style="display:flex;align-items:center;gap:8px">
                                     <span style="font-weight:600;font-size:.95rem;color:var(--tx)">${p.displayName}</span>
+                                    ${isBolgeMuduru ? '<span style="font-size:.6rem;background:linear-gradient(135deg,#b8860b,#daa520);color:#fff;padding:2px 6px;border-radius:4px;font-weight:600">BÖLGE</span>' : ''}
                                     <span style="font-size:.9rem;color:${yildizColor};letter-spacing:1px">${yildizlar}</span>
                                 </div>
                                 <div style="font-size:.75rem;color:${roleColor};font-weight:500">${p.position || 'Barista'}</div>
@@ -11219,17 +11232,25 @@ async function loadPuantaj() {
             } else {
                 // === KİLİTLİ KART (GÖRÜNEMİYOR) ===
                 // Rol rengi hâlâ görünür, sadece puanlar gizli
+                const lockedCardBg = isBolgeMuduru
+                    ? 'linear-gradient(135deg,rgba(184,134,11,.08),rgba(218,165,32,.04),rgba(255,215,0,.02))'
+                    : `linear-gradient(135deg,${roleColor}05,var(--cardBg))`;
+                const lockedAvatarBg = isBolgeMuduru
+                    ? 'linear-gradient(135deg,#b8860b80,#daa52060,#ffd70040)'
+                    : `linear-gradient(135deg,${roleColor}80,${roleColor}50)`;
+                    
                 html += `
-                <div style="background:linear-gradient(135deg,${roleColor}05,var(--cardBg));border:2px solid #6c757d30;border-left:4px solid ${roleColor}60;border-radius:12px;padding:16px;transition:all .2s;opacity:0.9">
+                <div style="background:${lockedCardBg};border:2px solid #6c757d30;border-left:4px solid ${isBolgeMuduru ? '#b8860b' : roleColor}60;border-radius:12px;padding:16px;transition:all .2s;opacity:0.9${isBolgeMuduru ? ';box-shadow:0 1px 8px rgba(184,134,11,.1)' : ''}">
                     <!-- Header - TIKLANABİLİR DEĞİL -->
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:8px;margin:-8px;border-radius:8px">
                         <div style="display:flex;align-items:center;gap:10px">
-                            <div style="width:36px;height:36px;background:linear-gradient(135deg,${roleColor}80,${roleColor}50);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;overflow:hidden">
+                            <div style="width:36px;height:36px;background:${lockedAvatarBg};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;overflow:hidden">
                                 ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover;filter:grayscale(30%)">` : p.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
                                 <div style="display:flex;align-items:center;gap:8px">
                                     <span style="font-weight:600;font-size:.95rem;color:var(--tx)">${p.displayName}</span>
+                                    ${isBolgeMuduru ? '<span style="font-size:.6rem;background:linear-gradient(135deg,#b8860b80,#daa52080);color:#fff;padding:2px 6px;border-radius:4px;font-weight:600">BÖLGE</span>' : ''}
                                 </div>
                                 <div style="font-size:.75rem;color:${roleColor};font-weight:500">${p.position || 'Personel'}</div>
                             </div>
