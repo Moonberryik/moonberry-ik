@@ -10741,6 +10741,42 @@ async function loadPuantajRules() {
     }
 }
 
+/**
+ * Puantaj Görünürlük Kontrolü - Ast-Üst İlişkisi
+ * 
+ * Hiyerarşi:
+ * - barista: kendini + diğer baristaları görür
+ * - mudur_yardimcisi: kendini + baristaları görür
+ * - magaza_muduru: kendini + yardımcıyı + baristaları görür
+ * - bolge_muduru: yönetici hariç herkesi görür (tüm şubeler)
+ * - yonetici: herkesi görür
+ */
+function canViewPersonnelPuan(viewerRole, targetRole) {
+    const hierarchy = {
+        'barista': 1,
+        'mudur_yardimcisi': 2,
+        'magaza_mudur_yardimcisi': 2,
+        'magaza_muduru': 3,
+        'bolge_muduru': 4,
+        'yonetici': 5
+    };
+    
+    const viewerLevel = hierarchy[viewerRole] || 1;
+    const targetLevel = hierarchy[targetRole] || 1;
+    
+    // Yönetici herkesi görür
+    if (viewerRole === 'yonetici') return true;
+    
+    // Bölge müdürü yönetici hariç herkesi görür
+    if (viewerRole === 'bolge_muduru') return targetRole !== 'yonetici';
+    
+    // Diğerleri: kendisi ve altındakileri görür
+    return targetLevel <= viewerLevel;
+}
+
+// Kilit SVG ikonu (puantaj için)
+const LOCK_ICON_SVG = `<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`;
+
 async function loadPuantaj() {
     const container = document.getElementById('puantajTableContainer');
     if (!container) return;
@@ -10910,6 +10946,7 @@ async function loadPuantaj() {
                 name: p.name,
                 codeName: p.codeName,
                 displayName: getPersonelDisplayName(p),  // codeName varsa onu, yoksa "Büşra S."
+                role: p.role || 'barista',  // ROL BİLGİSİ - görünürlük kontrolü için
                 tc: p.tc, 
                 position: p.position,
                 photoUrl: p.photoUrl || '',
@@ -10972,62 +11009,79 @@ async function loadPuantaj() {
         const brandBg = 'rgba(0,140,149,.08)';
         
         // === AYLIK ŞAMPIYONLAR ===
+        // Görünürlük kontrolü için viewer role'ü al
+        const championViewerRole = currentUser?.role || 'barista';
+        
         if (personelList.length > 1 && !isBarista) {
-            const topPerformer = sortedByPuan[0];
-            const mostImproved = sortedByPuan.find(p => p.pozitifOlay > 0);
-            const needsAttention = sortedByNegatif[0];
+            // Sadece görülebilen personelden şampiyonları seç
+            const visiblePersonel = personelList.filter(p => canViewPersonnelPuan(championViewerRole, p.role));
+            const sortedVisibleByPuan = [...visiblePersonel].sort((a, b) => b.toplamPuan - a.toplamPuan);
+            const sortedVisibleByNegatif = [...visiblePersonel].filter(p => p.negatifOlay > 0).sort((a, b) => b.negatifOlay - a.negatifOlay);
             
-            html += `
-                <div style="margin-bottom:20px;background:linear-gradient(135deg,${brandBg},rgba(255,255,255,.5));border:1px solid ${brandColor}25;border-radius:16px;padding:20px">
-                    <div style="font-weight:700;color:var(--tx);margin-bottom:16px;font-size:1rem;display:flex;align-items:center;gap:8px">
-                        <svg width="20" height="20" fill="none" stroke="${brandColor}" stroke-width="2" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7.8 17h8.4c1.68 0 2.52 0 3.162-.327a3 3 0 001.311-1.311C21 14.72 21 13.88 21 12.2V7.8c0-1.68 0-2.52-.327-3.162a3 3 0 00-1.311-1.311C18.72 3 17.88 3 16.2 3H7.8c-1.68 0-2.52 0-3.162.327a3 3 0 00-1.311 1.311C3 5.28 3 6.12 3 7.8v4.4c0 1.68 0 2.52.327 3.162a3 3 0 001.311 1.311C5.28 17 6.12 17 7.8 17z"/></svg>
-                        Bu Ay Öne Çıkanlar
+            const topPerformer = sortedVisibleByPuan[0];
+            const mostImproved = sortedVisibleByPuan.find(p => p.pozitifOlay > 0);
+            const needsAttention = sortedVisibleByNegatif[0];
+            
+            if (topPerformer || mostImproved || needsAttention) {
+                html += `
+                    <div style="margin-bottom:20px;background:linear-gradient(135deg,${brandBg},rgba(255,255,255,.5));border:1px solid ${brandColor}25;border-radius:16px;padding:20px">
+                        <div style="font-weight:700;color:var(--tx);margin-bottom:16px;font-size:1rem;display:flex;align-items:center;gap:8px">
+                            <svg width="20" height="20" fill="none" stroke="${brandColor}" stroke-width="2" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7.8 17h8.4c1.68 0 2.52 0 3.162-.327a3 3 0 001.311-1.311C21 14.72 21 13.88 21 12.2V7.8c0-1.68 0-2.52-.327-3.162a3 3 0 00-1.311-1.311C18.72 3 17.88 3 16.2 3H7.8c-1.68 0-2.52 0-3.162.327a3 3 0 00-1.311 1.311C3 5.28 3 6.12 3 7.8v4.4c0 1.68 0 2.52.327 3.162a3 3 0 001.311 1.311C5.28 17 6.12 17 7.8 17z"/></svg>
+                            Bu Ay Öne Çıkanlar
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+                            ${topPerformer && topPerformer.toplamPuan > 0 ? `
+                                <div style="background:linear-gradient(135deg,rgba(255,215,0,.15),rgba(255,215,0,.05));border:1px solid rgba(255,215,0,.3);border-radius:12px;padding:14px;text-align:center">
+                                    <div style="font-size:1.5rem;margin-bottom:4px">🏆</div>
+                                    <div style="font-size:.7rem;color:var(--tx2);margin-bottom:4px">En Yüksek Puan</div>
+                                    <div style="font-weight:700;color:var(--tx);font-size:.9rem">${topPerformer.displayName}</div>
+                                    <div style="font-size:.8rem;color:#27ae60;font-weight:600">+${topPerformer.toplamPuan} puan</div>
+                                </div>
+                            ` : ''}
+                            ${mostImproved && mostImproved.pozitifOlay >= 2 ? `
+                                <div style="background:linear-gradient(135deg,rgba(39,174,96,.15),rgba(39,174,96,.05));border:1px solid rgba(39,174,96,.3);border-radius:12px;padding:14px;text-align:center">
+                                    <div style="font-size:1.5rem;margin-bottom:4px">⭐</div>
+                                    <div style="font-size:.7rem;color:var(--tx2);margin-bottom:4px">En Çok Başarı</div>
+                                    <div style="font-weight:700;color:var(--tx);font-size:.9rem">${mostImproved.displayName}</div>
+                                    <div style="font-size:.8rem;color:#27ae60;font-weight:600">${mostImproved.pozitifOlay} başarı</div>
+                                </div>
+                            ` : ''}
+                            ${needsAttention && needsAttention.negatifOlay >= 2 ? `
+                                <div style="background:linear-gradient(135deg,rgba(231,76,60,.1),rgba(231,76,60,.03));border:1px solid rgba(231,76,60,.2);border-radius:12px;padding:14px;text-align:center">
+                                    <div style="font-size:1.5rem;margin-bottom:4px">⚠️</div>
+                                    <div style="font-size:.7rem;color:var(--tx2);margin-bottom:4px">Dikkat Gerektiren</div>
+                                    <div style="font-weight:700;color:var(--tx);font-size:.9rem">${needsAttention.displayName}</div>
+                                    <div style="font-size:.8rem;color:#e74c3c;font-weight:600">${needsAttention.negatifOlay} ihlal</div>
+                                </div>
+                            ` : ''}
+                        </div>
                     </div>
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
-                        ${topPerformer && topPerformer.toplamPuan > 0 ? `
-                            <div style="background:linear-gradient(135deg,rgba(255,215,0,.15),rgba(255,215,0,.05));border:1px solid rgba(255,215,0,.3);border-radius:12px;padding:14px;text-align:center">
-                                <div style="font-size:1.5rem;margin-bottom:4px">🏆</div>
-                                <div style="font-size:.7rem;color:var(--tx2);margin-bottom:4px">En Yüksek Puan</div>
-                                <div style="font-weight:700;color:var(--tx);font-size:.9rem">${topPerformer.displayName}</div>
-                                <div style="font-size:.8rem;color:#27ae60;font-weight:600">+${topPerformer.toplamPuan} puan</div>
-                            </div>
-                        ` : ''}
-                        ${mostImproved && mostImproved.pozitifOlay >= 2 ? `
-                            <div style="background:linear-gradient(135deg,rgba(39,174,96,.15),rgba(39,174,96,.05));border:1px solid rgba(39,174,96,.3);border-radius:12px;padding:14px;text-align:center">
-                                <div style="font-size:1.5rem;margin-bottom:4px">⭐</div>
-                                <div style="font-size:.7rem;color:var(--tx2);margin-bottom:4px">En Çok Başarı</div>
-                                <div style="font-weight:700;color:var(--tx);font-size:.9rem">${mostImproved.displayName}</div>
-                                <div style="font-size:.8rem;color:#27ae60;font-weight:600">${mostImproved.pozitifOlay} başarı</div>
-                            </div>
-                        ` : ''}
-                        ${needsAttention && needsAttention.negatifOlay >= 2 ? `
-                            <div style="background:linear-gradient(135deg,rgba(231,76,60,.1),rgba(231,76,60,.03));border:1px solid rgba(231,76,60,.2);border-radius:12px;padding:14px;text-align:center">
-                                <div style="font-size:1.5rem;margin-bottom:4px">⚠️</div>
-                                <div style="font-size:.7rem;color:var(--tx2);margin-bottom:4px">Dikkat Gerektiren</div>
-                                <div style="font-weight:700;color:var(--tx);font-size:.9rem">${needsAttention.displayName}</div>
-                                <div style="font-size:.8rem;color:#e74c3c;font-weight:600">${needsAttention.negatifOlay} ihlal</div>
-                            </div>
-                        ` : ''}
-                    </div>
-                </div>
-            `;
+                `;
+            }
         }
         
         // === EKİP DURUMU (Toplam puana göre sıralı) ===
+        const viewerRole = currentUser?.role || 'barista';
         const sortedPersonelList = [...personelList].sort((a, b) => b.toplamPuan - a.toplamPuan);
         html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:20px">`;
         sortedPersonelList.forEach(p => {
+            // === GÖRÜNÜRLİK KONTROLÜ ===
+            const canView = canViewPersonnelPuan(viewerRole, p.role);
+            
             const isRisk = p.toplamPuan <= -3;
             const isDanger = p.primDurumu === 'prim_yok';
             const puanColor = p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx)');
             const puanSign = p.toplamPuan > 0 ? '+' : '';
-            const cardBorder = isDanger ? '#e74c3c' : (isRisk ? '#f39c12' : brandColor);
+            const cardBorder = canView ? (isDanger ? '#e74c3c' : (isRisk ? '#f39c12' : brandColor)) : '#6c757d';
             
             // Yıldız gösterimi - BÜYÜTÜLDÜ
             const yildizlar = '★'.repeat(p.performansYildiz || 3) + '☆'.repeat(5 - (p.performansYildiz || 3));
             const yildizColor = p.performansYildiz >= 4 ? '#f1c40f' : (p.performansYildiz >= 3 ? '#95a5a6' : '#e74c3c');
             
-            html += `
+            // GÖRÜNÜRLİK DURUMUNA GÖRE KART
+            if (canView) {
+                // === NORMAL KART (GÖRÜNEBİLİR) ===
+                html += `
                 <div style="background:linear-gradient(135deg,${brandBg},var(--cardBg));border:2px solid ${cardBorder}30;border-left:4px solid ${cardBorder};border-radius:12px;padding:16px;transition:all .2s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
                     <!-- Header - TIKLANABİLİR -->
                     <div onclick="showPersonelPuanDetay('${p.id}', '${p.name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;cursor:pointer;padding:8px;margin:-8px;border-radius:8px;transition:background .15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
@@ -11090,6 +11144,63 @@ async function loadPuantaj() {
                     ` : ''}
                 </div>
             `;
+            } else {
+                // === KİLİTLİ KART (GÖRÜNEMİYOR) ===
+                html += `
+                <div style="background:linear-gradient(135deg,rgba(108,117,125,.08),var(--cardBg));border:2px solid #6c757d30;border-left:4px solid #6c757d;border-radius:12px;padding:16px;transition:all .2s;opacity:0.85">
+                    <!-- Header - TIKLANABİLİR DEĞİL -->
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:8px;margin:-8px;border-radius:8px">
+                        <div style="display:flex;align-items:center;gap:10px">
+                            <div style="width:36px;height:36px;background:linear-gradient(135deg,#6c757d,#6c757d99);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;overflow:hidden">
+                                ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover;filter:grayscale(50%)">` : p.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <span style="font-weight:600;font-size:.95rem;color:var(--tx)">${p.displayName}</span>
+                                </div>
+                                <div style="font-size:.75rem;color:var(--tx3)">${p.position || 'Personel'}</div>
+                            </div>
+                        </div>
+                        <div style="text-align:right">
+                            <div style="font-size:1.4rem;color:#6c757d;line-height:1;display:flex;align-items:center;justify-content:center">
+                                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                            </div>
+                            <div style="font-size:.65rem;color:var(--tx3);text-transform:uppercase">gizli</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Puan Detayı - KİLİTLİ -->
+                    <div style="display:flex;gap:8px;margin-bottom:12px;background:var(--bg3);padding:10px;border-radius:8px">
+                        <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
+                            <div style="font-size:.65rem;color:var(--tx3);margin-bottom:2px">Manuel</div>
+                            <div style="font-size:.9rem;font-weight:700;color:#6c757d">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                            </div>
+                        </div>
+                        <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
+                            <div style="font-size:.65rem;color:var(--tx3);margin-bottom:2px">Otomatik</div>
+                            <div style="font-size:.9rem;font-weight:700;color:#6c757d">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                            </div>
+                        </div>
+                        <div style="flex:1;text-align:center">
+                            <div style="font-size:.65rem;color:var(--tx3);margin-bottom:2px">Toplam</div>
+                            <div style="font-size:.9rem;font-weight:700;color:#6c757d">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Bilgi Mesajı -->
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <span style="font-size:.65rem;padding:3px 6px;background:rgba(108,117,125,.12);color:#6c757d;border-radius:4px;display:flex;align-items:center;gap:4px">
+                            <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                            Üst düzey personel
+                        </span>
+                    </div>
+                </div>
+            `;
+            }
         });
         html += `</div>`;
         
@@ -11371,6 +11482,15 @@ function showPersonelPuanDetay(personelId, personName) {
     
     if (!personelData) {
         toast('Personel verisi bulunamadı', 'error');
+        return;
+    }
+    
+    // === GÖRÜNÜRLİK KONTROLÜ ===
+    const viewerRole = currentUser?.role || 'barista';
+    const targetRole = personelData.role || 'barista';
+    
+    if (!canViewPersonnelPuan(viewerRole, targetRole)) {
+        toast('Bu personelin puanlarını görme yetkiniz yok', 'warning');
         return;
     }
     
