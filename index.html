@@ -18991,22 +18991,48 @@ async function loadTodayChecks() {
     // ========== ROL BAZLI FİLTRELEME FONKSİYONU ==========
     // checkType: 'mudur' → sadece müdür/yardımcı
     // checkType: diğerleri → barista varsa sadece baristalar, yoksa müdür
+    // + ŞU ANKİ SAATTE SHIFT'İ DEVAM EDENLER
     function filterPersonnelForCheck(allActiveList, checkType) {
         if (!allActiveList || allActiveList.length === 0) return [];
         
+        // ŞU ANKİ SAATTE AKTİF OLANLARI FİLTRELE
+        const nowHour = new Date().getHours();
+        const nowMinute = new Date().getMinutes();
+        const nowTotalMinutes = nowHour * 60 + nowMinute;
+        
+        const currentlyWorking = allActiveList.filter(p => {
+            const startHour = p.shiftStart || 10;
+            const endHour = p.shiftEnd || 19;
+            const startMinutes = startHour * 60;
+            let endMinutes = endHour * 60;
+            
+            // Gece geçişi kontrolü (örn: 16:00-01:00)
+            if (endHour < startHour) {
+                endMinutes += 24 * 60; // +24 saat
+                let adjustedNow = nowTotalMinutes;
+                if (nowHour < endHour) adjustedNow += 24 * 60;
+                return adjustedNow >= startMinutes && adjustedNow <= endMinutes;
+            }
+            
+            return nowTotalMinutes >= startMinutes && nowTotalMinutes <= endMinutes;
+        });
+        
+        // Şu an çalışan yoksa boş döndür
+        if (currentlyWorking.length === 0) return [];
+        
         // Müdür Kontrol: sadece mağaza müdürü veya yardımcı
         if (checkType === 'mudur') {
-            const mudur = allActiveList.find(p => p.role === 'magaza_muduru');
+            const mudur = currentlyWorking.find(p => p.role === 'magaza_muduru');
             if (mudur) return [mudur.name];
-            const yardimci = allActiveList.find(p => p.role === 'mudur_yardimcisi' || p.role === 'magaza_mudur_yardimcisi');
+            const yardimci = currentlyWorking.find(p => p.role === 'mudur_yardimcisi' || p.role === 'magaza_mudur_yardimcisi');
             if (yardimci) return [yardimci.name];
-            const bolge = allActiveList.find(p => p.role === 'bolge_muduru');
+            const bolge = currentlyWorking.find(p => p.role === 'bolge_muduru');
             if (bolge) return [bolge.name];
             return [];
         }
         
         // Diğer checkler: Önce baristalar (müdür HARİÇ)
-        const baristalar = allActiveList.filter(p => 
+        const baristalar = currentlyWorking.filter(p => 
             p.role !== 'magaza_muduru' && 
             p.role !== 'mudur_yardimcisi' && 
             p.role !== 'magaza_mudur_yardimcisi' &&
@@ -19014,7 +19040,7 @@ async function loadTodayChecks() {
         );
         
         // Müdür yardımcısını da ekle (barista gibi çalışır)
-        const yardimcilar = allActiveList.filter(p => 
+        const yardimcilar = currentlyWorking.filter(p => 
             p.role === 'mudur_yardimcisi' || p.role === 'magaza_mudur_yardimcisi'
         );
         
@@ -19029,11 +19055,11 @@ async function loadTodayChecks() {
         }
         
         // Barista ve yardımcı yok: mağaza müdürü (TEK BAŞINA)
-        const mudur = allActiveList.find(p => p.role === 'magaza_muduru');
+        const mudur = currentlyWorking.find(p => p.role === 'magaza_muduru');
         if (mudur) return [mudur.name];
         
         // En son bölge müdürü (gösterilir ama puan almaz)
-        const bolge = allActiveList.find(p => p.role === 'bolge_muduru');
+        const bolge = currentlyWorking.find(p => p.role === 'bolge_muduru');
         if (bolge) return [bolge.name];
         
         return [];
