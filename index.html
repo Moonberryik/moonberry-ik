@@ -19964,7 +19964,9 @@ async function loadTodayChecks() {
                 if (adjustedNowForMissed > deadlineWithLate && !mudurCompleted) {
                     isMudurCheckMissed = true;
                     canFillMudurCheck = false;
-                    mudurSubLabel = 'Süre doldu (-10 puan)';
+                    // Dinamik puan değeri
+                    const mudurMissedPoints = CHECK_RULES.mudur?.points?.missed || -10;
+                    mudurSubLabel = `Süre doldu (${mudurMissedPoints} puan)`;
                 }
                 
             } catch (e) {
