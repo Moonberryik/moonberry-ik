@@ -11085,8 +11085,10 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
         const filteredDocs = [];
         notesSnapshot.forEach(doc => {
             const note = doc.data();
-            if (note.date >= startDate && note.date <= endDate) {
-                filteredDocs.push({ id: doc.id, ...note });
+            // CF eventDate yazıyor, eski format date kullanıyordu - ikisini de kontrol et
+            const noteDate = note.eventDate || note.date;
+            if (noteDate >= startDate && noteDate <= endDate) {
+                filteredDocs.push({ id: doc.id, ...note, date: noteDate });
             }
         });
         
@@ -11098,14 +11100,15 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
         let totalAutoPoints = 0;
         
         filteredDocs.forEach(note => {
-            const date = note.date || 'unknown';
+            const date = note.eventDate || note.date || 'unknown';
             if (!notesByDate[date]) notesByDate[date] = [];
             notesByDate[date].push(note);
             
             if (!notesByPerson[note.personelId]) notesByPerson[note.personelId] = [];
             notesByPerson[note.personelId].push(note);
             
-            totalAutoPoints += note.points || 0;
+            // CF score yazıyor, eski format points kullanıyordu
+            totalAutoPoints += note.score || note.points || 0;
         });
         
         // Cache'e kaydet (detay modal için)
@@ -11143,7 +11146,7 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
             
             let personTotal = 0, missed = 0, late = 0, onTime = 0;
             notes.forEach(n => {
-                personTotal += n.points || 0;
+                personTotal += n.score || n.points || 0;
                 if (n.status === 'missed') missed++;
                 else if (n.status === 'late') late++;
                 else onTime++;
@@ -11183,12 +11186,13 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
             notes.forEach(note => {
                 const person = personelList.find(p => p.id === note.personelId);
                 const personName = person?.name || note.personelName || 'Bilinmeyen';
-                const noteColor = note.points > 0 ? '#27ae60' : (note.points < 0 ? '#e74c3c' : 'var(--tx3)');
+                const notePoints = note.score || note.points || 0;
+                const noteColor = notePoints > 0 ? '#27ae60' : (notePoints < 0 ? '#e74c3c' : 'var(--tx3)');
                 
                 // Detaylı açıklama oluştur
                 let aciklama = '';
-                const checkSaat = note.checkTime || '';
-                const checkTip = note.checkType || note.note || 'Check';
+                const checkSaat = note.eventTime || note.checkTime || '';
+                const checkTip = note.checklistType || note.checkType || note.note || 'Check';
                 
                 if (note.status === 'missed') {
                     aciklama = `${checkSaat ? checkSaat + ' ' : ''}${checkTip} tamamlanmadı`;
@@ -11203,7 +11207,7 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
                 html += `
                     <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${statusBg};border-radius:8px;margin-bottom:6px">
                         <div style="width:28px;height:28px;min-width:28px;background:${noteColor}15;border-radius:50%;display:flex;align-items:center;justify-content:center">
-                            <span style="font-size:.75rem;font-weight:700;color:${noteColor}">${note.points > 0 ? '+' : ''}${note.points}</span>
+                            <span style="font-size:.75rem;font-weight:700;color:${noteColor}">${notePoints > 0 ? '+' : ''}${notePoints}</span>
                         </div>
                         <div style="flex:1;min-width:0">
                             <div style="font-size:.8rem;font-weight:600;color:var(--tx)">${personName}</div>
