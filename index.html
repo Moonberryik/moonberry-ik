@@ -9644,14 +9644,60 @@ async function loadPersonelList() {
             return pos?.role || 'barista';
         }
         
-        // Rol görünümleri - SVG ikonlar
+        // === ROL STİLLERİ - MARKA RENKLERİ ===
+        // Barista: Sunberry coral (#ff8674)
+        // Müdür/Yardımcı: Moonberry teal (#008c95)
+        // Bölge Müdürü: Premium gold (#b8860b)
+        // Yönetici: Coral (#ff8674)
         const roleStyles = {
-            'yonetici': { name: 'Yönetici', color: '#ff8674', icon: '<svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>' },
-            'bolge_muduru': { name: 'Bölge Müdürü', color: '#9b59b6', icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>' },
-            'magaza_muduru': { name: 'Mağaza Müdürü', color: '#008c95', icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>' },
-            'magaza_mudur_yardimcisi': { name: 'Müdür Yrd.', color: '#3498db', icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' },
-            'mudur_yardimcisi': { name: 'Müdür Yrd.', color: '#3498db', icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' },
-            'barista': { name: 'Barista', color: '#27ae60', icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>' }
+            'yonetici': { 
+                name: 'Yönetici', 
+                badge: 'YÖNETİCİ',
+                color: '#ff8674', 
+                gradient: 'linear-gradient(135deg,#ff8674,#ff6b5b)',
+                icon: '<svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>',
+                premium: false
+            },
+            'bolge_muduru': { 
+                name: 'Bölge Müdürü', 
+                badge: 'BÖLGE',
+                color: '#b8860b', 
+                gradient: 'linear-gradient(135deg,#b8860b,#daa520,#ffd700)',
+                icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>',
+                premium: true
+            },
+            'magaza_muduru': { 
+                name: 'Mağaza Müdürü', 
+                badge: 'MÜDÜR',
+                color: '#008c95', 
+                gradient: 'linear-gradient(135deg,#008c95,#00a8a8)',
+                icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+                premium: false
+            },
+            'magaza_mudur_yardimcisi': { 
+                name: 'Müdür Yrd.', 
+                badge: 'YARDIMCI',
+                color: '#008c95', 
+                gradient: 'linear-gradient(135deg,#008c95,#00a8a8)',
+                icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+                premium: false
+            },
+            'mudur_yardimcisi': { 
+                name: 'Müdür Yrd.', 
+                badge: 'YARDIMCI',
+                color: '#008c95', 
+                gradient: 'linear-gradient(135deg,#008c95,#00a8a8)',
+                icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+                premium: false
+            },
+            'barista': { 
+                name: 'Barista', 
+                badge: 'BARİSTA',
+                color: '#ff8674', 
+                gradient: 'linear-gradient(135deg,#ff8674,#ff9a8b)',
+                icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>',
+                premium: false
+            }
         };
         
         // SVG ikonlar
@@ -9697,8 +9743,16 @@ async function loadPersonelList() {
             if (!docId) return;
             
             const role = p.role || getRoleFromPosition(p.position);
-            const roleInfo = roleStyles[role] || { name: 'Personel', color: '#9ca3af', icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' };
+            const roleInfo = roleStyles[role] || { 
+                name: 'Personel', 
+                badge: 'PERSONEL',
+                color: '#ff8674', 
+                gradient: 'linear-gradient(135deg,#ff8674,#ff9a8b)',
+                icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+                premium: false
+            };
             const hasAccess = !!(p.email && p.hasPassword);
+            const isPremium = roleInfo.premium;
             
             // Hiyerarşi kontrolü
             const targetLevel = getHierarchyLevel(role, p.position);
@@ -9708,25 +9762,32 @@ async function loadPersonelList() {
             // Barista seviyesinde ve başkasının kartı ise kısıtlı görünüm
             const showLimitedView = myLevel <= 1 && !isOwnCard && !isYonetici;
             
-            // Şube rengi
-            const isMoonberry = (p.branch || '').includes('Şişli') || (p.branch || '').includes('Merkez');
-            const branchColor = isMoonberry ? '#008c95' : '#ff8674';
+            // Kart arka plan ve gölge
+            const cardBg = isPremium 
+                ? 'linear-gradient(135deg,rgba(184,134,11,.08),rgba(218,165,32,.04),rgba(255,215,0,.02))' 
+                : `linear-gradient(135deg,${roleInfo.color}08,var(--bg2))`;
+            const cardShadow = isPremium ? 'box-shadow:0 2px 12px rgba(184,134,11,.15);' : '';
             
             // Arama için data attribute'lar
             const searchData = `${p.name || ''} ${p.branch || ''} ${p.tc || ''} ${p.email || ''} ${p.position || ''}`.toLowerCase();
             
+            // Badge HTML
+            const badgeHtml = isPremium
+                ? `<span style="background:${roleInfo.gradient};color:#fff;padding:3px 8px;border-radius:5px;font-size:.6rem;font-weight:700;display:flex;align-items:center;gap:4px;box-shadow:0 2px 6px rgba(184,134,11,.3)">${roleInfo.icon} ${roleInfo.badge}</span>`
+                : `<span style="background:${roleInfo.color}15;color:${roleInfo.color};padding:3px 8px;border-radius:5px;font-size:.6rem;font-weight:700;display:flex;align-items:center;gap:4px">${roleInfo.icon} ${roleInfo.badge}</span>`;
+            
             html += `
-                <div class="personel-card" data-search="${searchData}" data-branch="${p.branch || ''}" style="background:var(--bg2);border:1px solid var(--cardBorder);border-left:3px solid ${branchColor};border-radius:10px;padding:14px;transition:all .15s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                <div class="personel-card" data-search="${searchData}" data-branch="${p.branch || ''}" style="background:${cardBg};border:1px solid ${isPremium ? 'rgba(184,134,11,.2)' : 'var(--cardBorder)'};border-left:4px solid ${roleInfo.color};border-radius:10px;padding:14px;transition:all .15s;${cardShadow}" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px ${isPremium ? 'rgba(184,134,11,.25)' : 'rgba(0,0,0,.08)'}'" onmouseout="this.style.transform='none';this.style.boxShadow='${isPremium ? '0 2px 12px rgba(184,134,11,.15)' : 'none'}'">
                     <!-- Header -->
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:${showLimitedView ? '0' : '10px'}">
-                        <div style="width:40px;height:40px;background:linear-gradient(135deg,${roleInfo.color},${roleInfo.color}88);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;overflow:hidden">
+                        <div style="width:40px;height:40px;background:${roleInfo.gradient};border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;overflow:hidden;${isPremium ? 'box-shadow:0 2px 8px rgba(184,134,11,.4);' : ''}">
                             ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover">` : roleInfo.icon}
                         </div>
                         <div style="flex:1;min-width:0">
                             <div style="font-weight:600;color:var(--tx);font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name || 'İsimsiz'}</div>
-                            <div style="font-size:.75rem;color:var(--tx3)">${p.position || 'Pozisyon yok'}</div>
+                            <div style="font-size:.75rem;color:${roleInfo.color};font-weight:500">${p.position || 'Pozisyon yok'}</div>
                         </div>
-                        <span style="background:${roleInfo.color}15;color:${roleInfo.color};padding:3px 8px;border-radius:5px;font-size:.65rem;font-weight:600">${roleInfo.name}</span>
+                        ${badgeHtml}
                     </div>
                     
                     ${showLimitedView ? '' : `
@@ -11128,20 +11189,58 @@ async function loadPuantaj() {
             // === GÖRÜNÜRLİK KONTROLÜ ===
             const canView = canViewPersonnelPuan(viewerRole, p.role);
             
-            // === ROL RENKLERİ (Marka Renkleri) ===
+            // === ROL STİLLERİ - MARKA RENKLERİ ===
             // Barista: Sunberry coral (#ff8674)
             // Müdür/Yardımcı: Moonberry teal (#008c95)
-            // Bölge Müdürü: Premium gold (#b8860b → gradient)
-            const roleColors = {
-                'yonetici': '#ff8674',
-                'bolge_muduru': '#b8860b',  // Premium gold
-                'magaza_muduru': '#008c95', // Moonberry teal
-                'mudur_yardimcisi': '#008c95', // Moonberry teal
-                'magaza_mudur_yardimcisi': '#008c95', // Moonberry teal
-                'barista': '#ff8674' // Sunberry coral
+            // Bölge Müdürü: Premium gold (#b8860b)
+            const roleStylesPuantaj = {
+                'yonetici': { 
+                    badge: 'YÖNETİCİ',
+                    color: '#ff8674', 
+                    gradient: 'linear-gradient(135deg,#ff8674,#ff6b5b)',
+                    icon: '<svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>',
+                    premium: false
+                },
+                'bolge_muduru': { 
+                    badge: 'BÖLGE',
+                    color: '#b8860b', 
+                    gradient: 'linear-gradient(135deg,#b8860b,#daa520,#ffd700)',
+                    icon: '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>',
+                    premium: true
+                },
+                'magaza_muduru': { 
+                    badge: 'MÜDÜR',
+                    color: '#008c95', 
+                    gradient: 'linear-gradient(135deg,#008c95,#00a8a8)',
+                    icon: '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+                    premium: false
+                },
+                'magaza_mudur_yardimcisi': { 
+                    badge: 'YARDIMCI',
+                    color: '#008c95', 
+                    gradient: 'linear-gradient(135deg,#008c95,#00a8a8)',
+                    icon: '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+                    premium: false
+                },
+                'mudur_yardimcisi': { 
+                    badge: 'YARDIMCI',
+                    color: '#008c95', 
+                    gradient: 'linear-gradient(135deg,#008c95,#00a8a8)',
+                    icon: '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+                    premium: false
+                },
+                'barista': { 
+                    badge: 'BARİSTA',
+                    color: '#ff8674', 
+                    gradient: 'linear-gradient(135deg,#ff8674,#ff9a8b)',
+                    icon: '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>',
+                    premium: false
+                }
             };
-            const roleColor = roleColors[p.role] || '#ff8674';
-            const isBolgeMuduru = p.role === 'bolge_muduru';
+            
+            const roleStyle = roleStylesPuantaj[p.role] || roleStylesPuantaj['barista'];
+            const roleColor = roleStyle.color;
+            const isPremium = roleStyle.premium;
             
             const isRisk = p.toplamPuan <= -3;
             const isDanger = p.primDurumu === 'prim_yok';
@@ -11154,32 +11253,36 @@ async function loadPuantaj() {
             const yildizlar = '★'.repeat(p.performansYildiz || 3) + '☆'.repeat(5 - (p.performansYildiz || 3));
             const yildizColor = p.performansYildiz >= 4 ? '#f1c40f' : (p.performansYildiz >= 3 ? '#95a5a6' : '#e74c3c');
             
-            // Bölge müdürü için premium gradient
-            const cardBg = isBolgeMuduru && canView
+            // Kart arka planı
+            const cardBg = isPremium && canView
                 ? 'linear-gradient(135deg,rgba(184,134,11,.12),rgba(218,165,32,.06),rgba(255,215,0,.03))'
                 : `linear-gradient(135deg,${roleColor}08,var(--cardBg))`;
-            const avatarBg = isBolgeMuduru
-                ? 'linear-gradient(135deg,#b8860b,#daa520,#ffd700)'
-                : `linear-gradient(135deg,${roleColor},${roleColor}99)`;
+            
+            // Badge HTML
+            const badgeHtml = isPremium
+                ? `<span style="font-size:.55rem;background:${roleStyle.gradient};color:#fff;padding:2px 6px;border-radius:4px;font-weight:700;display:inline-flex;align-items:center;gap:3px;box-shadow:0 2px 6px rgba(184,134,11,.3)">${roleStyle.icon} ${roleStyle.badge}</span>`
+                : `<span style="font-size:.55rem;background:${roleColor}15;color:${roleColor};padding:2px 6px;border-radius:4px;font-weight:700;display:inline-flex;align-items:center;gap:3px">${roleStyle.icon} ${roleStyle.badge}</span>`;
             
             // GÖRÜNÜRLİK DURUMUNA GÖRE KART
             if (canView) {
                 // === NORMAL KART (GÖRÜNEBİLİR) ===
                 html += `
-                <div style="background:${cardBg};border:2px solid ${cardBorder}30;border-left:4px solid ${cardBorder};border-radius:12px;padding:16px;transition:all .2s${isBolgeMuduru ? ';box-shadow:0 2px 12px rgba(184,134,11,.15)' : ''}" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='${isBolgeMuduru ? '0 2px 12px rgba(184,134,11,.15)' : 'none'}'">
+                <div style="background:${cardBg};border:2px solid ${cardBorder}30;border-left:4px solid ${cardBorder};border-radius:12px;padding:16px;transition:all .2s${isPremium ? ';box-shadow:0 2px 12px rgba(184,134,11,.15)' : ''}" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='${isPremium ? '0 2px 12px rgba(184,134,11,.15)' : 'none'}'">
                     <!-- Header - TIKLANABİLİR -->
                     <div onclick="showPersonelPuanDetay('${p.id}', '${p.name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;cursor:pointer;padding:8px;margin:-8px;border-radius:8px;transition:background .15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
                         <div style="display:flex;align-items:center;gap:10px">
-                            <div style="width:36px;height:36px;background:${avatarBg};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;overflow:hidden${isBolgeMuduru ? ';box-shadow:0 2px 8px rgba(184,134,11,.4)' : ''}">
+                            <div style="width:36px;height:36px;background:${roleStyle.gradient};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;overflow:hidden${isPremium ? ';box-shadow:0 2px 8px rgba(184,134,11,.4)' : ''}">
                                 ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover">` : p.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                                <div style="display:flex;align-items:center;gap:8px">
+                                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                                     <span style="font-weight:600;font-size:.95rem;color:var(--tx)">${p.displayName}</span>
-                                    ${isBolgeMuduru ? '<span style="font-size:.6rem;background:linear-gradient(135deg,#b8860b,#daa520);color:#fff;padding:2px 6px;border-radius:4px;font-weight:600">BÖLGE</span>' : ''}
-                                    <span style="font-size:.9rem;color:${yildizColor};letter-spacing:1px">${yildizlar}</span>
+                                    ${badgeHtml}
                                 </div>
-                                <div style="font-size:.75rem;color:${roleColor};font-weight:500">${p.position || 'Barista'}</div>
+                                <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+                                    <span style="font-size:.75rem;color:${roleColor};font-weight:500">${p.position || 'Barista'}</span>
+                                    <span style="font-size:.85rem;color:${yildizColor};letter-spacing:1px">${yildizlar}</span>
+                                </div>
                             </div>
                         </div>
                         <div style="text-align:right">
@@ -11231,28 +11334,33 @@ async function loadPuantaj() {
             `;
             } else {
                 // === KİLİTLİ KART (GÖRÜNEMİYOR) ===
-                // Rol rengi hâlâ görünür, sadece puanlar gizli
-                const lockedCardBg = isBolgeMuduru
+                // Rol rengi ve badge hâlâ görünür, sadece puanlar gizli
+                const lockedCardBg = isPremium
                     ? 'linear-gradient(135deg,rgba(184,134,11,.08),rgba(218,165,32,.04),rgba(255,215,0,.02))'
                     : `linear-gradient(135deg,${roleColor}05,var(--cardBg))`;
-                const lockedAvatarBg = isBolgeMuduru
+                const lockedGradient = isPremium
                     ? 'linear-gradient(135deg,#b8860b80,#daa52060,#ffd70040)'
                     : `linear-gradient(135deg,${roleColor}80,${roleColor}50)`;
+                
+                // Kilitli badge (soluk)
+                const lockedBadgeHtml = isPremium
+                    ? `<span style="font-size:.55rem;background:${roleStyle.gradient};color:#fff;padding:2px 6px;border-radius:4px;font-weight:700;display:inline-flex;align-items:center;gap:3px;opacity:.7">${roleStyle.icon} ${roleStyle.badge}</span>`
+                    : `<span style="font-size:.55rem;background:${roleColor}15;color:${roleColor};padding:2px 6px;border-radius:4px;font-weight:700;display:inline-flex;align-items:center;gap:3px;opacity:.7">${roleStyle.icon} ${roleStyle.badge}</span>`;
                     
                 html += `
-                <div style="background:${lockedCardBg};border:2px solid #6c757d30;border-left:4px solid ${isBolgeMuduru ? '#b8860b' : roleColor}60;border-radius:12px;padding:16px;transition:all .2s;opacity:0.9${isBolgeMuduru ? ';box-shadow:0 1px 8px rgba(184,134,11,.1)' : ''}">
+                <div style="background:${lockedCardBg};border:2px solid #6c757d30;border-left:4px solid ${roleColor}60;border-radius:12px;padding:16px;transition:all .2s;opacity:0.9${isPremium ? ';box-shadow:0 1px 8px rgba(184,134,11,.1)' : ''}">
                     <!-- Header - TIKLANABİLİR DEĞİL -->
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:8px;margin:-8px;border-radius:8px">
                         <div style="display:flex;align-items:center;gap:10px">
-                            <div style="width:36px;height:36px;background:${lockedAvatarBg};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;overflow:hidden">
+                            <div style="width:36px;height:36px;background:${lockedGradient};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600;overflow:hidden">
                                 ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover;filter:grayscale(30%)">` : p.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                                <div style="display:flex;align-items:center;gap:8px">
+                                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                                     <span style="font-weight:600;font-size:.95rem;color:var(--tx)">${p.displayName}</span>
-                                    ${isBolgeMuduru ? '<span style="font-size:.6rem;background:linear-gradient(135deg,#b8860b80,#daa52080);color:#fff;padding:2px 6px;border-radius:4px;font-weight:600">BÖLGE</span>' : ''}
+                                    ${lockedBadgeHtml}
                                 </div>
-                                <div style="font-size:.75rem;color:${roleColor};font-weight:500">${p.position || 'Personel'}</div>
+                                <div style="font-size:.75rem;color:${roleColor};font-weight:500;opacity:.7">${p.position || 'Personel'}</div>
                             </div>
                         </div>
                         <div style="text-align:right">
