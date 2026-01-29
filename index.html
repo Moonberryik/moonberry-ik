@@ -10840,14 +10840,14 @@ async function loadPuantajRules() {
  * - yonetici: herkesi görür
  */
 function canViewPersonnelPuan(viewerRole, targetRole) {
-    // Yönetici herkesi görür
-    if (viewerRole === 'yonetici') return true;
+    // Yönetici ve admin herkesi görür
+    if (viewerRole === 'yonetici' || viewerRole === 'admin') return true;
     
-    // BÖLGE MÜDÜRÜ KARTI: Sadece yönetici görebilir
+    // BÖLGE MÜDÜRÜ KARTI: Sadece yönetici/admin görebilir
     if (targetRole === 'bolge_muduru') return false;
     
     // Bölge müdürü yönetici hariç herkesi görür (kendi kartı hariç - yukarıda engellendi)
-    if (viewerRole === 'bolge_muduru') return targetRole !== 'yonetici';
+    if (viewerRole === 'bolge_muduru') return targetRole !== 'yonetici' && targetRole !== 'admin';
     
     // Barista: kendisi + diğer baristalar + müdür yardımcısı
     if (viewerRole === 'barista') {
@@ -11062,11 +11062,14 @@ async function loadPuantaj() {
             
             const primDurumu = toplamPuan <= -5 ? 'prim_yok' : 'prim_var';
             
+            const displayNameResult = getPersonelDisplayName(p);
+            console.log(`[Puantaj] ${p.name} codeName="${p.codeName}" displayName="${displayNameResult}"`);
+            
             personelList.push({ 
                 id: doc.id, 
                 name: p.name,
                 codeName: p.codeName,
-                displayName: getPersonelDisplayName(p),  // codeName varsa onu, yoksa "Büşra S."
+                displayName: displayNameResult,  // codeName varsa onu, yoksa "Büşra S."
                 role: p.role || 'barista',  // ROL BİLGİSİ - görünürlük kontrolü için
                 tc: p.tc, 
                 position: p.position,
@@ -11413,10 +11416,14 @@ async function loadPuantaj() {
         
         let hasRecords = false;
         personelList.forEach(p => {
+            // Görünürlük kontrolü - sadece görülebilen personellerin değerlendirmelerini göster
+            const canView = canViewPersonnelPuan(viewerRole, p.role);
+            if (!canView) return;
+            
             if (p.puanlar && p.puanlar.length > 0) {
                 hasRecords = true;
                 html += `<div style="margin-bottom:16px">`;
-                html += `<div style="font-size:.9rem;font-weight:600;color:var(--tx);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--cardBorder)">${p.name}</div>`;
+                html += `<div style="font-size:.9rem;font-weight:600;color:var(--tx);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--cardBorder)">${p.displayName || p.name}</div>`;
                 p.puanlar.forEach(puan => {
                     if (puan.type === 'prim_reset') return; // Prim sıfırlama kayıtlarını atla
                     // Otomatik puanları atla - bunlar aşağıda "Check Sisteminden Otomatik Puanlar" bölümünde gösteriliyor
@@ -11691,7 +11698,13 @@ function showPersonelPuanDetay(personelId, personName) {
     const viewerRole = currentUser?.role || 'barista';
     const targetRole = personelData.role || 'barista';
     
-    if (!canViewPersonnelPuan(viewerRole, targetRole)) {
+    // DEBUG
+    console.log('[PuanDetay] viewerRole:', viewerRole, 'targetRole:', targetRole, 'canView:', canViewPersonnelPuan(viewerRole, targetRole));
+    
+    // Yönetici ve admin her zaman görebilir
+    const isAdmin = viewerRole === 'yonetici' || viewerRole === 'admin';
+    
+    if (!isAdmin && !canViewPersonnelPuan(viewerRole, targetRole)) {
         toast('Bu personelin puanlarını görme yetkiniz yok', 'warning');
         return;
     }
