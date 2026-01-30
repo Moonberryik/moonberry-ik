@@ -2544,7 +2544,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0655 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0700 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -25783,6 +25783,9 @@ async function saveAdvancedCheckRules() {
         const existingRule = CHECK_RULES[type] || {};
         const rule = { ...baseRule, ...existingRule };
         
+        // supervisorPenalty'yi koru (Firebase'den gelmemişse default kullan)
+        rule.supervisorPenalty = existingRule.supervisorPenalty ?? baseRule.supervisorPenalty ?? -0.5;
+        
         // Enabled
         const enabledEl = document.getElementById(`checkRule_${type}_enabled`);
         if (enabledEl) rule.enabled = enabledEl.checked;
@@ -26168,8 +26171,23 @@ async function loadSystemConfig() {
             WHATSAPP_GROUPS = SYSTEM_CONFIG.whatsappGroups || {};
             PLATFORMS = SYSTEM_CONFIG.platforms || PLATFORMS;
             BRANCH_HOURS = SYSTEM_CONFIG.branchHours || {};
-            CHECK_RULES = SYSTEM_CONFIG.checkRules || {};
             SHIFT_DURATION = SYSTEM_CONFIG.shiftDuration || 9;
+            
+            // CHECK_RULES merge - Firebase'den gelen kuralları mevcut default'larla birleştir
+            // supervisorPenalty gibi yeni alanlar korunur
+            if (SYSTEM_CONFIG.checkRules) {
+                const firebaseRules = SYSTEM_CONFIG.checkRules;
+                Object.keys(firebaseRules).forEach(key => {
+                    const defaultRule = CHECK_RULES[key] || DEFAULT_CHECK_RULES[key] || {};
+                    CHECK_RULES[key] = {
+                        ...defaultRule, // Default'ları koru (supervisorPenalty dahil)
+                        ...firebaseRules[key], // Firebase'den gelenleri üstüne yaz
+                        // supervisorPenalty: Firebase'de yoksa default'u kullan
+                        supervisorPenalty: firebaseRules[key]?.supervisorPenalty ?? defaultRule.supervisorPenalty ?? -0.5
+                    };
+                });
+                console.log('[Config] CHECK_RULES merged with supervisorPenalty');
+            }
         }
         
         // ====== CHECK SYSTEM SETTINGS YÜKLE ======
@@ -26293,6 +26311,20 @@ async function loadSystemConfig() {
         if (persDoc.exists) {
             personnelMapping = persDoc.data().list || [];
         }
+        
+        // === SUPERVISOR PENALTY DEFAULT ENSURE ===
+        // Firebase'den yüklenmiş CHECK_RULES'da supervisorPenalty yoksa default'ları ekle
+        Object.keys(CHECK_RULES).forEach(key => {
+            if (CHECK_RULES[key].supervisorPenalty === undefined) {
+                CHECK_RULES[key].supervisorPenalty = DEFAULT_CHECK_RULES[key]?.supervisorPenalty ?? -0.5;
+            }
+        });
+        // Ayrıca DEFAULT_CHECK_RULES'da olup CHECK_RULES'da olmayan türler için de ekle
+        Object.keys(DEFAULT_CHECK_RULES).forEach(key => {
+            if (!CHECK_RULES[key]) {
+                CHECK_RULES[key] = { ...DEFAULT_CHECK_RULES[key] };
+            }
+        });
         
         console.log('Sistem config yüklendi:', {
             branches: Object.keys(CHECKLIST_TYPES),
