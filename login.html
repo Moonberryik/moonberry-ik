@@ -679,7 +679,6 @@ body {
                 
                 const credData = credDoc.data();
                 const storedPassword = decodeCredential(credData);
-                console.log('   Kayıtlı:', storedPassword, '| Girilen:', password);
                 
                 if (!storedPassword || storedPassword !== password) {
                     console.log('   ✗ Şifre eşleşmiyor');
@@ -711,7 +710,6 @@ body {
                     if (configDoc.exists) {
                         const adminEmails = configDoc.data().adminEmails || [];
                         isAdmin = adminEmails.includes(email);
-                        console.log('   Admin emails:', adminEmails);
                     }
                 } catch (e) {
                     console.log('   Config okunamadı:', e.code);
