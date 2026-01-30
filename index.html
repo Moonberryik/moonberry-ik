@@ -2535,7 +2535,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0615 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0618 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -11501,7 +11501,9 @@ async function loadPrimSistemiPage() {
         annSnap.forEach(doc => {
             const data = { id: doc.id, ...doc.data() };
             const targetBranches = data.branches || ['all'];
-            if (targetBranches.includes('all') || targetBranches.includes(selectedBranch) || currentUser?.role === 'yonetici') {
+            // Yönetici ve bölge müdürü tüm bilgilendirmeleri görür
+            const canSeeAll = currentUser?.role === 'yonetici' || currentUser?.role === 'bolge_muduru';
+            if (targetBranches.includes('all') || targetBranches.includes(selectedBranch) || canSeeAll) {
                 announcements.push(data);
             }
         });
@@ -11943,10 +11945,13 @@ function canViewPersonnelPuan(viewerRole, targetRole) {
     // Yönetici ve admin herkesi görür
     if (viewerRole === 'yonetici' || viewerRole === 'admin') return true;
     
-    // BÖLGE MÜDÜRÜ KARTI: Sadece yönetici/admin görebilir
-    if (targetRole === 'bolge_muduru') return false;
+    // BÖLGE MÜDÜRÜ KARTI: Sadece yönetici/admin puanlarını görebilir
+    // Ama bölge müdürü kendi kartını görebilir
+    if (targetRole === 'bolge_muduru') {
+        return viewerRole === 'bolge_muduru'; // Sadece kendi kartını görür
+    }
     
-    // Bölge müdürü yönetici hariç herkesi görür (kendi kartı hariç - yukarıda engellendi)
+    // Bölge müdürü yönetici hariç herkesi görür
     if (viewerRole === 'bolge_muduru') return targetRole !== 'yonetici' && targetRole !== 'admin';
     
     // Barista: kendisi + diğer baristalar + müdür yardımcısı
