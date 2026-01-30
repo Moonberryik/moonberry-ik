@@ -2544,7 +2544,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0640 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0650 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -11985,33 +11985,37 @@ async function showCheckRulesEditModal() {
     let rowsHtml = checkTypes.map(ct => {
         const rule = CHECK_RULES[ct.id] || {};
         const pts = rule.points || { onTime: 0, late: 0, missed: 0 };
+        const supPenalty = rule.supervisorPenalty ?? -0.5;
         return `
-            <div style="display:grid;grid-template-columns:1fr repeat(3,70px);gap:8px;align-items:center;padding:10px 12px;background:var(--bg2);border-radius:8px">
-                <div style="font-weight:600;color:var(--tx);font-size:.8rem">${ct.name}</div>
+            <div style="display:grid;grid-template-columns:1fr repeat(4,60px);gap:6px;align-items:center;padding:10px 12px;background:var(--bg2);border-radius:8px">
+                <div style="font-weight:600;color:var(--tx);font-size:.75rem">${ct.name}</div>
                 <input type="number" data-check="${ct.id}" data-field="onTime" value="${pts.onTime}" 
-                    style="width:100%;padding:8px;border:1px solid var(--bg4);border-radius:6px;background:rgba(39,174,96,.08);color:#27ae60;font-weight:700;text-align:center;font-size:.85rem">
+                    style="width:100%;padding:6px;border:1px solid var(--bg4);border-radius:6px;background:rgba(39,174,96,.08);color:#27ae60;font-weight:700;text-align:center;font-size:.8rem">
                 <input type="number" data-check="${ct.id}" data-field="late" value="${pts.late}" 
-                    style="width:100%;padding:8px;border:1px solid var(--bg4);border-radius:6px;background:rgba(230,126,34,.08);color:#e67e22;font-weight:700;text-align:center;font-size:.85rem">
+                    style="width:100%;padding:6px;border:1px solid var(--bg4);border-radius:6px;background:rgba(230,126,34,.08);color:#e67e22;font-weight:700;text-align:center;font-size:.8rem">
                 <input type="number" data-check="${ct.id}" data-field="missed" value="${pts.missed}" 
-                    style="width:100%;padding:8px;border:1px solid var(--bg4);border-radius:6px;background:rgba(231,76,60,.08);color:#e74c3c;font-weight:700;text-align:center;font-size:.85rem">
+                    style="width:100%;padding:6px;border:1px solid var(--bg4);border-radius:6px;background:rgba(231,76,60,.08);color:#e74c3c;font-weight:700;text-align:center;font-size:.8rem">
+                <input type="number" step="0.1" data-check="${ct.id}" data-field="supervisorPenalty" value="${supPenalty}" 
+                    style="width:100%;padding:6px;border:1px solid var(--bg4);border-radius:6px;background:rgba(155,89,182,.08);color:#9b59b6;font-weight:700;text-align:center;font-size:.8rem">
             </div>
         `;
     }).join('');
     
     const body = `
         <div style="margin-bottom:12px">
-            <div style="display:grid;grid-template-columns:1fr repeat(3,70px);gap:8px;padding:0 12px;margin-bottom:8px">
-                <div style="font-size:.7rem;color:var(--tx3);font-weight:600">CHECK TİPİ</div>
-                <div style="font-size:.7rem;color:#27ae60;font-weight:600;text-align:center">VAKTİNDE</div>
-                <div style="font-size:.7rem;color:#e67e22;font-weight:600;text-align:center">GEÇ</div>
-                <div style="font-size:.7rem;color:#e74c3c;font-weight:600;text-align:center">YAPILMADI</div>
+            <div style="display:grid;grid-template-columns:1fr repeat(4,60px);gap:6px;padding:0 12px;margin-bottom:8px">
+                <div style="font-size:.65rem;color:var(--tx3);font-weight:600">CHECK TİPİ</div>
+                <div style="font-size:.65rem;color:#27ae60;font-weight:600;text-align:center">VAKTİNDE</div>
+                <div style="font-size:.65rem;color:#e67e22;font-weight:600;text-align:center">GEÇ</div>
+                <div style="font-size:.65rem;color:#e74c3c;font-weight:600;text-align:center">YAPILMADI</div>
+                <div style="font-size:.65rem;color:#9b59b6;font-weight:600;text-align:center">MÜDÜR</div>
             </div>
             <div style="display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow-y:auto">
                 ${rowsHtml}
             </div>
         </div>
         <div style="font-size:.7rem;color:var(--tx3);padding:10px;background:var(--bg2);border-radius:8px">
-            <strong>Not:</strong> Değişiklikler anlık olarak uygulanır. Negatif değerler için - işareti kullanın.
+            <strong>Müdür Sütunu:</strong> Personel check'i doldurmadığında müdür/yardımcıya yazılacak eksi puan.
         </div>
     `;
     
@@ -12028,10 +12032,18 @@ async function saveCheckRules() {
     inputs.forEach(inp => {
         const checkId = inp.dataset.check;
         const field = inp.dataset.field;
-        const value = parseInt(inp.value) || 0;
+        // supervisorPenalty için float, diğerleri için int
+        const value = field === 'supervisorPenalty' 
+            ? parseFloat(inp.value) || 0 
+            : parseInt(inp.value) || 0;
         
-        if (!updates[checkId]) updates[checkId] = {};
-        updates[checkId][field] = value;
+        if (!updates[checkId]) updates[checkId] = { points: {}, supervisorPenalty: 0 };
+        
+        if (field === 'supervisorPenalty') {
+            updates[checkId].supervisorPenalty = value;
+        } else {
+            updates[checkId].points[field] = value;
+        }
     });
     
     try {
@@ -12040,8 +12052,9 @@ async function saveCheckRules() {
             if (CHECK_RULES[checkId]) {
                 CHECK_RULES[checkId].points = {
                     ...CHECK_RULES[checkId].points,
-                    ...updates[checkId]
+                    ...updates[checkId].points
                 };
+                CHECK_RULES[checkId].supervisorPenalty = updates[checkId].supervisorPenalty;
             }
         });
         
@@ -12424,6 +12437,202 @@ function calculatePrim() {
     }
 }
 
+// ========== SUPERVISOR PENALTY SİSTEMİ ==========
+// Personel check kaçırdığında müdür/yardımcıya eksi puan yazılır
+
+/**
+ * ISO hafta numarasını hesapla
+ */
+function getWeekNumber(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+/**
+ * Shift verilerinden o saatteki müdür/yardımcıları bul
+ * @param {string} branch - Şube
+ * @param {string} date - Tarih (YYYY-MM-DD)
+ * @param {number} hour - Saat (0-23)
+ * @returns {Promise<Array>} - Müdür/yardımcı listesi
+ */
+async function getSupervisorsOnDuty(branch, date, hour) {
+    const supervisors = [];
+    
+    try {
+        // Shift verisini al
+        const dateObj = new Date(date);
+        const dayOfWeek = dateObj.getDay();
+        const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        
+        // Shift koleksiyonundan veri çek
+        const shiftKey = `${dateObj.getFullYear()}-W${getWeekNumber(dateObj)}`;
+        const shiftDoc = await db.collection('shifts').doc(`${branch}_${shiftKey}`).get();
+        
+        if (!shiftDoc.exists) {
+            // Fallback: Personel koleksiyonundan müdürleri al
+            const personelSnap = await db.collection('personel')
+                .where('branch', '==', branch)
+                .where('status', '==', 'active')
+                .get();
+            
+            personelSnap.forEach(doc => {
+                const p = doc.data();
+                if (['magaza_muduru', 'mudur_yardimcisi', 'magaza_mudur_yardimcisi'].includes(p.role)) {
+                    supervisors.push({
+                        id: doc.id,
+                        name: p.codeName || p.name?.split(' ')[0] || p.name,
+                        fullName: p.name,
+                        role: p.role
+                    });
+                }
+            });
+            return supervisors;
+        }
+        
+        const shiftData = shiftDoc.data();
+        const { personelShifts = {}, personelNames = {}, personelFullNames = {}, personelRoles = {} } = shiftData;
+        
+        // Her personel için shift kontrolü
+        for (const [uniqueId, days] of Object.entries(personelShifts)) {
+            const role = personelRoles[uniqueId] || '';
+            if (!['magaza_muduru', 'mudur_yardimcisi', 'magaza_mudur_yardimcisi'].includes(role)) continue;
+            
+            const todayShift = days[dayIndex] || '';
+            if (!todayShift || todayShift.toUpperCase() === 'X' || todayShift.toUpperCase() === 'OFF') continue;
+            
+            // Shift saatini parse et
+            const shiftTime = parseShiftTime(todayShift);
+            if (!shiftTime) continue;
+            
+            // Check saati shift içinde mi?
+            let isOnDuty = false;
+            if (shiftTime.endHour > shiftTime.startHour) {
+                // Normal shift (örn: 10-19)
+                isOnDuty = hour >= shiftTime.startHour && hour < shiftTime.endHour;
+            } else {
+                // Gece geçişli shift (örn: 16-01)
+                isOnDuty = hour >= shiftTime.startHour || hour < shiftTime.endHour;
+            }
+            
+            if (isOnDuty) {
+                supervisors.push({
+                    id: uniqueId,
+                    name: personelNames[uniqueId] || uniqueId,
+                    fullName: personelFullNames[uniqueId] || uniqueId,
+                    role: role
+                });
+            }
+        }
+    } catch (e) {
+        console.error('[SupervisorPenalty] Shift veri hatası:', e);
+    }
+    
+    return supervisors;
+}
+
+/**
+ * Personel check kaçırdığında supervisor penalty yaz
+ * @param {Object} params - Parametreler
+ */
+async function writeSupervisorPenalty(params) {
+    const { personelId, personelName, checkType, checkTime, date, branch } = params;
+    
+    // CHECK_RULES'dan penalty değerini al
+    const checkTypeId = canonicalChecklistTypeId?.(checkType) || checkType.toLowerCase().replace(/[^a-z]/g, '');
+    const rules = CHECK_RULES[checkTypeId] || CHECK_RULES['gunluk'] || {};
+    const penalty = rules.supervisorPenalty ?? -0.5;
+    
+    // Penalty 0 ise yazma
+    if (penalty === 0) return;
+    
+    // Check saatini parse et
+    const checkHour = parseInt(checkTime?.split(':')[0]) || 12;
+    
+    // O saatteki müdür/yardımcıları bul
+    const supervisors = await getSupervisorsOnDuty(branch, date, checkHour);
+    
+    if (supervisors.length === 0) {
+        console.log('[SupervisorPenalty] Görevde müdür/yardımcı bulunamadı:', { date, checkHour, branch });
+        return;
+    }
+    
+    console.log('[SupervisorPenalty] Yazılacak:', { personelName, checkType, supervisors: supervisors.map(s => s.name) });
+    
+    // Her müdür/yardımcı için penalty yaz
+    const batch = db.batch();
+    const now = new Date();
+    
+    for (const supervisor of supervisors) {
+        const penaltyId = `${date}_${checkTypeId}_${checkTime?.replace(':', '')}_${personelId}_${supervisor.id}`;
+        const penaltyRef = db.collection('supervisorPenalties').doc(penaltyId);
+        
+        batch.set(penaltyRef, {
+            supervisorId: supervisor.id,
+            supervisorName: supervisor.name,
+            supervisorFullName: supervisor.fullName,
+            supervisorRole: supervisor.role,
+            personelId: personelId,
+            personelName: personelName,
+            checkType: checkTypeId,
+            checkTypeName: rules.name || checkType,
+            checkTime: checkTime || '',
+            date: date,
+            penalty: penalty,
+            branch: branch,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            month: date.substring(0, 7) // YYYY-MM
+        }, { merge: true });
+    }
+    
+    try {
+        await batch.commit();
+        console.log('[SupervisorPenalty] Başarıyla yazıldı:', penaltyId);
+    } catch (e) {
+        console.error('[SupervisorPenalty] Yazma hatası:', e);
+    }
+}
+
+/**
+ * Supervisor penalty kayıtlarını yükle
+ * @param {string} supervisorId - Müdür/yardımcı ID
+ * @param {string} month - Ay (YYYY-MM)
+ * @returns {Promise<Array>} - Penalty kayıtları
+ */
+async function loadSupervisorPenalties(supervisorId, month) {
+    try {
+        const snap = await db.collection('supervisorPenalties')
+            .where('supervisorId', '==', supervisorId)
+            .where('month', '==', month)
+            .orderBy('date', 'desc')
+            .limit(100)
+            .get();
+        
+        const penalties = [];
+        snap.forEach(doc => {
+            penalties.push({ id: doc.id, ...doc.data() });
+        });
+        
+        return penalties;
+    } catch (e) {
+        console.error('[SupervisorPenalty] Yükleme hatası:', e);
+        return [];
+    }
+}
+
+/**
+ * Supervisor penalty toplamını hesapla
+ * @param {string} supervisorId - Müdür/yardımcı ID
+ * @param {string} month - Ay (YYYY-MM)
+ * @returns {Promise<number>} - Toplam penalty
+ */
+async function calculateSupervisorPenaltyTotal(supervisorId, month) {
+    const penalties = await loadSupervisorPenalties(supervisorId, month);
+    return penalties.reduce((sum, p) => sum + (p.penalty || 0), 0);
+}
+
 async function loadPuantajRules() {
     try {
         const snapshot = await db.collection('puantajRules').get();
@@ -12523,6 +12732,31 @@ async function loadPuantaj() {
         
         // Şubeye ait puantaj verilerini çek
         const puantajSnapshot = await db.collection('puantaj').where('period', '==', puantajKey).where('branch', '==', sube).get();
+        
+        // === SUPERVISOR PENALTIES YÜKLEMESİ ===
+        // Bu şubedeki müdür/yardımcıların personel eksi puanlarını yükle
+        let supervisorPenaltiesData = {};
+        try {
+            const penaltiesSnap = await db.collection('supervisorPenalties')
+                .where('branch', '==', sube)
+                .where('month', '==', puantajKey)
+                .get();
+            
+            penaltiesSnap.forEach(doc => {
+                const d = doc.data();
+                const supId = d.supervisorId;
+                if (!supervisorPenaltiesData[supId]) {
+                    supervisorPenaltiesData[supId] = { total: 0, records: [] };
+                }
+                supervisorPenaltiesData[supId].total += d.penalty || 0;
+                supervisorPenaltiesData[supId].records.push({ id: doc.id, ...d });
+            });
+            console.log('[Puantaj] Supervisor penalties yüklendi:', Object.keys(supervisorPenaltiesData).length, 'müdür');
+        } catch (e) {
+            console.log('[Puantaj] Supervisor penalties yüklenemedi (koleksiyon henüz yok olabilir):', e.message);
+        }
+        // Global'e kaydet - kart detayında kullanılacak
+        window.supervisorPenaltiesCache = supervisorPenaltiesData;
         
         // Bölge müdürü puantajlarını da çek - personelId ile (branch fark etmez)
         // Bölge müdürlerinin doc.id'lerini topla
@@ -12722,8 +12956,27 @@ async function loadPuantaj() {
                 else { autoOnTime++; pozitifOlay++; }
             });
             
-            // Toplam puan = Manuel + Otomatik + Reset Bonus
-            const toplamPuan = manuelPuan + otomatikPuan + primResetBonus;
+            // === PERSONEL EKSİ PUANI (Sadece Müdür/Yardımcı için) ===
+            // Personel check doldurmadığında müdüre yazılan eksi puanlar
+            const isSupervisorRole = ['magaza_muduru', 'mudur_yardimcisi', 'magaza_mudur_yardimcisi'].includes(p.role);
+            let personelEksiPuan = 0;
+            let personelEksiKayitlar = [];
+            
+            if (isSupervisorRole && window.supervisorPenaltiesCache) {
+                // supervisorId olarak doc.id veya normalize edilmiş id kullanılmış olabilir
+                const normalizedId = normalizePersonelId(p.name);
+                const penaltyData = window.supervisorPenaltiesCache[doc.id] || 
+                                   window.supervisorPenaltiesCache[normalizedId] ||
+                                   window.supervisorPenaltiesCache[p.codeName?.toLowerCase()?.replace(/\s+/g, '_')];
+                
+                if (penaltyData) {
+                    personelEksiPuan = penaltyData.total || 0;
+                    personelEksiKayitlar = penaltyData.records || [];
+                }
+            }
+            
+            // Toplam puan = Manuel + Otomatik + Reset Bonus + Personel Eksisi
+            const toplamPuan = manuelPuan + otomatikPuan + primResetBonus + personelEksiPuan;
             
             const primDurumu = toplamPuan <= -5 ? 'prim_yok' : 'prim_var';
             
@@ -12741,6 +12994,8 @@ async function loadPuantaj() {
                 toplamPuan,
                 manuelPuan,
                 otomatikPuan,
+                personelEksiPuan, // YENİ: Müdür/yardımcı için personel eksisi
+                personelEksiKayitlar, // YENİ: Detay için
                 primDurumu, 
                 kayitSayisi, 
                 negatifOlay,
@@ -13096,23 +13351,30 @@ async function loadPuantaj() {
                         </div>
                     </div>
                     
-                    <!-- Puan Detayı - Manuel/Otomatik/Toplam -->
-                    <div style="display:flex;gap:8px;margin-bottom:12px;background:var(--bg3);padding:10px;border-radius:8px">
+                    <!-- Puan Detayı - Manuel/Otomatik/(Personel Eksisi)/Toplam -->
+                    <div style="display:flex;gap:6px;margin-bottom:12px;background:var(--bg3);padding:10px;border-radius:8px">
                         <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
-                            <div style="font-size:.65rem;color:var(--tx3);margin-bottom:2px">Manuel</div>
-                            <div style="font-size:.9rem;font-weight:700;color:${p.manuelPuan > 0 ? '#27ae60' : p.manuelPuan < 0 ? '#e74c3c' : 'var(--tx2)'}">
-                                ${p.manuelPuan > 0 ? '+' : ''}${p.manuelPuan || 0}
-                            </div>
-                        </div>
-                        <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
-                            <div style="font-size:.65rem;color:var(--tx3);margin-bottom:2px">Otomatik</div>
-                            <div style="font-size:.9rem;font-weight:700;color:${p.otomatikPuan > 0 ? '#27ae60' : p.otomatikPuan < 0 ? '#e74c3c' : 'var(--tx2)'}">
+                            <div style="font-size:.6rem;color:var(--tx3);margin-bottom:2px">Otomatik</div>
+                            <div style="font-size:.85rem;font-weight:700;color:${p.otomatikPuan > 0 ? '#27ae60' : p.otomatikPuan < 0 ? '#e74c3c' : 'var(--tx2)'}">
                                 ${p.otomatikPuan > 0 ? '+' : ''}${p.otomatikPuan || 0}
                             </div>
                         </div>
+                        <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
+                            <div style="font-size:.6rem;color:var(--tx3);margin-bottom:2px">Manuel</div>
+                            <div style="font-size:.85rem;font-weight:700;color:${p.manuelPuan > 0 ? '#27ae60' : p.manuelPuan < 0 ? '#e74c3c' : 'var(--tx2)'}">
+                                ${p.manuelPuan > 0 ? '+' : ''}${p.manuelPuan || 0}
+                            </div>
+                        </div>
+                        ${isMudurRole ? `
+                        <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
+                            <div style="font-size:.6rem;color:#9b59b6;margin-bottom:2px">Personel</div>
+                            <div style="font-size:.85rem;font-weight:700;color:${p.personelEksiPuan < 0 ? '#9b59b6' : 'var(--tx2)'}">
+                                ${p.personelEksiPuan || 0}
+                            </div>
+                        </div>` : ''}
                         <div style="flex:1;text-align:center">
-                            <div style="font-size:.65rem;color:var(--tx3);margin-bottom:2px">Toplam</div>
-                            <div style="font-size:.9rem;font-weight:700;color:${puanColor}">
+                            <div style="font-size:.6rem;color:var(--tx3);margin-bottom:2px">Toplam</div>
+                            <div style="font-size:.85rem;font-weight:700;color:${puanColor}">
                                 ${puanSign}${p.toplamPuan}
                             </div>
                         </div>
@@ -13634,6 +13896,57 @@ function showPersonelPuanDetay(personelId, personName) {
         // Toplu silme butonu
         if (canManage) {
             body += `<button onclick="deleteSelectedManuelNotes()" style="margin-top:8px;width:100%;padding:8px;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.2);color:#e74c3c;border-radius:6px;font-size:.75rem;cursor:pointer;display:none" id="manuelDeleteSelectedBtn">Seçilenleri Sil</button>`;
+        }
+        
+        body += `</div>`;
+    }
+    
+    // === PERSONEL CHECKLİST DOLDURMAMASI (Sadece Müdür/Yardımcı için) ===
+    const isSupervisorRole = ['magaza_muduru', 'mudur_yardimcisi', 'magaza_mudur_yardimcisi'].includes(personelData?.role);
+    const personelEksiKayitlar = personelData?.personelEksiKayitlar || [];
+    
+    if (isSupervisorRole) {
+        const personelEksiTotal = personelEksiKayitlar.reduce((sum, r) => sum + (r.penalty || 0), 0);
+        
+        body += `
+            <div style="margin-top:12px">
+                <div style="font-size:.85rem;font-weight:600;color:var(--tx);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+                    <svg width="14" height="14" fill="none" stroke="#9b59b6" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                    <span style="color:#9b59b6">Personel Checklist Doldurmaması</span>
+                    <span style="color:var(--tx3);font-weight:400">(${personelEksiKayitlar.length})</span>
+                    ${personelEksiTotal !== 0 ? `<span style="margin-left:auto;font-size:.75rem;font-weight:700;color:#9b59b6">${personelEksiTotal}</span>` : ''}
+                </div>
+        `;
+        
+        if (personelEksiKayitlar.length === 0) {
+            body += `<div style="text-align:center;color:var(--tx3);font-size:.8rem;padding:16px;background:var(--bg2);border-radius:8px">Personel eksisi kaydı yok 👍</div>`;
+        } else {
+            // Tarihe göre sırala (yeni önce)
+            const sortedRecords = [...personelEksiKayitlar].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            
+            sortedRecords.slice(0, 15).forEach(record => {
+                const dateStr = record.date || '';
+                const dateObj = new Date(dateStr);
+                const tarih = isNaN(dateObj) ? '-' : `${String(dateObj.getDate()).padStart(2,'0')}.${String(dateObj.getMonth()+1).padStart(2,'0')}`;
+                const penalty = record.penalty || 0;
+                const personelName = record.personelName || 'Personel';
+                const checkTypeName = record.checkTypeName || record.checkType || 'Check';
+                const checkTime = record.checkTime || '';
+                
+                body += `
+                    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-size:.8rem">
+                        <span style="color:var(--tx3);min-width:40px">${tarih}</span>
+                        <span style="flex:1;color:var(--tx)">
+                            <span style="font-weight:600;color:#9b59b6">${personelName}</span> - ${checkTypeName}${checkTime ? ' · ' + checkTime : ''}
+                        </span>
+                        <span style="font-weight:700;color:#9b59b6;min-width:32px;text-align:right">${penalty}</span>
+                    </div>
+                `;
+            });
+            
+            if (personelEksiKayitlar.length > 15) {
+                body += `<div style="text-align:center;color:var(--tx3);font-size:.7rem;padding:6px">+${personelEksiKayitlar.length - 15} kayıt daha</div>`;
+            }
         }
         
         body += `</div>`;
@@ -20175,37 +20488,43 @@ let CHECK_RULES = {
         name: 'Günlük Check',
         window: { before: 60, after: 60 },
         lateWindow: 60,
-        points: { onTime: 2, late: -2, missed: -2 }
+        points: { onTime: 2, late: -2, missed: -2 },
+        supervisorPenalty: -0.5 // Personel doldurmadığında müdüre/yardımcıya
     },
     guncel: {  // gunluk alias - dashboard'da guncel kullanılıyor
         name: 'Günlük Genel Check',
         window: { before: 60, after: 60 },
         lateWindow: 60,
-        points: { onTime: 2, late: -2, missed: -2 }
+        points: { onTime: 2, late: -2, missed: -2 },
+        supervisorPenalty: -0.5
     },
     platform: {
         name: 'Platform Check',
         timeSlots: PLATFORM_CHECK_TIMES, // 10:00, 12:00, 15:00, 18:00, 21:00, 00:00
         window: { before: 30, after: 30 }, // Her saat için ±30 dakika
         lateWindow: 30,
-        points: { onTime: 1, late: -1, missed: -1 }
+        points: { onTime: 1, late: -1, missed: -1 },
+        supervisorPenalty: -0.3
     },
     acilis: {
         name: 'Açılış',
         deadline: '11:00',
         window: { before: 0, after: 120 },
-        points: { onTime: 5, late: -3, missed: -5 }
+        points: { onTime: 5, late: -3, missed: -5 },
+        supervisorPenalty: -1
     },
     kapanis: {
         name: 'Kapanış',
         deadline: '23:59',
         window: { before: 120, after: 0 },
-        points: { onTime: 5, late: -3, missed: -5 }
+        points: { onTime: 5, late: -3, missed: -5 },
+        supervisorPenalty: -1
     },
     mudur: {
         name: 'Müdür Kontrol',
         deadline: '21:00',
-        points: { onTime: 10, late: -5, missed: -10 }
+        points: { onTime: 10, late: -5, missed: -10 },
+        supervisorPenalty: 0 // Müdür kendi check'i - penalty yok
     },
     aylik: {
         name: 'Temizlik ve Bakım',
@@ -20217,11 +20536,13 @@ let CHECK_RULES = {
             kapanisci: { deadline: '02:00', window: { start: '16:00', end: '02:00' } }
         },
         points: { onTime: 1, late: -1, missed: -1 },
+        supervisorPenalty: -0.5,
         note: 'Her personel kendi shift türüne göre 1 kere yapmalı'
     },
     haftalik: {
         name: 'Haftalık Görevler',
-        points: { done: 3, missed: -3 }
+        points: { done: 3, missed: -3 },
+        supervisorPenalty: -0.5
     }
 };
 let SHIFT_DURATION = 9; // saat
