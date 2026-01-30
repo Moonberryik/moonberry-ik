@@ -2544,7 +2544,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0628 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0632 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -11601,10 +11601,16 @@ async function loadPrimSistemiPage() {
                             <div style="font-size:.75rem;color:var(--tx3)">${activeMonth} Dönemi${userBranchDisplay}</div>
                         </div>
                     </div>
-                    ${canEdit ? `<button onclick="showPrimEditModal()" style="background:linear-gradient(135deg,#27ae60,#2ecc71);border:none;color:#fff;padding:7px 14px;border-radius:8px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px;font-size:.75rem;flex-shrink:0">
-                        <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        Düzenle
-                    </button>` : ''}
+                    <div style="display:flex;gap:6px;flex-wrap:wrap">
+                        <button onclick="showPrimCalculatorModal()" style="background:var(--bg);border:1px solid var(--bg4);color:var(--tx2);padding:7px 12px;border-radius:8px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px;font-size:.75rem;flex-shrink:0">
+                            <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="14" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/></svg>
+                            Hesapla
+                        </button>
+                        ${canEdit ? `<button onclick="showPrimEditModal()" style="background:linear-gradient(135deg,#27ae60,#2ecc71);border:none;color:#fff;padding:7px 14px;border-radius:8px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px;font-size:.75rem;flex-shrink:0">
+                            <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            Düzenle
+                        </button>` : ''}
+                    </div>
                 </div>
                 
                 <!-- Prim Kademeleri - Responsive Grid -->
@@ -12144,6 +12150,270 @@ async function saveStarPoints() {
     } catch (e) {
         console.error('Kaydetme hatası:', e);
         toast('Kaydetme hatası', 'error');
+    }
+}
+
+// ========== PRİM HESAPLAMA MODAL ==========
+async function showPrimCalculatorModal() {
+    const selectedBranch = window.primSelectedBranch || currentUser?.branch || '';
+    const now = new Date();
+    const periodKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const monthName = now.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+    
+    // Prim kademelerini al
+    let tiers = [];
+    try {
+        const settingsDoc = await db.collection('settings').doc('primSystem').get();
+        if (settingsDoc.exists) {
+            const s = settingsDoc.data();
+            tiers = s.branchSettings?.[selectedBranch]?.tiers || s.tiers || [];
+        }
+    } catch (e) {
+        console.error('Prim ayarları yüklenemedi:', e);
+    }
+    
+    // Personel listesi
+    let personelOptions = '<option value="">Personel seçin...</option>';
+    try {
+        const personelSnap = await db.collection('personel')
+            .where('status', '!=', 'inactive')
+            .get();
+        
+        personelSnap.forEach(doc => {
+            const p = doc.data();
+            if (p.branch === selectedBranch || selectedBranch === 'all' || p.branch === 'all') {
+                const displayName = p.codeName || p.name?.split(' ')[0] || p.name;
+                personelOptions += `<option value="${doc.id}" data-name="${p.name}">${displayName}</option>`;
+            }
+        });
+    } catch (e) {
+        console.error('Personel yüklenemedi:', e);
+    }
+    
+    // Kademe gösterimi
+    const tiersHtml = tiers.length > 0 ? tiers.map((t, i) => {
+        const color = t.color || '#27ae60';
+        return `
+            <div class="prim-calc-tier" data-min="${parseCiroValue(t.minCiro)}" data-prim="${parseCiroValue(t.prim)}" 
+                style="padding:10px;background:var(--bg2);border:1px solid var(--bg4);border-radius:8px;text-align:center;transition:all .2s">
+                <div style="font-size:.65rem;color:var(--tx3);margin-bottom:2px">${t.label || 'Kademe ' + (i+1)}</div>
+                <div style="font-size:.8rem;font-weight:700;color:var(--tx)">${t.minCiro}</div>
+                <div style="font-size:.9rem;font-weight:800;color:${color}">${t.prim}</div>
+            </div>
+        `;
+    }).join('') : '<div style="text-align:center;color:var(--tx3);font-size:.8rem;grid-column:1/-1">Kademe tanımlı değil</div>';
+    
+    const body = `
+        <div style="margin-bottom:16px">
+            <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">Personel</label>
+            <select id="primCalcPersonel" onchange="updatePrimCalcPoints()" style="width:100%;padding:10px 12px;border:1px solid var(--bg4);border-radius:8px;font-size:.9rem;background:var(--bg2);color:var(--tx)">
+                ${personelOptions}
+            </select>
+        </div>
+        
+        <div style="margin-bottom:16px">
+            <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">Aylık Ciro (₺)</label>
+            <input type="text" id="primCalcCiro" placeholder="örn: 55000" oninput="calculatePrim()"
+                style="width:100%;padding:12px;border:1px solid var(--bg4);border-radius:8px;font-size:1.1rem;font-weight:700;background:var(--bg2);color:var(--tx);text-align:center;box-sizing:border-box">
+        </div>
+        
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:6px;margin-bottom:16px">
+            ${tiersHtml}
+        </div>
+        
+        <div id="primCalcPointsSection" style="display:none;margin-bottom:16px;padding:12px;background:var(--bg2);border-radius:10px">
+            <div style="font-size:.75rem;font-weight:600;color:var(--tx2);margin-bottom:8px">Personel Puanı (${monthName})</div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <div id="primCalcPointsDetail" style="font-size:.8rem;color:var(--tx3)">-</div>
+                <div id="primCalcPointsTotal" style="font-size:1.2rem;font-weight:800">-</div>
+            </div>
+        </div>
+        
+        <div id="primCalcResult" style="display:none;padding:20px;background:linear-gradient(135deg,rgba(39,174,96,.1),rgba(46,204,113,.05));border:2px solid rgba(39,174,96,.2);border-radius:12px;text-align:center">
+            <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Hesaplanan Prim</div>
+            <div id="primCalcAmount" style="font-size:2rem;font-weight:800;color:#27ae60">₺0</div>
+            <div id="primCalcTier" style="font-size:.8rem;color:var(--tx2);margin-top:4px">-</div>
+        </div>
+        
+        <div id="primCalcNoTier" style="display:none;padding:16px;background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.2);border-radius:10px;text-align:center">
+            <div style="font-size:.85rem;color:#e74c3c;font-weight:600">Ciro prim kademesine ulaşmadı</div>
+            <div id="primCalcNextTier" style="font-size:.75rem;color:var(--tx3);margin-top:4px">-</div>
+        </div>
+    `;
+    
+    showModal(`Prim Hesapla - ${monthName}`, body, `
+        <button class="btn btn-ghost" onclick="closeModal()">Kapat</button>
+    `);
+}
+
+function parseCiroValue(str) {
+    if (!str) return 0;
+    // "45.000₺" veya "45000" veya "45K" formatlarını parse et
+    const cleaned = String(str).replace(/[₺.\s]/g, '').replace(/K/gi, '000').replace(/k/gi, '000');
+    return parseInt(cleaned) || 0;
+}
+
+function formatCurrency(num) {
+    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(num);
+}
+
+async function updatePrimCalcPoints() {
+    const personelId = document.getElementById('primCalcPersonel')?.value;
+    const pointsSection = document.getElementById('primCalcPointsSection');
+    const pointsDetail = document.getElementById('primCalcPointsDetail');
+    const pointsTotal = document.getElementById('primCalcPointsTotal');
+    
+    if (!personelId || !pointsSection) {
+        if (pointsSection) pointsSection.style.display = 'none';
+        return;
+    }
+    
+    pointsSection.style.display = 'block';
+    pointsDetail.textContent = 'Yükleniyor...';
+    pointsTotal.textContent = '-';
+    
+    try {
+        const now = new Date();
+        const periodKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const monthStart = `${periodKey}-01`;
+        const monthEnd = `${periodKey}-31`;
+        
+        // Personel adını al
+        const personelDoc = await db.collection('personel').doc(personelId).get();
+        const personelName = personelDoc.exists ? personelDoc.data().name : '';
+        const normalizedId = normalizePersonelId(personelName);
+        
+        let totalPoints = 0;
+        let onTime = 0, late = 0, missed = 0, manual = 0;
+        
+        // 1. puantajNotes
+        const notesSnap = await db.collection('puantajNotes')
+            .where('personelId', '==', normalizedId)
+            .get();
+        
+        notesSnap.forEach(doc => {
+            const d = doc.data();
+            if (d.date >= monthStart && d.date <= monthEnd) {
+                totalPoints += d.points || 0;
+                if (d.status === 'onTime') onTime++;
+                else if (d.status === 'late') late++;
+                else if (d.status === 'missed') missed++;
+            }
+        });
+        
+        // 2. puantaj (manuel)
+        const puantajSnap = await db.collection('puantaj')
+            .where('personelId', '==', personelId)
+            .where('period', '==', periodKey)
+            .get();
+        
+        puantajSnap.forEach(doc => {
+            const d = doc.data();
+            totalPoints += getPointsFromStar(d.score || 3);
+            manual++;
+        });
+        
+        // Göster
+        const details = [];
+        if (onTime > 0) details.push(`${onTime} vaktinde`);
+        if (late > 0) details.push(`${late} geç`);
+        if (missed > 0) details.push(`${missed} kaçırılan`);
+        if (manual > 0) details.push(`${manual} değerlendirme`);
+        
+        pointsDetail.textContent = details.length > 0 ? details.join(' • ') : 'Kayıt yok';
+        
+        const color = totalPoints > 0 ? '#27ae60' : totalPoints < 0 ? '#e74c3c' : 'var(--tx)';
+        pointsTotal.style.color = color;
+        pointsTotal.textContent = (totalPoints > 0 ? '+' : '') + totalPoints + ' puan';
+        
+    } catch (e) {
+        console.error('Puan yükleme hatası:', e);
+        pointsDetail.textContent = 'Hata';
+        pointsTotal.textContent = '-';
+    }
+}
+
+function calculatePrim() {
+    const ciroInput = document.getElementById('primCalcCiro');
+    const resultDiv = document.getElementById('primCalcResult');
+    const noTierDiv = document.getElementById('primCalcNoTier');
+    const amountEl = document.getElementById('primCalcAmount');
+    const tierEl = document.getElementById('primCalcTier');
+    const nextTierEl = document.getElementById('primCalcNextTier');
+    
+    if (!ciroInput || !resultDiv) return;
+    
+    const ciro = parseCiroValue(ciroInput.value);
+    
+    // Tüm tier elementlerini bul
+    const tierEls = document.querySelectorAll('.prim-calc-tier');
+    let matchedTier = null;
+    let matchedPrim = 0;
+    let nextTier = null;
+    
+    // En yüksekten başlayarak kontrol et
+    const tiersData = [];
+    tierEls.forEach(el => {
+        tiersData.push({
+            el,
+            min: parseInt(el.dataset.min) || 0,
+            prim: parseInt(el.dataset.prim) || 0
+        });
+    });
+    
+    // minCiro'ya göre sırala (küçükten büyüğe)
+    tiersData.sort((a, b) => a.min - b.min);
+    
+    // Renkleri sıfırla
+    tiersData.forEach(t => {
+        t.el.style.border = '1px solid var(--bg4)';
+        t.el.style.background = 'var(--bg2)';
+    });
+    
+    // Eşleşen kademeyi bul (en yüksek ulaşılan)
+    for (let i = tiersData.length - 1; i >= 0; i--) {
+        if (ciro >= tiersData[i].min) {
+            matchedTier = tiersData[i];
+            matchedPrim = tiersData[i].prim;
+            break;
+        }
+    }
+    
+    // Bir sonraki kademeyi bul
+    if (!matchedTier && tiersData.length > 0) {
+        nextTier = tiersData[0];
+    } else if (matchedTier) {
+        const idx = tiersData.indexOf(matchedTier);
+        if (idx < tiersData.length - 1) {
+            nextTier = tiersData[idx + 1];
+        }
+    }
+    
+    if (ciro > 0 && matchedTier) {
+        // Eşleşen kademeyi vurgula
+        matchedTier.el.style.border = '2px solid #27ae60';
+        matchedTier.el.style.background = 'rgba(39,174,96,.1)';
+        
+        resultDiv.style.display = 'block';
+        noTierDiv.style.display = 'none';
+        amountEl.textContent = formatCurrency(matchedPrim);
+        
+        if (nextTier) {
+            const remaining = nextTier.min - ciro;
+            tierEl.textContent = `Sonraki kademe için ${formatCurrency(remaining)} daha`;
+        } else {
+            tierEl.textContent = 'En yüksek kademedesiniz! 🎉';
+        }
+    } else if (ciro > 0) {
+        resultDiv.style.display = 'none';
+        noTierDiv.style.display = 'block';
+        if (nextTier) {
+            const remaining = nextTier.min - ciro;
+            nextTierEl.textContent = `İlk kademe için ${formatCurrency(remaining)} daha gerekli`;
+        }
+    } else {
+        resultDiv.style.display = 'none';
+        noTierDiv.style.display = 'none';
     }
 }
 
