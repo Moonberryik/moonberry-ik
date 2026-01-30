@@ -769,14 +769,23 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 
                 <!-- Bu Ay Puan Özeti - Dinamik -->
                 <div id="monthlyPointsCard" style="margin-bottom:24px;display:none">
-                    <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:16px;padding:20px">
+                    <div style="background:linear-gradient(135deg,rgba(0,140,149,.08),rgba(0,140,149,.03));border:1px solid rgba(0,140,149,.15);border-radius:16px;padding:20px;cursor:pointer" onclick="showMonthlyPointsModal()">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-                            <div style="font-size:.85rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em">Bu Ay Puanım</div>
-                            <div id="monthlyPointsTotal" style="font-size:1.3rem;font-weight:700">-</div>
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <div style="width:36px;height:36px;background:linear-gradient(135deg,#008c95,#00a8b5);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                                    <svg width="18" height="18" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+                                </div>
+                                <div>
+                                    <div style="font-size:.85rem;font-weight:700;color:var(--tx)">Bu Ay Puanım</div>
+                                    <div style="font-size:.65rem;color:var(--tx3)">${new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' })}</div>
+                                </div>
+                            </div>
+                            <div id="monthlyPointsTotal" style="font-size:1.4rem;font-weight:800">-</div>
                         </div>
-                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" id="monthlyPointsDetails">
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" id="monthlyPointsDetails">
                             <!-- Dinamik içerik -->
                         </div>
+                        <div style="text-align:center;margin-top:12px;font-size:.65rem;color:var(--tx3)">Detaylar için tıklayın →</div>
                     </div>
                 </div>
                 
@@ -2535,7 +2544,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0625 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0628 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -22567,6 +22576,10 @@ async function loadMonthlyPoints() {
         
         const totalCompleted = onTimeCount + lateCount;
         
+        // Kartı göster
+        const card = document.getElementById('monthlyPointsCard');
+        if (card) card.style.display = 'block';
+        
         // Toplam puanı göster
         const pointColor = totalPoints > 0 ? '#27ae60' : totalPoints < 0 ? '#e74c3c' : 'var(--tx)';
         totalEl.style.color = pointColor;
@@ -22596,6 +22609,167 @@ async function loadMonthlyPoints() {
 }
 
 // ==================== LEADERBOARD (Puan Sıralaması) ====================
+
+// Aylık puan detay modal
+async function showMonthlyPointsModal() {
+    const now = new Date();
+    const monthName = now.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+    const periodKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    
+    const userName = currentUser?.name || '';
+    const userBranch = currentUser?.branch || '';
+    const personelId = normalizePersonelId(userName);
+    
+    // Verileri topla
+    let checkData = [];
+    let manualData = [];
+    
+    try {
+        // 1. Otomatik check puanları
+        const notesSnapshot = await db.collection('puantajNotes')
+            .where('personelId', '==', personelId)
+            .orderBy('date', 'desc')
+            .limit(50)
+            .get();
+        
+        const monthStartStr = `${periodKey}-01`;
+        const monthEndStr = `${periodKey}-31`;
+        
+        notesSnapshot.forEach(doc => {
+            const d = doc.data();
+            if (d.date >= monthStartStr && d.date <= monthEndStr) {
+                checkData.push({
+                    date: d.date,
+                    type: d.checkType || d.type || 'check',
+                    status: d.status,
+                    points: d.points || 0,
+                    time: d.time || ''
+                });
+            }
+        });
+        
+        // 2. Manuel değerlendirmeler
+        const personelQuery = await db.collection('personel').where('name', '==', userName).limit(1).get();
+        if (!personelQuery.empty) {
+            const docId = personelQuery.docs[0].id;
+            const puantajSnap = await db.collection('puantaj')
+                .where('personelId', '==', docId)
+                .where('period', '==', periodKey)
+                .get();
+            
+            puantajSnap.forEach(doc => {
+                const d = doc.data();
+                manualData.push({
+                    date: d.date || d.createdAt?.toDate?.()?.toISOString().split('T')[0] || '',
+                    score: d.score || 3,
+                    points: getPointsFromStar(d.score || 3),
+                    note: d.note || '',
+                    by: d.createdByName || d.createdBy || ''
+                });
+            });
+        }
+    } catch (e) {
+        console.error('Puan detayı yükleme hatası:', e);
+    }
+    
+    // Özet hesapla
+    let totalPoints = 0;
+    let onTime = 0, late = 0, missed = 0;
+    
+    checkData.forEach(c => {
+        totalPoints += c.points;
+        if (c.status === 'onTime') onTime++;
+        else if (c.status === 'late') late++;
+        else if (c.status === 'missed') missed++;
+    });
+    
+    manualData.forEach(m => {
+        totalPoints += m.points;
+    });
+    
+    // Check listesi HTML
+    let checkListHtml = checkData.length > 0 ? checkData.slice(0, 10).map(c => {
+        const statusColor = c.status === 'onTime' ? '#27ae60' : c.status === 'late' ? '#e67e22' : '#e74c3c';
+        const statusText = c.status === 'onTime' ? 'Vaktinde' : c.status === 'late' ? 'Geç' : 'Kaçırıldı';
+        const dateStr = c.date ? new Date(c.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) : '';
+        return `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg2);border-radius:6px">
+                <div>
+                    <div style="font-size:.75rem;font-weight:600;color:var(--tx)">${c.type}</div>
+                    <div style="font-size:.6rem;color:var(--tx3)">${dateStr} ${c.time || ''}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <span style="font-size:.6rem;color:${statusColor}">${statusText}</span>
+                    <span style="font-weight:700;color:${c.points >= 0 ? '#27ae60' : '#e74c3c'};font-size:.8rem">${c.points > 0 ? '+' : ''}${c.points}</span>
+                </div>
+            </div>
+        `;
+    }).join('') : '<div style="text-align:center;padding:16px;color:var(--tx3);font-size:.75rem">Bu ay henüz check kaydı yok</div>';
+    
+    // Manuel değerlendirme listesi
+    let manualListHtml = manualData.length > 0 ? manualData.map(m => {
+        const stars = '★'.repeat(m.score) + '☆'.repeat(5 - m.score);
+        return `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg2);border-radius:6px">
+                <div>
+                    <div style="font-size:.85rem;color:#DAA520">${stars}</div>
+                    <div style="font-size:.6rem;color:var(--tx3)">${m.by || 'Yönetici'}</div>
+                </div>
+                <span style="font-weight:700;color:${m.points >= 0 ? '#27ae60' : '#e74c3c'};font-size:.8rem">${m.points > 0 ? '+' : ''}${m.points}</span>
+            </div>
+        `;
+    }).join('') : '<div style="text-align:center;padding:16px;color:var(--tx3);font-size:.75rem">Bu ay değerlendirme yok</div>';
+    
+    const pointColor = totalPoints > 0 ? '#27ae60' : totalPoints < 0 ? '#e74c3c' : 'var(--tx)';
+    
+    const body = `
+        <div style="text-align:center;margin-bottom:20px">
+            <div style="font-size:2.5rem;font-weight:800;color:${pointColor}">${totalPoints > 0 ? '+' : ''}${totalPoints}</div>
+            <div style="font-size:.8rem;color:var(--tx3)">Toplam Puan</div>
+        </div>
+        
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
+            <div style="text-align:center;padding:12px;background:rgba(39,174,96,.1);border-radius:10px">
+                <div style="font-size:1.3rem;font-weight:700;color:#27ae60">${onTime}</div>
+                <div style="font-size:.65rem;color:var(--tx3)">Vaktinde</div>
+            </div>
+            <div style="text-align:center;padding:12px;background:rgba(230,126,34,.1);border-radius:10px">
+                <div style="font-size:1.3rem;font-weight:700;color:#e67e22">${late}</div>
+                <div style="font-size:.65rem;color:var(--tx3)">Geç</div>
+            </div>
+            <div style="text-align:center;padding:12px;background:rgba(231,76,60,.1);border-radius:10px">
+                <div style="font-size:1.3rem;font-weight:700;color:#e74c3c">${missed}</div>
+                <div style="font-size:.65rem;color:var(--tx3)">Kaçırılan</div>
+            </div>
+        </div>
+        
+        <div style="margin-bottom:16px">
+            <div style="font-size:.75rem;font-weight:600;color:var(--tx2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/></svg>
+                Check Puanları (Son 10)
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto">
+                ${checkListHtml}
+            </div>
+        </div>
+        
+        <div>
+            <div style="font-size:.75rem;font-weight:600;color:var(--tx2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                <svg width="12" height="12" fill="#DAA520" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                Manuel Değerlendirmeler
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+                ${manualListHtml}
+            </div>
+        </div>
+    `;
+    
+    showModal(`${monthName} Puan Detayı`, body, `
+        <button class="btn btn-ghost" onclick="closeModal()">Kapat</button>
+        <button class="btn btn-primary" onclick="goTo('puantaj');closeModal()">Puantaj Sayfasına Git</button>
+    `);
+}
+
 async function loadLeaderboard() {
     const section = document.getElementById('leaderboardSection');
     const container = document.getElementById('leaderboardContainer');
