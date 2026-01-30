@@ -2532,7 +2532,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0420 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0425 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -11278,6 +11278,7 @@ async function loadPuantaj() {
                 tc: p.tc, 
                 position: p.position,
                 photoUrl: p.photoUrl || '',
+                startDate: p.startDate || '',  // İşe giriş tarihi - sıralama için
                 toplamPuan,
                 manuelPuan,
                 otomatikPuan,
@@ -11419,9 +11420,18 @@ async function loadPuantaj() {
             }
         }
         
-        // === EKİP DURUMU (Toplam puana göre sıralı) ===
+        // === EKİP DURUMU (Rol bazlı sıralı, aynı rol içinde işe giriş tarihine göre) ===
         const viewerRole = currentUser?.role || 'barista';
-        const sortedPersonelList = [...personelList].sort((a, b) => b.toplamPuan - a.toplamPuan);
+        const roleOrderPuantaj = ['bolge_muduru', 'magaza_muduru', 'mudur_yardimcisi', 'magaza_mudur_yardimcisi', 'kidemli_barista', 'barista', 'part_time', 'yonetici'];
+        const sortedPersonelList = [...personelList].sort((a, b) => {
+            const aRoleIdx = roleOrderPuantaj.indexOf(a.role) === -1 ? 99 : roleOrderPuantaj.indexOf(a.role);
+            const bRoleIdx = roleOrderPuantaj.indexOf(b.role) === -1 ? 99 : roleOrderPuantaj.indexOf(b.role);
+            if (aRoleIdx !== bRoleIdx) return aRoleIdx - bRoleIdx;
+            // Aynı rol içinde işe giriş tarihine göre (eski → yeni)
+            const aStart = a.startDate || a.hireDate || '9999-99-99';
+            const bStart = b.startDate || b.hireDate || '9999-99-99';
+            return aStart.localeCompare(bStart);
+        });
         
         html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:20px">`;
         sortedPersonelList.forEach(p => {
@@ -11531,16 +11541,16 @@ async function loadPuantaj() {
             const isBolgeMuduru = p.role === 'bolge_muduru';
             const isYonetici = p.role === 'yonetici';
             
-            // Bölge müdürü: Premium altın taç
+            // Bölge müdürü: Premium altın taç (24px - şampiyon ile aynı)
             const bolgeMuduruBadge = isBolgeMuduru ? `
-                <div style="position:absolute;top:-10px;right:-10px;width:32px;height:32px;background:linear-gradient(135deg,#b8860b,#daa520,#ffd700);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(184,134,11,.6),inset 0 2px 4px rgba(255,255,255,.4);border:3px solid #fff">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" filter="drop-shadow(0 1px 2px rgba(0,0,0,.3))"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .55-.45 1-1 1H6c-.55 0-1-.45-1-1v-1h14v1z"/></svg>
+                <div style="position:absolute;top:-6px;right:-6px;width:24px;height:24px;background:linear-gradient(135deg,#b8860b,#daa520,#ffd700);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(184,134,11,.5);border:2px solid #fff">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .55-.45 1-1 1H6c-.55 0-1-.45-1-1v-1h14v1z"/></svg>
                 </div>` : '';
             
-            // Mağaza müdürü: Premium teal elmas
+            // Mağaza müdürü: Minimalist teal kalkan (24px - şampiyon ile aynı)
             const managerBadge = isManager ? `
-                <div style="position:absolute;top:-8px;right:-8px;width:28px;height:28px;background:linear-gradient(135deg,#005f66,#008c95,#00b3b3);border-radius:6px;transform:rotate(45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,140,149,.5),inset 0 1px 3px rgba(255,255,255,.3);border:2px solid #fff">
-                    <svg style="transform:rotate(-45deg)" width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+                <div style="position:absolute;top:-6px;right:-6px;width:24px;height:24px;background:linear-gradient(135deg,#006d75,#008c95);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,140,149,.5);border:2px solid #fff">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
                 </div>` : '';
             
             // Yönetici: Premium mor rozet
