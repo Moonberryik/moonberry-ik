@@ -2532,7 +2532,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0400 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0410 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -11214,6 +11214,7 @@ async function loadPuantaj() {
             let primResetBonus = 0;
             let autoMissed = 0, autoLate = 0, autoOnTime = 0;
             let manuelArtiSayisi = 0, manuelEksiSayisi = 0; // YENİ: Yıldız formülü için
+            let supervisionPenaltyCount = 0; // Müdür denetim cezası sayısı
             
             // Manuel puanlar (yıldız sistemi - CF puanları hariç)
             puanlar.forEach(x => {
@@ -11228,6 +11229,11 @@ async function loadPuantaj() {
                     otomatikPuan += x.score || x.points || 0;
                     if (x.status === 'missed') { autoMissed++; negatifOlay++; }
                     else if (x.status === 'late') { autoLate++; negatifOlay++; }
+                    else if (x.status === 'supervision_penalty') { 
+                        // Müdür denetim cezası - yıldıza 1 eksi check olarak yansır
+                        supervisionPenaltyCount++; 
+                        negatifOlay++; 
+                    }
                     else if (x.score < 0 || x.points < 0) { autoMissed++; negatifOlay++; } // CF missed için status olmayabilir
                     return;
                 }
@@ -11250,6 +11256,11 @@ async function loadPuantaj() {
                 otomatikPuan += n.points || 0;
                 if (n.status === 'missed') { autoMissed++; negatifOlay++; }
                 else if (n.status === 'late') { autoLate++; negatifOlay++; }
+                else if (n.status === 'supervision_penalty') { 
+                    supervisionPenaltyCount++; 
+                    negatifOlay++; 
+                    // Supervision penalty = 1 eksi check gibi yıldıza yansıyacak
+                }
                 else { autoOnTime++; pozitifOlay++; }
             });
             
@@ -11277,8 +11288,9 @@ async function loadPuantaj() {
                 autoMissed,
                 autoLate,
                 autoOnTime,
-                manuelArtiSayisi,  // YENİ
-                manuelEksiSayisi,  // YENİ
+                manuelArtiSayisi,
+                manuelEksiSayisi,
+                supervisionPenaltyCount, // YENİ: Denetim cezası
                 puanlar,
                 otomatikPuanlar
             });
@@ -11305,8 +11317,8 @@ async function loadPuantaj() {
                 return;
             }
             
-            // Toplam atanan check (missed dahil) + manuel eksiler
-            const atanan = (p.autoOnTime || 0) + (p.autoLate || 0) + (p.autoMissed || 0) + (p.manuelEksiSayisi || 0);
+            // Toplam atanan check (missed dahil) + manuel eksiler + supervision penalty
+            const atanan = (p.autoOnTime || 0) + (p.autoLate || 0) + (p.autoMissed || 0) + (p.manuelEksiSayisi || 0) + (p.supervisionPenaltyCount || 0);
             // Tamamlanan check (missed hariç) + manuel artılar
             const tamamlanan = (p.autoOnTime || 0) + (p.autoLate || 0) + (p.manuelArtiSayisi || 0);
             
