@@ -1871,6 +1871,26 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     </div>
                 </div>
 
+                <!-- Arşiv Ayarları -->
+                <div class="admin-section" id="admin-arsivAyarlari">
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">📦 Performans Arşiv Ayarları</div>
+                            <button class="btn btn-sm btn-primary" onclick="saveArchiveSettings()">💾 Kaydet</button>
+                        </div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:20px">Her ay sonunda performans verilerini otomatik arşivler. Geçmiş aylara bakabilir, trend grafiklerini görebilirsiniz.</p>
+                        
+                        <div id="archiveSettingsContainer" style="display:grid;gap:20px">
+                            <!-- Dinamik olarak doldurulacak -->
+                        </div>
+                        
+                        <!-- Son Arşivler ve Manuel Arşiv -->
+                        <div id="archiveStatusContainer" style="margin-top:20px">
+                            <!-- Dinamik olarak doldurulacak -->
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Check Kuralları - Gelişmiş -->
                 <div class="admin-section" id="admin-checkKurallari">
                     <div class="admin-card">
@@ -2544,7 +2564,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0725 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0130 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -6199,7 +6219,10 @@ function switchAdminTab(tab, btn) {
     }
     // aktiviteler artık oturumlar ile birleştirildi
     // yedekler lazy-load: butona tıklayınca yüklenir
-    if (tab === 'magazaSaatleri') renderBranchHoursSettings();
+    if (tab === 'magazaSaatleri') {
+        renderBranchHoursSettings();
+        renderArchiveSettings();
+    }
     if (tab === 'checkKurallari') renderCheckRulesSettings();
     if (tab === 'checklistTurleri') loadChecklistTypesConfig();
     if (tab === 'tumCheckler') {
@@ -15006,8 +15029,17 @@ async function loadPuantajArsiv() {
     container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx2);grid-column:1/-1">Arşiv yükleniyor...</div>';
     
     try {
-        let query = db.collection('puantaj');
-        if (sube) query = query.where('branch', '==', sube);
+        // Yeni puantajArchive koleksiyonundan veri al
+        let query = db.collection('puantajArchive')
+            .where('year', '==', parseInt(yil))
+            .orderBy('month', 'desc');
+        
+        if (sube) {
+            query = db.collection('puantajArchive')
+                .where('branch', '==', sube)
+                .where('year', '==', parseInt(yil))
+                .orderBy('month', 'desc');
+        }
         
         const snapshot = await query.get();
         
@@ -15016,56 +15048,72 @@ async function loadPuantajArsiv() {
         let toplamKayit = 0;
         let toplamNegatif = 0;
         let toplamPozitif = 0;
-        let yildizDagilim = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        let toplamPersonel = 0;
+        let toplamOtomatik = 0;
+        let toplamManuel = 0;
+        let toplamPersonelEksi = 0;
         
         snapshot.forEach(doc => {
             const d = doc.data();
-            const period = d.period || 'unknown';
-            const [pYil] = period.split('-');
-            
-            // Sadece seçili yıl
-            if (pYil !== String(yil)) return;
+            const period = d.month;
             
             if (!donemler[period]) {
-                donemler[period] = { kayitSayisi: 0, personeller: {}, negatif: 0, pozitif: 0, kayitlar: [] };
+                donemler[period] = { 
+                    branch: d.branch,
+                    personnelCount: 0, 
+                    personnel: {},
+                    negatif: 0, 
+                    pozitif: 0,
+                    toplamOtomatik: 0,
+                    toplamManuel: 0,
+                    toplamPersonelEksi: 0,
+                    archivedAt: d.archivedAt
+                };
             }
-            donemler[period].kayitSayisi++;
-            toplamKayit++;
             
-            if (!donemler[period].personeller[d.personelId]) {
-                donemler[period].personeller[d.personelId] = { toplamPuan: 0, name: d.personelName || 'Bilinmeyen' };
-            }
-            
-            const yildiz = d.score || 3;
-            yildizDagilim[yildiz] = (yildizDagilim[yildiz] || 0) + 1;
-            
-            let puan = 0;
-            // Puan sistemi: config'den dinamik
-            puan = getPointsFromStar(yildiz);
-            if (puan < 0) { toplamNegatif++; donemler[period].negatif++; }
-            else if (puan > 0) { toplamPozitif++; donemler[period].pozitif++; }
-            
-            donemler[period].personeller[d.personelId].toplamPuan += puan;
-            donemler[period].kayitlar.push({ ...d, id: doc.id, puan });
+            // Personel verilerini ekle
+            Object.entries(d.personnel || {}).forEach(([pid, p]) => {
+                donemler[period].personnel[pid] = p;
+                donemler[period].personnelCount++;
+                toplamPersonel++;
+                
+                donemler[period].toplamOtomatik += p.otomatikPuan || 0;
+                donemler[period].toplamManuel += p.manuelPuan || 0;
+                donemler[period].toplamPersonelEksi += p.personelEksiPuan || 0;
+                
+                toplamOtomatik += p.otomatikPuan || 0;
+                toplamManuel += p.manuelPuan || 0;
+                toplamPersonelEksi += p.personelEksiPuan || 0;
+                
+                toplamKayit += (p.otomatikKayitlar?.length || 0) + (p.manuelKayitlar?.length || 0);
+                
+                if (p.toplamPuan < 0) {
+                    donemler[period].negatif++;
+                    toplamNegatif++;
+                } else if (p.toplamPuan > 0) {
+                    donemler[period].pozitif++;
+                    toplamPozitif++;
+                }
+            });
         });
         
         // Özet İstatistikler
         const primYokToplam = Object.values(donemler).reduce((acc, d) => 
-            acc + Object.values(d.personeller).filter(p => p.toplamPuan <= -5).length, 0);
+            acc + Object.values(d.personnel).filter(p => p.toplamPuan <= -5).length, 0);
         
         if (summaryContainer) {
             summaryContainer.innerHTML = `
                 <div style="background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(0,140,149,.05));border:1px solid rgba(0,140,149,.2);border-radius:12px;padding:16px;text-align:center">
-                    <div style="font-size:1.8rem;font-weight:800;color:#008c95">${toplamKayit}</div>
-                    <div style="font-size:.75rem;color:var(--tx2)">Toplam Kayıt</div>
+                    <div style="font-size:1.8rem;font-weight:800;color:#008c95">${Object.keys(donemler).length}</div>
+                    <div style="font-size:.75rem;color:var(--tx2)">Arşivli Ay</div>
+                </div>
+                <div style="background:linear-gradient(135deg,rgba(155,89,182,.1),rgba(155,89,182,.05));border:1px solid rgba(155,89,182,.2);border-radius:12px;padding:16px;text-align:center">
+                    <div style="font-size:1.8rem;font-weight:800;color:#9b59b6">${toplamPersonel}</div>
+                    <div style="font-size:.75rem;color:var(--tx2)">Toplam Personel</div>
                 </div>
                 <div style="background:linear-gradient(135deg,rgba(231,76,60,.1),rgba(231,76,60,.05));border:1px solid rgba(231,76,60,.2);border-radius:12px;padding:16px;text-align:center">
                     <div style="font-size:1.8rem;font-weight:800;color:#e74c3c">${toplamNegatif}</div>
-                    <div style="font-size:.75rem;color:var(--tx2)">Negatif</div>
-                </div>
-                <div style="background:linear-gradient(135deg,rgba(39,174,96,.1),rgba(39,174,96,.05));border:1px solid rgba(39,174,96,.2);border-radius:12px;padding:16px;text-align:center">
-                    <div style="font-size:1.8rem;font-weight:800;color:#27ae60">${toplamPozitif}</div>
-                    <div style="font-size:.75rem;color:var(--tx2)">Pozitif</div>
+                    <div style="font-size:.75rem;color:var(--tx2)">Negatif Personel</div>
                 </div>
                 <div style="background:linear-gradient(135deg,rgba(243,156,18,.1),rgba(243,156,18,.05));border:1px solid rgba(243,156,18,.2);border-radius:12px;padding:16px;text-align:center">
                     <div style="font-size:1.8rem;font-weight:800;color:#f39c12">${primYokToplam}</div>
@@ -15074,88 +15122,147 @@ async function loadPuantajArsiv() {
             `;
         }
         
-        // Trend Chart (Aylık bar chart)
+        // Trend Chart - Aylık toplam puan bar + çizgi grafik
         if (trendChart) {
             const aylar = ['01','02','03','04','05','06','07','08','09','10','11','12'];
             const ayAdilar = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
-            let maxKayit = 1;
-            aylar.forEach(ay => {
+            
+            // Her ay için toplam puanları hesapla
+            const aylikPuanlar = aylar.map(ay => {
                 const period = `${yil}-${ay}`;
-                if (donemler[period]) maxKayit = Math.max(maxKayit, donemler[period].kayitSayisi);
+                const d = donemler[period];
+                if (!d) return { total: 0, otomatik: 0, manuel: 0, personelEksi: 0, personelCount: 0 };
+                
+                let total = 0, otomatik = 0, manuel = 0, personelEksi = 0;
+                Object.values(d.personnel).forEach(p => {
+                    total += p.toplamPuan || 0;
+                    otomatik += p.otomatikPuan || 0;
+                    manuel += p.manuelPuan || 0;
+                    personelEksi += p.personelEksiPuan || 0;
+                });
+                
+                return { total, otomatik, manuel, personelEksi, personelCount: d.personnelCount };
             });
             
-            let barHtml = '<svg width="100%" height="180" viewBox="0 0 360 180" preserveAspectRatio="xMidYMid meet">';
-            barHtml += '<line x1="30" y1="150" x2="350" y2="150" stroke="var(--cardBorder)" stroke-width="1"/>';
+            const maxVal = Math.max(...aylikPuanlar.map(a => Math.abs(a.total)), 1);
+            const chartHeight = 150;
+            const chartWidth = 340;
+            const barWidth = 18;
+            const gap = 10;
+            
+            let barHtml = `<svg width="100%" height="${chartHeight + 40}" viewBox="0 0 ${chartWidth + 30} ${chartHeight + 40}" preserveAspectRatio="xMidYMid meet">`;
+            
+            // Y ekseni çizgisi
+            barHtml += `<line x1="30" y1="10" x2="30" y2="${chartHeight + 10}" stroke="var(--cardBorder)" stroke-width="1"/>`;
+            // X ekseni çizgisi (ortada - 0 çizgisi)
+            barHtml += `<line x1="30" y1="${chartHeight/2 + 10}" x2="${chartWidth + 20}" y2="${chartHeight/2 + 10}" stroke="var(--cardBorder)" stroke-width="1" stroke-dasharray="4"/>`;
+            
+            // Çizgi grafik için noktalar
+            let linePoints = [];
             
             aylar.forEach((ay, i) => {
-                const period = `${yil}-${ay}`;
-                const kayit = donemler[period]?.kayitSayisi || 0;
-                const negatif = donemler[period]?.negatif || 0;
-                const pozitif = donemler[period]?.pozitif || 0;
-                const height = kayit > 0 ? (kayit / maxKayit) * 120 : 0;
-                const x = 35 + i * 27;
+                const data = aylikPuanlar[i];
+                const x = 40 + i * (barWidth + gap);
+                const centerY = chartHeight/2 + 10;
                 
-                // Negatif (kırmızı) ve pozitif (yeşil) yığılı bar
-                const negHeight = kayit > 0 ? (negatif / kayit) * height : 0;
-                const posHeight = height - negHeight;
+                // Bar yüksekliği (pozitif yukarı, negatif aşağı)
+                const barHeight = data.total !== 0 ? Math.abs(data.total / maxVal) * (chartHeight/2 - 10) : 0;
+                const y = data.total >= 0 ? centerY - barHeight : centerY;
+                const color = data.total >= 0 ? '#27ae60' : '#e74c3c';
                 
-                if (posHeight > 0) {
-                    barHtml += `<rect x="${x}" y="${150 - height}" width="20" height="${posHeight}" fill="#27ae60" rx="3" style="cursor:pointer" onclick="showArsivDetail('${period}')"><title>${ayAdilar[i]}: ${kayit} kayıt</title></rect>`;
+                if (barHeight > 0) {
+                    barHtml += `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" fill="${color}" rx="3" style="cursor:pointer;opacity:0.8" onclick="showArsivDetail('${yil}-${ay}')">
+                        <title>${ayAdilar[i]}: ${data.total > 0 ? '+' : ''}${data.total} puan (${data.personelCount} kişi)</title>
+                    </rect>`;
                 }
-                if (negHeight > 0) {
-                    barHtml += `<rect x="${x}" y="${150 - negHeight}" width="20" height="${negHeight}" fill="#e74c3c" rx="3" style="cursor:pointer" onclick="showArsivDetail('${period}')"><title>${ayAdilar[i]}: ${negatif} negatif</title></rect>`;
-                }
+                
+                // Çizgi grafik noktası
+                const lineY = centerY - (data.total / maxVal) * (chartHeight/2 - 10);
+                linePoints.push(`${x + barWidth/2},${lineY}`);
                 
                 // Ay etiketi
-                barHtml += `<text x="${x + 10}" y="168" text-anchor="middle" font-size="9" fill="var(--tx3)">${ayAdilar[i]}</text>`;
+                barHtml += `<text x="${x + barWidth/2}" y="${chartHeight + 30}" text-anchor="middle" font-size="9" fill="var(--tx3)">${ayAdilar[i]}</text>`;
+                
+                // Puan değeri (bar üstünde/altında)
+                if (data.total !== 0) {
+                    const textY = data.total >= 0 ? y - 4 : y + barHeight + 12;
+                    barHtml += `<text x="${x + barWidth/2}" y="${textY}" text-anchor="middle" font-size="8" fill="${color}" font-weight="600">${data.total > 0 ? '+' : ''}${data.total}</text>`;
+                }
             });
             
+            // Çizgi grafik
+            if (linePoints.length > 1) {
+                barHtml += `<polyline points="${linePoints.join(' ')}" fill="none" stroke="#9b59b6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+                // Noktalar
+                linePoints.forEach((point, i) => {
+                    const [px, py] = point.split(',');
+                    barHtml += `<circle cx="${px}" cy="${py}" r="4" fill="#9b59b6" stroke="#fff" stroke-width="2"/>`;
+                });
+            }
+            
             barHtml += '</svg>';
+            
+            // Legend
+            barHtml += `
+                <div style="display:flex;justify-content:center;gap:16px;margin-top:8px;font-size:.7rem">
+                    <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:12px;background:#27ae60;border-radius:2px"></div><span style="color:var(--tx3)">Pozitif</span></div>
+                    <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:12px;background:#e74c3c;border-radius:2px"></div><span style="color:var(--tx3)">Negatif</span></div>
+                    <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:3px;background:#9b59b6;border-radius:2px"></div><span style="color:var(--tx3)">Trend</span></div>
+                </div>
+            `;
+            
             trendChart.innerHTML = barHtml;
         }
         
-        // Pie Chart (Yıldız dağılımı)
+        // Pie Chart - Puan dağılımı (Otomatik / Manuel / Personel Eksisi)
         if (pieChart) {
-            const total = Object.values(yildizDagilim).reduce((a, b) => a + b, 0);
+            const total = Math.abs(toplamOtomatik) + Math.abs(toplamManuel) + Math.abs(toplamPersonelEksi);
+            
             if (total > 0) {
-                const colors = ['#c0392b', '#d35400', '#f39c12', '#27ae60', '#2ecc71'];
-                const labels = ['Ciddi İhlal', 'Orta İhlal', 'Hafif Uyarı', 'İyi Performans', 'Mükemmel'];
-                let startAngle = 0;
-                let pieHtml = '<svg width="160" height="160" viewBox="0 0 160 160">';
+                const segments = [
+                    { value: Math.abs(toplamOtomatik), label: 'CF (Otomatik)', color: '#008c95' },
+                    { value: Math.abs(toplamManuel), label: 'Manuel', color: '#3498db' },
+                    { value: Math.abs(toplamPersonelEksi), label: 'Personel Eksisi', color: '#9b59b6' }
+                ].filter(s => s.value > 0);
                 
-                [1,2,3,4,5].forEach((star, i) => {
-                    const value = yildizDagilim[star] || 0;
-                    if (value === 0) return;
-                    const percentage = value / total;
+                let startAngle = 0;
+                let pieHtml = '<svg width="140" height="140" viewBox="0 0 140 140">';
+                
+                segments.forEach(seg => {
+                    const percentage = seg.value / total;
                     const angle = percentage * 360;
                     const endAngle = startAngle + angle;
                     
                     const startRad = (startAngle - 90) * Math.PI / 180;
                     const endRad = (endAngle - 90) * Math.PI / 180;
                     
-                    const x1 = 80 + 60 * Math.cos(startRad);
-                    const y1 = 80 + 60 * Math.sin(startRad);
-                    const x2 = 80 + 60 * Math.cos(endRad);
-                    const y2 = 80 + 60 * Math.sin(endRad);
+                    const x1 = 70 + 55 * Math.cos(startRad);
+                    const y1 = 70 + 55 * Math.sin(startRad);
+                    const x2 = 70 + 55 * Math.cos(endRad);
+                    const y2 = 70 + 55 * Math.sin(endRad);
                     
                     const largeArc = angle > 180 ? 1 : 0;
                     
-                    pieHtml += `<path d="M80,80 L${x1},${y1} A60,60 0 ${largeArc},1 ${x2},${y2} Z" fill="${colors[i]}" style="cursor:pointer" onclick="alert('${labels[i]}: ${value} kayıt (${Math.round(percentage*100)}%)')"><title>${labels[i]}: ${value}</title></path>`;
+                    pieHtml += `<path d="M70,70 L${x1},${y1} A55,55 0 ${largeArc},1 ${x2},${y2} Z" fill="${seg.color}" style="cursor:pointer">
+                        <title>${seg.label}: ${seg.value} (${Math.round(percentage*100)}%)</title>
+                    </path>`;
                     
                     startAngle = endAngle;
                 });
                 
                 // Merkez daire (donut efekti)
-                pieHtml += '<circle cx="80" cy="80" r="35" fill="var(--cardBg)"/>';
-                pieHtml += `<text x="80" y="85" text-anchor="middle" font-size="14" font-weight="700" fill="var(--tx)">${total}</text>`;
+                pieHtml += '<circle cx="70" cy="70" r="30" fill="var(--cardBg)"/>';
+                pieHtml += `<text x="70" y="75" text-anchor="middle" font-size="12" font-weight="700" fill="var(--tx)">${total}</text>`;
                 pieHtml += '</svg>';
                 
                 // Legend
-                pieHtml += '<div style="margin-left:20px;font-size:.75rem">';
-                [1,2,3,4,5].forEach((star, i) => {
-                    const value = yildizDagilim[star] || 0;
-                    if (value === 0) return;
-                    pieHtml += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="width:10px;height:10px;background:${colors[i]};border-radius:2px"></div><span style="color:var(--tx2)">${labels[i]}: ${value}</span></div>`;
+                pieHtml += '<div style="margin-left:16px;font-size:.75rem">';
+                segments.forEach(seg => {
+                    pieHtml += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+                        <div style="width:10px;height:10px;background:${seg.color};border-radius:2px"></div>
+                        <span style="color:var(--tx2)">${seg.label}</span>
+                        <span style="color:var(--tx);font-weight:600;margin-left:auto">${seg.value}</span>
+                    </div>`;
                 });
                 pieHtml += '</div>';
                 
@@ -15173,25 +15280,33 @@ async function loadPuantajArsiv() {
         let html = '';
         
         if (sortedDonemler.length === 0) {
-            html = '<div style="text-align:center;padding:60px;color:var(--tx3);grid-column:1/-1">Bu yıla ait arşivlenmiş dönem yok</div>';
+            html = `
+                <div style="text-align:center;padding:60px;color:var(--tx3);grid-column:1/-1">
+                    <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 16px;opacity:.5"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
+                    <div style="margin-bottom:8px">Bu yıla ait arşiv bulunamadı</div>
+                    <div style="font-size:.8rem;color:var(--tx3)">Arşivler her ayın 1'inde otomatik oluşturulur veya Ayarlar > Arşiv Ayarları'ndan manuel oluşturabilirsiniz.</div>
+                </div>
+            `;
         } else {
             sortedDonemler.forEach(([period, data]) => {
                 const [pYil, ay] = period.split('-');
                 const ayAdi = getMonthName(ay);
-                const personelSayisi = Object.keys(data.personeller).length;
-                const primYokSayisi = Object.values(data.personeller).filter(p => p.toplamPuan <= -5).length;
-                const avgPuan = personelSayisi > 0 ? 
-                    (Object.values(data.personeller).reduce((a, p) => a + p.toplamPuan, 0) / personelSayisi).toFixed(1) : 0;
+                const personelSayisi = Object.keys(data.personnel).length;
+                const primYokSayisi = Object.values(data.personnel).filter(p => p.toplamPuan <= -5).length;
                 
-                const isMoonberry = sube.includes('Şişli') || sube.includes('Merkez');
-                const brandColor = isMoonberry ? '#008c95' : '#ff8674';
+                let toplamPuan = 0;
+                Object.values(data.personnel).forEach(p => toplamPuan += p.toplamPuan || 0);
+                const avgPuan = personelSayisi > 0 ? (toplamPuan / personelSayisi).toFixed(1) : 0;
+                
+                const brandColor = '#9b59b6'; // Arşiv için mor tema
+                const archivedDate = data.archivedAt?.toDate?.()?.toLocaleDateString('tr-TR') || '-';
                 
                 html += `
                     <div onclick="showArsivDetail('${period}')" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-left:4px solid ${brandColor};border-radius:12px;padding:16px;transition:all .2s;cursor:pointer" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
                             <div>
                                 <div style="font-size:1.05rem;font-weight:700;color:var(--tx)">${ayAdi} ${pYil}</div>
-                                <div style="font-size:.75rem;color:var(--tx3)">${personelSayisi} personel · ${data.kayitSayisi} kayıt</div>
+                                <div style="font-size:.75rem;color:var(--tx3)">${personelSayisi} personel · Arşiv: ${archivedDate}</div>
                             </div>
                             <div style="text-align:right">
                                 <div style="font-size:1.3rem;font-weight:800;color:${parseFloat(avgPuan) < 0 ? '#e74c3c' : '#27ae60'}">${avgPuan > 0 ? '+' : ''}${avgPuan}</div>
@@ -15199,16 +15314,20 @@ async function loadPuantajArsiv() {
                             </div>
                         </div>
                         <div style="display:flex;gap:8px">
-                            <div style="flex:1;background:rgba(39,174,96,.1);border-radius:8px;padding:8px;text-align:center">
-                                <div style="font-size:1rem;font-weight:700;color:#27ae60">${data.pozitif}</div>
-                                <div style="font-size:.6rem;color:var(--tx3)">Pozitif</div>
+                            <div style="flex:1;background:rgba(0,140,149,.1);border-radius:8px;padding:8px;text-align:center">
+                                <div style="font-size:.9rem;font-weight:700;color:#008c95">${data.toplamOtomatik}</div>
+                                <div style="font-size:.6rem;color:var(--tx3)">CF Puan</div>
                             </div>
-                            <div style="flex:1;background:rgba(231,76,60,.1);border-radius:8px;padding:8px;text-align:center">
-                                <div style="font-size:1rem;font-weight:700;color:#e74c3c">${data.negatif}</div>
-                                <div style="font-size:.6rem;color:var(--tx3)">Negatif</div>
+                            <div style="flex:1;background:rgba(52,152,219,.1);border-radius:8px;padding:8px;text-align:center">
+                                <div style="font-size:.9rem;font-weight:700;color:#3498db">${data.toplamManuel}</div>
+                                <div style="font-size:.6rem;color:var(--tx3)">Manuel</div>
+                            </div>
+                            <div style="flex:1;background:rgba(155,89,182,.1);border-radius:8px;padding:8px;text-align:center">
+                                <div style="font-size:.9rem;font-weight:700;color:#9b59b6">${data.toplamPersonelEksi}</div>
+                                <div style="font-size:.6rem;color:var(--tx3)">P. Eksi</div>
                             </div>
                             <div style="flex:1;background:rgba(243,156,18,.1);border-radius:8px;padding:8px;text-align:center">
-                                <div style="font-size:1rem;font-weight:700;color:#f39c12">${primYokSayisi}</div>
+                                <div style="font-size:.9rem;font-weight:700;color:#f39c12">${primYokSayisi}</div>
                                 <div style="font-size:.6rem;color:var(--tx3)">Prim Yok</div>
                             </div>
                         </div>
@@ -15224,7 +15343,7 @@ async function loadPuantajArsiv() {
         
     } catch (error) {
         console.error('Arşiv yükleme hatası:', error);
-        container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);grid-column:1/-1">Yükleme hatası!</div>';
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);grid-column:1/-1">Yükleme hatası! ' + error.message + '</div>';
     }
 }
 
@@ -15239,21 +15358,25 @@ function showArsivDetail(period) {
     const [yil, ay] = period.split('-');
     const ayAdi = getMonthName(ay);
     
-    // Personel listesi (puana göre sırala)
-    const personelList = Object.entries(data.personeller)
+    // Personel listesi (puana göre sırala) - yeni yapı: personnel
+    const personelList = Object.entries(data.personnel || data.personeller || {})
         .map(([id, p]) => ({ id, ...p }))
-        .sort((a, b) => b.toplamPuan - a.toplamPuan);
+        .sort((a, b) => (b.toplamPuan || 0) - (a.toplamPuan || 0));
+    
+    const toplam = personelList.reduce((sum, p) => sum + (p.toplamPuan || 0), 0);
+    const kayitSayisi = personelList.reduce((sum, p) => 
+        sum + (p.otomatikKayitlar?.length || 0) + (p.manuelKayitlar?.length || 0), 0);
     
     let html = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
             <div>
                 <div style="font-size:1.2rem;font-weight:700;color:var(--tx)">${ayAdi} ${yil} Detayı</div>
-                <div style="font-size:.85rem;color:var(--tx2)">${personelList.length} personel · ${data.kayitSayisi} kayıt</div>
+                <div style="font-size:.85rem;color:var(--tx2)">${personelList.length} personel · ${kayitSayisi} kayıt · Toplam: ${toplam >= 0 ? '+' : ''}${toplam} puan</div>
             </div>
             <button onclick="document.getElementById('arsivDetailPanel').style.display='none'" style="padding:8px 16px;background:var(--bg3);border:none;border-radius:8px;color:var(--tx);cursor:pointer;font-weight:500">Kapat</button>
         </div>
         
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
     `;
     
     personelList.forEach(p => {
@@ -15261,11 +15384,17 @@ function showArsivDetail(period) {
         const isDanger = p.toplamPuan <= -5;
         
         html += `
-            <div style="background:${isDanger ? 'rgba(231,76,60,.05)' : 'var(--bg3)'};border:1px solid ${isDanger ? 'rgba(231,76,60,.2)' : 'var(--cardBorder)'};border-radius:10px;padding:12px">
-                <div style="font-weight:600;color:var(--tx);margin-bottom:4px;font-size:.9rem">${p.name || 'Bilinmeyen'}</div>
+            <div onclick="showPersonelArsivDetail('${period}', '${p.id}')" style="background:${isDanger ? 'rgba(231,76,60,.05)' : 'var(--bg3)'};border:1px solid ${isDanger ? 'rgba(231,76,60,.2)' : 'var(--cardBorder)'};border-radius:10px;padding:12px;cursor:pointer;transition:all .2s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+                <div style="font-weight:600;color:var(--tx);margin-bottom:4px;font-size:.9rem">${p.name || p.codeName || 'Bilinmeyen'}</div>
+                <div style="font-size:.7rem;color:var(--tx3);margin-bottom:8px">${p.role || '-'}</div>
                 <div style="display:flex;align-items:center;justify-content:space-between">
-                    <span style="font-size:1.4rem;font-weight:800;color:${puanColor}">${p.toplamPuan > 0 ? '+' : ''}${p.toplamPuan}</span>
+                    <span style="font-size:1.4rem;font-weight:800;color:${puanColor}">${p.toplamPuan > 0 ? '+' : ''}${p.toplamPuan || 0}</span>
                     ${isDanger ? '<span style="font-size:.65rem;background:#e74c3c;color:#fff;padding:2px 6px;border-radius:4px">PRİM YOK</span>' : ''}
+                </div>
+                <div style="display:flex;gap:6px;margin-top:8px;font-size:.65rem">
+                    <span style="color:#008c95">CF: ${p.otomatikPuan || 0}</span>
+                    <span style="color:#3498db">M: ${p.manuelPuan || 0}</span>
+                    ${p.personelEksiPuan ? `<span style="color:#9b59b6">P: ${p.personelEksiPuan}</span>` : ''}
                 </div>
             </div>
         `;
@@ -15273,32 +15402,137 @@ function showArsivDetail(period) {
     
     html += '</div>';
     
-    // Son kayıtlar
-    html += `
-        <div style="margin-top:20px">
-            <div style="font-weight:600;color:var(--tx);margin-bottom:12px">Son Kayıtlar</div>
-            <div style="max-height:200px;overflow-y:auto">
-    `;
-    
-    const sonKayitlar = data.kayitlar.slice(-10).reverse();
-    sonKayitlar.forEach(k => {
-        const puanColor = k.puan < 0 ? '#e74c3c' : '#27ae60';
-        html += `
-            <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg3);border-radius:8px;margin-bottom:6px">
-                <div style="width:36px;height:36px;background:${k.puan < 0 ? 'rgba(231,76,60,.1)' : 'rgba(39,174,96,.1)'};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:${puanColor}">${k.puan > 0 ? '+' : ''}${k.puan}</div>
-                <div style="flex:1">
-                    <div style="font-size:.85rem;color:var(--tx);font-weight:500">${k.note || 'Açıklama yok'}</div>
-                    <div style="font-size:.7rem;color:var(--tx3)">${k.eventDate || k.createdAt?.toDate?.()?.toLocaleDateString('tr-TR') || '-'}</div>
-                </div>
-            </div>
-        `;
-    });
-    
-    html += '</div></div>';
-    
     detailPanel.innerHTML = html;
     detailPanel.style.display = 'block';
     detailPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/**
+ * Personel arşiv detayını göster
+ */
+function showPersonelArsivDetail(period, personelId) {
+    const donemler = window.arsivDataCache || {};
+    const data = donemler[period];
+    
+    if (!data) return;
+    
+    const personnel = data.personnel || data.personeller || {};
+    const p = personnel[personelId];
+    
+    if (!p) return;
+    
+    const [yil, ay] = period.split('-');
+    const ayAdi = getMonthName(ay);
+    const puanColor = p.toplamPuan >= 0 ? '#27ae60' : '#e74c3c';
+    
+    let html = `
+        <div style="max-height:70vh;overflow-y:auto">
+            <!-- Özet -->
+            <div style="background:linear-gradient(135deg,rgba(155,89,182,.1),rgba(155,89,182,.05));border-radius:12px;padding:16px;margin-bottom:16px">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div>
+                        <div style="font-size:1.1rem;font-weight:700;color:var(--tx)">${p.name || p.codeName}</div>
+                        <div style="font-size:.85rem;color:var(--tx2)">${p.role || '-'} · ${ayAdi} ${yil}</div>
+                    </div>
+                    <div style="text-align:right">
+                        <div style="font-size:1.8rem;font-weight:800;color:${puanColor}">${p.toplamPuan >= 0 ? '+' : ''}${p.toplamPuan || 0}</div>
+                        <div style="font-size:.7rem;color:var(--tx3)">TOPLAM PUAN</div>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px">
+                    <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
+                        <div style="font-size:1rem;font-weight:700;color:#008c95">${p.otomatikPuan || 0}</div>
+                        <div style="font-size:.65rem;color:var(--tx3)">CF Puan</div>
+                    </div>
+                    <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
+                        <div style="font-size:1rem;font-weight:700;color:#3498db">${p.manuelPuan || 0}</div>
+                        <div style="font-size:.65rem;color:var(--tx3)">Manuel</div>
+                    </div>
+                    <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
+                        <div style="font-size:1rem;font-weight:700;color:#9b59b6">${p.personelEksiPuan || 0}</div>
+                        <div style="font-size:.65rem;color:var(--tx3)">P. Eksi</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- CF Kayıtlar -->
+            <div style="margin-bottom:16px">
+                <div style="font-size:.85rem;font-weight:600;color:var(--tx);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                    <span style="background:rgba(0,140,149,.15);color:#008c95;padding:2px 8px;border-radius:4px;font-size:.7rem">CF</span>
+                    Check Puanları (${p.otomatikKayitlar?.length || 0})
+                </div>
+    `;
+    
+    if (p.otomatikKayitlar?.length > 0) {
+        p.otomatikKayitlar.slice(0, 20).forEach(k => {
+            const kPuanColor = k.points >= 0 ? '#27ae60' : '#e74c3c';
+            html += `
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-size:.8rem">
+                    <span style="color:var(--tx3);min-width:40px">${k.date?.substring(5) || '-'}</span>
+                    <span style="flex:1;color:var(--tx)">${k.checkType || '-'} ${k.checkTime ? '· ' + k.checkTime : ''}</span>
+                    <span style="font-weight:700;color:${kPuanColor}">${k.points >= 0 ? '+' : ''}${k.points}</span>
+                </div>
+            `;
+        });
+        if (p.otomatikKayitlar.length > 20) {
+            html += `<div style="text-align:center;color:var(--tx3);font-size:.7rem;padding:4px">+${p.otomatikKayitlar.length - 20} kayıt daha</div>`;
+        }
+    } else {
+        html += `<div style="text-align:center;color:var(--tx3);font-size:.8rem;padding:12px;background:var(--bg2);border-radius:6px">Kayıt yok</div>`;
+    }
+    
+    html += `</div>
+            <!-- Manuel Kayıtlar -->
+            <div style="margin-bottom:16px">
+                <div style="font-size:.85rem;font-weight:600;color:var(--tx);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                    <span style="background:rgba(52,152,219,.15);color:#3498db;padding:2px 8px;border-radius:4px;font-size:.7rem">Manuel</span>
+                    Manuel Puanlar (${p.manuelKayitlar?.length || 0})
+                </div>
+    `;
+    
+    if (p.manuelKayitlar?.length > 0) {
+        p.manuelKayitlar.slice(0, 10).forEach(k => {
+            const kPuanColor = k.points >= 0 ? '#27ae60' : '#e74c3c';
+            html += `
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-size:.8rem">
+                    <span style="color:var(--tx3);min-width:40px">${k.date?.substring(5) || '-'}</span>
+                    <span style="flex:1;color:var(--tx)">${k.note || '-'}</span>
+                    <span style="font-weight:700;color:${kPuanColor}">${k.points >= 0 ? '+' : ''}${k.points}</span>
+                </div>
+            `;
+        });
+    } else {
+        html += `<div style="text-align:center;color:var(--tx3);font-size:.8rem;padding:12px;background:var(--bg2);border-radius:6px">Kayıt yok</div>`;
+    }
+    
+    html += `</div>`;
+    
+    // Personel Eksisi Kayıtları (varsa)
+    if (p.personelEksiKayitlar?.length > 0) {
+        html += `
+            <div>
+                <div style="font-size:.85rem;font-weight:600;color:var(--tx);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                    <span style="background:rgba(155,89,182,.15);color:#9b59b6;padding:2px 8px;border-radius:4px;font-size:.7rem">P.Eksi</span>
+                    Personel Eksisi (${p.personelEksiKayitlar.length})
+                </div>
+        `;
+        
+        p.personelEksiKayitlar.forEach(k => {
+            html += `
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-size:.8rem">
+                    <span style="color:var(--tx3);min-width:40px">${k.date?.substring(5) || '-'}</span>
+                    <span style="flex:1;color:var(--tx)">${k.personelName} - ${k.checkTypeName || k.checkType} ${k.checkTime ? '· ' + k.checkTime : ''}</span>
+                    <span style="font-weight:700;color:#9b59b6">${k.penalty}</span>
+                </div>
+            `;
+        });
+        
+        html += `</div>`;
+    }
+    
+    html += `</div>`;
+    
+    showModal(`${p.name || p.codeName} - ${ayAdi} ${yil}`, html, '<button class="btn btn-ghost" onclick="closeModal()">Kapat</button>');
 }
 
 function getMonthName(ay) {
@@ -20670,6 +20904,315 @@ let BRANCH_HOURS = {};
 // BRANCH_HOURS Firebase'den SYSTEM_CONFIG.branchHours olarak yüklenir
 // Şube çalışma saatleri Ayarlar > Şube Çalışma Saatleri'nden ayarlanır
 
+// ARŞİV AYARLARI DEFAULT
+const DEFAULT_ARCHIVE_SETTINGS = {
+    enabled: true,
+    dayOfMonth: 1,      // Her ayın kaçında (1-28)
+    hour: 5,            // Saat (0-23)
+    minute: 0,          // Dakika (0-59)
+    lastArchived: {}    // { "Tuzla Port": "2026-01", "Şişli": "2026-01" }
+};
+
+// ==================== ARŞİV SİSTEMİ ====================
+
+/**
+ * Bir ayın puantaj verilerini arşivle
+ * @param {string} branch - Şube adı
+ * @param {string} month - Ay (YYYY-MM format)
+ * @returns {Promise<boolean>}
+ */
+async function archivePuantajMonth(branch, month) {
+    try {
+        console.log(`[Archive] ${branch} - ${month} arşivleniyor...`);
+        
+        const [year, monthNum] = month.split('-');
+        const startDate = `${month}-01`;
+        const endDay = new Date(parseInt(year), parseInt(monthNum), 0).getDate();
+        const endDate = `${month}-${String(endDay).padStart(2, '0')}`;
+        
+        // 1. Personel listesini al
+        const personelSnap = await db.collection('personel')
+            .where('branch', '==', branch)
+            .where('status', '==', 'active')
+            .get();
+        
+        if (personelSnap.empty) {
+            console.log(`[Archive] ${branch} için aktif personel yok`);
+            return false;
+        }
+        
+        // 2. Puantaj verilerini al (deleted olmayanlar)
+        const puantajSnap = await db.collection('puantaj')
+            .where('branch', '==', branch)
+            .where('eventDate', '>=', startDate)
+            .where('eventDate', '<=', endDate)
+            .get();
+        
+        // 3. PuantajNotes verilerini al (deleted olmayanlar)
+        const notesSnap = await db.collection('puantajNotes')
+            .where('branch', '==', branch)
+            .where('date', '>=', startDate)
+            .where('date', '<=', endDate)
+            .get();
+        
+        // 4. Supervisor Penalties verilerini al
+        const penaltiesSnap = await db.collection('supervisorPenalties')
+            .where('branch', '==', branch)
+            .where('month', '==', month)
+            .get();
+        
+        // 5. Personel bazlı veri topla
+        const personnelData = {};
+        
+        personelSnap.forEach(doc => {
+            const p = doc.data();
+            personnelData[doc.id] = {
+                name: p.name,
+                codeName: p.codeName || p.name?.split(' ')[0],
+                role: p.role,
+                otomatikPuan: 0,
+                manuelPuan: 0,
+                personelEksiPuan: 0,
+                toplamPuan: 0,
+                otomatikKayitlar: [],
+                manuelKayitlar: [],
+                personelEksiKayitlar: []
+            };
+        });
+        
+        // 6. Puantaj kayıtlarını işle
+        puantajSnap.forEach(doc => {
+            const d = doc.data();
+            if (d.deleted === true) return; // Soft deleted atla
+            
+            const pid = d.personelId;
+            if (!personnelData[pid]) return;
+            
+            const points = parseInt(d.points) || 0;
+            const isAuto = d.type === 'checklist_auto' || d.createdBy === 'system_auto' || d.autoGenerated === true;
+            
+            if (isAuto) {
+                personnelData[pid].otomatikPuan += points;
+                personnelData[pid].otomatikKayitlar.push({
+                    date: d.eventDate || d.date,
+                    checkType: d.checkType || d.type,
+                    checkTime: d.checkTime || '',
+                    status: d.status || '',
+                    points: points,
+                    note: d.note || '',
+                    createdAt: d.createdAt
+                });
+            } else if (d.type !== 'prim_reset') {
+                personnelData[pid].manuelPuan += points;
+                personnelData[pid].manuelKayitlar.push({
+                    date: d.eventDate || d.date,
+                    note: d.note || '',
+                    score: d.score,
+                    points: points,
+                    icon: d.icon || '',
+                    createdAt: d.createdAt,
+                    createdBy: d.createdBy || ''
+                });
+            }
+        });
+        
+        // 7. PuantajNotes kayıtlarını işle (CF otomatik)
+        notesSnap.forEach(doc => {
+            const d = doc.data();
+            if (d.deleted === true) return; // Soft deleted atla
+            
+            const pid = d.personelId;
+            if (!personnelData[pid]) return;
+            
+            const points = parseInt(d.points) || 0;
+            personnelData[pid].otomatikPuan += points;
+            personnelData[pid].otomatikKayitlar.push({
+                date: d.date,
+                checkType: d.checkType,
+                checkTime: d.checkTime || '',
+                status: d.status || '',
+                points: points,
+                note: d.note || '',
+                createdAt: d.createdAt
+            });
+        });
+        
+        // 8. Supervisor Penalties işle
+        penaltiesSnap.forEach(doc => {
+            const d = doc.data();
+            const supId = d.supervisorId;
+            if (!personnelData[supId]) return;
+            
+            const penalty = parseFloat(d.penalty) || 0;
+            personnelData[supId].personelEksiPuan += penalty;
+            personnelData[supId].personelEksiKayitlar.push({
+                date: d.date,
+                personelId: d.personelId,
+                personelName: d.personelName,
+                checkType: d.checkType,
+                checkTypeName: d.checkTypeName,
+                checkTime: d.checkTime || '',
+                penalty: penalty,
+                createdAt: d.createdAt
+            });
+        });
+        
+        // 9. Toplamları hesapla
+        Object.keys(personnelData).forEach(pid => {
+            const p = personnelData[pid];
+            p.toplamPuan = p.otomatikPuan + p.manuelPuan + p.personelEksiPuan;
+        });
+        
+        // 10. Arşiv dokümanı oluştur
+        const archiveDocId = `${branch}_${month}`;
+        await db.collection('puantajArchive').doc(archiveDocId).set({
+            branch: branch,
+            month: month,
+            year: parseInt(year),
+            monthNum: parseInt(monthNum),
+            archivedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            archivedBy: currentUser?.email || 'system',
+            personnelCount: Object.keys(personnelData).length,
+            personnel: personnelData
+        });
+        
+        // 11. lastArchived güncelle
+        await db.collection('config').doc('system').set({
+            archiveSettings: {
+                ...SYSTEM_CONFIG.archiveSettings,
+                lastArchived: {
+                    ...SYSTEM_CONFIG.archiveSettings?.lastArchived,
+                    [branch]: month
+                }
+            }
+        }, { merge: true });
+        
+        console.log(`[Archive] ✅ ${branch} - ${month} arşivlendi (${Object.keys(personnelData).length} personel)`);
+        return true;
+        
+    } catch (e) {
+        console.error(`[Archive] ❌ ${branch} - ${month} arşivleme hatası:`, e);
+        return false;
+    }
+}
+
+/**
+ * Tüm şubeleri arşivle
+ * @param {string} month - Ay (YYYY-MM format)
+ */
+async function archiveAllBranches(month) {
+    const branches = STATE.branches || [];
+    let successCount = 0;
+    
+    for (const branch of branches) {
+        const result = await archivePuantajMonth(branch, month);
+        if (result) successCount++;
+    }
+    
+    console.log(`[Archive] Toplam: ${successCount}/${branches.length} şube arşivlendi`);
+    return successCount;
+}
+
+/**
+ * Otomatik arşiv kontrolü - Sayfa açıldığında çalışır
+ */
+async function checkAndRunArchive() {
+    try {
+        const settings = SYSTEM_CONFIG.archiveSettings || DEFAULT_ARCHIVE_SETTINGS;
+        if (!settings.enabled) return;
+        
+        const now = new Date();
+        const today = now.getDate();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        
+        // Ayın doğru günü ve saati mi?
+        if (today !== settings.dayOfMonth) return;
+        if (currentHour < settings.hour) return;
+        if (currentHour === settings.hour && currentMinute < settings.minute) return;
+        
+        // Geçen ayı hesapla
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonthStr = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+        
+        // Her şube için kontrol et
+        const branches = STATE.branches || [];
+        const lastArchived = settings.lastArchived || {};
+        
+        for (const branch of branches) {
+            // Bu şube bu ay için zaten arşivlendi mi?
+            if (lastArchived[branch] === lastMonthStr) {
+                console.log(`[Archive] ${branch} - ${lastMonthStr} zaten arşivlenmiş`);
+                continue;
+            }
+            
+            // Arşivle
+            await archivePuantajMonth(branch, lastMonthStr);
+        }
+        
+    } catch (e) {
+        console.error('[Archive] Otomatik arşiv hatası:', e);
+    }
+}
+
+/**
+ * Arşiv verilerini yükle
+ * @param {string} branch - Şube
+ * @param {string} month - Ay (YYYY-MM)
+ */
+async function loadArchiveData(branch, month) {
+    try {
+        const docId = `${branch}_${month}`;
+        const doc = await db.collection('puantajArchive').doc(docId).get();
+        
+        if (!doc.exists) {
+            console.log(`[Archive] ${docId} bulunamadı`);
+            return null;
+        }
+        
+        return doc.data();
+    } catch (e) {
+        console.error('[Archive] Yükleme hatası:', e);
+        return null;
+    }
+}
+
+/**
+ * Arşiv listesini al (mevcut aylar)
+ * @param {string} branch - Şube (opsiyonel, boşsa tüm şubeler)
+ */
+async function getArchiveList(branch = null) {
+    try {
+        let query = db.collection('puantajArchive').orderBy('month', 'desc').limit(24);
+        
+        if (branch) {
+            query = db.collection('puantajArchive')
+                .where('branch', '==', branch)
+                .orderBy('month', 'desc')
+                .limit(24);
+        }
+        
+        const snap = await query.get();
+        const archives = [];
+        
+        snap.forEach(doc => {
+            const d = doc.data();
+            archives.push({
+                id: doc.id,
+                branch: d.branch,
+                month: d.month,
+                personnelCount: d.personnelCount,
+                archivedAt: d.archivedAt
+            });
+        });
+        
+        return archives;
+    } catch (e) {
+        console.error('[Archive] Liste hatası:', e);
+        return [];
+    }
+}
+
 // TEMİZLİK ÇİZELGESİ SHIFT TANIMLARI
 let TEMIZLIK_SHIFT_RULES = {
     acilisci: {
@@ -24773,6 +25316,354 @@ async function saveBranchHours() {
     }
 }
 
+// ==================== ADMIN - ARŞİV AYARLARI ====================
+
+/**
+ * Arşiv ayarları UI'ını render et
+ */
+function renderArchiveSettings() {
+    const container = document.getElementById('archiveSettingsContainer');
+    const statusContainer = document.getElementById('archiveStatusContainer');
+    if (!container) return;
+    
+    const settings = SYSTEM_CONFIG.archiveSettings || DEFAULT_ARCHIVE_SETTINGS;
+    
+    // Gün seçenekleri (1-28)
+    let dayOptions = '';
+    for (let i = 1; i <= 28; i++) {
+        dayOptions += `<option value="${i}" ${settings.dayOfMonth === i ? 'selected' : ''}>${i}</option>`;
+    }
+    
+    // Saat seçenekleri (0-23)
+    let hourOptions = '';
+    for (let h = 0; h <= 23; h++) {
+        hourOptions += `<option value="${h}" ${settings.hour === h ? 'selected' : ''}>${String(h).padStart(2, '0')}:00</option>`;
+    }
+    
+    container.innerHTML = `
+        <div style="background:var(--bg3);border-radius:12px;padding:20px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+                <div style="width:40px;height:40px;background:linear-gradient(135deg,#9b59b6,#8e44ad);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                    <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
+                </div>
+                <div>
+                    <div style="font-weight:600;color:var(--tx)">Otomatik Arşivleme</div>
+                    <div style="font-size:.8rem;color:var(--tx2)">Her ay sonunda performans verileri otomatik arşivlenir</div>
+                </div>
+                <label style="margin-left:auto;display:flex;align-items:center;gap:8px;cursor:pointer">
+                    <input type="checkbox" id="archiveEnabled" ${settings.enabled ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer">
+                    <span style="font-size:.85rem;color:var(--tx2)">Aktif</span>
+                </label>
+            </div>
+            
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">
+                <div class="form-group">
+                    <label class="form-label">Arşivleme Günü</label>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:.85rem;color:var(--tx2)">Her ayın</span>
+                        <select id="archiveDayOfMonth" class="form-input" style="width:80px">
+                            ${dayOptions}
+                        </select>
+                        <span style="font-size:.85rem;color:var(--tx2)">'inde</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Arşivleme Saati</label>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:.85rem;color:var(--tx2)">Saat</span>
+                        <select id="archiveHour" class="form-input" style="width:100px">
+                            ${hourOptions}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-top:16px;padding:12px;background:rgba(155,89,182,.1);border-radius:8px;border:1px solid rgba(155,89,182,.2)">
+                <div style="font-size:.8rem;color:#9b59b6">
+                    <strong>Not:</strong> Arşivleme geçen ayın verilerini kaydeder. Örneğin 1 Şubat'ta Ocak ayı arşivlenir.
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Son arşiv durumu ve manuel butonlar
+    renderArchiveStatus();
+}
+
+/**
+ * Arşiv durumu ve manuel butonları render et
+ */
+async function renderArchiveStatus() {
+    const container = document.getElementById('archiveStatusContainer');
+    if (!container) return;
+    
+    const settings = SYSTEM_CONFIG.archiveSettings || DEFAULT_ARCHIVE_SETTINGS;
+    const lastArchived = settings.lastArchived || {};
+    const branches = STATE.branches || [];
+    
+    // Geçen ay
+    const now = new Date();
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthStr = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+    const lastMonthName = lastMonth.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+    
+    // Bu ay
+    const thisMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const thisMonthName = now.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+    
+    // Şube durumları
+    let branchStatusHtml = '';
+    branches.forEach(branch => {
+        const lastArchivedMonth = lastArchived[branch];
+        const isArchived = lastArchivedMonth === lastMonthStr;
+        const statusColor = isArchived ? '#27ae60' : '#f39c12';
+        const statusText = isArchived ? `✓ ${lastMonthName} arşivlendi` : 'Henüz arşivlenmedi';
+        
+        branchStatusHtml += `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg2);border-radius:8px">
+                <div>
+                    <div style="font-weight:600;color:var(--tx);font-size:.9rem">${branch}</div>
+                    <div style="font-size:.75rem;color:${statusColor}">${statusText}</div>
+                </div>
+                <button onclick="manualArchive('${branch}', '${lastMonthStr}')" class="btn btn-sm btn-ghost" style="font-size:.75rem" ${isArchived ? 'disabled' : ''}>
+                    ${isArchived ? 'Arşivlendi' : 'Arşivle'}
+                </button>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = `
+        <div style="background:var(--bg3);border-radius:12px;padding:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                <div style="font-weight:600;color:var(--tx)">Arşiv Durumu - ${lastMonthName}</div>
+                <button onclick="archiveAllBranchesManual('${lastMonthStr}')" class="btn btn-sm btn-primary" style="font-size:.8rem">
+                    📦 Tümünü Arşivle
+                </button>
+            </div>
+            
+            <div style="display:grid;gap:8px">
+                ${branchStatusHtml}
+            </div>
+            
+            <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--bg2)">
+                <button onclick="showArchiveHistory()" class="btn btn-ghost" style="width:100%;font-size:.85rem">
+                    📋 Geçmiş Arşivleri Görüntüle
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Arşiv ayarlarını kaydet
+ */
+async function saveArchiveSettings() {
+    try {
+        const enabled = document.getElementById('archiveEnabled')?.checked ?? true;
+        const dayOfMonth = parseInt(document.getElementById('archiveDayOfMonth')?.value) || 1;
+        const hour = parseInt(document.getElementById('archiveHour')?.value) || 5;
+        
+        const newSettings = {
+            enabled,
+            dayOfMonth,
+            hour,
+            minute: 0,
+            lastArchived: SYSTEM_CONFIG.archiveSettings?.lastArchived || {}
+        };
+        
+        await db.collection('config').doc('system').set({
+            archiveSettings: newSettings,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        
+        SYSTEM_CONFIG.archiveSettings = newSettings;
+        
+        toast('Arşiv ayarları kaydedildi ✓', 'success');
+        
+    } catch (e) {
+        console.error('Arşiv ayarları kaydetme hatası:', e);
+        toast('Kaydetme hatası!', 'error');
+    }
+}
+
+/**
+ * Manuel arşivleme (tek şube)
+ */
+async function manualArchive(branch, month) {
+    if (!confirm(`${branch} - ${month} arşivlenecek. Devam etmek istiyor musunuz?`)) return;
+    
+    toast('Arşivleniyor...', 'info');
+    
+    const result = await archivePuantajMonth(branch, month);
+    
+    if (result) {
+        toast(`${branch} arşivlendi ✓`, 'success');
+        // UI güncelle
+        await loadSystemConfigForArchive();
+        renderArchiveStatus();
+    } else {
+        toast('Arşivleme başarısız!', 'error');
+    }
+}
+
+/**
+ * Tüm şubeleri manuel arşivle
+ */
+async function archiveAllBranchesManual(month) {
+    if (!confirm(`Tüm şubeler için ${month} arşivlenecek. Devam etmek istiyor musunuz?`)) return;
+    
+    toast('Tüm şubeler arşivleniyor...', 'info');
+    
+    const count = await archiveAllBranches(month);
+    
+    if (count > 0) {
+        toast(`${count} şube arşivlendi ✓`, 'success');
+        // UI güncelle
+        await loadSystemConfigForArchive();
+        renderArchiveStatus();
+    } else {
+        toast('Arşivleme başarısız!', 'error');
+    }
+}
+
+/**
+ * Sadece archiveSettings'i yeniden yükle
+ */
+async function loadSystemConfigForArchive() {
+    try {
+        const doc = await db.collection('config').doc('system').get();
+        if (doc.exists && doc.data().archiveSettings) {
+            SYSTEM_CONFIG.archiveSettings = doc.data().archiveSettings;
+        }
+    } catch (e) {
+        console.warn('Archive settings reload error:', e);
+    }
+}
+
+/**
+ * Geçmiş arşivleri göster
+ */
+async function showArchiveHistory() {
+    toast('Arşivler yükleniyor...', 'info');
+    
+    const archives = await getArchiveList();
+    
+    if (archives.length === 0) {
+        showModal('Geçmiş Arşivler', `
+            <div style="text-align:center;padding:40px;color:var(--tx2)">
+                <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 16px;opacity:.5"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
+                <div>Henüz arşiv kaydı yok</div>
+            </div>
+        `, '<button class="btn btn-ghost" onclick="closeModal()">Kapat</button>');
+        return;
+    }
+    
+    // Aya göre grupla
+    const grouped = {};
+    archives.forEach(a => {
+        if (!grouped[a.month]) grouped[a.month] = [];
+        grouped[a.month].push(a);
+    });
+    
+    let html = '<div style="max-height:60vh;overflow-y:auto">';
+    
+    Object.keys(grouped).sort().reverse().forEach(month => {
+        const monthDate = new Date(month + '-01');
+        const monthName = monthDate.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+        
+        html += `
+            <div style="margin-bottom:16px">
+                <div style="font-weight:600;color:var(--tx);margin-bottom:8px;font-size:.9rem">${monthName}</div>
+                <div style="display:grid;gap:6px">
+        `;
+        
+        grouped[month].forEach(a => {
+            const archivedDate = a.archivedAt?.toDate?.()?.toLocaleString('tr-TR') || '-';
+            html += `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg2);border-radius:8px">
+                    <div>
+                        <div style="font-weight:500;color:var(--tx);font-size:.85rem">${a.branch}</div>
+                        <div style="font-size:.7rem;color:var(--tx3)">${a.personnelCount} personel • ${archivedDate}</div>
+                    </div>
+                    <button onclick="viewArchiveDetail('${a.branch}', '${a.month}')" class="btn btn-sm btn-ghost" style="font-size:.75rem">
+                        Detay
+                    </button>
+                </div>
+            `;
+        });
+        
+        html += '</div></div>';
+    });
+    
+    html += '</div>';
+    
+    showModal('Geçmiş Arşivler', html, '<button class="btn btn-ghost" onclick="closeModal()">Kapat</button>');
+}
+
+/**
+ * Arşiv detayını göster
+ */
+async function viewArchiveDetail(branch, month) {
+    toast('Yükleniyor...', 'info');
+    
+    const data = await loadArchiveData(branch, month);
+    
+    if (!data) {
+        toast('Arşiv bulunamadı!', 'error');
+        return;
+    }
+    
+    const monthDate = new Date(month + '-01');
+    const monthName = monthDate.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+    
+    let html = `<div style="max-height:60vh;overflow-y:auto">`;
+    
+    // Özet
+    html += `
+        <div style="background:linear-gradient(135deg,rgba(155,89,182,.1),rgba(155,89,182,.05));border-radius:12px;padding:16px;margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                    <div style="font-size:1.1rem;font-weight:700;color:var(--tx)">${branch}</div>
+                    <div style="font-size:.85rem;color:var(--tx2)">${monthName}</div>
+                </div>
+                <div style="text-align:right">
+                    <div style="font-size:1.5rem;font-weight:700;color:#9b59b6">${data.personnelCount}</div>
+                    <div style="font-size:.7rem;color:var(--tx3)">Personel</div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Personel listesi
+    html += `<div style="display:grid;gap:8px">`;
+    
+    Object.entries(data.personnel || {}).forEach(([pid, p]) => {
+        const puanColor = p.toplamPuan >= 0 ? '#27ae60' : '#e74c3c';
+        
+        html += `
+            <div style="background:var(--bg2);border-radius:8px;padding:12px">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div>
+                        <div style="font-weight:600;color:var(--tx)">${p.name || p.codeName}</div>
+                        <div style="font-size:.75rem;color:var(--tx3)">${p.role || '-'}</div>
+                    </div>
+                    <div style="text-align:right">
+                        <div style="font-size:1.1rem;font-weight:700;color:${puanColor}">${p.toplamPuan >= 0 ? '+' : ''}${p.toplamPuan}</div>
+                        <div style="font-size:.65rem;color:var(--tx3)">
+                            CF: ${p.otomatikPuan} | Manuel: ${p.manuelPuan} ${p.personelEksiPuan ? `| P: ${p.personelEksiPuan}` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `</div></div>`;
+    
+    showModal(`Arşiv Detayı - ${branch}`, html, '<button class="btn btn-ghost" onclick="closeModal()">Kapat</button>');
+}
+
 // ==================== ADMIN - CHECKLIST TÜRLERİ YÖNETİMİ ====================
 
 let selectedChecklistTypeBranch = null; // STATE.branches[0] ile init edilecek
@@ -26404,12 +27295,30 @@ async function loadSystemConfig() {
             }
         });
         
+        // === ARŞİV AYARLARI YÜKLE ===
+        if (!SYSTEM_CONFIG.archiveSettings) {
+            SYSTEM_CONFIG.archiveSettings = { ...DEFAULT_ARCHIVE_SETTINGS };
+        } else {
+            // Default ile merge et (eksik alanları tamamla)
+            SYSTEM_CONFIG.archiveSettings = {
+                ...DEFAULT_ARCHIVE_SETTINGS,
+                ...SYSTEM_CONFIG.archiveSettings
+            };
+        }
+        
         console.log('Sistem config yüklendi:', {
             branches: Object.keys(CHECKLIST_TYPES),
             personnel: personnelMapping.length,
             branchHours: BRANCH_HOURS,
-            checkRules: CHECK_RULES
+            checkRules: CHECK_RULES,
+            archiveSettings: SYSTEM_CONFIG.archiveSettings
         });
+        
+        // === OTOMATİK ARŞİV KONTROLÜ (arka planda) ===
+        setTimeout(() => {
+            checkAndRunArchive().catch(e => console.warn('[Archive] Auto check error:', e));
+        }, 5000); // 5 saniye sonra çalıştır
+        
     } catch (e) {
         console.warn('Config yüklenemedi:', e);
         
