@@ -2544,7 +2544,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0705 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0710 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -12058,13 +12058,20 @@ async function saveCheckRules() {
             }
         });
         
-        // Firebase'e kaydet
+        // Firebase'e kaydet - systemConfig/checkRules
         await db.collection('systemConfig').doc('checkRules').set({
             rules: CHECK_RULES,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedBy: currentUser?.email
         }, { merge: true });
         
+        // Firebase'e kaydet - config/system (sayfa yüklenirken buradan okunuyor)
+        await db.collection('config').doc('system').set({
+            checkRules: CHECK_RULES,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        
+        console.log('[saveCheckRules] Her iki konuma da kaydedildi');
         toast('Check puanları kaydedildi', 'success');
         closeModal();
         loadPrimSistemiPage();
