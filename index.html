@@ -2522,7 +2522,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0545 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0550 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -11304,54 +11304,86 @@ async function loadPrimSistemiPage() {
     const activeTiers = branchTiers || s.tiers || [];
     const activeMonth = s.branchSettings?.[selectedBranch]?.month || s.month || `${currentMonth} ${currentYear}`;
     
-    // Check kurallarını al
+    // Check kurallarını DİNAMİK olarak çek
+    // 1. CHECKLIST_TYPES'dan isimler
+    // 2. CHECK_RULES'dan puanlar
     let checkRulesData = [];
     try {
-        // 1. settings/primSystem.checkRules
-        if (s.checkRules && Array.isArray(s.checkRules) && s.checkRules.length > 0) {
-            checkRulesData = s.checkRules.map(cr => ({
-                name: cr.name || cr.displayName,
-                onTime: cr.onTime ?? 1,
-                late: cr.late ?? -1,
-                missed: cr.missed ?? -2
-            }));
-        }
-        
-        // 2. systemConfig/checkRules.branches
-        if (checkRulesData.length === 0) {
-            const checkDoc = await db.collection('systemConfig').doc('checkRules').get();
-            if (checkDoc.exists) {
-                const data = checkDoc.data();
-                if (data.branches) {
-                    Object.values(data.branches).forEach(branch => {
-                        (branch.checks || []).forEach(check => {
-                            if (check.active !== false && !checkRulesData.find(c => c.name === (check.displayName || check.name))) {
-                                checkRulesData.push({
-                                    name: check.displayName || check.name,
-                                    onTime: check.points?.onTime ?? 1,
-                                    late: check.points?.late ?? -1,
-                                    missed: check.points?.missed ?? -2
-                                });
-                            }
-                        });
-                    });
+        // CHECKLIST_TYPES yüklü değilse Firebase'den yükle
+        if (Object.keys(CHECKLIST_TYPES).length === 0) {
+            const typesDoc = await db.collection('config').doc('checklistTypes').get();
+            if (typesDoc.exists) {
+                const data = typesDoc.data();
+                for (const [branch, types] of Object.entries(data)) {
+                    if (Array.isArray(types)) {
+                        CHECKLIST_TYPES[branch] = types;
+                    }
                 }
             }
         }
         
-        // 3. Varsayılan
+        // Şubeye ait checklist türlerini bul
+        // Önce tam eşleşme, yoksa benzer şube adı ara
+        let branchTypes = CHECKLIST_TYPES[selectedBranch];
+        if (!branchTypes) {
+            // Şube adı eşleşmesi ara (Tuzla Port -> Tuzla TRC gibi)
+            const branchKey = Object.keys(CHECKLIST_TYPES).find(k => 
+                k.toLowerCase().includes(selectedBranch.toLowerCase().split(' ')[0]) ||
+                selectedBranch.toLowerCase().includes(k.toLowerCase().split(' ')[0])
+            );
+            branchTypes = branchKey ? CHECKLIST_TYPES[branchKey] : null;
+        }
+        
+        // Tüm şubelerden unique türleri topla (fallback)
+        if (!branchTypes || branchTypes.length === 0) {
+            const allTypes = new Map();
+            Object.values(CHECKLIST_TYPES).forEach(types => {
+                if (Array.isArray(types)) {
+                    types.forEach(t => {
+                        if (!allTypes.has(t.id)) {
+                            allTypes.set(t.id, t);
+                        }
+                    });
+                }
+            });
+            branchTypes = Array.from(allTypes.values());
+        }
+        
+        // Her checklist türü için puanları CHECK_RULES'dan al
+        if (branchTypes && branchTypes.length > 0) {
+            branchTypes.forEach(type => {
+                const typeId = type.id || type.name?.toLowerCase();
+                const rules = CHECK_RULES[typeId] || CHECK_RULES[canonicalChecklistTypeId?.(typeId)] || {};
+                const points = rules.points || { onTime: 1, late: 0, missed: -1 };
+                
+                checkRulesData.push({
+                    name: type.name || rules.name || typeId,
+                    onTime: points.onTime ?? 1,
+                    late: points.late ?? 0,
+                    missed: points.missed ?? -1
+                });
+            });
+        }
+        
+        // Hâlâ boşsa config/system.checkRules'dan al
         if (checkRulesData.length === 0) {
-            checkRulesData = [
-                { name: 'Günlük Genel Kontroller', onTime: 1, late: -1, missed: -2 },
-                { name: 'Temizlik Kontrolleri', onTime: 1, late: 0, missed: -1 },
-                { name: 'Platform Kontrolleri', onTime: 2, late: -1, missed: -3 }
-            ];
+            const configDoc = await db.collection('config').doc('system').get();
+            if (configDoc.exists && configDoc.data().checkRules) {
+                const rules = configDoc.data().checkRules;
+                Object.entries(rules).forEach(([id, rule]) => {
+                    if (rule.points) {
+                        checkRulesData.push({
+                            name: rule.name || id,
+                            onTime: rule.points.onTime ?? 1,
+                            late: rule.points.late ?? 0,
+                            missed: rule.points.missed ?? -1
+                        });
+                    }
+                });
+            }
         }
     } catch (e) {
-        checkRulesData = [
-            { name: 'Günlük Genel Kontroller', onTime: 1, late: -1, missed: -2 },
-            { name: 'Temizlik Kontrolleri', onTime: 1, late: 0, missed: -1 }
-        ];
+        console.log('Check kuralları yüklenemedi:', e);
     }
     
     // Yıldız config
