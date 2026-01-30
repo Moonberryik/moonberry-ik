@@ -2544,7 +2544,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0638 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0640 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -13549,9 +13549,22 @@ function showPersonelPuanDetay(personelId, personName) {
             const dateStr = note.date || note.eventDate || '';
             const dateObj = new Date(dateStr);
             const tarih = isNaN(dateObj) ? '-' : `${String(dateObj.getDate()).padStart(2,'0')}.${String(dateObj.getMonth()+1).padStart(2,'0')}`;
-            const points = note.points || (note.score ? note.score - 3 : 0);
-            const noteColor = points > 0 ? '#27ae60' : (points < 0 ? '#e74c3c' : 'var(--tx3)');
+            
+            // Status'a göre doğru puanı hesapla
             const status = note.status || 'missed';
+            const checkType = note.checkType || note.type || 'gunluk';
+            const canonicalType = canonicalChecklistTypeId?.(checkType) || checkType.toLowerCase().replace(/[^a-z]/g, '');
+            const rules = CHECK_RULES[canonicalType] || CHECK_RULES['gunluk'] || { points: { onTime: 2, late: -2, missed: -2 } };
+            
+            // Önce note.points kullan (tam sayı ise), değilse status'a göre hesapla
+            let points = note.points;
+            if (points === undefined || points === null || !Number.isInteger(points)) {
+                if (status === 'onTime') points = rules.points?.onTime || 2;
+                else if (status === 'late') points = rules.points?.late || -2;
+                else points = rules.points?.missed || -2;
+            }
+            
+            const noteColor = points > 0 ? '#27ae60' : (points < 0 ? '#e74c3c' : 'var(--tx3)');
             // Yıldız: onTime=5★, late=2★, missed=1★
             const starCount = status === 'onTime' ? 5 : (status === 'late' ? 2 : 1);
             const starStr = '★'.repeat(starCount) + '☆'.repeat(5 - starCount);
