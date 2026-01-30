@@ -2564,7 +2564,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0130 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0200 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -15098,9 +15098,6 @@ async function loadPuantajArsiv() {
         });
         
         // Özet İstatistikler
-        const primYokToplam = Object.values(donemler).reduce((acc, d) => 
-            acc + Object.values(d.personnel).filter(p => p.toplamPuan <= -5).length, 0);
-        
         if (summaryContainer) {
             summaryContainer.innerHTML = `
                 <div style="background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(0,140,149,.05));border:1px solid rgba(0,140,149,.2);border-radius:12px;padding:16px;text-align:center">
@@ -15111,13 +15108,13 @@ async function loadPuantajArsiv() {
                     <div style="font-size:1.8rem;font-weight:800;color:#9b59b6">${toplamPersonel}</div>
                     <div style="font-size:.75rem;color:var(--tx2)">Toplam Personel</div>
                 </div>
+                <div style="background:linear-gradient(135deg,rgba(39,174,96,.1),rgba(39,174,96,.05));border:1px solid rgba(39,174,96,.2);border-radius:12px;padding:16px;text-align:center">
+                    <div style="font-size:1.8rem;font-weight:800;color:#27ae60">${toplamPozitif}</div>
+                    <div style="font-size:.75rem;color:var(--tx2)">Pozitif Personel</div>
+                </div>
                 <div style="background:linear-gradient(135deg,rgba(231,76,60,.1),rgba(231,76,60,.05));border:1px solid rgba(231,76,60,.2);border-radius:12px;padding:16px;text-align:center">
                     <div style="font-size:1.8rem;font-weight:800;color:#e74c3c">${toplamNegatif}</div>
                     <div style="font-size:.75rem;color:var(--tx2)">Negatif Personel</div>
-                </div>
-                <div style="background:linear-gradient(135deg,rgba(243,156,18,.1),rgba(243,156,18,.05));border:1px solid rgba(243,156,18,.2);border-radius:12px;padding:16px;text-align:center">
-                    <div style="font-size:1.8rem;font-weight:800;color:#f39c12">${primYokToplam}</div>
-                    <div style="font-size:.75rem;color:var(--tx2)">Prim Kaybı</div>
                 </div>
             `;
         }
@@ -15292,7 +15289,6 @@ async function loadPuantajArsiv() {
                 const [pYil, ay] = period.split('-');
                 const ayAdi = getMonthName(ay);
                 const personelSayisi = Object.keys(data.personnel).length;
-                const primYokSayisi = Object.values(data.personnel).filter(p => p.toplamPuan <= -5).length;
                 
                 let toplamPuan = 0;
                 Object.values(data.personnel).forEach(p => toplamPuan += p.toplamPuan || 0);
@@ -15326,9 +15322,9 @@ async function loadPuantajArsiv() {
                                 <div style="font-size:.9rem;font-weight:700;color:#9b59b6">${data.toplamPersonelEksi}</div>
                                 <div style="font-size:.6rem;color:var(--tx3)">P. Eksi</div>
                             </div>
-                            <div style="flex:1;background:rgba(243,156,18,.1);border-radius:8px;padding:8px;text-align:center">
-                                <div style="font-size:.9rem;font-weight:700;color:#f39c12">${primYokSayisi}</div>
-                                <div style="font-size:.6rem;color:var(--tx3)">Prim Yok</div>
+                            <div style="flex:1;background:${toplamPuan >= 0 ? 'rgba(39,174,96,.1)' : 'rgba(231,76,60,.1)'};border-radius:8px;padding:8px;text-align:center">
+                                <div style="font-size:.9rem;font-weight:700;color:${toplamPuan >= 0 ? '#27ae60' : '#e74c3c'}">${toplamPuan >= 0 ? '+' : ''}${toplamPuan}</div>
+                                <div style="font-size:.6rem;color:var(--tx3)">Toplam</div>
                             </div>
                         </div>
                     </div>
@@ -15381,15 +15377,14 @@ function showArsivDetail(period) {
     
     personelList.forEach(p => {
         const puanColor = p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx)');
-        const isDanger = p.toplamPuan <= -5;
+        const bgColor = p.toplamPuan < 0 ? 'rgba(231,76,60,.03)' : 'var(--bg3)';
         
         html += `
-            <div onclick="showPersonelArsivDetail('${period}', '${p.id}')" style="background:${isDanger ? 'rgba(231,76,60,.05)' : 'var(--bg3)'};border:1px solid ${isDanger ? 'rgba(231,76,60,.2)' : 'var(--cardBorder)'};border-radius:10px;padding:12px;cursor:pointer;transition:all .2s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+            <div onclick="showPersonelArsivDetail('${period}', '${p.id}')" style="background:${bgColor};border:1px solid var(--cardBorder);border-radius:10px;padding:12px;cursor:pointer;transition:all .2s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
                 <div style="font-weight:600;color:var(--tx);margin-bottom:4px;font-size:.9rem">${p.name || p.codeName || 'Bilinmeyen'}</div>
                 <div style="font-size:.7rem;color:var(--tx3);margin-bottom:8px">${p.role || '-'}</div>
                 <div style="display:flex;align-items:center;justify-content:space-between">
                     <span style="font-size:1.4rem;font-weight:800;color:${puanColor}">${p.toplamPuan > 0 ? '+' : ''}${p.toplamPuan || 0}</span>
-                    ${isDanger ? '<span style="font-size:.65rem;background:#e74c3c;color:#fff;padding:2px 6px;border-radius:4px">PRİM YOK</span>' : ''}
                 </div>
                 <div style="display:flex;gap:6px;margin-top:8px;font-size:.65rem">
                     <span style="color:#008c95">CF: ${p.otomatikPuan || 0}</span>
@@ -20941,32 +20936,31 @@ async function archivePuantajMonth(branch, month) {
             return false;
         }
         
-        // 2. Puantaj verilerini al (deleted olmayanlar)
-        const puantajSnap = await db.collection('puantaj')
-            .where('branch', '==', branch)
-            .where('eventDate', '>=', startDate)
-            .where('eventDate', '<=', endDate)
-            .get();
-        
-        // 3. PuantajNotes verilerini al (deleted olmayanlar)
-        const notesSnap = await db.collection('puantajNotes')
-            .where('branch', '==', branch)
-            .where('date', '>=', startDate)
-            .where('date', '<=', endDate)
-            .get();
-        
-        // 4. Supervisor Penalties verilerini al
-        const penaltiesSnap = await db.collection('supervisorPenalties')
-            .where('branch', '==', branch)
-            .where('month', '==', month)
-            .get();
-        
-        // 5. Personel bazlı veri topla
+        // 2. PersonelId Mapping oluştur (loadPuantaj'daki gibi)
+        const personelIdMapping = {};
         const personnelData = {};
         
         personelSnap.forEach(doc => {
             const p = doc.data();
-            personnelData[doc.id] = {
+            const docId = doc.id;
+            
+            // Bu personel için kullanılabilecek tüm ID'ler
+            const possibleIds = [
+                docId,
+                p.uniqueId,
+                normalizePersonelId(p.name),
+                p.name?.toLowerCase().replace(/\s+/g, '_'),
+                p.name?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''),
+                p.codeName?.toLowerCase().replace(/\s+/g, '_'),
+            ].filter(k => k);
+            
+            // Her olası ID'yi doc.id'ye map'le
+            possibleIds.forEach(pid => {
+                personelIdMapping[pid] = docId;
+            });
+            
+            // Personel verisi başlat
+            personnelData[docId] = {
                 name: p.name,
                 codeName: p.codeName || p.name?.split(' ')[0],
                 role: p.role,
@@ -20980,21 +20974,33 @@ async function archivePuantajMonth(branch, month) {
             };
         });
         
-        // 6. Puantaj kayıtlarını işle
+        console.log(`[Archive] ${Object.keys(personnelData).length} personel, mapping: ${Object.keys(personelIdMapping).length} key`);
+        
+        // 3. Puantaj verilerini al
+        const puantajSnap = await db.collection('puantaj')
+            .where('branch', '==', branch)
+            .get();
+        
+        // 4. Puantaj kayıtlarını işle
         puantajSnap.forEach(doc => {
             const d = doc.data();
-            if (d.deleted === true) return; // Soft deleted atla
+            if (d.deleted === true) return;
             
-            const pid = d.personelId;
-            if (!personnelData[pid]) return;
+            // Tarih kontrolü
+            const eventDate = d.eventDate || d.date || '';
+            if (eventDate < startDate || eventDate > endDate) return;
+            
+            // personelId'yi gerçek doc.id'ye çevir
+            const realDocId = personelIdMapping[d.personelId] || d.personelId;
+            if (!personnelData[realDocId]) return;
             
             const points = parseInt(d.points) || 0;
             const isAuto = d.type === 'checklist_auto' || d.createdBy === 'system_auto' || d.autoGenerated === true;
             
             if (isAuto) {
-                personnelData[pid].otomatikPuan += points;
-                personnelData[pid].otomatikKayitlar.push({
-                    date: d.eventDate || d.date,
+                personnelData[realDocId].otomatikPuan += points;
+                personnelData[realDocId].otomatikKayitlar.push({
+                    date: eventDate,
                     checkType: d.checkType || d.type,
                     checkTime: d.checkTime || '',
                     status: d.status || '',
@@ -21003,9 +21009,9 @@ async function archivePuantajMonth(branch, month) {
                     createdAt: d.createdAt
                 });
             } else if (d.type !== 'prim_reset') {
-                personnelData[pid].manuelPuan += points;
-                personnelData[pid].manuelKayitlar.push({
-                    date: d.eventDate || d.date,
+                personnelData[realDocId].manuelPuan += points;
+                personnelData[realDocId].manuelKayitlar.push({
+                    date: eventDate,
                     note: d.note || '',
                     score: d.score,
                     points: points,
@@ -21016,18 +21022,26 @@ async function archivePuantajMonth(branch, month) {
             }
         });
         
-        // 7. PuantajNotes kayıtlarını işle (CF otomatik)
+        // 5. PuantajNotes verilerini al (TÜM verileri çek, sonra filtrele - loadPuantaj gibi)
+        const notesSnap = await db.collection('puantajNotes').get();
+        
         notesSnap.forEach(doc => {
             const d = doc.data();
-            if (d.deleted === true) return; // Soft deleted atla
+            if (d.deleted === true) return;
             
-            const pid = d.personelId;
-            if (!personnelData[pid]) return;
+            // Şube ve tarih kontrolü
+            if (d.branch !== branch) return;
+            const noteDate = d.date || '';
+            if (noteDate < startDate || noteDate > endDate) return;
+            
+            // personelId'yi gerçek doc.id'ye çevir
+            const realDocId = personelIdMapping[d.personelId] || d.personelId;
+            if (!personnelData[realDocId]) return;
             
             const points = parseInt(d.points) || 0;
-            personnelData[pid].otomatikPuan += points;
-            personnelData[pid].otomatikKayitlar.push({
-                date: d.date,
+            personnelData[realDocId].otomatikPuan += points;
+            personnelData[realDocId].otomatikKayitlar.push({
+                date: noteDate,
                 checkType: d.checkType,
                 checkTime: d.checkTime || '',
                 status: d.status || '',
@@ -21037,15 +21051,21 @@ async function archivePuantajMonth(branch, month) {
             });
         });
         
-        // 8. Supervisor Penalties işle
+        // 6. Supervisor Penalties işle
+        const penaltiesSnap = await db.collection('supervisorPenalties')
+            .where('branch', '==', branch)
+            .where('month', '==', month)
+            .get();
+        
         penaltiesSnap.forEach(doc => {
             const d = doc.data();
-            const supId = d.supervisorId;
-            if (!personnelData[supId]) return;
+            // supervisorId'yi gerçek doc.id'ye çevir
+            const realDocId = personelIdMapping[d.supervisorId] || d.supervisorId;
+            if (!personnelData[realDocId]) return;
             
             const penalty = parseFloat(d.penalty) || 0;
-            personnelData[supId].personelEksiPuan += penalty;
-            personnelData[supId].personelEksiKayitlar.push({
+            personnelData[realDocId].personelEksiPuan += penalty;
+            personnelData[realDocId].personelEksiKayitlar.push({
                 date: d.date,
                 personelId: d.personelId,
                 personelName: d.personelName,
@@ -21057,13 +21077,22 @@ async function archivePuantajMonth(branch, month) {
             });
         });
         
-        // 9. Toplamları hesapla
+        // 7. Toplamları hesapla
         Object.keys(personnelData).forEach(pid => {
             const p = personnelData[pid];
             p.toplamPuan = p.otomatikPuan + p.manuelPuan + p.personelEksiPuan;
         });
         
-        // 10. Arşiv dokümanı oluştur
+        // Debug log
+        let totalOto = 0, totalManuel = 0, totalPEksi = 0;
+        Object.values(personnelData).forEach(p => {
+            totalOto += p.otomatikPuan;
+            totalManuel += p.manuelPuan;
+            totalPEksi += p.personelEksiPuan;
+        });
+        console.log(`[Archive] Toplamlar - Otomatik: ${totalOto}, Manuel: ${totalManuel}, P.Eksi: ${totalPEksi}`);
+        
+        // 8. Arşiv dokümanı oluştur
         const archiveDocId = `${branch}_${month}`;
         await db.collection('puantajArchive').doc(archiveDocId).set({
             branch: branch,
@@ -21076,7 +21105,7 @@ async function archivePuantajMonth(branch, month) {
             personnel: personnelData
         });
         
-        // 11. lastArchived güncelle
+        // 9. lastArchived güncelle
         await db.collection('config').doc('system').set({
             archiveSettings: {
                 ...SYSTEM_CONFIG.archiveSettings,
@@ -25426,9 +25455,14 @@ async function renderArchiveStatus() {
                     <div style="font-weight:600;color:var(--tx);font-size:.9rem">${branch}</div>
                     <div style="font-size:.75rem;color:${statusColor}">${statusText}</div>
                 </div>
-                <button onclick="manualArchive('${branch}', '${lastMonthStr}')" class="btn btn-sm btn-ghost" style="font-size:.75rem" ${isArchived ? 'disabled' : ''}>
-                    ${isArchived ? 'Arşivlendi' : 'Arşivle'}
-                </button>
+                <div style="display:flex;gap:6px">
+                    <button onclick="manualArchive('${branch}', '${lastMonthStr}')" class="btn btn-sm btn-ghost" style="font-size:.75rem" ${isArchived ? 'disabled' : ''}>
+                        ${isArchived ? 'Arşivlendi' : 'Arşivle'}
+                    </button>
+                    <button onclick="archiveAndReset('${branch}', '${lastMonthStr}')" class="btn btn-sm btn-ghost" style="font-size:.75rem;color:#e74c3c" title="Arşivle ve puanları sıfırla">
+                        🗑️
+                    </button>
+                </div>
             </div>
         `;
     });
@@ -25437,13 +25471,24 @@ async function renderArchiveStatus() {
         <div style="background:var(--bg3);border-radius:12px;padding:20px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
                 <div style="font-weight:600;color:var(--tx)">Arşiv Durumu - ${lastMonthName}</div>
-                <button onclick="archiveAllBranchesManual('${lastMonthStr}')" class="btn btn-sm btn-primary" style="font-size:.8rem">
-                    📦 Tümünü Arşivle
-                </button>
+                <div style="display:flex;gap:8px">
+                    <button onclick="archiveAllBranchesManual('${lastMonthStr}')" class="btn btn-sm btn-primary" style="font-size:.8rem">
+                        📦 Tümünü Arşivle
+                    </button>
+                    <button onclick="archiveAndResetAll('${lastMonthStr}')" class="btn btn-sm" style="font-size:.8rem;background:#e74c3c;color:#fff" title="Tümünü arşivle ve puanları sıfırla">
+                        📦🗑️ Arşivle + Sıfırla
+                    </button>
+                </div>
             </div>
             
             <div style="display:grid;gap:8px">
                 ${branchStatusHtml}
+            </div>
+            
+            <div style="margin-top:16px;padding:12px;background:rgba(231,76,60,.08);border-radius:8px;border:1px solid rgba(231,76,60,.2)">
+                <div style="font-size:.8rem;color:#e74c3c">
+                    <strong>🗑️ Arşivle + Sıfırla:</strong> Verileri arşivler ve ilgili ayın tüm puantaj kayıtlarını siler. Bu işlem geri alınamaz!
+                </div>
             </div>
             
             <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--bg2)">
@@ -25525,6 +25570,135 @@ async function archiveAllBranchesManual(month) {
     } else {
         toast('Arşivleme başarısız!', 'error');
     }
+}
+
+/**
+ * Tek şube için arşivle ve puanları sıfırla
+ */
+async function archiveAndReset(branch, month) {
+    if (!confirm(`⚠️ DİKKAT!\n\n${branch} - ${month} arşivlenecek ve tüm puantaj kayıtları silinecek.\n\nBu işlem geri alınamaz! Devam etmek istiyor musunuz?`)) return;
+    
+    if (!confirm(`Son onay: ${branch} için ${month} verileri kalıcı olarak silinecek. Emin misiniz?`)) return;
+    
+    toast('Arşivleniyor ve sıfırlanıyor...', 'info');
+    
+    try {
+        // 1. Önce arşivle
+        const archiveResult = await archivePuantajMonth(branch, month);
+        if (!archiveResult) {
+            toast('Arşivleme başarısız!', 'error');
+            return;
+        }
+        
+        // 2. Puantaj kayıtlarını sil
+        await resetPuantajMonth(branch, month);
+        
+        toast(`${branch} arşivlendi ve puanlar sıfırlandı ✓`, 'success');
+        await loadSystemConfigForArchive();
+        renderArchiveStatus();
+        
+    } catch (e) {
+        console.error('Arşivle + Sıfırla hatası:', e);
+        toast('İşlem hatası: ' + e.message, 'error');
+    }
+}
+
+/**
+ * Tüm şubeler için arşivle ve puanları sıfırla
+ */
+async function archiveAndResetAll(month) {
+    if (!confirm(`⚠️ DİKKAT!\n\nTÜM ŞUBELER için ${month} arşivlenecek ve tüm puantaj kayıtları silinecek.\n\nBu işlem geri alınamaz! Devam etmek istiyor musunuz?`)) return;
+    
+    if (!confirm(`Son onay: TÜM ŞUBELER için ${month} verileri kalıcı olarak silinecek. Emin misiniz?`)) return;
+    
+    toast('Tüm şubeler arşivleniyor ve sıfırlanıyor...', 'info');
+    
+    try {
+        const branches = STATE.branches || [];
+        let successCount = 0;
+        
+        for (const branch of branches) {
+            // 1. Arşivle
+            const archiveResult = await archivePuantajMonth(branch, month);
+            if (!archiveResult) continue;
+            
+            // 2. Sıfırla
+            await resetPuantajMonth(branch, month);
+            successCount++;
+        }
+        
+        toast(`${successCount}/${branches.length} şube arşivlendi ve sıfırlandı ✓`, 'success');
+        await loadSystemConfigForArchive();
+        renderArchiveStatus();
+        
+    } catch (e) {
+        console.error('Toplu arşivle + sıfırla hatası:', e);
+        toast('İşlem hatası: ' + e.message, 'error');
+    }
+}
+
+/**
+ * Bir ayın puantaj kayıtlarını sıfırla (sil)
+ */
+async function resetPuantajMonth(branch, month) {
+    const [year, monthNum] = month.split('-');
+    const startDate = `${month}-01`;
+    const endDay = new Date(parseInt(year), parseInt(monthNum), 0).getDate();
+    const endDate = `${month}-${String(endDay).padStart(2, '0')}`;
+    
+    console.log(`[Reset] ${branch} - ${month} puanları siliniyor...`);
+    
+    // 1. Puantaj koleksiyonundan sil
+    const puantajSnap = await db.collection('puantaj')
+        .where('branch', '==', branch)
+        .get();
+    
+    const batch1 = db.batch();
+    let count1 = 0;
+    puantajSnap.forEach(doc => {
+        const d = doc.data();
+        const eventDate = d.eventDate || d.date || '';
+        if (eventDate >= startDate && eventDate <= endDate) {
+            batch1.delete(doc.ref);
+            count1++;
+        }
+    });
+    if (count1 > 0) await batch1.commit();
+    console.log(`[Reset] puantaj: ${count1} kayıt silindi`);
+    
+    // 2. PuantajNotes koleksiyonundan sil
+    const notesSnap = await db.collection('puantajNotes').get();
+    
+    const batch2 = db.batch();
+    let count2 = 0;
+    notesSnap.forEach(doc => {
+        const d = doc.data();
+        if (d.branch !== branch) return;
+        const noteDate = d.date || '';
+        if (noteDate >= startDate && noteDate <= endDate) {
+            batch2.delete(doc.ref);
+            count2++;
+        }
+    });
+    if (count2 > 0) await batch2.commit();
+    console.log(`[Reset] puantajNotes: ${count2} kayıt silindi`);
+    
+    // 3. SupervisorPenalties koleksiyonundan sil
+    const penaltiesSnap = await db.collection('supervisorPenalties')
+        .where('branch', '==', branch)
+        .where('month', '==', month)
+        .get();
+    
+    const batch3 = db.batch();
+    let count3 = 0;
+    penaltiesSnap.forEach(doc => {
+        batch3.delete(doc.ref);
+        count3++;
+    });
+    if (count3 > 0) await batch3.commit();
+    console.log(`[Reset] supervisorPenalties: ${count3} kayıt silindi`);
+    
+    console.log(`[Reset] ✅ ${branch} - ${month} toplam ${count1 + count2 + count3} kayıt silindi`);
 }
 
 /**
