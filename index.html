@@ -2544,7 +2544,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0635 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0636 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -12989,11 +12989,12 @@ async function loadPuantaj() {
             const puanColor = p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx)');
             const puanSign = p.toplamPuan > 0 ? '+' : '';
             
-            // Barista/servis personeli için Sunberry sol kenarlık
+            // Barista/servis personeli için Sunberry sol kenarlık (HER ZAMAN, risk/tehlike dahil)
             const isBaristaRole = ['barista', 'part_time', 'kidemli_barista'].includes(p.role);
-            const baseCardColor = isBaristaRole ? '#ff8674' : roleColor;
-            // Kart border: tehlike durumu > risk > barista=Sunberry veya rol rengi
-            const cardBorder = canView ? (isDanger ? '#e74c3c' : (isRisk ? '#f39c12' : baseCardColor)) : '#6c757d';
+            // Barista ise HER ZAMAN Sunberry, değilse: tehlike > risk > rol rengi
+            const cardBorder = canView 
+                ? (isBaristaRole ? '#ff8674' : (isDanger ? '#e74c3c' : (isRisk ? '#f39c12' : roleColor))) 
+                : '#6c757d';
             
             // === DİNAMİK YILDIZ GÖSTERİMİ ===
             // Tam değere göre CSS gradient ile doluluk
