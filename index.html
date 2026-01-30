@@ -2564,7 +2564,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0225 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0235 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -15381,7 +15381,7 @@ function showArsivDetail(period) {
         
         html += `
             <div onclick="showPersonelArsivDetail('${period}', '${p.id}')" style="background:${bgColor};border:1px solid var(--cardBorder);border-radius:10px;padding:12px;cursor:pointer;transition:all .2s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
-                <div style="font-weight:600;color:var(--tx);margin-bottom:4px;font-size:.9rem">${p.name || p.codeName || 'Bilinmeyen'}</div>
+                <div style="font-weight:600;color:var(--tx);margin-bottom:4px;font-size:.9rem">${p.codeName || p.name || 'Bilinmeyen'}</div>
                 <div style="font-size:.7rem;color:var(--tx3);margin-bottom:8px">${p.role || '-'}</div>
                 <div style="display:flex;align-items:center;justify-content:space-between">
                     <span style="font-size:1.4rem;font-weight:800;color:${puanColor}">${p.toplamPuan > 0 ? '+' : ''}${p.toplamPuan || 0}</span>
@@ -20902,10 +20902,14 @@ let BRANCH_HOURS = {};
 // ARŞİV AYARLARI DEFAULT
 const DEFAULT_ARCHIVE_SETTINGS = {
     enabled: true,
-    dayOfMonth: 1,      // Her ayın kaçında (1-28)
-    hour: 5,            // Saat (0-23)
-    minute: 0,          // Dakika (0-59)
-    lastArchived: {}    // { "Tuzla Port": "2026-01", "Şişli": "2026-01" }
+    dayOfMonth: 1,          // Her ayın kaçında arşivle (1-28)
+    hour: 5,                // Arşivleme saati (0-23)
+    minute: 0,              // Dakika (0-59)
+    autoReset: false,       // Otomatik sıfırlama aktif mi?
+    autoResetDayOfMonth: 2, // Her ayın kaçında sıfırla (arşivden 1 gün sonra önerilir)
+    autoResetHour: 3,       // Sıfırlama saati
+    lastArchived: {},       // { "Tuzla Port": "2026-01", "Şişli": "2026-01" }
+    lastReset: {}           // { "Tuzla Port": "2026-01", "Şişli": "2026-01" }
 };
 
 // ==================== ARŞİV SİSTEMİ ====================
@@ -21160,39 +21164,66 @@ async function archiveAllBranches(month) {
 async function checkAndRunArchive() {
     try {
         const settings = SYSTEM_CONFIG.archiveSettings || DEFAULT_ARCHIVE_SETTINGS;
-        if (!settings.enabled) return;
         
         const now = new Date();
         const today = now.getDate();
         const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
-        
-        // Ayın doğru günü ve saati mi?
-        if (today !== settings.dayOfMonth) return;
-        if (currentHour < settings.hour) return;
-        if (currentHour === settings.hour && currentMinute < settings.minute) return;
         
         // Geçen ayı hesapla
         const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const lastMonthStr = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
         
-        // Her şube için kontrol et
         const branches = STATE.branches || [];
         const lastArchived = settings.lastArchived || {};
+        const lastReset = settings.lastReset || {};
         
-        for (const branch of branches) {
-            // Bu şube bu ay için zaten arşivlendi mi?
-            if (lastArchived[branch] === lastMonthStr) {
-                console.log(`[Archive] ${branch} - ${lastMonthStr} zaten arşivlenmiş`);
-                continue;
+        // === 1. OTOMATİK ARŞİVLEME ===
+        if (settings.enabled && today === settings.dayOfMonth && currentHour >= settings.hour) {
+            for (const branch of branches) {
+                if (lastArchived[branch] === lastMonthStr) {
+                    console.log(`[Archive] ${branch} - ${lastMonthStr} zaten arşivlenmiş`);
+                    continue;
+                }
+                await archivePuantajMonth(branch, lastMonthStr);
             }
-            
-            // Arşivle
-            await archivePuantajMonth(branch, lastMonthStr);
+        }
+        
+        // === 2. OTOMATİK SIFIRLAMA ===
+        if (settings.autoReset && today === settings.autoResetDayOfMonth && currentHour >= settings.autoResetHour) {
+            for (const branch of branches) {
+                // Önce arşivlenmiş mi kontrol et
+                if (lastArchived[branch] !== lastMonthStr) {
+                    console.log(`[Reset] ${branch} - ${lastMonthStr} henüz arşivlenmemiş, sıfırlama atlanıyor`);
+                    continue;
+                }
+                
+                // Zaten sıfırlanmış mı?
+                if (lastReset[branch] === lastMonthStr) {
+                    console.log(`[Reset] ${branch} - ${lastMonthStr} zaten sıfırlanmış`);
+                    continue;
+                }
+                
+                // Sıfırla
+                console.log(`[Reset] ${branch} - ${lastMonthStr} sıfırlanıyor...`);
+                await resetPuantajMonth(branch, lastMonthStr);
+                
+                // lastReset güncelle
+                await db.collection('config').doc('system').set({
+                    archiveSettings: {
+                        ...settings,
+                        lastReset: {
+                            ...lastReset,
+                            [branch]: lastMonthStr
+                        }
+                    }
+                }, { merge: true });
+                
+                console.log(`[Reset] ✅ ${branch} - ${lastMonthStr} sıfırlandı`);
+            }
         }
         
     } catch (e) {
-        console.error('[Archive] Otomatik arşiv hatası:', e);
+        console.error('[Archive/Reset] Otomatik işlem hatası:', e);
     }
 }
 
@@ -25587,12 +25618,21 @@ async function saveArchiveSettings() {
         const dayOfMonth = parseInt(document.getElementById('archiveDayOfMonth')?.value) || 1;
         const hour = parseInt(document.getElementById('archiveHour')?.value) || 5;
         
+        // Otomatik sıfırlama ayarları
+        const autoReset = document.getElementById('autoResetEnabled')?.checked ?? false;
+        const autoResetDayOfMonth = parseInt(document.getElementById('autoResetDayOfMonth')?.value) || 2;
+        const autoResetHour = parseInt(document.getElementById('autoResetHour')?.value) || 3;
+        
         const newSettings = {
             enabled,
             dayOfMonth,
             hour,
             minute: 0,
-            lastArchived: SYSTEM_CONFIG.archiveSettings?.lastArchived || {}
+            autoReset,
+            autoResetDayOfMonth,
+            autoResetHour,
+            lastArchived: SYSTEM_CONFIG.archiveSettings?.lastArchived || {},
+            lastReset: SYSTEM_CONFIG.archiveSettings?.lastReset || {}
         };
         
         await db.collection('config').doc('system').set({
