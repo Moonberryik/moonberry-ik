@@ -2544,7 +2544,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0650 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0655 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -12633,6 +12633,151 @@ async function calculateSupervisorPenaltyTotal(supervisorId, month) {
     return penalties.reduce((sum, p) => sum + (p.penalty || 0), 0);
 }
 
+/**
+ * Firebase'e supervisorPenalty default değerlerini kaydet
+ * Console'dan bir kerelik çalıştırılacak
+ */
+async function saveSupervisorPenaltyDefaults() {
+    try {
+        // systemConfig/checkRules'a supervisorPenalty ekle
+        const doc = await db.collection('systemConfig').doc('checkRules').get();
+        const existingRules = doc.exists ? (doc.data().rules || {}) : {};
+        
+        // Her check tipi için supervisorPenalty ekle
+        const updatedRules = {};
+        Object.keys(CHECK_RULES).forEach(key => {
+            updatedRules[key] = {
+                ...existingRules[key],
+                ...CHECK_RULES[key],
+                supervisorPenalty: CHECK_RULES[key].supervisorPenalty ?? existingRules[key]?.supervisorPenalty ?? -0.5
+            };
+        });
+        
+        await db.collection('systemConfig').doc('checkRules').set({
+            rules: updatedRules,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedBy: currentUser?.email
+        }, { merge: true });
+        
+        // config/system'a da kaydet
+        const sysDoc = await db.collection('config').doc('system').get();
+        const sysRules = sysDoc.exists ? (sysDoc.data().checkRules || {}) : {};
+        
+        const updatedSysRules = {};
+        Object.keys(CHECK_RULES).forEach(key => {
+            updatedSysRules[key] = {
+                ...sysRules[key],
+                ...CHECK_RULES[key],
+                supervisorPenalty: CHECK_RULES[key].supervisorPenalty ?? sysRules[key]?.supervisorPenalty ?? -0.5
+            };
+        });
+        
+        await db.collection('config').doc('system').set({
+            checkRules: updatedSysRules,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        
+        console.log('✅ supervisorPenalty default değerleri Firebase\'e kaydedildi');
+        toast('supervisorPenalty kaydedildi', 'success');
+        return true;
+    } catch (e) {
+        console.error('❌ supervisorPenalty kaydetme hatası:', e);
+        toast('Kaydetme hatası', 'error');
+        return false;
+    }
+}
+
+/**
+ * Eksik supervisor penalty kayıtlarını tamamla (Fallback)
+ * Puantaj sayfası yüklendiğinde çağrılır
+ * @param {string} branch - Şube
+ * @param {string} month - Ay (YYYY-MM)
+ */
+async function fillMissingSupervisorPenalties(branch, month) {
+    // Sadece müdür/yardımcı yetkisi olanlar için çalış
+    const role = currentUser?.role;
+    if (!['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(role)) return;
+    
+    try {
+        // Son 7 günün missed check'lerini al
+        const now = new Date();
+        const startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - 7);
+        const startDateStr = startDate.toISOString().split('T')[0];
+        
+        const missedChecks = await db.collection('puantajNotes')
+            .where('branch', '==', branch)
+            .where('status', '==', 'missed')
+            .where('date', '>=', startDateStr)
+            .limit(100)
+            .get();
+        
+        if (missedChecks.empty) return;
+        
+        // Mevcut penalty'leri al (çakışma kontrolü için)
+        const existingPenalties = await db.collection('supervisorPenalties')
+            .where('branch', '==', branch)
+            .where('month', '==', month)
+            .get();
+        
+        const existingIds = new Set();
+        existingPenalties.forEach(doc => existingIds.add(doc.id));
+        
+        let writtenCount = 0;
+        
+        for (const doc of missedChecks.docs) {
+            const check = doc.data();
+            
+            // Bu check için penalty yazılmış mı kontrol et
+            const checkTypeId = canonicalChecklistTypeId?.(check.checkType) || check.checkType?.toLowerCase().replace(/[^a-z]/g, '') || 'gunluk';
+            const checkHour = parseInt(check.checkTime?.split(':')[0]) || 12;
+            
+            // O saatteki supervisorları bul
+            const supervisors = await getSupervisorsOnDuty(branch, check.date, checkHour);
+            
+            for (const sup of supervisors) {
+                const penaltyId = `${check.date}_${checkTypeId}_${(check.checkTime || '').replace(':', '')}_${check.personelId}_${sup.id}`;
+                
+                // Zaten varsa atla
+                if (existingIds.has(penaltyId)) continue;
+                
+                // Penalty yaz
+                const rules = CHECK_RULES[checkTypeId] || CHECK_RULES['gunluk'] || {};
+                const penalty = rules.supervisorPenalty ?? -0.5;
+                
+                if (penalty === 0) continue;
+                
+                await db.collection('supervisorPenalties').doc(penaltyId).set({
+                    supervisorId: sup.id,
+                    supervisorName: sup.name,
+                    supervisorFullName: sup.fullName,
+                    supervisorRole: sup.role,
+                    personelId: check.personelId,
+                    personelName: check.personelName,
+                    checkType: checkTypeId,
+                    checkTypeName: rules.name || check.checkType,
+                    checkTime: check.checkTime || '',
+                    date: check.date,
+                    penalty: penalty,
+                    branch: branch,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    month: check.date?.substring(0, 7) || month,
+                    source: 'fallback'
+                });
+                
+                existingIds.add(penaltyId);
+                writtenCount++;
+            }
+        }
+        
+        if (writtenCount > 0) {
+            console.log(`[SupervisorPenalty Fallback] ${writtenCount} eksik kayıt tamamlandı`);
+        }
+    } catch (e) {
+        console.warn('[SupervisorPenalty Fallback] Hata:', e.message);
+    }
+}
+
 async function loadPuantajRules() {
     try {
         const snapshot = await db.collection('puantajRules').get();
@@ -12757,6 +12902,9 @@ async function loadPuantaj() {
         }
         // Global'e kaydet - kart detayında kullanılacak
         window.supervisorPenaltiesCache = supervisorPenaltiesData;
+        
+        // Fallback: Eksik penalty kayıtlarını tamamla (arka planda)
+        fillMissingSupervisorPenalties(sube, puantajKey).catch(() => {});
         
         // Bölge müdürü puantajlarını da çek - personelId ile (branch fark etmez)
         // Bölge müdürlerinin doc.id'lerini topla
@@ -21029,6 +21177,23 @@ async function createAutoPuantajNote(personelId, personelName, checkType, checkT
         });
         
         console.log('✅ Puantaj notu oluşturuldu:', noteId, points);
+        
+        // === SUPERVISOR PENALTY TETİKLEYİCİ ===
+        // Personel check kaçırdıysa (missed) müdür/yardımcıya eksi yaz
+        if (status === 'missed') {
+            try {
+                await writeSupervisorPenalty({
+                    personelId: finalPersonelId,
+                    personelName: finalPersonelName,
+                    checkType: checkType,
+                    checkTime: checkTime,
+                    date: date,
+                    branch: branch
+                });
+            } catch (penaltyErr) {
+                console.warn('[SupervisorPenalty] Yazılamadı:', penaltyErr.message);
+            }
+        }
     } catch (e) {
         console.error('❌ Puantaj notu oluşturulamadı:', e.message);
     }
@@ -24913,6 +25078,7 @@ const DEFAULT_CHECK_RULES = {
         timeSlots: ['10:00', '12:00', '15:00', '18:00', '21:00'],
         lateWindow: 30,
         points: { onTime: 1, late: 0, missed: -2 },
+        supervisorPenalty: -0.5,
         responsibleShift: 'auto', // auto = saat bazlı otomatik
         branches: ['all']
     },
@@ -24922,6 +25088,7 @@ const DEFAULT_CHECK_RULES = {
         timeSlots: ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'],
         lateWindow: 30,
         points: { onTime: 0, late: 0, missed: -1 },
+        supervisorPenalty: -0.3,
         responsibleShift: 'all',
         branches: ['all']
     },
@@ -24935,6 +25102,7 @@ const DEFAULT_CHECK_RULES = {
         },
         lateWindow: 30,
         points: { onTime: 1, late: 0, missed: -1 },
+        supervisorPenalty: -0.5,
         branches: ['all']
     },
     mudur: { 
@@ -24944,6 +25112,7 @@ const DEFAULT_CHECK_RULES = {
         activeFrom: '18:00',
         lateWindow: 30,
         points: { onTime: 1, late: -1, missed: -2 },
+        supervisorPenalty: 0, // Müdür kendi check'i - penalty yok
         responsibleShift: 'mudur',
         branches: ['all']
     },
@@ -24954,6 +25123,7 @@ const DEFAULT_CHECK_RULES = {
         activeFrom: '09:00',
         lateWindow: 30,
         points: { onTime: 1, late: -1, missed: -2 },
+        supervisorPenalty: -1,
         responsibleShift: 'acilis',
         branches: ['all']
     },
@@ -24964,6 +25134,7 @@ const DEFAULT_CHECK_RULES = {
         activeFrom: '22:00',
         lateWindow: 30,
         points: { onTime: 1, late: 0, missed: -2 },
+        supervisorPenalty: -1,
         responsibleShift: 'kapanis',
         branches: ['all']
     }
@@ -25762,7 +25933,23 @@ async function loadCheckRulesFromFirebase() {
     try {
         const doc = await db.collection('config').doc('system').get();
         if (doc.exists && doc.data().checkRules) {
-            CHECK_RULES = doc.data().checkRules;
+            const firebaseRules = doc.data().checkRules;
+            
+            // Firebase'den gelen kuralları mevcut CHECK_RULES ile merge et
+            // supervisorPenalty yoksa default'u koru
+            Object.keys(firebaseRules).forEach(key => {
+                if (CHECK_RULES[key]) {
+                    // Mevcut kuralı güncelle ama supervisorPenalty'yi koru
+                    const defaultPenalty = CHECK_RULES[key].supervisorPenalty ?? DEFAULT_CHECK_RULES[key]?.supervisorPenalty ?? -0.5;
+                    CHECK_RULES[key] = {
+                        ...CHECK_RULES[key],
+                        ...firebaseRules[key],
+                        supervisorPenalty: firebaseRules[key].supervisorPenalty ?? defaultPenalty
+                    };
+                } else {
+                    CHECK_RULES[key] = firebaseRules[key];
+                }
+            });
             
             // Dashboard mesajlarını da yükle
             const msgs = doc.data().dashboardMessages || {};
