@@ -2522,7 +2522,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0550 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0555 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -11277,11 +11277,11 @@ async function loadPrimSistemiPage() {
     const currentYear = new Date().getFullYear();
     const userBranch = currentUser?.branch || '';
     
-    // Mevcut şubeleri al
-    const branches = window.BRANCHES || ['Şişli', 'Tuzla Port'];
+    // Mevcut şubeleri DİNAMİK al (📍 Şubeler'den)
+    const branches = STATE.branches || window.BRANCHES || [];
     
     // Seçili şube (yönetici ise dropdown'dan, değilse kendi şubesi)
-    const selectedBranch = window.primSelectedBranch || userBranch || branches[0];
+    const selectedBranch = window.primSelectedBranch || userBranch || branches[0] || '';
     
     // Prim ayarlarını yükle
     let s = primSettingsCache;
@@ -11424,12 +11424,12 @@ async function loadPrimSistemiPage() {
             const tierIcon = t.icon || 'dollar';
             const badge = t.badge || '';
             const hasBadge = badge.trim() !== '';
-            return `<div style="background:${hasBadge ? `linear-gradient(135deg,${tierColor}12,${tierColor}05)` : 'var(--bg)'};border:${hasBadge ? `2px solid ${tierColor}35` : '1px solid var(--bg4)'};border-radius:14px;padding:20px 16px;padding-top:${hasBadge ? '24px' : '20px'};text-align:center;position:relative;min-width:115px;flex:1">
-                ${hasBadge ? `<div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,${tierColor},${tierColor}dd);color:#fff;font-size:.58rem;padding:5px 10px;border-radius:8px;font-weight:700;white-space:nowrap;box-shadow:0 3px 8px ${tierColor}35;display:inline-flex;align-items:center;gap:3px;letter-spacing:.2px">${icons[tierIcon] ? icons[tierIcon].replace(/16/g, '10') : ''}${badge}</div>` : ''}
-                <div style="width:36px;height:36px;background:${tierColor}12;border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;color:${tierColor}">${icons[tierIcon] || icons.dollar}</div>
-                <div style="font-size:.6rem;color:var(--tx3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;font-weight:600">${t.label || 'Ciro'}</div>
-                <div style="font-size:.85rem;font-weight:600;color:var(--tx);margin-bottom:8px">${t.minCiro}</div>
-                <div style="font-size:1.4rem;font-weight:800;color:${tierColor};line-height:1">${t.prim}</div>
+            return `<div style="background:${hasBadge ? `linear-gradient(135deg,${tierColor}12,${tierColor}05)` : 'var(--bg)'};border:${hasBadge ? `2px solid ${tierColor}35` : '1px solid var(--bg4)'};border-radius:14px;padding:20px 14px;padding-top:${hasBadge ? '24px' : '20px'};text-align:center;position:relative;min-width:100px;flex:1 1 auto">
+                ${hasBadge ? `<div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,${tierColor},${tierColor}dd);color:#fff;font-size:.55rem;padding:4px 8px;border-radius:8px;font-weight:700;white-space:nowrap;box-shadow:0 3px 8px ${tierColor}35;display:inline-flex;align-items:center;gap:3px;letter-spacing:.2px">${icons[tierIcon] ? icons[tierIcon].replace(/16/g, '10') : ''}${badge}</div>` : ''}
+                <div style="width:32px;height:32px;background:${tierColor}12;border-radius:8px;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:${tierColor}">${icons[tierIcon] || icons.dollar}</div>
+                <div style="font-size:.55rem;color:var(--tx3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px;font-weight:600">${t.label || 'Ciro'}</div>
+                <div style="font-size:.8rem;font-weight:600;color:var(--tx);margin-bottom:6px">${t.minCiro}</div>
+                <div style="font-size:1.2rem;font-weight:800;color:${tierColor};line-height:1">${t.prim}</div>
             </div>`;
         }).join('');
     }
@@ -11502,8 +11502,9 @@ async function loadPrimSistemiPage() {
             
             announcementsHtml = announcements.map(a => {
                 const cfg = typeConfig[a.type] || typeConfig.info;
+                const animClass = a.animation && a.animation !== 'none' ? `ann-${a.animation}` : '';
                 return `
-                    <div style="background:${cfg.bg};border:1px solid ${cfg.color}20;border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;position:relative">
+                    <div class="${animClass}" style="background:${cfg.bg};border:1px solid ${cfg.color}20;border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;position:relative">
                         <div style="color:${cfg.color};flex-shrink:0;margin-top:1px">${cfg.icon}</div>
                         <div style="flex:1">
                             ${a.title ? `<div style="font-weight:700;color:${cfg.color};margin-bottom:3px;font-size:.85rem">${a.title}</div>` : ''}
@@ -11563,7 +11564,7 @@ async function loadPrimSistemiPage() {
                             <div style="font-size:.65rem;color:var(--tx3)">${checkRulesData.length} aktif check tipi</div>
                         </div>
                     </div>
-                    <div style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto">
+                    <div style="display:flex;flex-direction:column;gap:8px">
                         ${checkPointsHtml}
                     </div>
                 </div>
@@ -11611,78 +11612,254 @@ function changePrimBranch(branch) {
 
 
 // Prim Bilgilendirmesi Ekle Modal
-function showAddPrimAnnouncementModal() {
-    const types = [
-        { value: 'info', label: 'Bilgi', color: '#3498db' },
-        { value: 'success', label: 'Başarı', color: '#27ae60' },
-        { value: 'warning', label: 'Uyarı', color: '#f39c12' },
-        { value: 'urgent', label: 'Acil', color: '#e74c3c' },
-        { value: 'tip', label: 'İpucu', color: '#9b59b6' }
-    ];
+function showAddPrimAnnouncementModal(editId = null) {
+    const branches = STATE.branches || [];
+    const selectedBranch = window.primSelectedBranch || currentUser?.branch || branches[0] || '';
+    const isEdit = !!editId;
     
-    const branchOptions = (window.BRANCHES || ['Şişli', 'Tuzla Port']).map(b => 
-        `<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" name="primAnnBranch" value="${b}"> ${b}</label>`
-    ).join('');
+    // Düzenleme modunda mevcut veriyi al
+    let editData = null;
+    if (isEdit) {
+        // TODO: editData'yı primAnnouncementsData'dan al
+    }
     
-    const body = `
-        <div style="display:flex;flex-direction:column;gap:16px">
-            <div>
-                <label style="font-size:.85rem;font-weight:600;color:var(--tx);display:block;margin-bottom:8px">Tür</label>
-                <select id="primAnnType" style="width:100%;padding:12px;border:1px solid var(--bg4);border-radius:10px;background:var(--bg);color:var(--tx)">
-                    ${types.map(t => `<option value="${t.value}">${t.label}</option>`).join('')}
+    const currentType = editData?.type || 'info';
+    const currentAnimation = editData?.animation || 'none';
+    
+    const bodyHtml = `
+        <div style="margin-bottom:16px">
+            <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">Başlık</label>
+            <input type="text" id="primAnnTitle" placeholder="Duyuru başlığı..." value="${editData?.title || ''}"
+                style="width:100%;padding:12px;border:1px solid var(--cardBorder);border-radius:8px;font-size:.9rem;background:var(--bg2);color:var(--tx)">
+        </div>
+        
+        <div style="margin-bottom:16px">
+            <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">İçerik</label>
+            <textarea id="primAnnContent" rows="3" placeholder="Duyuru içeriği..." 
+                style="width:100%;padding:12px;border:1px solid var(--cardBorder);border-radius:8px;font-size:.9rem;background:var(--bg2);color:var(--tx);resize:vertical">${editData?.content || ''}</textarea>
+        </div>
+        
+        <div style="margin-bottom:16px">
+            <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">Duyuru Türü</label>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+                <label class="prim-ann-type-option" data-type="info" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid ${currentType === 'info' ? '#008c95' : 'var(--bg4)'};border-radius:10px;cursor:pointer;transition:all .2s">
+                    <input type="radio" name="primAnnType" value="info" ${currentType === 'info' ? 'checked' : ''} style="display:none">
+                    <svg width="18" height="18" fill="none" stroke="#3498db" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span style="font-size:.85rem;font-weight:500">Bilgilendirme</span>
+                </label>
+                <label class="prim-ann-type-option" data-type="success" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid ${currentType === 'success' ? '#008c95' : 'var(--bg4)'};border-radius:10px;cursor:pointer;transition:all .2s">
+                    <input type="radio" name="primAnnType" value="success" ${currentType === 'success' ? 'checked' : ''} style="display:none">
+                    <svg width="18" height="18" fill="none" stroke="#27ae60" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <span style="font-size:.85rem;font-weight:500">İyi Haber</span>
+                </label>
+                <label class="prim-ann-type-option" data-type="warning" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid ${currentType === 'warning' ? '#008c95' : 'var(--bg4)'};border-radius:10px;cursor:pointer;transition:all .2s">
+                    <input type="radio" name="primAnnType" value="warning" ${currentType === 'warning' ? 'checked' : ''} style="display:none">
+                    <svg width="18" height="18" fill="none" stroke="#f39c12" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <span style="font-size:.85rem;font-weight:500">Uyarı</span>
+                </label>
+                <label class="prim-ann-type-option" data-type="urgent" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid ${currentType === 'urgent' ? '#008c95' : 'var(--bg4)'};border-radius:10px;cursor:pointer;transition:all .2s">
+                    <input type="radio" name="primAnnType" value="urgent" ${currentType === 'urgent' ? 'checked' : ''} style="display:none">
+                    <svg width="18" height="18" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <span style="font-size:.85rem;font-weight:500">Acil</span>
+                </label>
+                <label class="prim-ann-type-option" data-type="tip" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid ${currentType === 'tip' ? '#008c95' : 'var(--bg4)'};border-radius:10px;cursor:pointer;transition:all .2s">
+                    <input type="radio" name="primAnnType" value="tip" ${currentType === 'tip' ? 'checked' : ''} style="display:none">
+                    <svg width="18" height="18" fill="none" stroke="#9b59b6" stroke-width="2" viewBox="0 0 24 24"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                    <span style="font-size:.85rem;font-weight:500">İpucu</span>
+                </label>
+            </div>
+        </div>
+        
+        <div style="margin-bottom:16px">
+            <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">Animasyon</label>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+                <button type="button" class="prim-animation-option ${currentAnimation === 'none' ? 'selected' : ''}" data-animation="none" 
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'none' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx)">Yok</button>
+                <button type="button" class="prim-animation-option ${currentAnimation === 'pulse' ? 'selected' : ''}" data-animation="pulse" 
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'pulse' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:ann-pulse 2s ease-in-out infinite">Nabız</button>
+                <button type="button" class="prim-animation-option ${currentAnimation === 'shake' ? 'selected' : ''}" data-animation="shake" 
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'shake' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:ann-shake 1s ease-in-out infinite">Sallama</button>
+                <button type="button" class="prim-animation-option ${currentAnimation === 'glow' ? 'selected' : ''}" data-animation="glow" 
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'glow' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:ann-glow 2s ease-in-out infinite">Parlama</button>
+                <button type="button" class="prim-animation-option ${currentAnimation === 'bounce' ? 'selected' : ''}" data-animation="bounce" 
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'bounce' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:ann-bounce 1s ease-in-out infinite">Zıplama</button>
+                <button type="button" class="prim-animation-option ${currentAnimation === 'blink' ? 'selected' : ''}" data-animation="blink" 
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'blink' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:ann-blink 1s ease-in-out infinite">Yanıp Sönme</button>
+                <button type="button" class="prim-animation-option ${currentAnimation === 'heartbeat' ? 'selected' : ''}" data-animation="heartbeat" 
+                    style="padding:8px 14px;background:var(--bg3);border:2px solid ${currentAnimation === 'heartbeat' ? '#008c95' : 'var(--bg4)'};border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--tx);animation:ann-heartbeat 1.5s ease-in-out infinite">Kalp Atışı</button>
+            </div>
+            <input type="hidden" id="primAnnAnimation" value="${currentAnimation}">
+        </div>
+        
+        <div style="margin-bottom:16px">
+            <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">Otomatik Silinme</label>
+            <div style="display:flex;align-items:center;gap:10px">
+                <select id="primAnnAutoDelete" style="padding:8px 12px;border:1px solid var(--cardBorder);border-radius:8px;font-size:.85rem;background:var(--bg2);color:var(--tx);cursor:pointer">
+                    <option value="0" ${!editData?.expiresAt ? 'selected' : ''}>Silinmesin</option>
+                    <option value="1" ${editData?.expiresDays === 1 ? 'selected' : ''}>1 gün sonra</option>
+                    <option value="3" ${editData?.expiresDays === 3 ? 'selected' : ''}>3 gün sonra</option>
+                    <option value="7" ${editData?.expiresDays === 7 ? 'selected' : ''}>7 gün sonra</option>
+                    <option value="14" ${editData?.expiresDays === 14 ? 'selected' : ''}>14 gün sonra</option>
+                    <option value="30" ${editData?.expiresDays === 30 ? 'selected' : ''}>30 gün sonra</option>
                 </select>
+                <span style="font-size:.75rem;color:var(--tx3)">Süre dolunca duyuru otomatik silinir</span>
             </div>
-            <div>
-                <label style="font-size:.85rem;font-weight:600;color:var(--tx);display:block;margin-bottom:8px">Başlık (opsiyonel)</label>
-                <input type="text" id="primAnnTitle" style="width:100%;padding:12px;border:1px solid var(--bg4);border-radius:10px;background:var(--bg);color:var(--tx)" placeholder="Dikkat!">
-            </div>
-            <div>
-                <label style="font-size:.85rem;font-weight:600;color:var(--tx);display:block;margin-bottom:8px">İçerik *</label>
-                <textarea id="primAnnContent" rows="3" style="width:100%;padding:12px;border:1px solid var(--bg4);border-radius:10px;background:var(--bg);color:var(--tx);resize:vertical" placeholder="Bilgilendirme metni..."></textarea>
-            </div>
-            <div>
-                <label style="font-size:.85rem;font-weight:600;color:var(--tx);display:block;margin-bottom:8px">Şubeler</label>
-                <div style="display:flex;flex-wrap:wrap;gap:12px;padding:12px;background:var(--bg2);border-radius:10px">
-                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" name="primAnnBranch" value="all" checked> Tümü</label>
-                    ${branchOptions}
-                </div>
+        </div>
+        
+        <div style="margin-bottom:16px">
+            <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">Hedef Şubeler</label>
+            <div id="primBranchSelectionContainer" style="display:flex;flex-wrap:wrap;gap:8px">
+                <label class="prim-branch-option selected" data-branch="all" 
+                    style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:rgba(0,140,149,.1);border:2px solid #008c95;border-radius:8px;cursor:pointer;font-size:.85rem;transition:all .2s">
+                    <span>Tüm Şubeler</span>
+                </label>
+                ${branches.map(b => `
+                    <label class="prim-branch-option" data-branch="${b}" 
+                        style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg3);border:2px solid var(--bg4);border-radius:8px;cursor:pointer;font-size:.85rem;transition:all .2s">
+                        <span>${b}</span>
+                    </label>
+                `).join('')}
             </div>
         </div>
     `;
     
-    showModal('Bilgilendirme Ekle', body, `
+    const footerHtml = `
         <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
-        <button class="btn btn-primary" onclick="savePrimAnnouncement()">Kaydet</button>
-    `);
+        <button class="btn btn-primary" onclick="savePrimAnnouncement('${editId || ''}')" style="background:linear-gradient(135deg,#27ae60,#2ecc71);border:none">Bilgilendirme Ekle</button>
+    `;
+    
+    showModal('Yeni Bilgilendirme', bodyHtml, footerHtml);
+    
+    // Event listener'ları ekle
+    setTimeout(() => {
+        // Duyuru türü seçimi
+        document.querySelectorAll('.prim-ann-type-option').forEach(opt => {
+            opt.addEventListener('click', function() {
+                document.querySelectorAll('.prim-ann-type-option').forEach(o => {
+                    o.style.borderColor = 'var(--bg4)';
+                    o.style.background = 'var(--bg3)';
+                });
+                this.style.borderColor = '#008c95';
+                this.style.background = 'rgba(0,140,149,.1)';
+                this.querySelector('input').checked = true;
+            });
+            if (opt.querySelector('input:checked')) {
+                opt.style.borderColor = '#008c95';
+                opt.style.background = 'rgba(0,140,149,.1)';
+            }
+        });
+        
+        // Animasyon seçimi
+        document.querySelectorAll('.prim-animation-option').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.prim-animation-option').forEach(b => {
+                    b.style.borderColor = 'var(--bg4)';
+                    b.classList.remove('selected');
+                });
+                this.style.borderColor = '#008c95';
+                this.classList.add('selected');
+                document.getElementById('primAnnAnimation').value = this.dataset.animation;
+            });
+        });
+        
+        // Şube seçimi
+        document.querySelectorAll('.prim-branch-option').forEach(label => {
+            label.addEventListener('click', function() {
+                const branch = this.dataset.branch;
+                const allOption = document.querySelector('.prim-branch-option[data-branch="all"]');
+                
+                if (branch === 'all') {
+                    document.querySelectorAll('.prim-branch-option').forEach(l => {
+                        l.classList.remove('selected');
+                        l.style.borderColor = 'var(--bg4)';
+                        l.style.background = 'var(--bg3)';
+                    });
+                    this.classList.add('selected');
+                    this.style.borderColor = '#008c95';
+                    this.style.background = 'rgba(0,140,149,.1)';
+                } else {
+                    if (allOption.classList.contains('selected')) {
+                        allOption.classList.remove('selected');
+                        allOption.style.borderColor = 'var(--bg4)';
+                        allOption.style.background = 'var(--bg3)';
+                    }
+                    this.classList.toggle('selected');
+                    if (this.classList.contains('selected')) {
+                        this.style.borderColor = '#008c95';
+                        this.style.background = 'rgba(0,140,149,.1)';
+                    } else {
+                        this.style.borderColor = 'var(--bg4)';
+                        this.style.background = 'var(--bg3)';
+                    }
+                    
+                    const selectedBranches = document.querySelectorAll('.prim-branch-option.selected:not([data-branch="all"])');
+                    if (selectedBranches.length === 0) {
+                        allOption.classList.add('selected');
+                        allOption.style.borderColor = '#008c95';
+                        allOption.style.background = 'rgba(0,140,149,.1)';
+                    }
+                }
+            });
+        });
+    }, 100);
 }
 
-async function savePrimAnnouncement() {
-    const type = document.getElementById('primAnnType')?.value;
+async function savePrimAnnouncement(editId = '') {
     const title = document.getElementById('primAnnTitle')?.value?.trim();
     const content = document.getElementById('primAnnContent')?.value?.trim();
+    const announcementType = document.querySelector('input[name="primAnnType"]:checked')?.value || 'info';
+    const animation = document.getElementById('primAnnAnimation')?.value || 'none';
+    const autoDeleteDays = parseInt(document.getElementById('primAnnAutoDelete')?.value) || 0;
     
-    if (!content) {
-        toast('İçerik gerekli', 'error');
+    if (!title && !content) {
+        toast('Başlık veya içerik gerekli', 'error');
         return;
     }
     
-    const checkedBranches = Array.from(document.querySelectorAll('input[name="primAnnBranch"]:checked')).map(c => c.value);
-    const branches = checkedBranches.includes('all') ? ['all'] : checkedBranches;
+    // Seçili şubeleri al
+    const allSelected = document.querySelector('.prim-branch-option[data-branch="all"].selected');
+    let branches = ['all'];
+    if (!allSelected) {
+        branches = Array.from(document.querySelectorAll('.prim-branch-option.selected:not([data-branch="all"])')).map(l => l.dataset.branch);
+        if (branches.length === 0) branches = ['all'];
+    }
+    
+    const data = {
+        title: title || '',
+        content: content || '',
+        branches,
+        type: announcementType,
+        animation,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    
+    // Otomatik silinme
+    if (autoDeleteDays > 0) {
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + autoDeleteDays);
+        data.expiresAt = firebase.firestore.Timestamp.fromDate(expiresAt);
+        data.expiresDays = autoDeleteDays;
+    } else {
+        data.expiresAt = null;
+        data.expiresDays = null;
+    }
     
     try {
-        await db.collection('primAnnouncements').add({
-            type,
-            title,
-            content,
-            branches,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            createdBy: currentUser?.email || currentUser?.username
-        });
+        if (editId) {
+            await db.collection('primAnnouncements').doc(editId).update(data);
+            toast('Bilgilendirme güncellendi', 'success');
+        } else {
+            data.createdBy = currentUser?.email || currentUser?.username;
+            data.createdByName = currentUser?.codeName?.split(' ')[0] || currentUser?.name?.split(' ')[0] || 'Yönetici';
+            data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            await db.collection('primAnnouncements').add(data);
+            toast('Bilgilendirme eklendi', 'success');
+        }
         
         closeModal();
-        toast('Bilgilendirme eklendi', 'success');
         loadPrimSistemiPage();
     } catch (e) {
+        console.error('Bilgilendirme kaydedilemedi:', e);
         toast('Kaydetme hatası', 'error');
     }
 }
