@@ -2522,7 +2522,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0540 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0545 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -10767,24 +10767,31 @@ async function loadPrimSettings() {
             </div>
         </div>
         
-        <!-- PUAN TABLOSU -->
+        <!-- PUAN TABLOSU - DİNAMİK -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
             <div style="background:var(--bg2);border-radius:10px;padding:14px">
                 <div style="font-size:.8rem;font-weight:600;color:var(--tx);margin-bottom:10px">Check Puanları</div>
-                <div style="display:flex;flex-direction:column;gap:6px;font-size:.75rem">
+                <div id="popupCheckPoints" style="display:flex;flex-direction:column;gap:6px;font-size:.75rem">
                     <div style="display:flex;justify-content:space-between"><span style="color:var(--tx2)">Vaktinde</span><span style="color:#27ae60;font-weight:600">+1</span></div>
                     <div style="display:flex;justify-content:space-between"><span style="color:var(--tx2)">Geç</span><span style="color:#e67e22;font-weight:600">-1</span></div>
-                    <div style="display:flex;justify-content:space-between"><span style="color:var(--tx2)">Yapılmayan</span><span style="color:#e74c3c;font-weight:600">-2</span></div>
-                    <div style="display:flex;justify-content:space-between"><span style="color:var(--tx2)">Platform eksik</span><span style="color:#9b59b6;font-weight:600">-1</span></div>
+                    <div style="display:flex;justify-content:space-between"><span style="color:var(--tx2)">Yapılmadı</span><span style="color:#e74c3c;font-weight:600">-2</span></div>
                 </div>
             </div>
             <div style="background:var(--bg2);border-radius:10px;padding:14px">
                 <div style="font-size:.8rem;font-weight:600;color:var(--tx);margin-bottom:10px">Yönetici Değerlendirmesi</div>
-                <div style="display:flex;flex-direction:column;gap:6px;font-size:.75rem">
-                    <div style="display:flex;justify-content:space-between"><span style="color:var(--tx2)">★ Ciddi ihlal</span><span style="color:#c0392b;font-weight:600">-3</span></div>
-                    <div style="display:flex;justify-content:space-between"><span style="color:var(--tx2)">★★ Orta ihlal</span><span style="color:#d35400;font-weight:600">-2</span></div>
-                    <div style="display:flex;justify-content:space-between"><span style="color:var(--tx2)">★★★★ İyi performans</span><span style="color:#27ae60;font-weight:600">+1</span></div>
-                    <div style="display:flex;justify-content:space-between"><span style="color:var(--tx2)">★★★★★ Mükemmel</span><span style="color:#2ecc71;font-weight:600">+2</span></div>
+                <div id="popupStarPoints" style="display:flex;flex-direction:column;gap:6px;font-size:.75rem">
+                    ${(() => {
+                        const sc = starPointsConfig || {};
+                        let html = '';
+                        for (let i = 1; i <= 5; i++) {
+                            const cfg = sc[i] || { label: i + ' Yıldız', points: i - 3, color: '#888' };
+                            if (cfg.points !== 0) {
+                                const stars = '★'.repeat(i);
+                                html += `<div style="display:flex;justify-content:space-between"><span style="color:var(--tx2)">${stars} ${cfg.label}</span><span style="color:${cfg.color};font-weight:600">${cfg.points > 0 ? '+' : ''}${cfg.points}</span></div>`;
+                            }
+                        }
+                        return html || '<div style="color:var(--tx3)">Yapılandırılmamış</div>';
+                    })()}
                 </div>
             </div>
         </div>
@@ -11270,6 +11277,12 @@ async function loadPrimSistemiPage() {
     const currentYear = new Date().getFullYear();
     const userBranch = currentUser?.branch || '';
     
+    // Mevcut şubeleri al
+    const branches = window.BRANCHES || ['Şişli', 'Tuzla Port'];
+    
+    // Seçili şube (yönetici ise dropdown'dan, değilse kendi şubesi)
+    const selectedBranch = window.primSelectedBranch || userBranch || branches[0];
+    
     // Prim ayarlarını yükle
     let s = primSettingsCache;
     if (!s || !s.tiers) {
@@ -11287,31 +11300,29 @@ async function loadPrimSistemiPage() {
     }
     
     // Şube bazlı prim (varsa)
-    const branchTiers = s.branchSettings?.[userBranch]?.tiers;
+    const branchTiers = s.branchSettings?.[selectedBranch]?.tiers;
     const activeTiers = branchTiers || s.tiers || [];
-    const activeMonth = s.branchSettings?.[userBranch]?.month || s.month || `${currentMonth} ${currentYear}`;
+    const activeMonth = s.branchSettings?.[selectedBranch]?.month || s.month || `${currentMonth} ${currentYear}`;
     
-    // Check kurallarını Firebase'den al (systemConfig/checkRules)
+    // Check kurallarını al
     let checkRulesData = [];
     try {
-        const checkDoc = await db.collection('systemConfig').doc('checkRules').get();
-        if (checkDoc.exists) {
-            const data = checkDoc.data();
-            if (data.branches) {
-                // Kullanıcının şubesine ait check'leri al
-                const branchChecks = data.branches[userBranch]?.checks || [];
-                branchChecks.forEach(check => {
-                    if (check.active !== false) {
-                        checkRulesData.push({
-                            name: check.displayName || check.name,
-                            onTime: check.points?.onTime ?? 1,
-                            late: check.points?.late ?? -1,
-                            missed: check.points?.missed ?? -2
-                        });
-                    }
-                });
-                // Eğer şubeye özel yoksa tüm şubelerin ortak check'lerini göster
-                if (checkRulesData.length === 0) {
+        // 1. settings/primSystem.checkRules
+        if (s.checkRules && Array.isArray(s.checkRules) && s.checkRules.length > 0) {
+            checkRulesData = s.checkRules.map(cr => ({
+                name: cr.name || cr.displayName,
+                onTime: cr.onTime ?? 1,
+                late: cr.late ?? -1,
+                missed: cr.missed ?? -2
+            }));
+        }
+        
+        // 2. systemConfig/checkRules.branches
+        if (checkRulesData.length === 0) {
+            const checkDoc = await db.collection('systemConfig').doc('checkRules').get();
+            if (checkDoc.exists) {
+                const data = checkDoc.data();
+                if (data.branches) {
                     Object.values(data.branches).forEach(branch => {
                         (branch.checks || []).forEach(check => {
                             if (check.active !== false && !checkRulesData.find(c => c.name === (check.displayName || check.name))) {
@@ -11327,8 +11338,20 @@ async function loadPrimSistemiPage() {
                 }
             }
         }
+        
+        // 3. Varsayılan
+        if (checkRulesData.length === 0) {
+            checkRulesData = [
+                { name: 'Günlük Genel Kontroller', onTime: 1, late: -1, missed: -2 },
+                { name: 'Temizlik Kontrolleri', onTime: 1, late: 0, missed: -1 },
+                { name: 'Platform Kontrolleri', onTime: 2, late: -1, missed: -3 }
+            ];
+        }
     } catch (e) {
-        console.log('Check kuralları yüklenemedi:', e);
+        checkRulesData = [
+            { name: 'Günlük Genel Kontroller', onTime: 1, late: -1, missed: -2 },
+            { name: 'Temizlik Kontrolleri', onTime: 1, late: 0, missed: -1 }
+        ];
     }
     
     // Yıldız config
@@ -11336,38 +11359,45 @@ async function loadPrimSistemiPage() {
     
     // SVG ikonları
     const icons = {
-        check: '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>',
-        clock: '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
-        x: '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>',
-        trophy: '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 010-5H6M18 9h1.5a2.5 2.5 0 000-5H18M4 22h16M18 2H6v7a6 6 0 1012 0V2z"/></svg>',
-        dollar: '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>',
-        star: '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
-        crown: '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>',
-        medal: '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>',
-        gift: '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7"/></svg>',
-        target: '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
-        zap: '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'
+        trophy: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 010-5H6M18 9h1.5a2.5 2.5 0 000-5H18M4 22h16M18 2H6v7a6 6 0 1012 0V2z"/></svg>',
+        dollar: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>',
+        star: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+        crown: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>',
+        medal: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>',
+        gift: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7"/></svg>',
+        target: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+        zap: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'
     };
     
-    // Tier HTML - badge her tier için ayrı
+    // Şube seçici (sadece yönetici için)
+    let branchSelectorHtml = '';
+    if (canEdit && branches.length > 1) {
+        branchSelectorHtml = `
+            <select id="primBranchSelector" onchange="changePrimBranch(this.value)" style="background:var(--bg2);border:1px solid var(--bg4);color:var(--tx);padding:8px 14px;border-radius:10px;font-size:.85rem;cursor:pointer;font-weight:500">
+                ${branches.map(b => `<option value="${b}" ${selectedBranch === b ? 'selected' : ''}>${b}</option>`).join('')}
+            </select>
+        `;
+    }
+    
+    // Tier HTML
     let tiersHtml = '';
     if (activeTiers.length === 0) {
-        tiersHtml = `<div style="text-align:center;padding:40px;color:var(--tx3)">
+        tiersHtml = `<div style="text-align:center;padding:40px;color:var(--tx3);flex:1">
             <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin-bottom:12px;opacity:.4"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
             <div style="font-size:.9rem">Henüz prim kademesi tanımlanmamış</div>
         </div>`;
     } else {
-        tiersHtml = activeTiers.map((t, i, arr) => {
-            const isLast = i === arr.length - 1;
-            const tierColor = t.color || (isLast ? '#2ecc71' : '#27ae60');
+        tiersHtml = activeTiers.map((t) => {
+            const tierColor = t.color || '#27ae60';
             const tierIcon = t.icon || 'dollar';
-            const badge = t.badge || ''; // Her tier'ın kendi badge'i
-            return `<div style="background:${badge ? `linear-gradient(135deg,${tierColor}12,${tierColor}06)` : 'var(--bg)'};border:${badge ? `2px solid ${tierColor}35` : '1px solid var(--bg4)'};border-radius:16px;padding:24px 16px;text-align:center;position:relative;transition:all .2s;min-width:130px" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
-                ${badge ? `<div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,${tierColor},${tierColor}dd);color:#fff;font-size:.6rem;padding:4px 10px;border-radius:10px;font-weight:600;white-space:nowrap;box-shadow:0 2px 8px ${tierColor}40;display:flex;align-items:center;gap:4px">${icons[tierIcon] || icons.trophy} ${badge}</div>` : ''}
-                <div style="width:40px;height:40px;background:${tierColor}12;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;color:${tierColor}">${icons[tierIcon] || icons.dollar}</div>
-                <div style="font-size:.7rem;color:var(--tx3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;font-weight:500">${t.label || 'Ciro'}</div>
-                <div style="font-size:.95rem;font-weight:600;color:var(--tx);margin-bottom:10px">${t.minCiro}</div>
-                <div style="font-size:1.8rem;font-weight:800;color:${tierColor};line-height:1">${t.prim}</div>
+            const badge = t.badge || '';
+            const hasBadge = badge.trim() !== '';
+            return `<div style="background:${hasBadge ? `linear-gradient(135deg,${tierColor}12,${tierColor}05)` : 'var(--bg)'};border:${hasBadge ? `2px solid ${tierColor}35` : '1px solid var(--bg4)'};border-radius:14px;padding:20px 16px;padding-top:${hasBadge ? '24px' : '20px'};text-align:center;position:relative;min-width:115px;flex:1">
+                ${hasBadge ? `<div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,${tierColor},${tierColor}dd);color:#fff;font-size:.58rem;padding:5px 10px;border-radius:8px;font-weight:700;white-space:nowrap;box-shadow:0 3px 8px ${tierColor}35;display:inline-flex;align-items:center;gap:3px;letter-spacing:.2px">${icons[tierIcon] ? icons[tierIcon].replace(/16/g, '10') : ''}${badge}</div>` : ''}
+                <div style="width:36px;height:36px;background:${tierColor}12;border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;color:${tierColor}">${icons[tierIcon] || icons.dollar}</div>
+                <div style="font-size:.6rem;color:var(--tx3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;font-weight:600">${t.label || 'Ciro'}</div>
+                <div style="font-size:.85rem;font-weight:600;color:var(--tx);margin-bottom:8px">${t.minCiro}</div>
+                <div style="font-size:1.4rem;font-weight:800;color:${tierColor};line-height:1">${t.prim}</div>
             </div>`;
         }).join('');
     }
@@ -11391,33 +11421,28 @@ async function loadPrimSistemiPage() {
         }
     }
     
-    // Check puanları HTML (Firebase'den dinamik)
-    let checkPointsHtml = '';
-    if (checkRulesData.length > 0) {
-        checkPointsHtml = checkRulesData.map(c => `
-            <div style="padding:12px;background:var(--bg2);border-radius:10px;border:1px solid var(--bg4)">
-                <div style="font-weight:600;color:var(--tx);font-size:.85rem;margin-bottom:10px">${c.name}</div>
-                <div style="display:flex;gap:8px">
-                    <div style="flex:1;text-align:center;padding:8px 4px;background:rgba(39,174,96,.1);border-radius:6px">
-                        <div style="font-size:.6rem;color:var(--tx3);margin-bottom:2px">VAKTİNDE</div>
-                        <div style="font-weight:700;color:#27ae60;font-size:.95rem">${c.onTime > 0 ? '+' : ''}${c.onTime}</div>
-                    </div>
-                    <div style="flex:1;text-align:center;padding:8px 4px;background:rgba(230,126,34,.1);border-radius:6px">
-                        <div style="font-size:.6rem;color:var(--tx3);margin-bottom:2px">GEÇ</div>
-                        <div style="font-weight:700;color:#e67e22;font-size:.95rem">${c.late}</div>
-                    </div>
-                    <div style="flex:1;text-align:center;padding:8px 4px;background:rgba(231,76,60,.1);border-radius:6px">
-                        <div style="font-size:.6rem;color:var(--tx3);margin-bottom:2px">YAPILMADI</div>
-                        <div style="font-weight:700;color:#e74c3c;font-size:.95rem">${c.missed}</div>
-                    </div>
+    // Check puanları HTML
+    let checkPointsHtml = checkRulesData.map(c => `
+        <div style="padding:12px;background:var(--bg2);border-radius:10px;border:1px solid var(--bg4)">
+            <div style="font-weight:600;color:var(--tx);font-size:.8rem;margin-bottom:10px">${c.name}</div>
+            <div style="display:flex;gap:6px">
+                <div style="flex:1;text-align:center;padding:8px 4px;background:rgba(39,174,96,.1);border-radius:6px">
+                    <div style="font-size:.55rem;color:var(--tx3);margin-bottom:2px">VAKTİNDE</div>
+                    <div style="font-weight:700;color:#27ae60;font-size:.9rem">${c.onTime > 0 ? '+' : ''}${c.onTime}</div>
+                </div>
+                <div style="flex:1;text-align:center;padding:8px 4px;background:rgba(230,126,34,.1);border-radius:6px">
+                    <div style="font-size:.55rem;color:var(--tx3);margin-bottom:2px">GEÇ</div>
+                    <div style="font-weight:700;color:#e67e22;font-size:.9rem">${c.late}</div>
+                </div>
+                <div style="flex:1;text-align:center;padding:8px 4px;background:rgba(231,76,60,.1);border-radius:6px">
+                    <div style="font-size:.55rem;color:var(--tx3);margin-bottom:2px">YAPILMADI</div>
+                    <div style="font-weight:700;color:#e74c3c;font-size:.9rem">${c.missed}</div>
                 </div>
             </div>
-        `).join('');
-    } else {
-        checkPointsHtml = '<div style="text-align:center;padding:20px;color:var(--tx3);font-size:.85rem">Check kuralları yapılandırılmamış</div>';
-    }
+        </div>
+    `).join('');
     
-    // Bilgilendirmeler - Firebase primAnnouncements koleksiyonundan
+    // Bilgilendirmeler
     let announcementsHtml = '';
     try {
         const annSnap = await db.collection('primAnnouncements')
@@ -11429,7 +11454,7 @@ async function loadPrimSistemiPage() {
         annSnap.forEach(doc => {
             const data = { id: doc.id, ...doc.data() };
             const targetBranches = data.branches || ['all'];
-            if (targetBranches.includes('all') || targetBranches.includes(userBranch) || currentUser?.role === 'yonetici') {
+            if (targetBranches.includes('all') || targetBranches.includes(selectedBranch) || currentUser?.role === 'yonetici') {
                 announcements.push(data);
             }
         });
@@ -11446,13 +11471,13 @@ async function loadPrimSistemiPage() {
             announcementsHtml = announcements.map(a => {
                 const cfg = typeConfig[a.type] || typeConfig.info;
                 return `
-                    <div style="background:${cfg.bg};border:1px solid ${cfg.color}20;border-radius:12px;padding:16px 18px;display:flex;align-items:flex-start;gap:14px;position:relative">
-                        <div style="color:${cfg.color};flex-shrink:0;margin-top:2px">${cfg.icon}</div>
+                    <div style="background:${cfg.bg};border:1px solid ${cfg.color}20;border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;position:relative">
+                        <div style="color:${cfg.color};flex-shrink:0;margin-top:1px">${cfg.icon}</div>
                         <div style="flex:1">
-                            ${a.title ? `<div style="font-weight:700;color:${cfg.color};margin-bottom:4px;font-size:.9rem">${a.title}</div>` : ''}
-                            <div style="color:var(--tx2);font-size:.85rem;line-height:1.6">${a.content}</div>
+                            ${a.title ? `<div style="font-weight:700;color:${cfg.color};margin-bottom:3px;font-size:.85rem">${a.title}</div>` : ''}
+                            <div style="color:var(--tx2);font-size:.8rem;line-height:1.5">${a.content}</div>
                         </div>
-                        ${canEdit ? `<button onclick="deletePrimAnnouncement('${a.id}')" style="position:absolute;top:8px;right:8px;background:none;border:none;color:var(--tx3);cursor:pointer;padding:4px;opacity:.5" title="Sil"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>` : ''}
+                        ${canEdit ? `<button onclick="deletePrimAnnouncement('${a.id}')" style="position:absolute;top:8px;right:8px;background:none;border:none;color:var(--tx3);cursor:pointer;padding:4px;opacity:.4" title="Sil"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>` : ''}
                     </div>
                 `;
             }).join('');
@@ -11461,83 +11486,97 @@ async function loadPrimSistemiPage() {
         console.log('Prim duyuruları:', e.message);
     }
     
+    // Kullanıcı şube bilgisi
+    const userBranchDisplay = currentUser?.role === 'yonetici' ? '' : `<span style="font-size:.8rem;color:var(--tx3);margin-left:8px">(${userBranch})</span>`;
+    
     container.innerHTML = `
         <div style="max-width:900px">
             <!-- Header -->
-            <div style="background:linear-gradient(135deg,rgba(39,174,96,.08),rgba(46,204,113,.04));border:1px solid rgba(39,174,96,.15);border-radius:20px;padding:28px;margin-bottom:24px">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:16px">
-                    <div style="display:flex;align-items:center;gap:14px">
-                        <div style="width:56px;height:56px;background:linear-gradient(135deg,#27ae60,#2ecc71);border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(39,174,96,.25)">
-                            <svg width="28" height="28" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+            <div style="background:linear-gradient(135deg,rgba(39,174,96,.08),rgba(46,204,113,.04));border:1px solid rgba(39,174,96,.15);border-radius:20px;padding:24px;margin-bottom:20px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <div style="width:50px;height:50px;background:linear-gradient(135deg,#27ae60,#2ecc71);border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(39,174,96,.25)">
+                            <svg width="24" height="24" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
                         </div>
                         <div>
-                            <div style="font-size:1.4rem;font-weight:800;color:var(--tx)">Prim Sistemi</div>
-                            <div style="font-size:.9rem;color:var(--tx3)">${activeMonth} Dönemi</div>
+                            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                                <div style="font-size:1.3rem;font-weight:800;color:var(--tx)">Prim Sistemi</div>
+                                ${branchSelectorHtml}
+                            </div>
+                            <div style="font-size:.85rem;color:var(--tx3)">${activeMonth} Dönemi${userBranchDisplay}</div>
                         </div>
                     </div>
-                    ${canEdit ? `<button onclick="showPrimEditModal()" style="background:linear-gradient(135deg,#27ae60,#2ecc71);border:none;color:#fff;padding:12px 24px;border-radius:12px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:8px;box-shadow:0 4px 16px rgba(39,174,96,.25);transition:all .2s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    ${canEdit ? `<button onclick="showPrimEditModal()" style="background:linear-gradient(135deg,#27ae60,#2ecc71);border:none;color:#fff;padding:10px 20px;border-radius:10px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(39,174,96,.25);font-size:.85rem">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         Düzenle
                     </button>` : ''}
                 </div>
                 
                 <!-- Prim Kademeleri -->
-                <div style="display:flex;gap:16px;overflow-x:auto;padding-bottom:8px">
+                <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:stretch;padding-top:8px">
                     ${tiersHtml}
                 </div>
             </div>
             
             <!-- Puan Kartları -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-bottom:24px">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:20px">
                 <!-- Check Puanları -->
-                <div style="background:var(--bg);border:1px solid var(--bg4);border-radius:16px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.03)">
-                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-                        <div style="width:40px;height:40px;background:linear-gradient(135deg,#008c95,#00a8b5);border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,140,149,.2)">
-                            <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                <div style="background:var(--bg);border:1px solid var(--bg4);border-radius:14px;padding:18px;box-shadow:0 2px 6px rgba(0,0,0,.02)">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                        <div style="width:36px;height:36px;background:linear-gradient(135deg,#008c95,#00a8b5);border-radius:10px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,140,149,.2)">
+                            <svg width="18" height="18" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
                         </div>
                         <div>
-                            <div style="font-weight:700;color:var(--tx)">Check Puanları</div>
-                            <div style="font-size:.7rem;color:var(--tx3)">${checkRulesData.length} aktif check tipi</div>
+                            <div style="font-weight:700;color:var(--tx);font-size:.9rem">Check Puanları</div>
+                            <div style="font-size:.65rem;color:var(--tx3)">${checkRulesData.length} aktif check tipi</div>
                         </div>
                     </div>
-                    <div style="display:flex;flex-direction:column;gap:10px;max-height:350px;overflow-y:auto">
+                    <div style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto">
                         ${checkPointsHtml}
                     </div>
                 </div>
                 
                 <!-- Yönetici Değerlendirmesi -->
-                <div style="background:var(--bg);border:1px solid var(--bg4);border-radius:16px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.03)">
-                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-                        <div style="width:40px;height:40px;background:linear-gradient(135deg,#DAA520,#FFD700);border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(218,165,32,.25)">
-                            <svg width="20" height="20" fill="#fff" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <div style="background:var(--bg);border:1px solid var(--bg4);border-radius:14px;padding:18px;box-shadow:0 2px 6px rgba(0,0,0,.02)">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                        <div style="width:36px;height:36px;background:linear-gradient(135deg,#DAA520,#FFD700);border-radius:10px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(218,165,32,.2)">
+                            <svg width="18" height="18" fill="#fff" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                         </div>
                         <div>
-                            <div style="font-weight:700;color:var(--tx)">Yönetici Değerlendirmesi</div>
-                            <div style="font-size:.7rem;color:var(--tx3)">Manuel puan sistemi</div>
+                            <div style="font-weight:700;color:var(--tx);font-size:.9rem">Yönetici Değerlendirmesi</div>
+                            <div style="font-size:.65rem;color:var(--tx3)">Manuel puan sistemi</div>
                         </div>
                     </div>
                     <div style="display:flex;flex-direction:column;gap:8px">
-                        ${starPointsHtml || '<div style="text-align:center;padding:20px;color:var(--tx3);font-size:.85rem">Yıldız puanları yapılandırılmamış</div>'}
+                        ${starPointsHtml || '<div style="text-align:center;padding:20px;color:var(--tx3);font-size:.8rem">Yıldız puanları yapılandırılmamış</div>'}
                     </div>
                 </div>
             </div>
             
             <!-- Bilgilendirmeler -->
-            <div style="margin-bottom:24px">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-                    <div style="font-size:1rem;font-weight:700;color:var(--tx)">Bilgilendirmeler</div>
-                    ${canEdit ? `<button onclick="showAddPrimAnnouncementModal()" style="background:var(--bg2);border:1px solid var(--bg4);color:var(--tx2);padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.8rem;display:flex;align-items:center;gap:6px">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            <div style="margin-bottom:20px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                    <div style="font-size:.95rem;font-weight:700;color:var(--tx)">Bilgilendirmeler</div>
+                    ${canEdit ? `<button onclick="showAddPrimAnnouncementModal()" style="background:var(--bg2);border:1px solid var(--bg4);color:var(--tx2);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:.75rem;display:flex;align-items:center;gap:5px">
+                        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
                         Ekle
                     </button>` : ''}
                 </div>
-                <div id="primAnnouncementsContainer" style="display:flex;flex-direction:column;gap:12px">
-                    ${announcementsHtml || '<div style="text-align:center;padding:30px;color:var(--tx3);background:var(--bg2);border-radius:12px;font-size:.85rem">Henüz bilgilendirme eklenmemiş</div>'}
+                <div id="primAnnouncementsContainer" style="display:flex;flex-direction:column;gap:10px">
+                    ${announcementsHtml || '<div style="text-align:center;padding:24px;color:var(--tx3);background:var(--bg2);border-radius:10px;font-size:.8rem">Henüz bilgilendirme eklenmemiş</div>'}
                 </div>
             </div>
         </div>
     `;
 }
+
+// Şube değiştirme fonksiyonu
+function changePrimBranch(branch) {
+    window.primSelectedBranch = branch;
+    primSettingsCache = null; // Cache'i temizle
+    loadPrimSistemiPage();
+}
+
 
 // Prim Bilgilendirmesi Ekle Modal
 function showAddPrimAnnouncementModal() {
