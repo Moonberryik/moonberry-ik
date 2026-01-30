@@ -1515,42 +1515,34 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                 
                 <!-- KAYIT SEKMESİ -->
                 <div id="puantajKayitTab">
-                    <div class="form-section">
-                        <div class="form-section-title" style="display:flex;align-items:center;gap:8px">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                            Dönem Seçimi
-                        </div>
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label">Ay</label>
-                                <select id="puantajAy" class="form-select" onchange="loadPuantaj()">
-                                    <option value="01">Ocak</option>
-                                    <option value="02">Şubat</option>
-                                    <option value="03">Mart</option>
-                                    <option value="04">Nisan</option>
-                                    <option value="05">Mayıs</option>
-                                    <option value="06">Haziran</option>
-                                    <option value="07">Temmuz</option>
-                                    <option value="08">Ağustos</option>
-                                    <option value="09">Eylül</option>
-                                    <option value="10">Ekim</option>
-                                    <option value="11">Kasım</option>
-                                    <option value="12">Aralık</option>
-                                </select>
+                    <div class="form-section" style="padding:12px 16px">
+                        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <svg width="14" height="14" fill="none" stroke="var(--tx2)" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                <span style="font-size:.8rem;color:var(--tx2);font-weight:600">Dönem:</span>
                             </div>
-                            <div class="form-group">
-                                <label class="form-label">Yıl</label>
-                                <select id="puantajYil" class="form-select" onchange="loadPuantaj()">
-                                    <option value="2027">2027</option>
-                                    <option value="2026">2026</option>
-                                    <option value="2025">2025</option>
-                                    <option value="2024">2024</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Şube</label>
-                                <select id="puantajSube" class="form-select" onchange="loadPuantaj()"></select>
-                            </div>
+                            <select id="puantajAy" class="form-select" style="width:auto;min-width:90px;padding:6px 10px;font-size:.85rem" onchange="loadPuantaj()">
+                                <option value="01">Ocak</option>
+                                <option value="02">Şubat</option>
+                                <option value="03">Mart</option>
+                                <option value="04">Nisan</option>
+                                <option value="05">Mayıs</option>
+                                <option value="06">Haziran</option>
+                                <option value="07">Temmuz</option>
+                                <option value="08">Ağustos</option>
+                                <option value="09">Eylül</option>
+                                <option value="10">Ekim</option>
+                                <option value="11">Kasım</option>
+                                <option value="12">Aralık</option>
+                            </select>
+                            <select id="puantajYil" class="form-select" style="width:auto;min-width:80px;padding:6px 10px;font-size:.85rem" onchange="loadPuantaj()">
+                                <option value="2027">2027</option>
+                                <option value="2026">2026</option>
+                                <option value="2025">2025</option>
+                                <option value="2024">2024</option>
+                            </select>
+                            <div style="width:1px;height:20px;background:var(--bg4)"></div>
+                            <select id="puantajSube" class="form-select" style="width:auto;min-width:120px;padding:6px 10px;font-size:.85rem" onchange="loadPuantaj()"></select>
                         </div>
                     </div>
                     
@@ -2532,7 +2524,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0435 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0440 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -11364,8 +11356,13 @@ async function loadPuantaj() {
         const championViewerRole = currentUser?.role || 'barista';
         
         if (personelList.length > 1 && !isBarista) {
-            // Sadece görülebilen personelden şampiyonları seç
-            const visiblePersonel = personelList.filter(p => canViewPersonnelPuan(championViewerRole, p.role));
+            // Sadece görülebilen personelden şampiyonları seç (müdürler hariç)
+            const visiblePersonel = personelList.filter(p => 
+                canViewPersonnelPuan(championViewerRole, p.role) &&
+                p.role !== 'bolge_muduru' && 
+                p.role !== 'magaza_muduru' && 
+                p.role !== 'yonetici'
+            );
             const sortedVisibleByPuan = [...visiblePersonel].sort((a, b) => b.toplamPuan - a.toplamPuan);
             const sortedVisibleByNegatif = [...visiblePersonel].filter(p => p.negatifOlay > 0).sort((a, b) => b.negatifOlay - a.negatifOlay);
             
@@ -12047,7 +12044,7 @@ function showPersonelPuanDetay(personelId, personName) {
             <div style="background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(255,134,116,.05));border-radius:12px;padding:16px;margin-bottom:16px">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
                     <div>
-                        <div style="font-size:1.1rem;font-weight:700;color:var(--tx)">${formatDisplayName(personName)}</div>
+                        <div style="font-size:1.1rem;font-weight:700;color:var(--tx)">${personelData.displayName || formatDisplayName(personName)}</div>
                         <div style="font-size:1.1rem;color:${yildizColor};letter-spacing:2px">${yildizlar}</div>
                     </div>
                     <div style="text-align:right">
@@ -12152,7 +12149,8 @@ function showPersonelPuanDetay(personelId, personName) {
         `;
     }
     
-    showModal(`${formatDisplayName(personName)} - Puan Detayı`, body, footer);
+    const modalTitle = personelData.displayName || formatDisplayName(personName);
+    showModal(`${modalTitle} - Puan Detayı`, body, footer);
 }
 
 // Otomatik puantaj notu sil
