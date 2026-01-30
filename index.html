@@ -1931,12 +1931,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <div class="admin-card" style="margin-top:20px">
                         <div class="admin-card-header">
                             <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
-                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                <svg width="16" height="16" fill="none" stroke="#DAA520" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                                 Puantaj Değerlendirme Kuralları
                             </div>
-                            <button class="btn btn-sm btn-primary" onclick="showAddPuantajRuleModal()">+ Kural Ekle</button>
                         </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Manuel puantaj değerlendirmesinde kullanılacak kuralları belirleyin. Kurallar prim hesaplamasını etkiler.</p>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Yönetici değerlendirmelerinde kullanılan yıldız-puan karşılıklarını ayarlayın.</p>
                         <div class="admin-list" id="puantajRulesList">
                             <p style="color:var(--tx2);text-align:center;padding:20px">Kurallar yükleniyor...</p>
                         </div>
@@ -2176,12 +2175,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <div class="admin-card">
                         <div class="admin-card-header">
                             <div class="admin-card-title" style="display:flex;align-items:center;gap:8px">
-                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                <svg width="16" height="16" fill="none" stroke="#DAA520" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                                 Puantaj Kuralları
                             </div>
-                            <button class="btn btn-sm btn-primary" onclick="showAddPuantajRuleModal()">+ Kural Ekle</button>
                         </div>
-                        <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:16px">Puantaj değerlendirmesinde kullanılacak kuralları belirleyin. Kurallar otomatik olarak prim hesaplamasını etkiler.</p>
+                        <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:16px">Yönetici değerlendirmelerinde kullanılan yıldız-puan karşılıklarını ayarlayın.</p>
                         <div class="admin-list" id="puantajRulesList">
                             <p style="color:var(--tx2);text-align:center;padding:20px">Kurallar yükleniyor...</p>
                         </div>
@@ -2524,7 +2522,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0510 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0515 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -10659,6 +10657,66 @@ function filterPersonelByBranch(branch) {
 // ==================== PUANTAJ SİSTEMİ ====================
 let puantajRulesCache = [];
 let primSettingsCache = null;
+let starPointsConfig = null; // Yıldız-Puan config cache
+
+// Yıldız-Puan config'i yükle
+async function loadStarPointsConfig() {
+    if (starPointsConfig) return starPointsConfig;
+    try {
+        const doc = await db.collection('config').doc('starPoints').get();
+        if (doc.exists) {
+            starPointsConfig = doc.data();
+        } else {
+            // Varsayılan (fallback)
+            starPointsConfig = {
+                1: { label: 'Ciddi İhlal', points: -3, color: '#c0392b' },
+                2: { label: 'Orta İhlal', points: -2, color: '#e74c3c' },
+                3: { label: 'Hafif İhlal', points: -1, color: '#e67e22' },
+                4: { label: 'İyi', points: 1, color: '#f1c40f' },
+                5: { label: 'Mükemmel', points: 2, color: '#f39c12' }
+            };
+        }
+    } catch (e) {
+        console.error('StarPoints config yüklenemedi:', e);
+        starPointsConfig = {
+            1: { label: 'Ciddi İhlal', points: -3, color: '#c0392b' },
+            2: { label: 'Orta İhlal', points: -2, color: '#e74c3c' },
+            3: { label: 'Hafif İhlal', points: -1, color: '#e67e22' },
+            4: { label: 'İyi', points: 1, color: '#f1c40f' },
+            5: { label: 'Mükemmel', points: 2, color: '#f39c12' }
+        };
+    }
+    return starPointsConfig;
+}
+
+// Yıldızdan puan hesapla (config'den dinamik)
+function getPointsFromStar(star) {
+    const s = parseInt(star) || 3;
+    if (starPointsConfig && starPointsConfig[s]) {
+        return starPointsConfig[s].points;
+    }
+    // Fallback: eski sistem
+    return s - 3;
+}
+
+// Yıldız rengi al (config'den dinamik)
+function getStarColor(star) {
+    const s = parseInt(star) || 3;
+    if (starPointsConfig && starPointsConfig[s]) {
+        return starPointsConfig[s].color;
+    }
+    // Fallback
+    return s >= 4 ? '#f1c40f' : (s >= 3 ? '#e67e22' : '#e74c3c');
+}
+
+// Yıldız etiketi al (config'den dinamik)
+function getStarLabel(star) {
+    const s = parseInt(star) || 3;
+    if (starPointsConfig && starPointsConfig[s]) {
+        return starPointsConfig[s].label;
+    }
+    return '';
+}
 
 // Prim Sistemi Yükle
 async function loadPrimSettings() {
@@ -11035,8 +11093,9 @@ async function loadPuantaj() {
     
     container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx2)">Yükleniyor...</div>';
     
-    // Puantaj kurallarını yükle
+    // Puantaj kurallarını ve starPoints config'i yükle
     await loadPuantajRules();
+    await loadStarPointsConfig();
     
     try {
         // Şubeye ait personeli çek
@@ -11231,8 +11290,8 @@ async function loadPuantaj() {
                 }
                 
                 const yildiz = x.score || 3;
-                // Puan sistemi: 1★=-2, 2★=-1, 3★=0, 4★=+1, 5★=+2 (score - 3)
-                const puanDegeri = yildiz - 3;
+                // Puan sistemi: config'den dinamik (varsayılan: 1★=-3, 2★=-2, 3★=-1, 4★=+1, 5★=+2)
+                const puanDegeri = getPointsFromStar(yildiz);
                 manuelPuan += puanDegeri;
                 if (puanDegeri < 0) {
                     negatifOlay++;
@@ -12116,10 +12175,10 @@ function showPersonelPuanDetay(personelId, personName) {
             const tarih = tarihRaw.includes('.') ? tarihRaw.split('.').slice(0,2).join('.') : (tarihRaw.includes('-') ? tarihRaw.slice(5,10).split('-').reverse().join('.') : tarihRaw);
             const rawScore = parseInt(puan.score) || 3;
             const yildiz = Math.max(1, Math.min(5, rawScore));
-            const puanEtki = yildiz - 3;
+            const puanEtki = getPointsFromStar(yildiz);
             const puanColor = puanEtki < 0 ? '#e74c3c' : (puanEtki > 0 ? '#27ae60' : 'var(--tx3)');
             const yildizStr = '★'.repeat(yildiz) + '☆'.repeat(5-yildiz);
-            const starColor = yildiz >= 4 ? '#f1c40f' : (yildiz >= 3 ? '#95a5a6' : '#e74c3c');
+            const starColor = getStarColor(yildiz);
             const ikonHtml = puan.icon ? `<span style="font-size:.9rem;margin-right:4px">${puan.icon}</span>` : '';
             
             body += `
@@ -12872,8 +12931,8 @@ async function loadPuantajAnaliz() {
             }
             
             const yildiz = d.score || 3;
-            // Puan sistemi: 1★=-2, 2★=-1, 3★=0, 4★=+1, 5★=+2 (score - 3)
-            const puan = yildiz - 3;
+            // Puan sistemi: config'den dinamik
+            const puan = getPointsFromStar(yildiz);
             personelStats[d.personelId].toplamPuan += puan;
             if (puan < 0) {
                 personelStats[d.personelId].negatif++;
@@ -13024,8 +13083,8 @@ async function loadPuantajArsiv() {
             yildizDagilim[yildiz] = (yildizDagilim[yildiz] || 0) + 1;
             
             let puan = 0;
-            // Puan sistemi: 1★=-2, 2★=-1, 3★=0, 4★=+1, 5★=+2 (score - 3)
-            puan = yildiz - 3;
+            // Puan sistemi: config'den dinamik
+            puan = getPointsFromStar(yildiz);
             if (puan < 0) { toplamNegatif++; donemler[period].negatif++; }
             else if (puan > 0) { toplamPozitif++; donemler[period].pozitif++; }
             
@@ -15527,93 +15586,129 @@ async function loadPuantajRulesAdmin() {
     if (!container) return;
     
     try {
-        const snapshot = await db.collection('puantajRules').get();
+        // starPoints config'i yükle
+        await loadStarPointsConfig();
         
-        if (snapshot.empty) {
-            container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx2)">Henüz kural tanımlanmamış</div>';
-            return;
-        }
+        const config = starPointsConfig || {};
         
-        let html = '';
+        // Premium renk paleti (koyu kırmızı → altın)
+        const defaultColors = {
+            1: '#8B0000', // Koyu kırmızı
+            2: '#C0392B', // Kırmızı
+            3: '#D35400', // Turuncu
+            4: '#DAA520', // Altın
+            5: '#FFD700'  // Parlak altın
+        };
         
-        // Kuralları kategoriye göre grupla
-        const ihlaller = [];
-        const basarilar = [];
+        let html = `
+            <div style="margin-bottom:20px">
+                <div style="font-size:.95rem;font-weight:600;color:var(--tx);margin-bottom:20px;display:flex;align-items:center;gap:10px">
+                    <svg width="20" height="20" fill="none" stroke="#DAA520" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    Manuel Değerlendirme Puanları
+                </div>
+                <div style="background:linear-gradient(135deg, var(--bg2) 0%, var(--bg) 100%);border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08)">
+        `;
         
-        snapshot.forEach(doc => {
-            const r = { id: doc.id, ...doc.data() };
-            if (r.effect && r.effect.includes('+')) {
-                basarilar.push(r);
-            } else {
-                ihlaller.push(r);
-            }
-        });
-        
-        // İhlaller
-        if (ihlaller.length > 0) {
-            html += `<div style="margin-bottom:20px">
-                <div style="font-size:.85rem;font-weight:600;color:#e74c3c;margin-bottom:12px;display:flex;align-items:center;gap:8px">
-                    <span>⚠️</span> İhlal Kuralları
-                </div>`;
-            ihlaller.forEach(r => {
-                const starCount = r.star || 1;
-                const stars = '⭐'.repeat(starCount);
-                const effectColor = r.effect === '-3' ? '#c0392b' : (r.effect === '-2' ? '#d35400' : '#f39c12');
-                const effectBg = r.effect === '-3' ? 'rgba(192,57,43,.15)' : (r.effect === '-2' ? 'rgba(211,84,0,.15)' : 'rgba(243,156,18,.15)');
-                html += `
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:rgba(231,76,60,.05);border:1px solid rgba(231,76,60,.15);border-radius:12px;margin-bottom:8px">
-                        <div style="flex:1">
-                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap">
-                                <span style="font-size:1rem">${stars}</span>
-                                <span style="font-weight:600;color:var(--tx)">${r.title}</span>
-                                <span style="font-size:.8rem;background:${effectBg};color:${effectColor};padding:4px 12px;border-radius:20px;font-weight:600">${r.effect} Puan</span>
-                            </div>
-                            ${r.desc ? `<div style="font-size:.8rem;color:var(--tx3);margin-top:4px">${r.desc}</div>` : ''}
-                        </div>
-                        <div style="display:flex;gap:6px">
-                            <button onclick="editPuantajRule('${r.id}')" style="background:var(--bg3);border:none;color:var(--tx);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:.8rem;transition:all .2s" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">✏️ Düzenle</button>
-                            <button onclick="deletePuantajRule('${r.id}')" style="background:rgba(255,107,107,.1);border:none;color:#e74c3c;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:.8rem;transition:all .2s" onmouseover="this.style.background='rgba(255,107,107,.2)'" onmouseout="this.style.background='rgba(255,107,107,.1)'">🗑️ Sil</button>
-                        </div>
+        // 5'ten 1'e yıldızları göster (mükemmel → ciddi ihlal)
+        for (let star = 5; star >= 1; star--) {
+            const cfg = config[star] || { label: '', points: star - 3, color: defaultColors[star] };
+            const displayColor = cfg.color || defaultColors[star];
+            const starStr = '★'.repeat(star) + '☆'.repeat(5 - star);
+            const bgGradient = star >= 4 
+                ? 'linear-gradient(90deg, rgba(218,165,32,.08) 0%, transparent 100%)' 
+                : (star === 3 
+                    ? 'linear-gradient(90deg, rgba(211,84,0,.06) 0%, transparent 100%)'
+                    : 'linear-gradient(90deg, rgba(192,57,43,.06) 0%, transparent 100%)');
+            
+            html += `
+                <div style="display:flex;align-items:center;gap:16px;padding:16px 20px;border-bottom:1px solid var(--bg3);background:${bgGradient};${star === 1 ? 'border-bottom:none;' : ''}" id="starRow${star}">
+                    <div style="font-size:1.2rem;color:${displayColor};letter-spacing:2px;min-width:100px;text-shadow:0 1px 2px rgba(0,0,0,.1)">${starStr}</div>
+                    <div style="flex:1">
+                        <input type="text" value="${cfg.label}" 
+                            onchange="updateStarLabel(${star}, this.value)"
+                            style="width:100%;padding:10px 14px;border:1px solid var(--bg4);border-radius:8px;background:var(--bg);color:var(--tx);font-size:.85rem;transition:border-color .2s"
+                            onfocus="this.style.borderColor='#008c95'" onblur="this.style.borderColor='var(--bg4)'"
+                            placeholder="${star >= 4 ? 'Örn: İyi Performans' : (star === 3 ? 'Örn: Hafif Uyarı' : 'Örn: İhlal Türü')}">
                     </div>
-                `;
-            });
-            html += `</div>`;
+                    <div style="display:flex;align-items:center;gap:10px;min-width:130px">
+                        <input type="number" value="${cfg.points}" 
+                            onchange="updateStarPoints(${star}, this.value)"
+                            style="width:70px;padding:10px;border:1px solid var(--bg4);border-radius:8px;background:var(--bg);color:${cfg.points >= 0 ? '#27ae60' : '#e74c3c'};font-size:.9rem;text-align:center;font-weight:700"
+                            min="-10" max="10">
+                        <span style="font-size:.8rem;color:var(--tx3);font-weight:500">puan</span>
+                    </div>
+                    <div style="min-width:44px">
+                        <input type="color" value="${displayColor}" 
+                            onchange="updateStarColor(${star}, this.value)"
+                            style="width:36px;height:36px;border:2px solid var(--bg4);border-radius:8px;cursor:pointer;padding:0">
+                    </div>
+                </div>
+            `;
         }
         
-        // Başarılar
-        if (basarilar.length > 0) {
-            html += `<div>
-                <div style="font-size:.85rem;font-weight:600;color:#27ae60;margin-bottom:12px;display:flex;align-items:center;gap:8px">
-                    <span>🏆</span> Başarı Kuralları
-                </div>`;
-            basarilar.forEach(r => {
-                const starCount = r.star || 4;
-                const stars = '⭐'.repeat(starCount);
-                const effectColor = r.effect === '+2' ? '#27ae60' : '#2ecc71';
-                const effectBg = r.effect === '+2' ? 'rgba(39,174,96,.15)' : 'rgba(46,204,113,.15)';
-                html += `
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:rgba(39,174,96,.05);border:1px solid rgba(39,174,96,.15);border-radius:12px;margin-bottom:8px">
-                        <div style="flex:1">
-                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap">
-                                <span style="font-size:1rem">${stars}</span>
-                                <span style="font-weight:600;color:var(--tx)">${r.title}</span>
-                                <span style="font-size:.8rem;background:${effectBg};color:${effectColor};padding:4px 12px;border-radius:20px;font-weight:600">${r.effect} Puan</span>
-                            </div>
-                            ${r.desc ? `<div style="font-size:.8rem;color:var(--tx3);margin-top:4px">${r.desc}</div>` : ''}
-                        </div>
-                        <div style="display:flex;gap:6px">
-                            <button onclick="editPuantajRule('${r.id}')" style="background:var(--bg3);border:none;color:var(--tx);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:.8rem;transition:all .2s" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">✏️ Düzenle</button>
-                            <button onclick="deletePuantajRule('${r.id}')" style="background:rgba(255,107,107,.1);border:none;color:#e74c3c;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:.8rem;transition:all .2s" onmouseover="this.style.background='rgba(255,107,107,.2)'" onmouseout="this.style.background='rgba(255,107,107,.1)'">🗑️ Sil</button>
-                        </div>
+        html += `
+                </div>
+                <div style="margin-top:16px;display:flex;justify-content:flex-end">
+                    <button onclick="saveStarPointsConfig()" class="btn btn-primary" style="padding:12px 24px;font-weight:600;display:flex;align-items:center;gap:8px">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        Değişiklikleri Kaydet
+                    </button>
+                </div>
+            </div>
+            
+            <div style="background:linear-gradient(135deg, rgba(218,165,32,.06) 0%, rgba(0,140,149,.04) 100%);border:1px solid rgba(218,165,32,.2);border-radius:12px;padding:16px 20px;margin-top:20px">
+                <div style="font-size:.82rem;color:var(--tx2);line-height:1.7">
+                    <div style="font-weight:600;color:var(--tx);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                        Nasıl Çalışır
                     </div>
-                `;
-            });
-            html += `</div>`;
-        }
+                    • Yöneticiler personel değerlendirirken 1-5 yıldız seçer<br>
+                    • Her yıldız karşılığı yukarıdaki puan otomatik eklenir/çıkarılır<br>
+                    • Toplam puanlar prim hesaplamasını ve performans sıralamasını etkiler
+                </div>
+            </div>
+        `;
         
         container.innerHTML = html;
     } catch (error) {
         console.error('Kural yükleme hatası:', error);
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red)">Yükleme hatası</div>';
+    }
+}
+
+// Yıldız etiketini güncelle (geçici - kaydet'e basınca kalıcı)
+function updateStarLabel(star, value) {
+    if (!starPointsConfig) starPointsConfig = {};
+    if (!starPointsConfig[star]) starPointsConfig[star] = { label: '', points: star - 3, color: '#888' };
+    starPointsConfig[star].label = value;
+}
+
+// Yıldız puanını güncelle (geçici - kaydet'e basınca kalıcı)
+function updateStarPoints(star, value) {
+    if (!starPointsConfig) starPointsConfig = {};
+    if (!starPointsConfig[star]) starPointsConfig[star] = { label: '', points: star - 3, color: '#888' };
+    starPointsConfig[star].points = parseInt(value) || 0;
+}
+
+// Yıldız rengini güncelle (geçici - kaydet'e basınca kalıcı)
+function updateStarColor(star, value) {
+    if (!starPointsConfig) starPointsConfig = {};
+    if (!starPointsConfig[star]) starPointsConfig[star] = { label: '', points: star - 3, color: '#888' };
+    starPointsConfig[star].color = value;
+}
+
+// starPoints config'i kaydet
+async function saveStarPointsConfig() {
+    try {
+        const configToSave = { ...starPointsConfig };
+        configToSave.updatedAt = new Date();
+        configToSave.updatedBy = currentUser?.email || 'unknown';
+        
+        await db.collection('config').doc('starPoints').set(configToSave);
+        toast('Puantaj kuralları kaydedildi', 'success');
+    } catch (e) {
+        console.error('Kaydetme hatası:', e);
+        toast('Kaydetme başarısız', 'error');
     }
 }
 
@@ -21328,9 +21423,9 @@ async function loadMonthlyPoints() {
                 
                 puantajSnapshot.forEach(doc => {
                     const data = doc.data();
-                    // score 1-5 arası yıldız, puana çevir: 5=+2, 4=+1, 3=0, 2=-1, 1=-2
+                    // score 1-5 arası yıldız, puana çevir: config'den dinamik
                     const score = data.score || 3;
-                    const points = score - 3;
+                    const points = getPointsFromStar(score);
                     totalPoints += points;
                     manualCount++;
                 });
@@ -21495,7 +21590,7 @@ async function loadLeaderboard() {
             const data = doc.data();
             const personelDocId = data.personelId;
             const score = data.score || 3;
-            const points = score - 3;
+            const points = getPointsFromStar(score);
             
             const personelInfo = personelByDocId[personelDocId];
             if (!personelInfo) return;
@@ -26853,7 +26948,7 @@ async function loadKPIDashboard() {
             puantajSnapshot.forEach(doc => {
                 const data = doc.data();
                 const score = data.score || 3;
-                totalPoints += (score - 3);
+                totalPoints += getPointsFromStar(score);
                 manualCount++;
             });
             
