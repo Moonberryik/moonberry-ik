@@ -2532,7 +2532,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0350 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0400 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -11511,21 +11511,38 @@ async function loadPuantaj() {
             </span>`;
             
             // === MÜDÜR SİMGESİ veya ŞAMPİYON BADGE ===
-            const isManager = ['magaza_muduru', 'yonetici'].includes(p.role);
-            const managerBadge = isManager ? `
-                <div style="position:absolute;top:-6px;right:-6px;width:24px;height:24px;background:linear-gradient(135deg,#008c95,#00a8a8);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,140,149,.4);border:2px solid #fff">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            const isManager = p.role === 'magaza_muduru';
+            const isBolgeMuduru = p.role === 'bolge_muduru';
+            const isYonetici = p.role === 'yonetici';
+            
+            // Bölge müdürü: Premium altın taç
+            const bolgeMuduruBadge = isBolgeMuduru ? `
+                <div style="position:absolute;top:-8px;right:-8px;width:28px;height:28px;background:linear-gradient(135deg,#b8860b,#daa520,#ffd700);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(184,134,11,.6),inset 0 1px 2px rgba(255,255,255,.4);border:2px solid #fff">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" filter="drop-shadow(0 1px 1px rgba(0,0,0,.2))"><path d="M12 1L15.5 8L23 9L17.5 14.5L19 22L12 18.5L5 22L6.5 14.5L1 9L8.5 8L12 1Z"/></svg>
                 </div>` : '';
             
-            const championBadge = !isManager && p.isChampion ? `
+            // Mağaza müdürü: Premium teal rozet
+            const managerBadge = isManager ? `
+                <div style="position:absolute;top:-6px;right:-6px;width:26px;height:26px;background:linear-gradient(135deg,#006d75,#008c95,#00a8a8);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,140,149,.5),inset 0 1px 2px rgba(255,255,255,.3);border:2px solid #fff">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+                </div>` : '';
+            
+            // Yönetici: Premium mor rozet
+            const yoneticiBadge = isYonetici ? `
+                <div style="position:absolute;top:-6px;right:-6px;width:26px;height:26px;background:linear-gradient(135deg,#6b21a8,#9333ea,#a855f7);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(147,51,234,.5),inset 0 1px 2px rgba(255,255,255,.3);border:2px solid #fff">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+                </div>` : '';
+            
+            // Şampiyon badge (barista/yardımcı için)
+            const championBadge = !isManager && !isBolgeMuduru && !isYonetici && p.isChampion ? `
                 <div style="position:absolute;top:-6px;right:-6px;width:24px;height:24px;background:linear-gradient(135deg,#ffd700,#ffb700);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(255,215,0,.5);border:2px solid #fff">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
                 </div>` : '';
             
-            const cardCornerBadge = managerBadge || championBadge;
+            const cardCornerBadge = bolgeMuduruBadge || managerBadge || yoneticiBadge || championBadge;
             
             // Sıralama rozeti (2+ için, müdürler hariç)
-            const rankBadge = !isManager && !p.isChampion && p.championRank ? `
+            const rankBadge = !isManager && !isBolgeMuduru && !isYonetici && !p.isChampion && p.championRank ? `
                 <span style="font-size:.55rem;background:var(--bg3);color:var(--tx2);padding:1px 4px;border-radius:3px;margin-left:4px">#${p.championRank}</span>` : '';
             
             // Kart arka planı
@@ -21247,21 +21264,20 @@ async function loadLeaderboard() {
     
     const isFullAdmin = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
     const isStoreManager = currentUser?.role === 'magaza_muduru';
+    const isMudurYardimcisi = currentUser?.role === 'mudur_yardimcisi' || currentUser?.role === 'magaza_mudur_yardimcisi';
     
-    // Sadece yöneticiler ve mağaza müdürleri görebilir
-    if (!isFullAdmin && !isStoreManager) {
+    // Müdürler ve yardımcılar görebilir
+    if (!isFullAdmin && !isStoreManager && !isMudurYardimcisi) {
         section.style.display = 'none';
         return;
     }
     
-    // Mağaza müdürü için şube filtresi
     const userBranch = currentUser?.branch;
     
     section.style.display = 'block';
     container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tx3)">Yükleniyor...</div>';
     
     try {
-        // Bu ayın başlangıcı
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
         const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -21270,24 +21286,21 @@ async function loadLeaderboard() {
         const periodKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         const monthName = now.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
         
-        // 1. Aktif personel listesini çek (mağaza müdürü için şube filtreli)
-        let personelQuery = db.collection('personel');
-        if (isStoreManager && userBranch && userBranch !== 'all') {
-            personelQuery = personelQuery.where('branch', '==', userBranch);
-        }
-        const personelSnapshot = await personelQuery.get();
+        // Personel listesi
+        const personelSnapshot = await db.collection('personel').get();
         const activePersonel = {};
         const personelByDocId = {};
         
         personelSnapshot.forEach(doc => {
             const d = doc.data();
-            if (d.status !== 'inactive' && d.status !== 'deleted') {
+            if (d.status !== 'inactive' && d.status !== 'deleted' && d.role !== 'bolge_muduru') {
                 const normalizedId = normalizePersonelId(d.name);
                 activePersonel[normalizedId] = {
                     docId: doc.id,
                     name: d.name,
                     codeName: d.codeName || formatDisplayName(d.name),
-                    branch: d.branch
+                    branch: d.branch,
+                    role: d.role
                 };
                 personelByDocId[doc.id] = activePersonel[normalizedId];
             }
@@ -21296,7 +21309,7 @@ async function loadLeaderboard() {
         // Personel bazında puanları topla
         const personelPoints = {};
         
-        // 2. puantajNotes koleksiyonundan çek (otomatik check puanları)
+        // puantajNotes (otomatik)
         const notesSnapshot = await db.collection('puantajNotes')
             .where('date', '>=', monthStartStr)
             .where('date', '<=', monthEndStr)
@@ -21308,15 +21321,17 @@ async function loadLeaderboard() {
             const points = data.points || 0;
             const status = data.status || 'completed';
             
-            // Sadece aktif personelleri dahil et
             const personelInfo = activePersonel[personelId];
-            if (!personelInfo) return; // Silinmiş/bilinmeyen personeli atla
+            if (!personelInfo) return;
             
             const displayName = personelInfo.codeName;
+            const branch = personelInfo.branch || 'Bilinmiyor';
             
             if (!personelPoints[displayName]) {
                 personelPoints[displayName] = { 
                     fullName: personelInfo.name,
+                    branch,
+                    role: personelInfo.role,
                     total: 0, 
                     onTime: 0, 
                     late: 0, 
@@ -21333,7 +21348,7 @@ async function loadLeaderboard() {
             else if (status === 'missed') personelPoints[displayName].missed++;
         });
         
-        // 3. puantaj koleksiyonundan çek (manuel değerlendirmeler)
+        // puantaj (manuel)
         const puantajSnapshot = await db.collection('puantaj')
             .where('period', '==', periodKey)
             .get();
@@ -21342,17 +21357,19 @@ async function loadLeaderboard() {
             const data = doc.data();
             const personelDocId = data.personelId;
             const score = data.score || 3;
-            const points = score - 3; // 5→+2, 4→+1, 3→0, 2→-1, 1→-2
+            const points = score - 3;
             
-            // personelId ile eşleştir
             const personelInfo = personelByDocId[personelDocId];
             if (!personelInfo) return;
             
             const displayName = personelInfo.codeName;
+            const branch = personelInfo.branch || 'Bilinmiyor';
             
             if (!personelPoints[displayName]) {
                 personelPoints[displayName] = { 
                     fullName: personelInfo.name,
+                    branch,
+                    role: personelInfo.role,
                     total: 0, 
                     onTime: 0, 
                     late: 0, 
@@ -21366,46 +21383,105 @@ async function loadLeaderboard() {
             personelPoints[displayName].manual++;
         });
         
-        // Puanlara göre sırala
-        const sorted = Object.entries(personelPoints)
-            .map(([name, data]) => ({ name, ...data }))
-            .sort((a, b) => b.total - a.total);
+        // Şube bazlı grupla
+        const byBranch = {};
+        Object.entries(personelPoints).forEach(([name, data]) => {
+            const branch = data.branch || 'Bilinmiyor';
+            if (!byBranch[branch]) byBranch[branch] = [];
+            byBranch[branch].push({ name, ...data });
+        });
         
-        if (sorted.length === 0) {
+        // Her şubeyi puana göre sırala
+        Object.keys(byBranch).forEach(branch => {
+            byBranch[branch].sort((a, b) => b.total - a.total);
+        });
+        
+        // Görüntülenecek şubeler
+        let visibleBranches = Object.keys(byBranch);
+        if (!isFullAdmin) {
+            // Müdür/yardımcı sadece kendi şubesini görür
+            visibleBranches = visibleBranches.filter(b => b === userBranch);
+        }
+        
+        if (visibleBranches.length === 0) {
             container.innerHTML = '<div style="padding:30px;text-align:center;color:var(--tx3)">Bu ay henüz veri yok</div>';
             return;
         }
         
-        // Sıralama HTML
-        const rankColors = ['#ffd700', '#c0c0c0', '#cd7f32']; // Altın, Gümüş, Bronz
-        const rankIcons = ['🥇', '🥈', '🥉'];
+        // Premium SVG ikonlar
+        const rankSvgs = [
+            `<svg width="20" height="20" viewBox="0 0 24 24" fill="#ffd700"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>`,
+            `<svg width="18" height="18" viewBox="0 0 24 24" fill="#c0c0c0"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>`,
+            `<svg width="16" height="16" viewBox="0 0 24 24" fill="#cd7f32"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>`
+        ];
         
         let html = `
             <div style="padding:16px 20px;background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(0,140,149,.05));border-bottom:1px solid var(--cardBorder)">
                 <div style="font-size:.85rem;font-weight:600;color:var(--tx)">${monthName} Sıralaması</div>
-                <div style="font-size:.7rem;color:var(--tx3)">${sorted.length} personel</div>
+                <div style="font-size:.7rem;color:var(--tx3)">${visibleBranches.length} şube</div>
             </div>
         `;
         
-        sorted.forEach((person, index) => {
-            const rank = index + 1;
-            const isTop3 = rank <= 3;
-            const pointColor = person.total > 0 ? '#27ae60' : person.total < 0 ? '#e74c3c' : 'var(--tx2)';
-            const successRate = person.completed > 0 ? Math.round((person.onTime / person.completed) * 100) : 0;
+        visibleBranches.forEach(branch => {
+            const persons = byBranch[branch] || [];
+            const top3 = persons.slice(0, 3);
+            const remaining = persons.slice(3);
+            const branchId = branch.replace(/[^a-zA-Z0-9]/g, '_');
             
             html += `
-                <div style="display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--cardBorder);${isTop3 ? 'background:rgba(255,215,0,.03)' : ''}">
-                    <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:${isTop3 ? '1.2rem' : '.9rem'};font-weight:700;color:${isTop3 ? rankColors[index] : 'var(--tx3)'}">${isTop3 ? rankIcons[index] : rank}</div>
-                    <div style="flex:1">
-                        <div style="font-weight:600;color:var(--tx);font-size:.9rem">${person.name}</div>
-                        <div style="font-size:.7rem;color:var(--tx3)">${person.completed} check • %${successRate} başarı</div>
-                    </div>
-                    <div style="text-align:right">
-                        <div style="font-size:1.1rem;font-weight:700;color:${pointColor}">${person.total > 0 ? '+' : ''}${person.total}</div>
-                        <div style="font-size:.65rem;color:var(--tx3)">puan</div>
+                <div style="padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--cardBorder)">
+                    <div style="font-size:.8rem;font-weight:600;color:var(--tx);display:flex;align-items:center;gap:6px">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        ${branch}
                     </div>
                 </div>
             `;
+            
+            // İlk 3
+            top3.forEach((person, index) => {
+                const rank = index + 1;
+                const pointColor = person.total > 0 ? '#27ae60' : person.total < 0 ? '#e74c3c' : 'var(--tx2)';
+                const successRate = person.completed > 0 ? Math.round((person.onTime / person.completed) * 100) : 0;
+                
+                html += `
+                    <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--cardBorder);background:${rank === 1 ? 'rgba(255,215,0,.05)' : 'transparent'}">
+                        <div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center">${rankSvgs[index]}</div>
+                        <div style="flex:1">
+                            <div style="font-weight:600;color:var(--tx);font-size:.85rem">${person.name}</div>
+                            <div style="font-size:.65rem;color:var(--tx3)">${person.completed} check • %${successRate} başarı</div>
+                        </div>
+                        <div style="text-align:right">
+                            <div style="font-size:1rem;font-weight:700;color:${pointColor}">${person.total > 0 ? '+' : ''}${person.total}</div>
+                            <div style="font-size:.6rem;color:var(--tx3)">puan</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            // Daha fazla butonu
+            if (remaining.length > 0) {
+                html += `
+                    <div id="leaderboard_more_${branchId}" style="display:none">
+                        ${remaining.map((person, i) => {
+                            const rank = i + 4;
+                            const pointColor = person.total > 0 ? '#27ae60' : person.total < 0 ? '#e74c3c' : 'var(--tx2)';
+                            return `
+                                <div style="display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid var(--cardBorder)">
+                                    <div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:600;color:var(--tx3)">${rank}</div>
+                                    <div style="flex:1">
+                                        <div style="font-weight:500;color:var(--tx);font-size:.8rem">${person.name}</div>
+                                    </div>
+                                    <div style="font-size:.9rem;font-weight:600;color:${pointColor}">${person.total > 0 ? '+' : ''}${person.total}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    <button onclick="toggleLeaderboardMore('${branchId}')" id="leaderboard_btn_${branchId}" style="width:100%;padding:10px;border:none;background:var(--bg3);color:var(--tx2);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;border-bottom:1px solid var(--cardBorder)">
+                        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+                        ${remaining.length} kişi daha
+                    </button>
+                `;
+            }
         });
         
         container.innerHTML = html;
@@ -21414,6 +21490,19 @@ async function loadLeaderboard() {
         console.error('Leaderboard yükleme hatası:', e);
         container.innerHTML = '<div style="padding:30px;text-align:center;color:#e74c3c">Yüklenirken hata oluştu</div>';
     }
+}
+
+// Daha fazla göster/gizle
+function toggleLeaderboardMore(branchId) {
+    const moreDiv = document.getElementById(`leaderboard_more_${branchId}`);
+    const btn = document.getElementById(`leaderboard_btn_${branchId}`);
+    if (!moreDiv || !btn) return;
+    
+    const isHidden = moreDiv.style.display === 'none';
+    moreDiv.style.display = isHidden ? 'block' : 'none';
+    btn.innerHTML = isHidden 
+        ? '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></svg> Gizle'
+        : `<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg> ${moreDiv.children.length} kişi daha`;
 }
 
 // Dashboard check'lerini sırala
