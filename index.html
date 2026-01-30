@@ -2532,7 +2532,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0340 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0350 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -11325,8 +11325,9 @@ async function loadPuantaj() {
         });
         
         // === YILDIZ BAZLI SIRALAMA (1. için badge) ===
+        // Sadece barista ve müdür yardımcıları arasında şampiyonluk
         const sortedByYildiz = [...personelList]
-            .filter(p => p.role !== 'bolge_muduru') // Bölge müdürü hariç
+            .filter(p => p.role !== 'bolge_muduru' && p.role !== 'magaza_muduru' && p.role !== 'yonetici') // Müdürler hariç
             .sort((a, b) => b.performansYildizDeger - a.performansYildizDeger);
         
         // 1. sıradakine badge ver
@@ -11372,7 +11373,9 @@ async function loadPuantaj() {
                         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
                             ${topPerformer && topPerformer.toplamPuan > 0 ? `
                                 <div style="background:linear-gradient(135deg,rgba(255,215,0,.15),rgba(255,215,0,.05));border:1px solid rgba(255,215,0,.3);border-radius:12px;padding:14px;text-align:center">
-                                    <div style="font-size:1.5rem;margin-bottom:4px">🏆</div>
+                                    <div style="width:36px;height:36px;margin:0 auto 8px;background:linear-gradient(135deg,#ffd700,#ffb700);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(255,215,0,.4)">
+                                        <svg width="18" height="18" fill="#fff" viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+                                    </div>
                                     <div style="font-size:.7rem;color:var(--tx2);margin-bottom:4px">En Yüksek Puan</div>
                                     <div style="font-weight:700;color:var(--tx);font-size:.9rem">${topPerformer.displayName}</div>
                                     <div style="font-size:.8rem;color:#27ae60;font-weight:600">+${topPerformer.toplamPuan} puan</div>
@@ -11380,7 +11383,9 @@ async function loadPuantaj() {
                             ` : ''}
                             ${mostImproved && mostImproved.pozitifOlay >= 2 ? `
                                 <div style="background:linear-gradient(135deg,rgba(39,174,96,.15),rgba(39,174,96,.05));border:1px solid rgba(39,174,96,.3);border-radius:12px;padding:14px;text-align:center">
-                                    <div style="font-size:1.5rem;margin-bottom:4px">⭐</div>
+                                    <div style="width:36px;height:36px;margin:0 auto 8px;background:linear-gradient(135deg,#27ae60,#2ecc71);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(39,174,96,.4)">
+                                        <svg width="18" height="18" fill="#fff" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                    </div>
                                     <div style="font-size:.7rem;color:var(--tx2);margin-bottom:4px">En Çok Başarı</div>
                                     <div style="font-weight:700;color:var(--tx);font-size:.9rem">${mostImproved.displayName}</div>
                                     <div style="font-size:.8rem;color:#27ae60;font-weight:600">${mostImproved.pozitifOlay} başarı</div>
@@ -11388,7 +11393,9 @@ async function loadPuantaj() {
                             ` : ''}
                             ${needsAttention && needsAttention.negatifOlay >= 2 ? `
                                 <div style="background:linear-gradient(135deg,rgba(231,76,60,.1),rgba(231,76,60,.03));border:1px solid rgba(231,76,60,.2);border-radius:12px;padding:14px;text-align:center">
-                                    <div style="font-size:1.5rem;margin-bottom:4px">⚠️</div>
+                                    <div style="width:36px;height:36px;margin:0 auto 8px;background:linear-gradient(135deg,#e74c3c,#c0392b);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(231,76,60,.4)">
+                                        <svg width="18" height="18" fill="#fff" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13" stroke="#fff" stroke-width="2"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="#fff" stroke-width="2"/></svg>
+                                    </div>
                                     <div style="font-size:.7rem;color:var(--tx2);margin-bottom:4px">Dikkat Gerektiren</div>
                                     <div style="font-weight:700;color:var(--tx);font-size:.9rem">${needsAttention.displayName}</div>
                                     <div style="font-size:.8rem;color:#e74c3c;font-weight:600">${needsAttention.negatifOlay} ihlal</div>
@@ -11503,14 +11510,22 @@ async function loadPuantaj() {
                 <span style="position:absolute;left:0;top:0;overflow:hidden;width:${yildizYuzde}%;white-space:nowrap;color:${yildizColor}">★★★★★</span>
             </span>`;
             
-            // === ŞAMPİYON BADGE (1. sıradaki) ===
-            const championBadge = p.isChampion ? `
+            // === MÜDÜR SİMGESİ veya ŞAMPİYON BADGE ===
+            const isManager = ['magaza_muduru', 'yonetici'].includes(p.role);
+            const managerBadge = isManager ? `
+                <div style="position:absolute;top:-6px;right:-6px;width:24px;height:24px;background:linear-gradient(135deg,#008c95,#00a8a8);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,140,149,.4);border:2px solid #fff">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>` : '';
+            
+            const championBadge = !isManager && p.isChampion ? `
                 <div style="position:absolute;top:-6px;right:-6px;width:24px;height:24px;background:linear-gradient(135deg,#ffd700,#ffb700);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(255,215,0,.5);border:2px solid #fff">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
                 </div>` : '';
             
-            // Sıralama rozeti (2+ için)
-            const rankBadge = !p.isChampion && p.championRank ? `
+            const cardCornerBadge = managerBadge || championBadge;
+            
+            // Sıralama rozeti (2+ için, müdürler hariç)
+            const rankBadge = !isManager && !p.isChampion && p.championRank ? `
                 <span style="font-size:.55rem;background:var(--bg3);color:var(--tx2);padding:1px 4px;border-radius:3px;margin-left:4px">#${p.championRank}</span>` : '';
             
             // Kart arka planı
@@ -11528,7 +11543,7 @@ async function loadPuantaj() {
                 // === NORMAL KART (GÖRÜNEBİLİR) ===
                 html += `
                 <div style="position:relative;background:${cardBg};border:2px solid ${cardBorder}30;border-left:4px solid ${cardBorder};border-radius:12px;padding:16px;transition:all .2s${isPremium ? ';box-shadow:0 2px 12px rgba(184,134,11,.15)' : ''}${p.isChampion ? ';box-shadow:0 4px 16px rgba(255,215,0,.25)' : ''}" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='${isPremium ? '0 2px 12px rgba(184,134,11,.15)' : p.isChampion ? '0 4px 16px rgba(255,215,0,.25)' : 'none'}'">
-                    ${championBadge}
+                    ${cardCornerBadge}
                     <!-- Header - TIKLANABİLİR -->
                     <div onclick="showPersonelPuanDetay('${p.id}', '${p.name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;cursor:pointer;padding:8px;margin:-8px;border-radius:8px;transition:background .15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
                         <div style="display:flex;align-items:center;gap:10px">
