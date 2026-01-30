@@ -2532,7 +2532,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0415 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0420 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -20986,11 +20986,11 @@ async function loadTodayChecks() {
             let countdownHtml = '';
             
             if (check.isCompleted) {
-                countdownHtml = `<span class="check-countdown-pill done">✓ Tamam</span>`;
+                countdownHtml = `<span class="check-countdown-pill done"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align:-2px"><polyline points="20 6 9 17 4 12"/></svg> Tamam</span>`;
             } else if (isDisabled) {
-                countdownHtml = `<span class="check-countdown-pill expired">⛔ Doldurulamaz</span>`;
+                countdownHtml = `<span class="check-countdown-pill expired"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-2px"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> Doldurulamaz</span>`;
             } else if (isExpired) {
-                countdownHtml = `<div class="check-countdown-live expired">⚠️ Süresi doldu</div>`;
+                countdownHtml = `<div class="check-countdown-live expired"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-2px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Süresi doldu</div>`;
             } else if (check.deadline) {
                 // Saat ve kalan süre göster
                 const remainingMin = check.remainingMinutes !== undefined ? check.remainingMinutes : '';
@@ -21045,7 +21045,7 @@ async function loadTodayChecks() {
                 timePointsHtml = `
                     <div style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--tx2);flex-wrap:wrap">
                         <span style="display:flex;align-items:center;gap:4px">
-                            <span style="color:var(--tx3)">⏰</span>
+                            <svg width="12" height="12" fill="none" stroke="var(--tx3)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                             <span style="font-weight:500">${check.activeFrom}-${check.deadline}</span>
                             <span style="color:#27ae60;font-weight:600">${check.points.onTime > 0 ? '+' : ''}${check.points.onTime} puan</span>
                         </span>
@@ -21309,7 +21309,9 @@ async function loadLeaderboard() {
         
         personelSnapshot.forEach(doc => {
             const d = doc.data();
-            if (d.status !== 'inactive' && d.status !== 'deleted' && d.role !== 'bolge_muduru') {
+            // Sıralamadan muaf: bölge müdürü, mağaza müdürü, yönetici
+            if (d.status !== 'inactive' && d.status !== 'deleted' && 
+                d.role !== 'bolge_muduru' && d.role !== 'magaza_muduru' && d.role !== 'yonetici') {
                 const normalizedId = normalizePersonelId(d.name);
                 activePersonel[normalizedId] = {
                     docId: doc.id,
