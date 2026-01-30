@@ -2522,7 +2522,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0520 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0525 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -12204,9 +12204,10 @@ function showPersonelPuanDetay(personelId, personName) {
     
     let footer = `<button class="btn btn-ghost" onclick="closeModal()">Kapat</button>`;
     if (canManage) {
+        const evalName = (personelData.displayName || personName).replace(/'/g, "\\'");
         footer = `
             <button class="btn btn-ghost" onclick="closeModal()">Kapat</button>
-            <button class="btn btn-primary" onclick="closeModal();showPuantajModal('${personelId}','${personName.replace(/'/g, "\\'")}')">Değerlendir</button>
+            <button class="btn btn-primary" onclick="closeModal();showPuantajModal('${personelId}','${evalName}')">Değerlendir</button>
         `;
     }
     
@@ -12436,7 +12437,9 @@ function showPuantajModal(personelId, name, type = 'all') {
         return;
     }
     
-    const title = `${name} - Manuel Değerlendirme`;
+    // displayName varsa onu kullan (codeName'den geliyor)
+    const displayName = personelData?.displayName || name;
+    const title = `${displayName} - Manuel Değerlendirme`;
     
     // Config'den dinamik yıldız seçenekleri oluştur
     const config = starPointsConfig || {
