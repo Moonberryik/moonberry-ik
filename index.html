@@ -2522,7 +2522,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0525 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0530 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -10824,7 +10824,10 @@ async function loadPrimSettings() {
 }
 
 // Prim Ayarlarını Düzenle
-function editPrimSettings() {
+// Prim düzenleme modalı için geçici state
+let primEditTiers = [];
+
+function showPrimEditModal() {
     // Yetki kontrolü
     const perms = window.userAdvancedPermissions || {};
     const canEdit = currentUser?.role === 'yonetici' || perms.pages?.primSistemi?.edit === true;
@@ -10834,49 +10837,183 @@ function editPrimSettings() {
     }
     
     const s = primSettingsCache || {};
-    const tiersJson = JSON.stringify(s.tiers || [], null, 2);
+    primEditTiers = JSON.parse(JSON.stringify(s.tiers || [])); // Deep copy
+    
+    renderPrimEditModal(s);
+}
+
+function renderPrimEditModal(s) {
+    // Kademe satırları HTML
+    let tiersHtml = '';
+    primEditTiers.forEach((t, i) => {
+        const isLast = i === primEditTiers.length - 1;
+        tiersHtml += `
+            <div style="display:flex;align-items:center;gap:10px;padding:12px;background:${isLast ? 'rgba(46,204,113,.1)' : 'var(--bg2)'};border-radius:10px;border:1px solid ${isLast ? 'rgba(46,204,113,.3)' : 'var(--bg4)'}" id="tierRow${i}">
+                <div style="flex:1">
+                    <label style="font-size:.7rem;color:var(--tx3);display:block;margin-bottom:4px">Ciro Aralığı</label>
+                    <input type="text" value="${t.minCiro || ''}" onchange="primEditTiers[${i}].minCiro=this.value" 
+                        style="width:100%;padding:10px;border:1px solid var(--bg4);border-radius:8px;background:var(--bg);color:var(--tx);font-size:.9rem"
+                        placeholder="55-65K">
+                </div>
+                <div style="flex:1">
+                    <label style="font-size:.7rem;color:var(--tx3);display:block;margin-bottom:4px">Prim Tutarı</label>
+                    <input type="text" value="${t.prim || ''}" onchange="primEditTiers[${i}].prim=this.value" 
+                        style="width:100%;padding:10px;border:1px solid var(--bg4);border-radius:8px;background:var(--bg);color:var(--tx);font-size:.9rem;font-weight:600"
+                        placeholder="500 TL">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;padding-top:18px">
+                    ${isLast ? '<span style="font-size:.6rem;color:#2ecc71;font-weight:600">🏆 EN YÜKSEK</span>' : ''}
+                    <button onclick="removePrimTier(${i})" style="background:rgba(231,76,60,.1);border:none;color:#e74c3c;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:1rem" title="Sil">×</button>
+                </div>
+            </div>
+        `;
+    });
+    
+    if (primEditTiers.length === 0) {
+        tiersHtml = '<div style="text-align:center;padding:20px;color:var(--tx3)">Henüz kademe yok. + butonuna tıklayarak ekleyin.</div>';
+    }
     
     const body = `
-        <div style="display:flex;flex-direction:column;gap:16px">
-            <div class="form-group">
-                <label class="form-label">Dönem (Ay/Yıl)</label>
-                <input type="text" id="primMonth" class="form-input" value="${s.month || ''}" placeholder="Ocak 2026">
+        <div style="display:flex;flex-direction:column;gap:20px">
+            <!-- Dönem -->
+            <div>
+                <label style="font-size:.85rem;font-weight:600;color:var(--tx);display:block;margin-bottom:8px">Dönem</label>
+                <input type="text" id="primMonth" value="${s.month || ''}" placeholder="Ocak 2026"
+                    style="width:100%;padding:12px;border:1px solid var(--bg4);border-radius:10px;background:var(--bg);color:var(--tx);font-size:.9rem">
             </div>
-            <div class="form-group">
-                <label class="form-label">Prim Kademeleri (JSON)</label>
-                <textarea id="primTiers" class="form-input" rows="6" style="font-family:monospace;font-size:.8rem">${tiersJson}</textarea>
-                <div style="font-size:.7rem;color:var(--tx3);margin-top:4px">Format: [{"minCiro": "55-65K", "prim": "500 TL"}, ...]</div>
+            
+            <!-- Prim Kademeleri -->
+            <div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                    <label style="font-size:.85rem;font-weight:600;color:var(--tx)">Prim Kademeleri</label>
+                    <button onclick="addPrimTier()" style="background:linear-gradient(135deg,#27ae60,#2ecc71);border:none;color:#fff;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.8rem;font-weight:600;display:flex;align-items:center;gap:6px">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                        Kademe Ekle
+                    </button>
+                </div>
+                <div id="primTiersContainer" style="display:flex;flex-direction:column;gap:10px">
+                    ${tiersHtml}
+                </div>
+                <div style="font-size:.7rem;color:var(--tx3);margin-top:8px;padding:8px;background:var(--bg2);border-radius:6px">
+                    💡 Son kademe otomatik olarak "EN YÜKSEK" olarak işaretlenir
+                </div>
             </div>
-            <div class="form-group">
-                <label class="form-label">Uyarı Mesajı</label>
-                <input type="text" id="primWarning" class="form-input" value="${s.warning || ''}">
+            
+            <!-- Uyarı Mesajı -->
+            <div>
+                <label style="font-size:.85rem;font-weight:600;color:var(--tx);display:block;margin-bottom:8px">Uyarı Mesajı</label>
+                <input type="text" id="primWarning" value="${s.warning || ''}" placeholder="-5 puana düşersen prim hakkını kaybedersin!"
+                    style="width:100%;padding:12px;border:1px solid var(--bg4);border-radius:10px;background:var(--bg);color:var(--tx);font-size:.9rem">
             </div>
-            <div class="form-group">
-                <label class="form-label">Motivasyon Yazısı 1</label>
-                <textarea id="primMotivation" class="form-input" rows="3">${s.motivation || ''}</textarea>
+            
+            <!-- Motivasyon -->
+            <div>
+                <label style="font-size:.85rem;font-weight:600;color:var(--tx);display:block;margin-bottom:8px">Motivasyon Yazısı</label>
+                <textarea id="primMotivation" rows="3" placeholder="Prim sisteminde başarılı olmanın en önemli adımı..."
+                    style="width:100%;padding:12px;border:1px solid var(--bg4);border-radius:10px;background:var(--bg);color:var(--tx);font-size:.9rem;resize:vertical">${s.motivation || ''}</textarea>
             </div>
-            <div class="form-group">
-                <label class="form-label">Motivasyon Yazısı 2</label>
-                <textarea id="primMotivation2" class="form-input" rows="3">${s.motivation2 || ''}</textarea>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Slogan</label>
-                <input type="text" id="primQuote" class="form-input" value="${s.quote || ''}">
+            
+            <!-- Slogan -->
+            <div>
+                <label style="font-size:.85rem;font-weight:600;color:var(--tx);display:block;margin-bottom:8px">Slogan</label>
+                <input type="text" id="primQuote" value="${s.quote || ''}" placeholder="Checklist'i doldur, prim cebinde kalsın."
+                    style="width:100%;padding:12px;border:1px solid var(--bg4);border-radius:10px;background:var(--bg);color:var(--tx);font-size:.9rem;font-style:italic">
             </div>
         </div>
     `;
     
     const footer = `
         <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
-        <button class="btn btn-primary" onclick="savePrimSettings()">Kaydet</button>
+        <button class="btn btn-primary" onclick="savePrimSettingsNew()">Kaydet</button>
     `;
     
     showModal('Prim Sistemi Düzenle', body, footer);
 }
 
-// Prim Ayarlarını Kaydet
-async function savePrimSettings() {
-    // Yetki kontrolü
+function addPrimTier() {
+    primEditTiers.push({ minCiro: '', prim: '' });
+    const s = primSettingsCache || {};
+    // Modal'ı güncelle
+    document.querySelector('.modal-body').innerHTML = renderPrimTiersOnly();
+}
+
+function removePrimTier(index) {
+    primEditTiers.splice(index, 1);
+    document.querySelector('.modal-body').innerHTML = renderPrimTiersOnly();
+}
+
+function renderPrimTiersOnly() {
+    const s = primSettingsCache || {};
+    
+    let tiersHtml = '';
+    primEditTiers.forEach((t, i) => {
+        const isLast = i === primEditTiers.length - 1;
+        tiersHtml += `
+            <div style="display:flex;align-items:center;gap:10px;padding:12px;background:${isLast ? 'rgba(46,204,113,.1)' : 'var(--bg2)'};border-radius:10px;border:1px solid ${isLast ? 'rgba(46,204,113,.3)' : 'var(--bg4)'}">
+                <div style="flex:1">
+                    <label style="font-size:.7rem;color:var(--tx3);display:block;margin-bottom:4px">Ciro Aralığı</label>
+                    <input type="text" value="${t.minCiro || ''}" onchange="primEditTiers[${i}].minCiro=this.value" 
+                        style="width:100%;padding:10px;border:1px solid var(--bg4);border-radius:8px;background:var(--bg);color:var(--tx);font-size:.9rem"
+                        placeholder="55-65K">
+                </div>
+                <div style="flex:1">
+                    <label style="font-size:.7rem;color:var(--tx3);display:block;margin-bottom:4px">Prim Tutarı</label>
+                    <input type="text" value="${t.prim || ''}" onchange="primEditTiers[${i}].prim=this.value" 
+                        style="width:100%;padding:10px;border:1px solid var(--bg4);border-radius:8px;background:var(--bg);color:var(--tx);font-size:.9rem;font-weight:600"
+                        placeholder="500 TL">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;padding-top:18px">
+                    ${isLast ? '<span style="font-size:.6rem;color:#2ecc71;font-weight:600">🏆 EN YÜKSEK</span>' : ''}
+                    <button onclick="removePrimTier(${i})" style="background:rgba(231,76,60,.1);border:none;color:#e74c3c;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:1rem" title="Sil">×</button>
+                </div>
+            </div>
+        `;
+    });
+    
+    if (primEditTiers.length === 0) {
+        tiersHtml = '<div style="text-align:center;padding:20px;color:var(--tx3)">Henüz kademe yok. + butonuna tıklayarak ekleyin.</div>';
+    }
+    
+    return `
+        <div style="display:flex;flex-direction:column;gap:20px">
+            <div>
+                <label style="font-size:.85rem;font-weight:600;color:var(--tx);display:block;margin-bottom:8px">Dönem</label>
+                <input type="text" id="primMonth" value="${document.getElementById('primMonth')?.value || s.month || ''}" placeholder="Ocak 2026"
+                    style="width:100%;padding:12px;border:1px solid var(--bg4);border-radius:10px;background:var(--bg);color:var(--tx);font-size:.9rem">
+            </div>
+            <div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                    <label style="font-size:.85rem;font-weight:600;color:var(--tx)">Prim Kademeleri</label>
+                    <button onclick="addPrimTier()" style="background:linear-gradient(135deg,#27ae60,#2ecc71);border:none;color:#fff;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.8rem;font-weight:600;display:flex;align-items:center;gap:6px">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                        Kademe Ekle
+                    </button>
+                </div>
+                <div id="primTiersContainer" style="display:flex;flex-direction:column;gap:10px">${tiersHtml}</div>
+                <div style="font-size:.7rem;color:var(--tx3);margin-top:8px;padding:8px;background:var(--bg2);border-radius:6px">
+                    💡 Son kademe otomatik olarak "EN YÜKSEK" olarak işaretlenir
+                </div>
+            </div>
+            <div>
+                <label style="font-size:.85rem;font-weight:600;color:var(--tx);display:block;margin-bottom:8px">Uyarı Mesajı</label>
+                <input type="text" id="primWarning" value="${document.getElementById('primWarning')?.value || s.warning || ''}" placeholder="-5 puana düşersen prim hakkını kaybedersin!"
+                    style="width:100%;padding:12px;border:1px solid var(--bg4);border-radius:10px;background:var(--bg);color:var(--tx);font-size:.9rem">
+            </div>
+            <div>
+                <label style="font-size:.85rem;font-weight:600;color:var(--tx);display:block;margin-bottom:8px">Motivasyon Yazısı</label>
+                <textarea id="primMotivation" rows="3" placeholder="Prim sisteminde başarılı olmanın en önemli adımı..."
+                    style="width:100%;padding:12px;border:1px solid var(--bg4);border-radius:10px;background:var(--bg);color:var(--tx);font-size:.9rem;resize:vertical">${document.getElementById('primMotivation')?.value || s.motivation || ''}</textarea>
+            </div>
+            <div>
+                <label style="font-size:.85rem;font-weight:600;color:var(--tx);display:block;margin-bottom:8px">Slogan</label>
+                <input type="text" id="primQuote" value="${document.getElementById('primQuote')?.value || s.quote || ''}" placeholder="Checklist'i doldur, prim cebinde kalsın."
+                    style="width:100%;padding:12px;border:1px solid var(--bg4);border-radius:10px;background:var(--bg);color:var(--tx);font-size:.9rem;font-style:italic">
+            </div>
+        </div>
+    `;
+}
+
+async function savePrimSettingsNew() {
     const perms = window.userAdvancedPermissions || {};
     const canEdit = currentUser?.role === 'yonetici' || perms.pages?.primSistemi?.edit === true;
     if (!canEdit) {
@@ -10884,49 +11021,64 @@ async function savePrimSettings() {
         return;
     }
     
-    try {
-        let tiers = [];
-        try {
-            tiers = JSON.parse(document.getElementById('primTiers').value);
-        } catch (e) {
-            toast('Prim kademeleri JSON formatı hatalı', 'error');
-            return;
+    // Input'lardan güncel değerleri al
+    primEditTiers.forEach((t, i) => {
+        const row = document.querySelector(`#primTiersContainer`);
+        if (row) {
+            const inputs = row.querySelectorAll('input[type="text"]');
+            // Her satırda 2 input var: ciro ve prim
+            const ciroInput = inputs[i * 2];
+            const primInput = inputs[i * 2 + 1];
+            if (ciroInput) t.minCiro = ciroInput.value;
+            if (primInput) t.prim = primInput.value;
         }
-        
+    });
+    
+    // Boş kademeleri filtrele
+    const validTiers = primEditTiers.filter(t => t.minCiro && t.prim);
+    
+    try {
         const settings = {
-            month: document.getElementById('primMonth').value,
-            tiers: tiers,
-            warning: document.getElementById('primWarning').value,
-            motivation: document.getElementById('primMotivation').value,
-            motivation2: document.getElementById('primMotivation2').value,
-            quote: document.getElementById('primQuote').value,
+            month: document.getElementById('primMonth')?.value || '',
+            tiers: validTiers,
+            warning: document.getElementById('primWarning')?.value || '',
+            motivation: document.getElementById('primMotivation')?.value || '',
+            quote: document.getElementById('primQuote')?.value || '',
             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedBy: currentUser?.email || currentUser?.username
         };
         
         await db.collection('settings').doc('primSystem').set(settings, { merge: true });
+        primSettingsCache = settings;
         
         closeModal();
         toast('Prim ayarları kaydedildi', 'success');
-        loadPrimSettings();
+        loadPrimSistemiPage();
     } catch (e) {
         console.error('Prim ayarları kaydetme hatası:', e);
         toast('Kaydetme hatası: ' + e.message, 'error');
     }
 }
 
+// Eski fonksiyon için alias
+function editPrimSettings() { showPrimEditModal(); }
+
 // Prim Sistemi Sayfası Yükle
 async function loadPrimSistemiPage() {
     const container = document.getElementById('primSistemiContainer');
     if (!container) return;
     
-    // Yetki kontrolü - yönetici her zaman, diğerleri matrise göre
+    // Config'leri yükle
+    await loadStarPointsConfig();
+    
+    // Yetki kontrolü
     const perms = window.userAdvancedPermissions || {};
     const canEdit = currentUser?.role === 'yonetici' || perms.pages?.primSistemi?.edit === true;
     const aylar = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
     const currentMonth = aylar[new Date().getMonth() + 1];
     const currentYear = new Date().getFullYear();
     
+    // Prim ayarlarını yükle
     let s = primSettingsCache;
     if (!s || !s.tiers) {
         try {
@@ -10937,86 +11089,198 @@ async function loadPrimSistemiPage() {
             } else {
                 s = {
                     month: `${currentMonth} ${currentYear}`,
-                    tiers: [
-                        { minCiro: '55-65K', prim: '500 TL' },
-                        { minCiro: '65-75K', prim: '1.000 TL' },
-                        { minCiro: '75K+', prim: '2.000 TL' }
-                    ],
+                    tiers: [],
                     warning: '-5 puana düşersen prim hakkını kaybedersin!',
                     motivation: 'Prim sisteminde başarılı olmanın en önemli adımı check listelerini zamanında doldurmak.',
-                    quote: 'Checklist\'i doldur, ek ürün öner, prim cebinde kalsın.'
+                    quote: 'Checklist\'i doldur, ek ürün öner, prim cebinde kalsın.',
+                    primThreshold: -5
                 };
             }
         } catch (e) {
-            s = { month: `${currentMonth} ${currentYear}`, tiers: [], motivation: '', quote: '' };
+            s = { month: `${currentMonth} ${currentYear}`, tiers: [], motivation: '', quote: '', primThreshold: -5 };
         }
     }
     
+    // Checklist kurallarını al (dinamik check puanları için)
+    let checkRules = [];
+    try {
+        const rulesSnap = await db.collection('checklistRules').get();
+        rulesSnap.forEach(doc => {
+            const d = doc.data();
+            if (d.name && d.points) {
+                checkRules.push({
+                    name: d.displayName || d.name,
+                    onTime: d.points.onTime || 1,
+                    late: d.points.late || -1,
+                    missed: d.points.missed || -2
+                });
+            }
+        });
+    } catch (e) {
+        console.error('Check kuralları yüklenemedi:', e);
+    }
+    
+    // Check puanları özeti (tüm kuralların ortalaması veya ilki)
+    const avgOnTime = checkRules.length > 0 ? Math.round(checkRules.reduce((a, r) => a + r.onTime, 0) / checkRules.length) : 1;
+    const avgLate = checkRules.length > 0 ? Math.round(checkRules.reduce((a, r) => a + r.late, 0) / checkRules.length) : -1;
+    const avgMissed = checkRules.length > 0 ? Math.round(checkRules.reduce((a, r) => a + r.missed, 0) / checkRules.length) : -2;
+    
+    // Yıldız config'den al
+    const starConfig = starPointsConfig || {};
+    
+    // Tier HTML oluştur
+    let tiersHtml = '';
+    if ((s.tiers || []).length === 0) {
+        tiersHtml = `<div style="text-align:center;padding:30px;color:var(--tx3)">
+            <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin-bottom:12px;opacity:.5"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+            <div style="font-size:.9rem">Henüz prim kademesi tanımlanmamış</div>
+            ${canEdit ? '<div style="font-size:.8rem;margin-top:8px">Düzenle butonuna tıklayarak kademe ekleyin</div>' : ''}
+        </div>`;
+    } else {
+        tiersHtml = (s.tiers || []).map((t, i, arr) => {
+            const isLast = i === arr.length - 1;
+            const tierColor = isLast ? '#2ecc71' : '#27ae60';
+            return `<div style="background:${isLast ? 'linear-gradient(135deg,rgba(46,204,113,.15),rgba(39,174,96,.08))' : 'linear-gradient(135deg,var(--bg2),var(--bg))'};border:${isLast ? '2px solid rgba(46,204,113,.4)' : '1px solid var(--bg4)'};border-radius:14px;padding:24px 20px;text-align:center;position:relative;transition:transform .2s,box-shadow .2s" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.1)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                ${isLast ? '<div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#2ecc71,#27ae60);color:#fff;font-size:.65rem;padding:4px 12px;border-radius:12px;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(46,204,113,.3)">🏆 EN YÜKSEK</div>' : ''}
+                <div style="font-size:.75rem;color:var(--tx3);margin-bottom:8px;font-weight:500;text-transform:uppercase;letter-spacing:.5px">Ciro</div>
+                <div style="font-size:1rem;font-weight:600;color:var(--tx);margin-bottom:12px">${t.minCiro}</div>
+                <div style="font-size:2rem;font-weight:800;color:${tierColor};line-height:1">${t.prim}</div>
+                <div style="font-size:.7rem;color:var(--tx3);margin-top:6px">prim</div>
+            </div>`;
+        }).join('');
+    }
+    
+    // Yıldız puanları HTML (config'den dinamik)
+    let starPointsHtml = '';
+    for (let star = 1; star <= 5; star++) {
+        const cfg = starConfig[star] || { label: `${star} Yıldız`, points: star - 3, color: '#888' };
+        if (cfg.points !== 0) { // Sadece 0 olmayan puanları göster
+            const starStr = '★'.repeat(star);
+            const isPositive = cfg.points > 0;
+            starPointsHtml += `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:${cfg.color}12;border-radius:8px">
+                    <span style="color:${cfg.color};font-size:.85rem">${starStr} <span style="color:var(--tx2);font-size:.8rem">${cfg.label}</span></span>
+                    <span style="color:${cfg.color};font-weight:700">${isPositive ? '+' : ''}${cfg.points}</span>
+                </div>
+            `;
+        }
+    }
+    
+    // Check detayları HTML (birden fazla check tipi varsa)
+    let checkDetailsHtml = '';
+    if (checkRules.length > 1) {
+        checkDetailsHtml = `
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bg4)">
+                <div style="font-size:.7rem;color:var(--tx3);margin-bottom:8px">Check Tipleri</div>
+                ${checkRules.slice(0, 4).map(r => `
+                    <div style="display:flex;justify-content:space-between;font-size:.75rem;padding:4px 0;color:var(--tx2)">
+                        <span>${r.name}</span>
+                        <span style="color:#27ae60">+${r.onTime}</span>
+                        <span style="color:#e67e22">${r.late}</span>
+                        <span style="color:#e74c3c">${r.missed}</span>
+                    </div>
+                `).join('')}
+                ${checkRules.length > 4 ? `<div style="font-size:.7rem;color:var(--tx3);text-align:center;margin-top:4px">+${checkRules.length - 4} daha...</div>` : ''}
+            </div>
+        `;
+    }
+    
     container.innerHTML = `
-        <div style="background:linear-gradient(135deg,rgba(39,174,96,.08),rgba(46,204,113,.04));border:1px solid rgba(39,174,96,.15);border-radius:16px;padding:24px;margin-bottom:24px">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-                <div style="display:flex;align-items:center;gap:12px">
-                    <div style="width:48px;height:48px;background:linear-gradient(135deg,#27ae60,#2ecc71);border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(39,174,96,.25)">
-                        <svg width="24" height="24" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        <div style="max-width:900px;margin:0 auto">
+            <!-- Header -->
+            <div style="background:linear-gradient(135deg,rgba(39,174,96,.1),rgba(46,204,113,.05));border:1px solid rgba(39,174,96,.2);border-radius:20px;padding:28px;margin-bottom:24px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:16px">
+                    <div style="display:flex;align-items:center;gap:14px">
+                        <div style="width:56px;height:56px;background:linear-gradient(135deg,#27ae60,#2ecc71);border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(39,174,96,.3)">
+                            <svg width="28" height="28" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                        </div>
+                        <div>
+                            <div style="font-size:1.4rem;font-weight:800;color:var(--tx)">Prim Sistemi</div>
+                            <div style="font-size:.9rem;color:var(--tx3)">${s.month || currentMonth + ' ' + currentYear} Dönemi</div>
+                        </div>
                     </div>
-                    <div>
-                        <div style="font-size:1.3rem;font-weight:700;color:var(--tx)">Prim Sistemi</div>
-                        <div style="font-size:.85rem;color:var(--tx3)">${s.month || currentMonth + ' ' + currentYear} Dönemi</div>
+                    ${canEdit ? `<button onclick="showPrimEditModal()" style="background:linear-gradient(135deg,#27ae60,#2ecc71);border:none;color:#fff;padding:12px 24px;border-radius:12px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:8px;box-shadow:0 4px 16px rgba(39,174,96,.3);transition:transform .2s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Düzenle
+                    </button>` : ''}
+                </div>
+                
+                <!-- Prim Kademeleri -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px">
+                    ${tiersHtml}
+                </div>
+            </div>
+            
+            <!-- Puan Kartları -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;margin-bottom:24px">
+                <!-- Check Puanları -->
+                <div style="background:var(--bg);border:1px solid var(--bg4);border-radius:16px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.04)">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+                        <div style="width:40px;height:40px;background:linear-gradient(135deg,#008c95,#00a8b5);border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,140,149,.2)">
+                            <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                        </div>
+                        <div>
+                            <div style="font-weight:700;color:var(--tx)">Check Puanları</div>
+                            <div style="font-size:.7rem;color:var(--tx3)">${checkRules.length} aktif check tipi</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:rgba(39,174,96,.08);border-radius:10px">
+                            <span style="color:var(--tx2);display:flex;align-items:center;gap:6px"><svg width="14" height="14" fill="none" stroke="#27ae60" stroke-width="2" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Vaktinde</span>
+                            <span style="color:#27ae60;font-weight:700;font-size:1.1rem">${avgOnTime > 0 ? '+' : ''}${avgOnTime}</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:rgba(230,126,34,.08);border-radius:10px">
+                            <span style="color:var(--tx2);display:flex;align-items:center;gap:6px"><svg width="14" height="14" fill="none" stroke="#e67e22" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Geç</span>
+                            <span style="color:#e67e22;font-weight:700;font-size:1.1rem">${avgLate}</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:rgba(231,76,60,.08);border-radius:10px">
+                            <span style="color:var(--tx2);display:flex;align-items:center;gap:6px"><svg width="14" height="14" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>Yapılmayan</span>
+                            <span style="color:#e74c3c;font-weight:700;font-size:1.1rem">${avgMissed}</span>
+                        </div>
+                    </div>
+                    ${checkDetailsHtml}
+                </div>
+                
+                <!-- Yönetici Değerlendirmesi -->
+                <div style="background:var(--bg);border:1px solid var(--bg4);border-radius:16px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.04)">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+                        <div style="width:40px;height:40px;background:linear-gradient(135deg,#DAA520,#FFD700);border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(218,165,32,.3)">
+                            <svg width="20" height="20" fill="#fff" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        </div>
+                        <div>
+                            <div style="font-weight:700;color:var(--tx)">Yönetici Değerlendirmesi</div>
+                            <div style="font-size:.7rem;color:var(--tx3)">Manuel puan sistemi</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                        ${starPointsHtml || '<div style="text-align:center;padding:20px;color:var(--tx3);font-size:.85rem">Yıldız puanları yapılandırılmamış</div>'}
                     </div>
                 </div>
-                ${canEdit ? `<button onclick="editPrimSettings()" style="background:linear-gradient(135deg,#27ae60,#2ecc71);border:none;color:#fff;padding:10px 20px;border-radius:10px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(39,174,96,.25)"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Düzenle</button>` : ''}
             </div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px">
-                ${(s.tiers || []).map((t, i, arr) => {
-                    const isLast = i === arr.length - 1;
-                    return `<div style="background:${isLast ? 'linear-gradient(135deg,rgba(46,204,113,.2),rgba(39,174,96,.1))' : 'var(--cardBg)'};border:${isLast ? '2px solid rgba(46,204,113,.4)' : '1px solid var(--cardBorder)'};border-radius:12px;padding:20px;text-align:center;position:relative">
-                        ${isLast ? '<div style="position:absolute;top:-8px;right:-8px;background:#2ecc71;color:#fff;font-size:.65rem;padding:3px 8px;border-radius:10px;font-weight:700">EN YÜKSEK</div>' : ''}
-                        <div style="font-size:.8rem;color:var(--tx3);margin-bottom:8px">${t.minCiro}</div>
-                        <div style="font-size:1.8rem;font-weight:800;color:${isLast ? '#2ecc71' : '#27ae60'}">${t.prim}</div>
-                    </div>`;
-                }).join('')}
+            
+            <!-- Uyarı -->
+            <div style="background:linear-gradient(135deg,rgba(231,76,60,.06),rgba(192,57,43,.03));border:1px solid rgba(231,76,60,.15);border-radius:14px;padding:20px;margin-bottom:24px;display:flex;align-items:center;gap:16px">
+                <div style="width:44px;height:44px;background:rgba(231,76,60,.12);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                    <svg width="22" height="22" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <div>
+                    <div style="font-weight:700;color:#c0392b;margin-bottom:4px">Dikkat!</div>
+                    <div style="color:var(--tx2);font-size:.9rem">${s.warning || `${s.primThreshold || -5} puana düşersen prim hakkını kaybedersin!`}</div>
+                </div>
             </div>
-        </div>
-        
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-bottom:24px">
-            <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:16px;padding:20px">
+            
+            <!-- Motivasyon -->
+            ${s.motivation ? `<div style="background:var(--bg);border:1px solid var(--bg4);border-radius:16px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.04)">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-                    <div style="width:36px;height:36px;background:linear-gradient(135deg,#008c95,#00a8b5);border-radius:10px;display:flex;align-items:center;justify-content:center">
-                        <svg width="18" height="18" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                    <div style="width:36px;height:36px;background:linear-gradient(135deg,#9b59b6,#8e44ad);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                        <svg width="18" height="18" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
                     </div>
-                    <div style="font-weight:700;color:var(--tx)">Check Puanları</div>
+                    <div style="font-weight:700;color:var(--tx)">Primi Nasıl Kazanırsın?</div>
                 </div>
-                <div style="display:flex;flex-direction:column;gap:10px">
-                    <div style="display:flex;justify-content:space-between;padding:10px 14px;background:rgba(39,174,96,.08);border-radius:8px"><span style="color:var(--tx2)">✓ Vaktinde</span><span style="color:#27ae60;font-weight:700">+1</span></div>
-                    <div style="display:flex;justify-content:space-between;padding:10px 14px;background:rgba(230,126,34,.08);border-radius:8px"><span style="color:var(--tx2)">⏰ Geç</span><span style="color:#e67e22;font-weight:700">-1</span></div>
-                    <div style="display:flex;justify-content:space-between;padding:10px 14px;background:rgba(231,76,60,.08);border-radius:8px"><span style="color:var(--tx2)">✗ Yapılmayan</span><span style="color:#e74c3c;font-weight:700">-2</span></div>
-                </div>
-            </div>
-            <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:16px;padding:20px">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-                    <div style="width:36px;height:36px;background:linear-gradient(135deg,#f39c12,#f1c40f);border-radius:10px;display:flex;align-items:center;justify-content:center">
-                        <svg width="18" height="18" fill="#fff" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    </div>
-                    <div style="font-weight:700;color:var(--tx)">Yönetici Değerlendirmesi</div>
-                </div>
-                <div style="display:flex;flex-direction:column;gap:10px">
-                    <div style="display:flex;justify-content:space-between;padding:10px 14px;background:rgba(192,57,43,.08);border-radius:8px"><span style="color:var(--tx2)">★ Ciddi</span><span style="color:#c0392b;font-weight:700">-3</span></div>
-                    <div style="display:flex;justify-content:space-between;padding:10px 14px;background:rgba(39,174,96,.08);border-radius:8px"><span style="color:var(--tx2)">★★★★ İyi</span><span style="color:#27ae60;font-weight:700">+1</span></div>
-                    <div style="display:flex;justify-content:space-between;padding:10px 14px;background:rgba(46,204,113,.08);border-radius:8px"><span style="color:var(--tx2)">★★★★★ Mükemmel</span><span style="color:#2ecc71;font-weight:700">+2</span></div>
-                </div>
-            </div>
+                <div style="color:var(--tx2);line-height:1.8;font-size:.9rem">${s.motivation}</div>
+                ${s.quote ? `<div style="margin-top:20px;padding:16px 20px;background:linear-gradient(135deg,rgba(155,89,182,.08),rgba(142,68,173,.04));border-radius:12px;border-left:4px solid #9b59b6;font-style:italic;color:var(--tx)">"${s.quote}"</div>` : ''}
+            </div>` : ''}
         </div>
-        
-        <div style="background:linear-gradient(135deg,rgba(231,76,60,.08),rgba(192,57,43,.04));border:1px solid rgba(231,76,60,.2);border-radius:12px;padding:20px;margin-bottom:24px;display:flex;align-items:center;gap:16px">
-            <svg width="24" height="24" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            <div><div style="font-weight:700;color:#c0392b;margin-bottom:4px">Dikkat!</div><div style="color:var(--tx2)">${s.warning || '-5 puana düşersen prim hakkını kaybedersin!'}</div></div>
-        </div>
-        
-        ${s.motivation ? `<div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:16px;padding:24px">
-            <div style="font-weight:700;color:var(--tx);margin-bottom:12px">Primi Nasıl Kazanırsın?</div>
-            <div style="color:var(--tx2);line-height:1.8">${s.motivation}</div>
-            ${s.quote ? `<div style="margin-top:16px;padding:16px;background:rgba(155,89,182,.08);border-radius:10px;border-left:4px solid #9b59b6;font-style:italic;color:var(--tx)">"${s.quote}"</div>` : ''}
-        </div>` : ''}
     `;
 }
 
