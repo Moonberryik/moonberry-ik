@@ -2522,7 +2522,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0605 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0610 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -11425,12 +11425,12 @@ async function loadPrimSistemiPage() {
             const tierIcon = t.icon || 'dollar';
             const badge = t.badge || '';
             const hasBadge = badge.trim() !== '';
-            return `<div style="background:${hasBadge ? `linear-gradient(135deg,${tierColor}10,${tierColor}05)` : 'var(--bg)'};border:${hasBadge ? `2px solid ${tierColor}30` : '1px solid var(--bg4)'};border-radius:10px;padding:12px 10px;padding-top:${hasBadge ? '18px' : '12px'};text-align:center;position:relative">
-                ${hasBadge ? `<div style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,${tierColor},${tierColor}dd);color:#fff;font-size:.5rem;padding:3px 6px;border-radius:5px;font-weight:700;white-space:nowrap;box-shadow:0 2px 5px ${tierColor}25;display:inline-flex;align-items:center;gap:2px">${icons[tierIcon] ? icons[tierIcon].replace(/16/g, '8') : ''}${badge}</div>` : ''}
-                <div style="width:24px;height:24px;background:${tierColor}12;border-radius:6px;display:flex;align-items:center;justify-content:center;margin:0 auto 5px;color:${tierColor}">${(icons[tierIcon] || icons.dollar).replace(/16/g, '12')}</div>
-                <div style="font-size:.5rem;color:var(--tx3);margin-bottom:2px;text-transform:uppercase;letter-spacing:.3px;font-weight:600">${t.label || 'Ciro'}</div>
-                <div style="font-size:.7rem;font-weight:600;color:var(--tx);margin-bottom:3px">${t.minCiro}</div>
-                <div style="font-size:1rem;font-weight:800;color:${tierColor};line-height:1">${t.prim}</div>
+            return `<div style="background:${hasBadge ? `linear-gradient(135deg,${tierColor}10,${tierColor}05)` : 'var(--bg)'};border:${hasBadge ? `2px solid ${tierColor}30` : '1px solid var(--bg4)'};border-radius:10px;padding:14px 10px;padding-top:${hasBadge ? '20px' : '14px'};text-align:center;position:relative">
+                ${hasBadge ? `<div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,${tierColor},${tierColor}dd);color:#fff;font-size:.65rem;padding:4px 8px;border-radius:6px;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px ${tierColor}30;display:inline-flex;align-items:center;gap:3px">${icons[tierIcon] ? icons[tierIcon].replace(/16/g, '10') : ''}${badge}</div>` : ''}
+                <div style="width:26px;height:26px;background:${tierColor}12;border-radius:6px;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;color:${tierColor}">${(icons[tierIcon] || icons.dollar).replace(/16/g, '13')}</div>
+                <div style="font-size:.55rem;color:var(--tx3);margin-bottom:2px;text-transform:uppercase;letter-spacing:.3px;font-weight:600">${t.label || 'Ciro'}</div>
+                <div style="font-size:.75rem;font-weight:600;color:var(--tx);margin-bottom:4px">${t.minCiro}</div>
+                <div style="font-size:1.05rem;font-weight:800;color:${tierColor};line-height:1">${t.prim}</div>
             </div>`;
         }).join('');
     }
@@ -11454,19 +11454,22 @@ async function loadPrimSistemiPage() {
         }
     }
     
-    // Check puanları HTML - KOMPAKT GRID
+    // Check puanları HTML - BÜYÜK KARTLAR, 4'LÜ GRİD
     let checkPointsHtml = checkRulesData.map(c => `
-        <div style="padding:10px 12px;background:var(--bg2);border-radius:8px;border:1px solid var(--bg4);display:flex;align-items:center;justify-content:space-between;gap:8px">
-            <div style="font-weight:600;color:var(--tx);font-size:.75rem;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</div>
-            <div style="display:flex;gap:4px;flex-shrink:0">
-                <div style="text-align:center;padding:4px 8px;background:rgba(39,174,96,.12);border-radius:4px;min-width:32px">
-                    <div style="font-weight:700;color:#27ae60;font-size:.75rem">${c.onTime > 0 ? '+' : ''}${c.onTime}</div>
+        <div style="padding:14px;background:var(--bg2);border-radius:10px;border:1px solid var(--bg4)">
+            <div style="font-weight:700;color:var(--tx);font-size:.85rem;margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</div>
+            <div style="display:flex;gap:6px">
+                <div style="flex:1;text-align:center;padding:8px 6px;background:rgba(39,174,96,.12);border-radius:6px">
+                    <div style="font-size:.55rem;color:#27ae60;margin-bottom:3px;font-weight:600">VAKTİNDE</div>
+                    <div style="font-weight:800;color:#27ae60;font-size:1rem">${c.onTime > 0 ? '+' : ''}${c.onTime}</div>
                 </div>
-                <div style="text-align:center;padding:4px 8px;background:rgba(230,126,34,.12);border-radius:4px;min-width:32px">
-                    <div style="font-weight:700;color:#e67e22;font-size:.75rem">${c.late}</div>
+                <div style="flex:1;text-align:center;padding:8px 6px;background:rgba(230,126,34,.12);border-radius:6px">
+                    <div style="font-size:.55rem;color:#e67e22;margin-bottom:3px;font-weight:600">GEÇ</div>
+                    <div style="font-weight:800;color:#e67e22;font-size:1rem">${c.late}</div>
                 </div>
-                <div style="text-align:center;padding:4px 8px;background:rgba(231,76,60,.12);border-radius:4px;min-width:32px">
-                    <div style="font-weight:700;color:#e74c3c;font-size:.75rem">${c.missed}</div>
+                <div style="flex:1;text-align:center;padding:8px 6px;background:rgba(231,76,60,.12);border-radius:6px">
+                    <div style="font-size:.55rem;color:#e74c3c;margin-bottom:3px;font-weight:600">YAPILMADI</div>
+                    <div style="font-weight:800;color:#e74c3c;font-size:1rem">${c.missed}</div>
                 </div>
             </div>
         </div>
@@ -11501,14 +11504,32 @@ async function loadPrimSistemiPage() {
             announcementsHtml = announcements.map(a => {
                 const cfg = typeConfig[a.type] || typeConfig.info;
                 const animClass = a.animation && a.animation !== 'none' ? `ann-${a.animation}` : '';
+                // Tarih formatla (sadece gün)
+                let dateStr = '';
+                if (a.createdAt) {
+                    const d = a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+                    dateStr = d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+                }
                 return `
                     <div class="${animClass}" style="background:${cfg.bg};border:1px solid ${cfg.color}20;border-radius:10px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;position:relative">
                         <div style="color:${cfg.color};flex-shrink:0;margin-top:1px">${cfg.icon.replace(/18/g, '16')}</div>
                         <div style="flex:1;min-width:0">
-                            ${a.title ? `<div style="font-weight:700;color:${cfg.color};margin-bottom:2px;font-size:.8rem">${a.title}</div>` : ''}
+                            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+                                ${a.title ? `<div style="font-weight:700;color:${cfg.color};font-size:.8rem">${a.title}</div>` : ''}
+                                ${dateStr ? `<span style="font-size:.6rem;color:var(--tx3);font-weight:500">${dateStr}</span>` : ''}
+                            </div>
                             <div style="color:var(--tx2);font-size:.75rem;line-height:1.4">${a.content}</div>
                         </div>
-                        ${canEdit ? `<button onclick="deletePrimAnnouncement('${a.id}')" style="position:absolute;top:6px;right:6px;background:none;border:none;color:var(--tx3);cursor:pointer;padding:2px;opacity:.4" title="Sil"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>` : ''}
+                        ${canEditAnn ? `
+                            <div style="position:absolute;top:6px;right:6px;display:flex;gap:4px">
+                                <button onclick="showAddPrimAnnouncementModal('${a.id}')" style="background:none;border:none;color:var(--tx3);cursor:pointer;padding:2px;opacity:.5" title="Düzenle">
+                                    <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                </button>
+                                <button onclick="deletePrimAnnouncement('${a.id}')" style="background:none;border:none;color:var(--tx3);cursor:pointer;padding:2px;opacity:.5" title="Sil">
+                                    <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                                </button>
+                            </div>
+                        ` : ''}
                     </div>
                 `;
             }).join('');
@@ -11556,7 +11577,12 @@ async function loadPrimSistemiPage() {
             ${(announcementsHtml || canEditAnn) ? `
             <div style="background:var(--bg);border:1px solid var(--bg4);border-radius:12px;padding:14px;margin-bottom:12px">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                    <div style="font-size:.85rem;font-weight:700;color:var(--tx)">📢 Bilgilendirmeler</div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <div style="width:28px;height:28px;background:linear-gradient(135deg,#3498db,#2980b9);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                            <svg width="13" height="13" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+                        </div>
+                        <div style="font-size:.85rem;font-weight:700;color:var(--tx)">Bilgilendirmeler</div>
+                    </div>
                     ${canEditAnn ? `<button onclick="showAddPrimAnnouncementModal()" style="background:var(--bg2);border:1px solid var(--bg4);color:var(--tx2);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:.7rem;display:flex;align-items:center;gap:4px">
                         <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
                         Ekle
@@ -11581,18 +11607,18 @@ async function loadPrimSistemiPage() {
                 </div>
             </div>
             
-            <!-- Check Puanları - EN ALTTA, YAN YANA KUTUCUKLAR -->
+            <!-- Check Puanları - EN ALTTA, 4'LÜ GRİD -->
             <div style="background:var(--bg);border:1px solid var(--bg4);border-radius:12px;padding:14px">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
                     <div style="width:28px;height:28px;background:linear-gradient(135deg,#008c95,#00a8b5);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
                         <svg width="13" height="13" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
                     </div>
                     <div>
                         <div style="font-weight:700;color:var(--tx);font-size:.85rem">Check Puanları</div>
-                        <div style="font-size:.55rem;color:var(--tx3)">${checkRulesData.length} check • <span style="color:#27ae60">✓</span> <span style="color:#e67e22">⏱</span> <span style="color:#e74c3c">✗</span></div>
+                        <div style="font-size:.6rem;color:var(--tx3)">${checkRulesData.length} check tipi</div>
                     </div>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px">
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px">
                     ${checkPointsHtml}
                 </div>
             </div>
@@ -11608,16 +11634,23 @@ function changePrimBranch(branch) {
 }
 
 
-// Prim Bilgilendirmesi Ekle Modal
-function showAddPrimAnnouncementModal(editId = null) {
+// Prim Bilgilendirmesi Ekle/Düzenle Modal
+async function showAddPrimAnnouncementModal(editId = null) {
     const branches = STATE.branches || [];
     const selectedBranch = window.primSelectedBranch || currentUser?.branch || branches[0] || '';
     const isEdit = !!editId;
     
-    // Düzenleme modunda mevcut veriyi al
+    // Düzenleme modunda mevcut veriyi Firebase'den al
     let editData = null;
     if (isEdit) {
-        // TODO: editData'yı primAnnouncementsData'dan al
+        try {
+            const doc = await db.collection('primAnnouncements').doc(editId).get();
+            if (doc.exists) {
+                editData = { id: doc.id, ...doc.data() };
+            }
+        } catch (e) {
+            console.error('Duyuru yüklenemedi:', e);
+        }
     }
     
     const currentType = editData?.type || 'info';
@@ -11627,13 +11660,13 @@ function showAddPrimAnnouncementModal(editId = null) {
         <div style="margin-bottom:16px">
             <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">Başlık</label>
             <input type="text" id="primAnnTitle" placeholder="Duyuru başlığı..." value="${editData?.title || ''}"
-                style="width:100%;padding:12px;border:1px solid var(--cardBorder);border-radius:8px;font-size:.9rem;background:var(--bg2);color:var(--tx)">
+                style="width:100%;padding:12px;border:1px solid var(--cardBorder);border-radius:8px;font-size:.9rem;background:var(--bg2);color:var(--tx);box-sizing:border-box">
         </div>
         
         <div style="margin-bottom:16px">
             <label style="display:block;font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px">İçerik</label>
             <textarea id="primAnnContent" rows="3" placeholder="Duyuru içeriği..." 
-                style="width:100%;padding:12px;border:1px solid var(--cardBorder);border-radius:8px;font-size:.9rem;background:var(--bg2);color:var(--tx);resize:vertical">${editData?.content || ''}</textarea>
+                style="width:100%;padding:12px;border:1px solid var(--cardBorder);border-radius:8px;font-size:.9rem;background:var(--bg2);color:var(--tx);resize:vertical;box-sizing:border-box">${editData?.content || ''}</textarea>
         </div>
         
         <div style="margin-bottom:16px">
@@ -11722,10 +11755,10 @@ function showAddPrimAnnouncementModal(editId = null) {
     
     const footerHtml = `
         <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
-        <button class="btn btn-primary" onclick="savePrimAnnouncement('${editId || ''}')" style="background:linear-gradient(135deg,#27ae60,#2ecc71);border:none">Bilgilendirme Ekle</button>
+        <button class="btn btn-primary" onclick="savePrimAnnouncement('${editId || ''}')" style="background:linear-gradient(135deg,#27ae60,#2ecc71);border:none">${isEdit ? 'Kaydet' : 'Ekle'}</button>
     `;
     
-    showModal('Yeni Bilgilendirme', bodyHtml, footerHtml);
+    showModal(isEdit ? 'Bilgilendirme Düzenle' : 'Yeni Bilgilendirme', bodyHtml, footerHtml);
     
     // Event listener'ları ekle
     setTimeout(() => {
