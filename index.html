@@ -2524,7 +2524,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0440 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0445 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -11388,7 +11388,7 @@ async function loadPuantaj() {
                                     <div style="font-size:.8rem;color:#27ae60;font-weight:600">+${topPerformer.toplamPuan} puan</div>
                                 </div>
                             ` : ''}
-                            ${mostImproved && mostImproved.pozitifOlay >= 2 ? `
+                            ${mostImproved && mostImproved.pozitifOlay >= 1 ? `
                                 <div style="background:linear-gradient(135deg,rgba(39,174,96,.15),rgba(39,174,96,.05));border:1px solid rgba(39,174,96,.3);border-radius:12px;padding:14px;text-align:center">
                                     <div style="width:36px;height:36px;margin:0 auto 8px;background:linear-gradient(135deg,#27ae60,#2ecc71);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(39,174,96,.4)">
                                         <svg width="18" height="18" fill="#fff" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -12040,98 +12040,103 @@ function showPersonelPuanDetay(personelId, personName) {
     
     let body = `
         <div style="max-height:70vh;overflow-y:auto">
-            <!-- Özet Kart -->
-            <div style="background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(255,134,116,.05));border-radius:12px;padding:16px;margin-bottom:16px">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-                    <div>
-                        <div style="font-size:1.1rem;font-weight:700;color:var(--tx)">${personelData.displayName || formatDisplayName(personName)}</div>
-                        <div style="font-size:1.1rem;color:${yildizColor};letter-spacing:2px">${yildizlar}</div>
-                    </div>
-                    <div style="text-align:right">
-                        <div style="font-size:1.8rem;font-weight:800;color:${toplamPuan >= 0 ? '#27ae60' : '#e74c3c'}">${toplamPuan >= 0 ? '+' : ''}${toplamPuan}</div>
-                        <div style="font-size:.7rem;color:var(--tx3)">TOPLAM PUAN</div>
-                    </div>
+            <!-- Kompakt Özet -->
+            <div style="display:flex;gap:12px;margin-bottom:16px;padding:12px;background:linear-gradient(135deg,rgba(0,140,149,.08),rgba(255,134,116,.04));border-radius:10px">
+                <div style="flex:1">
+                    <div style="font-weight:700;color:var(--tx);margin-bottom:4px">${personelData.displayName || formatDisplayName(personName)}</div>
+                    <div style="font-size:1rem;color:${yildizColor};letter-spacing:1px">${yildizlar}</div>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
-                    <div style="background:var(--bg2);border-radius:8px;padding:8px;text-align:center">
-                        <div style="font-size:1rem;font-weight:700;color:${autoTotal >= 0 ? '#27ae60' : '#e74c3c'}">${autoTotal >= 0 ? '+' : ''}${autoTotal}</div>
-                        <div style="font-size:.6rem;color:var(--tx3)">Otomatik</div>
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;flex:2">
+                    <div style="text-align:center;padding:6px;background:var(--bg2);border-radius:6px">
+                        <div style="font-size:1.1rem;font-weight:700;color:${toplamPuan >= 0 ? '#27ae60' : '#e74c3c'}">${toplamPuan >= 0 ? '+' : ''}${toplamPuan}</div>
+                        <div style="font-size:.55rem;color:var(--tx3)">TOPLAM</div>
                     </div>
-                    <div style="background:var(--bg2);border-radius:8px;padding:8px;text-align:center">
-                        <div style="font-size:1rem;font-weight:700;color:${manuelTotal >= 0 ? '#27ae60' : '#e74c3c'}">${manuelTotal >= 0 ? '+' : ''}${manuelTotal}</div>
-                        <div style="font-size:.6rem;color:var(--tx3)">Manuel</div>
+                    <div style="text-align:center;padding:6px;background:var(--bg2);border-radius:6px">
+                        <div style="font-size:.9rem;font-weight:600;color:${autoTotal >= 0 ? '#27ae60' : '#e74c3c'}">${autoTotal >= 0 ? '+' : ''}${autoTotal}</div>
+                        <div style="font-size:.55rem;color:var(--tx3)">CF</div>
                     </div>
-                    <div style="background:var(--bg2);border-radius:8px;padding:8px;text-align:center">
-                        <div style="font-size:1rem;font-weight:700;color:#e74c3c">${missed}</div>
-                        <div style="font-size:.6rem;color:var(--tx3)">Eksik</div>
+                    <div style="text-align:center;padding:6px;background:var(--bg2);border-radius:6px">
+                        <div style="font-size:.9rem;font-weight:600;color:${manuelTotal >= 0 ? '#27ae60' : '#e74c3c'}">${manuelTotal >= 0 ? '+' : ''}${manuelTotal}</div>
+                        <div style="font-size:.55rem;color:var(--tx3)">Manuel</div>
                     </div>
-                    <div style="background:var(--bg2);border-radius:8px;padding:8px;text-align:center">
-                        <div style="font-size:1rem;font-weight:700;color:#27ae60">${onTime}</div>
-                        <div style="font-size:.6rem;color:var(--tx3)">Tam</div>
+                    <div style="text-align:center;padding:6px;background:var(--bg2);border-radius:6px">
+                        <div style="font-size:.9rem;font-weight:600;color:#e74c3c">${missed}</div>
+                        <div style="font-size:.55rem;color:var(--tx3)">Eksik</div>
                     </div>
                 </div>
             </div>
             
-            <!-- Otomatik Puanlar -->
-            <div style="margin-bottom:16px">
-                <div style="font-size:.85rem;font-weight:600;color:var(--tx);margin-bottom:10px;display:flex;align-items:center;gap:6px">
-                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/></svg>
-                    Check Sisteminden (${notes.length})
+            <!-- CF Puanlar -->
+            <div style="margin-bottom:12px">
+                <div style="font-size:.8rem;font-weight:600;color:var(--tx);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                    Check Sisteminden
+                    <span style="font-size:.65rem;background:rgba(0,140,149,.15);color:#008c95;padding:1px 6px;border-radius:3px;font-weight:500">CF</span>
+                    <span style="color:var(--tx3);font-weight:400">(${notes.length})</span>
                 </div>
     `;
     
-    // Tarihe göre sırala ve göster
-    const sortedNotes = [...notes].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    // Tarihe göre sırala ve göster (son 10)
+    const sortedNotes = [...notes].sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 10);
+    if (notes.length === 0) {
+        body += `<div style="text-align:center;color:var(--tx3);font-size:.75rem;padding:12px">Henüz CF puanı yok</div>`;
+    }
     sortedNotes.forEach(note => {
         const dateObj = new Date(note.date);
-        const gun = gunAdi[dateObj.getDay()];
-        const tarih = `${dateObj.getDate()} ${ayAdi[dateObj.getMonth() + 1]}`;
+        const tarih = `${String(dateObj.getDate()).padStart(2,'0')}.${String(dateObj.getMonth()+1).padStart(2,'0')}`;
         const noteColor = note.points > 0 ? '#27ae60' : (note.points < 0 ? '#e74c3c' : 'var(--tx3)');
-        const statusBg = note.status === 'onTime' ? 'rgba(39,174,96,.08)' : (note.status === 'late' ? 'rgba(243,156,18,.08)' : 'rgba(231,76,60,.08)');
-        const statusText = note.status === 'onTime' ? 'Vaktinde' : (note.status === 'late' ? 'Geç' : 'Eksik');
+        const statusIcon = note.status === 'onTime' ? '✓' : (note.status === 'late' ? '⏱' : '✗');
+        const statusColor = note.status === 'onTime' ? '#27ae60' : (note.status === 'late' ? '#f39c12' : '#e74c3c');
+        const checkTip = note.checkType || 'Check';
         const checkSaat = note.checkTime || '';
-        const checkTip = note.checkType || 'Platform Check';
         
         body += `
-            <div style="display:flex;align-items:center;gap:10px;padding:10px;background:${statusBg};border-radius:8px;margin-bottom:6px">
-                <div style="min-width:60px;font-size:.7rem;color:var(--tx3)">${tarih}<br>${gun}</div>
-                <div style="flex:1">
-                    <div style="font-size:.8rem;color:var(--tx);font-weight:500">${checkTip} ${checkSaat ? '· ' + checkSaat : ''}</div>
-                    <div style="font-size:.7rem;color:var(--tx2)">${statusText}</div>
-                </div>
-                <div style="font-weight:700;color:${noteColor};font-size:.85rem">${note.points > 0 ? '+' : ''}${note.points}</div>
-                ${canManage ? `<button onclick="deleteAutoNote('${note.id}');closeModal();setTimeout(loadPuantaj,500)" style="background:rgba(231,76,60,.1);border:none;color:#e74c3c;cursor:pointer;padding:4px 8px;border-radius:4px;font-size:.65rem">Sil</button>` : ''}
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-size:.75rem">
+                <span style="color:${statusColor};font-weight:600;width:14px">${statusIcon}</span>
+                <span style="color:var(--tx3);min-width:36px">${tarih}</span>
+                <span style="flex:1;color:var(--tx)">${checkTip}${checkSaat ? ' · ' + checkSaat : ''}</span>
+                <span style="background:rgba(0,140,149,.1);color:#008c95;padding:1px 4px;border-radius:3px;font-size:.6rem;font-weight:600">CF</span>
+                <span style="font-weight:700;color:${noteColor};min-width:28px;text-align:right">${note.points > 0 ? '+' : ''}${note.points}</span>
+                ${canManage ? `<button onclick="deleteAutoNote('${note.id}');closeModal();setTimeout(loadPuantaj,500)" style="background:none;border:none;color:#e74c3c;cursor:pointer;padding:2px;font-size:.6rem;opacity:.6" title="Sil">✕</button>` : ''}
             </div>
         `;
     });
+    if (notes.length > 10) {
+        body += `<div style="text-align:center;color:var(--tx3);font-size:.65rem;padding:4px">+${notes.length - 10} kayıt daha</div>`;
+    }
     
     body += `</div>`;
     
     // Manuel Puanlar
     if (manuelPuanlar.length > 0) {
         body += `
-            <div>
-                <div style="font-size:.85rem;font-weight:600;color:var(--tx);margin-bottom:10px;display:flex;align-items:center;gap:6px">
-                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    Manuel Değerlendirmeler (${manuelPuanlar.length})
+            <div style="margin-top:12px">
+                <div style="font-size:.8rem;font-weight:600;color:var(--tx);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    Manuel Değerlendirmeler
+                    <span style="color:var(--tx3);font-weight:400">(${manuelPuanlar.length})</span>
                 </div>
         `;
         
         manuelPuanlar.forEach(puan => {
             if (puan.type === 'prim_reset') return;
-            const tarih = puan.eventDate || puan.createdAt?.toDate?.()?.toLocaleDateString('tr-TR') || '-';
+            const tarihRaw = puan.eventDate || puan.createdAt?.toDate?.()?.toLocaleDateString('tr-TR') || '-';
+            const tarih = tarihRaw.includes('.') ? tarihRaw.split('.').slice(0,2).join('.') : tarihRaw.slice(5,10).split('-').reverse().join('.');
             const yildiz = puan.score || 3;
-            const puanEtki = yildiz - 3; // 1★=-2, 2★=-1, 3★=0, 4★=+1, 5★=+2
-            const puanColor = puanEtki < 0 ? '#e74c3c' : '#27ae60';
+            const puanEtki = yildiz - 3;
+            const puanColor = puanEtki < 0 ? '#e74c3c' : (puanEtki > 0 ? '#27ae60' : 'var(--tx3)');
+            const yildizStr = '★'.repeat(yildiz) + '☆'.repeat(5-yildiz);
+            const yildizColor = yildiz >= 4 ? '#f1c40f' : (yildiz >= 3 ? '#95a5a6' : '#e74c3c');
+            // İkon varsa göster
+            const ikonHtml = puan.icon ? `<span style="font-size:.9rem;margin-right:4px">${puan.icon}</span>` : '';
             
             body += `
-                <div style="display:flex;align-items:center;gap:10px;padding:10px;background:${puanEtki < 0 ? 'rgba(231,76,60,.08)' : 'rgba(39,174,96,.08)'};border-radius:8px;margin-bottom:6px">
-                    <div style="min-width:60px;font-size:.75rem;color:var(--tx3)">${tarih}</div>
-                    <div style="flex:1">
-                        <div style="font-size:.8rem;color:var(--tx)">${puan.note || '-'}</div>
-                    </div>
-                    <div style="font-weight:700;color:${puanColor};font-size:.85rem">${puanEtki > 0 ? '+' : ''}${puanEtki}</div>
-                    ${canManage ? `<button onclick="deletePuantajEntry('${puan.id}');closeModal();setTimeout(loadPuantaj,500)" style="background:rgba(231,76,60,.1);border:none;color:#e74c3c;cursor:pointer;padding:4px 8px;border-radius:4px;font-size:.65rem">Sil</button>` : ''}
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-size:.75rem">
+                    <span style="color:${yildizColor};font-size:.7rem;letter-spacing:-1px">${yildizStr}</span>
+                    <span style="color:var(--tx3);min-width:36px">${tarih}</span>
+                    <span style="flex:1;color:var(--tx)">${ikonHtml}${puan.note || '-'}</span>
+                    <span style="font-weight:700;color:${puanColor};min-width:28px;text-align:right">${puanEtki > 0 ? '+' : ''}${puanEtki}</span>
+                    ${canManage ? `<button onclick="deletePuantajEntry('${puan.id}');closeModal();setTimeout(loadPuantaj,500)" style="background:none;border:none;color:#e74c3c;cursor:pointer;padding:2px;font-size:.6rem;opacity:.6" title="Sil">✕</button>` : ''}
                 </div>
             `;
         });
