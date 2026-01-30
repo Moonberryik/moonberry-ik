@@ -2522,7 +2522,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0610 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0612 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -11273,6 +11273,7 @@ async function loadPrimSistemiPage() {
     
     const perms = window.userAdvancedPermissions || {};
     const canEdit = currentUser?.role === 'yonetici' || perms.pages?.primSistemi?.edit === true;
+    const canEditAnn = canEdit || currentUser?.role === 'bolge_muduru'; // Bölge müdürü de bilgilendirme ekleyebilir
     const aylar = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
     const currentMonth = aylar[new Date().getMonth() + 1];
     const currentYear = new Date().getFullYear();
@@ -11540,9 +11541,6 @@ async function loadPrimSistemiPage() {
     
     // Kullanıcı şube bilgisi
     const userBranchDisplay = currentUser?.role === 'yonetici' ? '' : (currentUser?.role === 'bolge_muduru' ? '' : `<span style="font-size:.75rem;color:var(--tx3);margin-left:6px">(${userBranch})</span>`);
-    
-    // Bölge müdürü de düzenleyebilir
-    const canEditAnn = canEdit || currentUser?.role === 'bolge_muduru';
     
     container.innerHTML = `
         <div style="max-width:100%;overflow-x:hidden">
