@@ -2544,7 +2544,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0700 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0705 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -12589,7 +12589,7 @@ async function writeSupervisorPenalty(params) {
     
     try {
         await batch.commit();
-        console.log('[SupervisorPenalty] Başarıyla yazıldı:', penaltyId);
+        console.log('[SupervisorPenalty] Başarıyla yazıldı:', supervisors.length, 'kayıt');
     } catch (e) {
         console.error('[SupervisorPenalty] Yazma hatası:', e);
     }
@@ -13979,8 +13979,28 @@ function showPersonelPuanDetay(personelId, personName) {
             const starCount = status === 'onTime' ? 5 : (status === 'late' ? 2 : 1);
             const starStr = '★'.repeat(starCount) + '☆'.repeat(5 - starCount);
             const starColor = status === 'onTime' ? '#f1c40f' : (status === 'late' ? '#f39c12' : '#e74c3c');
-            const checkTip = note.checkType || note.note || 'Check';
-            const checkSaat = note.checkTime || '';
+            
+            // checkType'dan "Zamanında", "Geç", "Doldurulmadı" ve parantez içi saati temizle
+            let rawCheckTip = note.checkType || note.note || 'Check';
+            let checkTip = rawCheckTip
+                .replace(/\s*-\s*(Zamanında|Geç|Doldurulmadı|Yapılmadı|Kaçırıldı)/gi, '')
+                .replace(/\s*\(\d{1,2}:\d{2}\)/g, '')
+                .trim();
+            
+            // Check saati (checkTime veya parantez içinden)
+            let checkSaat = note.checkTime || '';
+            if (!checkSaat) {
+                const saatMatch = rawCheckTip.match(/\((\d{1,2}:\d{2})\)/);
+                if (saatMatch) checkSaat = saatMatch[1];
+            }
+            
+            // Yazılma saati (createdAt'ten)
+            let yazilmaSaati = '';
+            if (note.createdAt) {
+                const ts = note.createdAt.toDate ? note.createdAt.toDate() : new Date(note.createdAt);
+                yazilmaSaati = ts.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', hour12: false });
+            }
+            
             const noteId = note.id || '';
             
             body += `
@@ -13989,6 +14009,7 @@ function showPersonelPuanDetay(personelId, personName) {
                     <span style="color:${starColor};font-size:.7rem;letter-spacing:-1px;min-width:50px">${starStr}</span>
                     <span style="color:var(--tx3);min-width:40px">${tarih}</span>
                     <span style="flex:1;color:var(--tx)">${checkTip}${checkSaat ? ' · ' + checkSaat : ''}</span>
+                    ${yazilmaSaati ? `<span style="color:var(--tx3);font-size:.65rem">${yazilmaSaati}</span>` : ''}
                     <span style="background:rgba(0,140,149,.12);color:#008c95;padding:2px 6px;border-radius:4px;font-size:.65rem;font-weight:600">CF</span>
                     <span style="font-weight:700;color:${noteColor};min-width:32px;text-align:right">${points > 0 ? '+' : ''}${points}</span>
                 </div>
@@ -14030,12 +14051,20 @@ function showPersonelPuanDetay(personelId, personName) {
             const starColor = getStarColor(yildiz);
             const ikonHtml = puan.icon ? `<span style="font-size:.9rem;margin-right:4px">${puan.icon}</span>` : '';
             
+            // Yazılma saati (createdAt'ten)
+            let yazilmaSaati = '';
+            if (puan.createdAt) {
+                const ts = puan.createdAt.toDate ? puan.createdAt.toDate() : new Date(puan.createdAt);
+                yazilmaSaati = ts.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', hour12: false });
+            }
+            
             body += `
                 <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-size:.8rem">
                     ${canManage ? `<input type="checkbox" class="manuel-checkbox" data-id="${puan.id}" style="cursor:pointer;margin:0">` : ''}
                     <span style="color:${starColor};font-size:.7rem;letter-spacing:-1px;min-width:50px">${yildizStr}</span>
                     <span style="color:var(--tx3);min-width:40px">${tarih}</span>
                     <span style="flex:1;color:var(--tx)">${ikonHtml}${puan.note || '-'}</span>
+                    ${yazilmaSaati ? `<span style="color:var(--tx3);font-size:.65rem">${yazilmaSaati}</span>` : ''}
                     <span style="font-weight:700;color:${puanColor};min-width:32px;text-align:right">${puanEtki > 0 ? '+' : ''}${puanEtki}</span>
                 </div>
             `;
@@ -14081,12 +14110,20 @@ function showPersonelPuanDetay(personelId, personName) {
                 const checkTypeName = record.checkTypeName || record.checkType || 'Check';
                 const checkTime = record.checkTime || '';
                 
+                // Yazılma saati (createdAt'ten)
+                let yazilmaSaati = '';
+                if (record.createdAt) {
+                    const ts = record.createdAt.toDate ? record.createdAt.toDate() : new Date(record.createdAt);
+                    yazilmaSaati = ts.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', hour12: false });
+                }
+                
                 body += `
                     <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-size:.8rem">
                         <span style="color:var(--tx3);min-width:40px">${tarih}</span>
                         <span style="flex:1;color:var(--tx)">
                             <span style="font-weight:600;color:#9b59b6">${personelName}</span> - ${checkTypeName}${checkTime ? ' · ' + checkTime : ''}
                         </span>
+                        ${yazilmaSaati ? `<span style="color:var(--tx3);font-size:.65rem">${yazilmaSaati}</span>` : ''}
                         <span style="font-weight:700;color:#9b59b6;min-width:32px;text-align:right">${penalty}</span>
                     </div>
                 `;
