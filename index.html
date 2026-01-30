@@ -2532,7 +2532,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0325 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0340 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -11213,6 +11213,7 @@ async function loadPuantaj() {
             let pozitifOlay = 0;
             let primResetBonus = 0;
             let autoMissed = 0, autoLate = 0, autoOnTime = 0;
+            let manuelArtiSayisi = 0, manuelEksiSayisi = 0; // YENİ: Yıldız formülü için
             
             // Manuel puanlar (yıldız sistemi - CF puanları hariç)
             puanlar.forEach(x => {
@@ -11237,8 +11238,10 @@ async function loadPuantaj() {
                 manuelPuan += puanDegeri;
                 if (puanDegeri < 0) {
                     negatifOlay++;
+                    manuelEksiSayisi++; // Her negatif değerlendirme = 1 eksi
                 } else if (puanDegeri > 0) {
                     pozitifOlay++;
+                    manuelArtiSayisi++; // Her pozitif değerlendirme = 1 artı
                 }
             });
             
@@ -11274,6 +11277,8 @@ async function loadPuantaj() {
                 autoMissed,
                 autoLate,
                 autoOnTime,
+                manuelArtiSayisi,  // YENİ
+                manuelEksiSayisi,  // YENİ
                 puanlar,
                 otomatikPuanlar
             });
@@ -11287,35 +11292,56 @@ async function loadPuantaj() {
         const sortedByPuan = [...personelList].sort((a, b) => b.toplamPuan - a.toplamPuan);
         const sortedByNegatif = [...personelList].filter(p => p.negatifOlay > 0).sort((a, b) => b.negatifOlay - a.negatifOlay);
         
-        // === İSTATİSTİKSEL YILDIZ HESAPLAMA (Z-Score) ===
-        // Ortalama hesapla
-        const puanlar = personelList.map(p => p.toplamPuan);
-        const n = puanlar.length;
-        const ortalama = n > 0 ? puanlar.reduce((a, b) => a + b, 0) / n : 0;
-        
-        // Standart sapma hesapla
-        const varyans = n > 0 ? puanlar.reduce((acc, p) => acc + Math.pow(p - ortalama, 2), 0) / n : 0;
-        const stdSapma = Math.sqrt(varyans) || 1; // 0'a bölmeyi önle
-        
-        // Z-score'a göre yıldız ata (Normal dağılım)
-        // z >= 1.0  → 5 yıldız (üst ~16%)
-        // z >= 0.25 → 4 yıldız (üst-orta ~40%)
-        // z >= -0.25 → 3 yıldız (orta ~20%)
-        // z >= -1.0 → 2 yıldız (alt-orta ~40%)
-        // z < -1.0  → 1 yıldız (alt ~16%)
+        // === BİREYSEL PERFORMANS YILDIZ HESAPLAMA ===
+        // Formül: Yıldız = ((Tamamlanan + Manuel Artı) / (Atanan + Manuel Eksi)) × 5
+        // Atanan = autoOnTime + autoLate + autoMissed
+        // Tamamlanan = autoOnTime + autoLate (missed hariç)
         personelList.forEach(p => {
-            const zScore = (p.toplamPuan - ortalama) / stdSapma;
-            p.zScore = zScore;
+            // Bölge müdürü yıldız sisteminden muaf
+            if (p.role === 'bolge_muduru') {
+                p.performansYildiz = 5;
+                p.performansYildizDeger = 5;
+                p.tamamlamaOrani = 100;
+                return;
+            }
             
-            if (zScore >= 1.0) p.performansYildiz = 5;
-            else if (zScore >= 0.25) p.performansYildiz = 4;
-            else if (zScore >= -0.25) p.performansYildiz = 3;
-            else if (zScore >= -1.0) p.performansYildiz = 2;
-            else p.performansYildiz = 1;
+            // Toplam atanan check (missed dahil) + manuel eksiler
+            const atanan = (p.autoOnTime || 0) + (p.autoLate || 0) + (p.autoMissed || 0) + (p.manuelEksiSayisi || 0);
+            // Tamamlanan check (missed hariç) + manuel artılar
+            const tamamlanan = (p.autoOnTime || 0) + (p.autoLate || 0) + (p.manuelArtiSayisi || 0);
+            
+            // Yıldız hesaplama
+            let yildizDeger = 3; // Varsayılan nötr
+            if (atanan > 0) {
+                yildizDeger = (tamamlanan / atanan) * 5;
+                yildizDeger = Math.max(0, Math.min(5, yildizDeger)); // 0-5 arası sınırla
+            }
+            
+            p.performansYildizDeger = yildizDeger; // Tam değer (4.87 gibi)
+            p.performansYildiz = Math.round(yildizDeger); // Yuvarlak (görsel için)
+            p.tamamlamaOrani = atanan > 0 ? Math.round((tamamlanan / atanan) * 100) : 100;
+            p.atananCheck = atanan;
+            p.tamamlananCheck = tamamlanan;
+        });
+        
+        // === YILDIZ BAZLI SIRALAMA (1. için badge) ===
+        const sortedByYildiz = [...personelList]
+            .filter(p => p.role !== 'bolge_muduru') // Bölge müdürü hariç
+            .sort((a, b) => b.performansYildizDeger - a.performansYildizDeger);
+        
+        // 1. sıradakine badge ver
+        if (sortedByYildiz.length > 0) {
+            sortedByYildiz[0].isChampion = true;
+            sortedByYildiz[0].championRank = 1;
+        }
+        // Diğerlerine sıra numarası ver
+        sortedByYildiz.forEach((p, i) => {
+            if (i > 0) p.championRank = i + 1;
         });
         
         // İstatistik cache'e kaydet
-        window.puantajStats = { ortalama: ortalama.toFixed(1), stdSapma: stdSapma.toFixed(1), n };
+        const n = personelList.length;
+        window.puantajStats = { n, sortedByYildiz };
         
         // Personel Kartları - Düzenli Grid, Marka Renkleri
         // Her iki şubede de Moonberry teal rengi
@@ -11467,9 +11493,25 @@ async function loadPuantaj() {
             // Kart border: tehlike durumu > risk > rol rengi
             const cardBorder = canView ? (isDanger ? '#e74c3c' : (isRisk ? '#f39c12' : roleColor)) : '#6c757d';
             
-            // Yıldız gösterimi - BÜYÜTÜLDÜ
-            const yildizlar = '★'.repeat(p.performansYildiz || 3) + '☆'.repeat(5 - (p.performansYildiz || 3));
-            const yildizColor = p.performansYildiz >= 4 ? '#f1c40f' : (p.performansYildiz >= 3 ? '#95a5a6' : '#e74c3c');
+            // === DİNAMİK YILDIZ GÖSTERİMİ ===
+            // Tam değere göre CSS gradient ile doluluk
+            const yildizDeger = p.performansYildizDeger || 3;
+            const yildizYuzde = Math.round((yildizDeger / 5) * 100);
+            const yildizColor = yildizDeger >= 4 ? '#f1c40f' : (yildizDeger >= 3 ? '#95a5a6' : '#e74c3c');
+            const yildizHtml = `<span style="position:relative;display:inline-flex;font-size:.85rem;letter-spacing:1px">
+                <span style="color:#ddd">☆☆☆☆☆</span>
+                <span style="position:absolute;left:0;top:0;overflow:hidden;width:${yildizYuzde}%;white-space:nowrap;color:${yildizColor}">★★★★★</span>
+            </span>`;
+            
+            // === ŞAMPİYON BADGE (1. sıradaki) ===
+            const championBadge = p.isChampion ? `
+                <div style="position:absolute;top:-6px;right:-6px;width:24px;height:24px;background:linear-gradient(135deg,#ffd700,#ffb700);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(255,215,0,.5);border:2px solid #fff">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+                </div>` : '';
+            
+            // Sıralama rozeti (2+ için)
+            const rankBadge = !p.isChampion && p.championRank ? `
+                <span style="font-size:.55rem;background:var(--bg3);color:var(--tx2);padding:1px 4px;border-radius:3px;margin-left:4px">#${p.championRank}</span>` : '';
             
             // Kart arka planı
             const cardBg = isPremium && canView
@@ -11485,7 +11527,8 @@ async function loadPuantaj() {
             if (canView) {
                 // === NORMAL KART (GÖRÜNEBİLİR) ===
                 html += `
-                <div style="background:${cardBg};border:2px solid ${cardBorder}30;border-left:4px solid ${cardBorder};border-radius:12px;padding:16px;transition:all .2s${isPremium ? ';box-shadow:0 2px 12px rgba(184,134,11,.15)' : ''}" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='${isPremium ? '0 2px 12px rgba(184,134,11,.15)' : 'none'}'">
+                <div style="position:relative;background:${cardBg};border:2px solid ${cardBorder}30;border-left:4px solid ${cardBorder};border-radius:12px;padding:16px;transition:all .2s${isPremium ? ';box-shadow:0 2px 12px rgba(184,134,11,.15)' : ''}${p.isChampion ? ';box-shadow:0 4px 16px rgba(255,215,0,.25)' : ''}" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='${isPremium ? '0 2px 12px rgba(184,134,11,.15)' : p.isChampion ? '0 4px 16px rgba(255,215,0,.25)' : 'none'}'">
+                    ${championBadge}
                     <!-- Header - TIKLANABİLİR -->
                     <div onclick="showPersonelPuanDetay('${p.id}', '${p.name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;cursor:pointer;padding:8px;margin:-8px;border-radius:8px;transition:background .15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
                         <div style="display:flex;align-items:center;gap:10px">
@@ -11495,11 +11538,11 @@ async function loadPuantaj() {
                             <div>
                                 <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                                     <span style="font-weight:600;font-size:.95rem;color:var(--tx)">${p.displayName}</span>
-                                    ${badgeHtml}
+                                    ${badgeHtml}${rankBadge}
                                 </div>
                                 <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
                                     <span style="font-size:.75rem;color:${roleColor};font-weight:500">${p.position || 'Barista'}</span>
-                                    <span style="font-size:.85rem;color:${yildizColor};letter-spacing:1px">${yildizlar}</span>
+                                    ${yildizHtml}
                                 </div>
                             </div>
                         </div>
