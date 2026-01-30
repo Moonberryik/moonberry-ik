@@ -2535,7 +2535,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0618 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0620 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -11494,12 +11494,20 @@ async function loadPrimSistemiPage() {
     try {
         const annSnap = await db.collection('primAnnouncements')
             .orderBy('createdAt', 'desc')
-            .limit(10)
+            .limit(20)
             .get();
         
+        const now = new Date();
         const announcements = [];
         annSnap.forEach(doc => {
             const data = { id: doc.id, ...doc.data() };
+            
+            // Süre dolmuş duyuruları atla
+            if (data.expiresAt) {
+                const expiresDate = data.expiresAt.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
+                if (expiresDate < now) return; // Süresi dolmuş, gösterme
+            }
+            
             const targetBranches = data.branches || ['all'];
             // Yönetici ve bölge müdürü tüm bilgilendirmeleri görür
             const canSeeAll = currentUser?.role === 'yonetici' || currentUser?.role === 'bolge_muduru';
@@ -11526,13 +11534,23 @@ async function loadPrimSistemiPage() {
                     const d = a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
                     dateStr = d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
                 }
+                // Kalan gün hesapla
+                let expiresStr = '';
+                if (a.expiresAt) {
+                    const exp = a.expiresAt.toDate ? a.expiresAt.toDate() : new Date(a.expiresAt);
+                    const daysLeft = Math.ceil((exp - new Date()) / (1000 * 60 * 60 * 24));
+                    if (daysLeft <= 3) {
+                        expiresStr = `<span style="font-size:.55rem;color:#e74c3c;font-weight:600;margin-left:4px">${daysLeft} gün</span>`;
+                    }
+                }
                 return `
                     <div class="${animClass}" style="background:${cfg.bg};border:1px solid ${cfg.color}20;border-radius:10px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;position:relative">
                         <div style="color:${cfg.color};flex-shrink:0;margin-top:1px">${cfg.icon.replace(/18/g, '16')}</div>
                         <div style="flex:1;min-width:0">
-                            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+                            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;flex-wrap:wrap">
                                 ${a.title ? `<div style="font-weight:700;color:${cfg.color};font-size:.8rem">${a.title}</div>` : ''}
                                 ${dateStr ? `<span style="font-size:.6rem;color:var(--tx3);font-weight:500">${dateStr}</span>` : ''}
+                                ${expiresStr}
                             </div>
                             <div style="color:var(--tx2);font-size:.75rem;line-height:1.4">${a.content}</div>
                         </div>
@@ -11945,10 +11963,10 @@ function canViewPersonnelPuan(viewerRole, targetRole) {
     // Yönetici ve admin herkesi görür
     if (viewerRole === 'yonetici' || viewerRole === 'admin') return true;
     
-    // BÖLGE MÜDÜRÜ KARTI: Sadece yönetici/admin puanlarını görebilir
-    // Ama bölge müdürü kendi kartını görebilir
+    // BÖLGE MÜDÜRÜ KARTI: Sadece yönetici/admin ve kendisi puanlarını görebilir
+    // Diğerleri kilitli kart görür (canView=false olunca kilitli kart render edilir)
     if (targetRole === 'bolge_muduru') {
-        return viewerRole === 'bolge_muduru'; // Sadece kendi kartını görür
+        return viewerRole === 'bolge_muduru';
     }
     
     // Bölge müdürü yönetici hariç herkesi görür
@@ -11968,7 +11986,7 @@ function canViewPersonnelPuan(viewerRole, targetRole) {
                targetRole === 'magaza_mudur_yardimcisi';
     }
     
-    // Mağaza Müdürü: kendisi + yardımcılar + baristalar
+    // Mağaza Müdürü: kendisi + yardımcılar + baristalar (bölge müdürü kilitli görünür)
     if (viewerRole === 'magaza_muduru') {
         return targetRole === 'barista' || 
                targetRole === 'mudur_yardimcisi' || 
