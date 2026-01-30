@@ -2524,7 +2524,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0500 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0505 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -12147,23 +12147,49 @@ function showPersonelPuanDetay(personelId, personName) {
     
     // Checkbox event listeners (modal açıldıktan sonra)
     setTimeout(() => {
+        const modalBody = document.querySelector('.modal-body');
+        if (!modalBody) return;
+        
         // CF checkboxları
-        document.querySelectorAll('.cf-checkbox').forEach(cb => {
+        const cfCheckboxes = modalBody.querySelectorAll('.cf-checkbox');
+        const cfDeleteBtn = modalBody.querySelector('#cfDeleteSelectedBtn');
+        
+        cfCheckboxes.forEach(cb => {
             cb.addEventListener('change', () => {
-                const btn = document.getElementById('cfDeleteSelectedBtn');
-                const anyChecked = document.querySelector('.cf-checkbox:checked');
-                if (btn) btn.style.display = anyChecked ? 'block' : 'none';
+                const anyChecked = modalBody.querySelector('.cf-checkbox:checked');
+                if (cfDeleteBtn) cfDeleteBtn.style.display = anyChecked ? 'block' : 'none';
             });
         });
+        
+        // CF "Tümü" checkbox
+        const cfSelectAll = modalBody.querySelector('#cfSelectAll');
+        if (cfSelectAll) {
+            cfSelectAll.addEventListener('change', () => {
+                cfCheckboxes.forEach(c => c.checked = cfSelectAll.checked);
+                if (cfDeleteBtn) cfDeleteBtn.style.display = cfSelectAll.checked && cfCheckboxes.length > 0 ? 'block' : 'none';
+            });
+        }
+        
         // Manuel checkboxları
-        document.querySelectorAll('.manuel-checkbox').forEach(cb => {
+        const manuelCheckboxes = modalBody.querySelectorAll('.manuel-checkbox');
+        const manuelDeleteBtn = modalBody.querySelector('#manuelDeleteSelectedBtn');
+        
+        manuelCheckboxes.forEach(cb => {
             cb.addEventListener('change', () => {
-                const btn = document.getElementById('manuelDeleteSelectedBtn');
-                const anyChecked = document.querySelector('.manuel-checkbox:checked');
-                if (btn) btn.style.display = anyChecked ? 'block' : 'none';
+                const anyChecked = modalBody.querySelector('.manuel-checkbox:checked');
+                if (manuelDeleteBtn) manuelDeleteBtn.style.display = anyChecked ? 'block' : 'none';
             });
         });
-    }, 100);
+        
+        // Manuel "Tümü" checkbox
+        const manuelSelectAll = modalBody.querySelector('#manuelSelectAll');
+        if (manuelSelectAll) {
+            manuelSelectAll.addEventListener('change', () => {
+                manuelCheckboxes.forEach(c => c.checked = manuelSelectAll.checked);
+                if (manuelDeleteBtn) manuelDeleteBtn.style.display = manuelSelectAll.checked && manuelCheckboxes.length > 0 ? 'block' : 'none';
+            });
+        }
+    }, 150);
 }
 
 // Otomatik puantaj notu sil
