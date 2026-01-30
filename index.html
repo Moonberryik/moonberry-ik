@@ -2535,7 +2535,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0620 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0622 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -12410,14 +12410,9 @@ async function loadPuantaj() {
         // Cache'i SIRALANMIŞ liste ile güncelle
         window.puantajPersonelCache = sortedPersonelList;
         
-        // Bölge müdürü kartı gizli - listeden çıkar (yönetici hariç - o görebilir)
-        const displayList = sortedPersonelList.filter(p => {
-            // Bölge müdürü kendi kartını göremez, yönetici görebilir
-            if (p.role === 'bolge_muduru') {
-                return viewerRole === 'yonetici' || viewerRole === 'admin';
-            }
-            return true;
-        });
+        // Tüm personeli göster - kilitli kartlar canView ile kontrol ediliyor
+        // Bölge müdürü kartı: yönetici açık görür, diğerleri kilitli görür (kendi kendini görebilir)
+        const displayList = sortedPersonelList;
         
         html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:20px">`;
         displayList.forEach(p => {
