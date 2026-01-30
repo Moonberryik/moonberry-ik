@@ -2544,7 +2544,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0636 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0638 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -9798,9 +9798,12 @@ async function loadPersonelList() {
             const hasAccess = !!(p.email && p.hasPassword);
             const isPremium = roleInfo.premium;
             
-            // Barista/servis personeli için Sunberry sol kenarlık
+            // === SOL KENARLIK RENKLERİ ===
+            // Barista/servis: Sunberry (#ff8674)
+            // Müdür/Yardımcı: Moonberry (#008c95)
             const isBarista = ['barista', 'part_time', 'kidemli_barista'].includes(role);
-            const cardLeftBorder = isBarista ? '#ff8674' : roleInfo.color;
+            const isMudur = ['magaza_muduru', 'mudur_yardimcisi', 'magaza_mudur_yardimcisi'].includes(role);
+            const cardLeftBorder = isBarista ? '#ff8674' : (isMudur ? '#008c95' : roleInfo.color);
             
             // Hiyerarşi kontrolü
             const targetLevel = getHierarchyLevel(role, p.position);
@@ -12989,12 +12992,25 @@ async function loadPuantaj() {
             const puanColor = p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx)');
             const puanSign = p.toplamPuan > 0 ? '+' : '';
             
-            // Barista/servis personeli için Sunberry sol kenarlık (HER ZAMAN, risk/tehlike dahil)
+            // === SOL KENARLIK RENKLERİ ===
+            // Barista/servis: Sunberry (#ff8674) - HER ZAMAN
+            // Müdür/Yardımcı: Moonberry (#008c95) - HER ZAMAN
+            // Diğerleri: rol rengi (risk/tehlike override edebilir)
             const isBaristaRole = ['barista', 'part_time', 'kidemli_barista'].includes(p.role);
-            // Barista ise HER ZAMAN Sunberry, değilse: tehlike > risk > rol rengi
-            const cardBorder = canView 
-                ? (isBaristaRole ? '#ff8674' : (isDanger ? '#e74c3c' : (isRisk ? '#f39c12' : roleColor))) 
-                : '#6c757d';
+            const isMudurRole = ['magaza_muduru', 'mudur_yardimcisi', 'magaza_mudur_yardimcisi'].includes(p.role);
+            
+            let cardBorder = roleColor;
+            if (!canView) {
+                cardBorder = '#6c757d';
+            } else if (isBaristaRole) {
+                cardBorder = '#ff8674'; // Sunberry - her zaman
+            } else if (isMudurRole) {
+                cardBorder = '#008c95'; // Moonberry - her zaman
+            } else if (isDanger) {
+                cardBorder = '#e74c3c';
+            } else if (isRisk) {
+                cardBorder = '#f39c12';
+            }
             
             // === DİNAMİK YILDIZ GÖSTERİMİ ===
             // Tam değere göre CSS gradient ile doluluk
@@ -13125,8 +13141,10 @@ async function loadPuantaj() {
                 // === KİLİTLİ KART (GÖRÜNEMİYOR) ===
                 // Rol rengi ve badge hâlâ görünür, sadece puanlar gizli
                 
-                // Barista/servis personeli için Sunberry sol kenarlık
+                // Sol kenarlık renkleri (barista=Sunberry, müdür=Moonberry)
                 const isBaristaLocked = ['barista', 'part_time', 'kidemli_barista'].includes(p.role);
+                const isMudurLocked = ['magaza_muduru', 'mudur_yardimcisi', 'magaza_mudur_yardimcisi'].includes(p.role);
+                const lockedBorderColor = isBaristaLocked ? '#ff8674' : (isMudurLocked ? '#008c95' : roleColor);
                 
                 const lockedCardBg = isPremium
                     ? 'linear-gradient(135deg,rgba(184,134,11,.08),rgba(218,165,32,.04),rgba(255,215,0,.02))'
@@ -13141,7 +13159,7 @@ async function loadPuantaj() {
                     : `<span style="font-size:.55rem;background:${roleColor}15;color:${roleColor};padding:2px 6px;border-radius:4px;font-weight:700;display:inline-flex;align-items:center;gap:3px;opacity:.7">${roleStyle.icon} ${roleStyle.badge}</span>`;
                     
                 html += `
-                <div style="background:${lockedCardBg};border:2px solid #6c757d30;border-left:4px solid ${isBaristaLocked ? "#ff8674" : roleColor}60;border-radius:12px;padding:16px;transition:all .2s;opacity:0.9${isPremium ? ';box-shadow:0 1px 8px rgba(184,134,11,.1)' : ''}">
+                <div style="background:${lockedCardBg};border:2px solid #6c757d30;border-left:4px solid ${lockedBorderColor}60;border-radius:12px;padding:16px;transition:all .2s;opacity:0.9${isPremium ? ';box-shadow:0 1px 8px rgba(184,134,11,.1)' : ''}">
                     <!-- Header - TIKLANABİLİR DEĞİL -->
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:8px;margin:-8px;border-radius:8px">
                         <div style="display:flex;align-items:center;gap:10px">
