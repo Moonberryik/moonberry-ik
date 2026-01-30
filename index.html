@@ -2564,7 +2564,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0215 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0220 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -25372,8 +25372,20 @@ function renderArchiveSettings() {
         hourOptions += `<option value="${h}" ${settings.hour === h ? 'selected' : ''}>${String(h).padStart(2, '0')}:00</option>`;
     }
     
+    // Sıfırlama gün seçenekleri
+    let resetDayOptions = '';
+    for (let i = 1; i <= 28; i++) {
+        resetDayOptions += `<option value="${i}" ${settings.autoResetDayOfMonth === i ? 'selected' : ''}>${i}</option>`;
+    }
+    
+    // Sıfırlama saat seçenekleri
+    let resetHourOptions = '';
+    for (let h = 0; h <= 23; h++) {
+        resetHourOptions += `<option value="${h}" ${settings.autoResetHour === h ? 'selected' : ''}>${String(h).padStart(2, '0')}:00</option>`;
+    }
+    
     container.innerHTML = `
-        <div style="background:var(--bg3);border-radius:12px;padding:20px">
+        <div style="background:var(--bg3);border-radius:12px;padding:20px;margin-bottom:16px">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
                 <div style="width:40px;height:40px;background:linear-gradient(135deg,#9b59b6,#8e44ad);border-radius:10px;display:flex;align-items:center;justify-content:center">
                     <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
@@ -25417,10 +25429,64 @@ function renderArchiveSettings() {
                 </div>
             </div>
         </div>
+        
+        <!-- Otomatik Sıfırlama -->
+        <div style="background:var(--bg3);border-radius:12px;padding:20px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+                <div style="width:40px;height:40px;background:linear-gradient(135deg,#e74c3c,#c0392b);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                    <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                </div>
+                <div>
+                    <div style="font-weight:600;color:var(--tx)">Otomatik Sıfırlama</div>
+                    <div style="font-size:.8rem;color:var(--tx2)">Arşivleme sonrası eski verileri otomatik sil</div>
+                </div>
+                <label style="margin-left:auto;display:flex;align-items:center;gap:8px;cursor:pointer">
+                    <input type="checkbox" id="autoResetEnabled" ${settings.autoReset ? 'checked' : ''} onchange="toggleAutoResetOptions()" style="width:18px;height:18px;cursor:pointer">
+                    <span style="font-size:.85rem;color:var(--tx2)">Aktif</span>
+                </label>
+            </div>
+            
+            <div id="autoResetOptions" style="display:${settings.autoReset ? 'grid' : 'none'};grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">
+                <div class="form-group">
+                    <label class="form-label">Sıfırlama Günü</label>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:.85rem;color:var(--tx2)">Her ayın</span>
+                        <select id="autoResetDayOfMonth" class="form-input" style="width:80px">
+                            ${resetDayOptions}
+                        </select>
+                        <span style="font-size:.85rem;color:var(--tx2)">'inde</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Sıfırlama Saati</label>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:.85rem;color:var(--tx2)">Saat</span>
+                        <select id="autoResetHour" class="form-input" style="width:100px">
+                            ${resetHourOptions}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-top:16px;padding:12px;background:rgba(231,76,60,.1);border-radius:8px;border:1px solid rgba(231,76,60,.2)">
+                <div style="font-size:.8rem;color:#e74c3c">
+                    <strong>⚠️ Dikkat:</strong> Sıfırlama işlemi geri alınamaz! Arşivleme gününden en az 1 gün sonra ayarlamanız önerilir.
+                </div>
+            </div>
+        </div>
     `;
     
     // Son arşiv durumu ve manuel butonlar
     renderArchiveStatus();
+}
+
+function toggleAutoResetOptions() {
+    const checkbox = document.getElementById('autoResetEnabled');
+    const options = document.getElementById('autoResetOptions');
+    if (checkbox && options) {
+        options.style.display = checkbox.checked ? 'grid' : 'none';
+    }
 }
 
 /**
@@ -25539,7 +25605,20 @@ async function saveArchiveSettings() {
  * Manuel arşivleme (tek şube)
  */
 async function manualArchive(branch, month) {
-    if (!confirm(`${branch} - ${month} arşivlenecek. Devam etmek istiyor musunuz?`)) return;
+    // Mevcut arşiv kontrolü
+    const archiveDocId = `${branch}_${month}`;
+    const existingDoc = await db.collection('puantajArchive').doc(archiveDocId).get();
+    
+    if (existingDoc.exists) {
+        const existing = existingDoc.data();
+        const archivedDate = existing.archivedAt?.toDate?.()?.toLocaleString('tr-TR') || 'bilinmiyor';
+        
+        if (!confirm(`⚠️ ${branch} - ${month} zaten arşivlenmiş!\n\nArşiv tarihi: ${archivedDate}\nPersonel: ${existing.personnelCount} kişi\n\nÜzerine yazmak istiyor musunuz?`)) {
+            return;
+        }
+    } else {
+        if (!confirm(`${branch} - ${month} arşivlenecek. Devam etmek istiyor musunuz?`)) return;
+    }
     
     toast('Arşivleniyor...', 'info');
     
