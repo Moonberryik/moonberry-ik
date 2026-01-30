@@ -2524,7 +2524,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0455 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0500 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -12037,6 +12037,7 @@ function showPersonelPuanDetay(personelId, personName) {
                     Check Sisteminden
                     <span style="font-size:.65rem;background:rgba(0,140,149,.15);color:#008c95;padding:2px 8px;border-radius:4px;font-weight:600">CF</span>
                     <span style="color:var(--tx3);font-weight:400">(${tumCFPuanlar.length})</span>
+                    ${canManage && tumCFPuanlar.length > 0 ? `<label style="margin-left:auto;display:flex;align-items:center;gap:4px;font-size:.7rem;color:var(--tx3);cursor:pointer"><input type="checkbox" id="cfSelectAll" onchange="document.querySelectorAll('.cf-checkbox').forEach(c=>c.checked=this.checked)" style="cursor:pointer">Tümü</label>` : ''}
                 </div>
     `;
     
@@ -12057,26 +12058,33 @@ function showPersonelPuanDetay(personelId, personName) {
             const points = note.points || (note.score ? note.score - 3 : 0);
             const noteColor = points > 0 ? '#27ae60' : (points < 0 ? '#e74c3c' : 'var(--tx3)');
             const status = note.status || 'missed';
-            const statusIcon = status === 'onTime' ? '✓' : (status === 'late' ? '⏱' : '✗');
-            const statusColor = status === 'onTime' ? '#27ae60' : (status === 'late' ? '#f39c12' : '#e74c3c');
+            // Yıldız: onTime=5★, late=2★, missed=1★
+            const starCount = status === 'onTime' ? 5 : (status === 'late' ? 2 : 1);
+            const starStr = '★'.repeat(starCount) + '☆'.repeat(5 - starCount);
+            const starColor = status === 'onTime' ? '#f1c40f' : (status === 'late' ? '#f39c12' : '#e74c3c');
             const checkTip = note.checkType || note.note || 'Check';
             const checkSaat = note.checkTime || '';
             const noteId = note.id || '';
             
             body += `
                 <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-size:.8rem">
-                    <span style="color:${statusColor};font-weight:600;width:16px">${statusIcon}</span>
+                    ${canManage && noteId ? `<input type="checkbox" class="cf-checkbox" data-id="${noteId}" style="cursor:pointer;margin:0">` : ''}
+                    <span style="color:${starColor};font-size:.7rem;letter-spacing:-1px;min-width:50px">${starStr}</span>
                     <span style="color:var(--tx3);min-width:40px">${tarih}</span>
                     <span style="flex:1;color:var(--tx)">${checkTip}${checkSaat ? ' · ' + checkSaat : ''}</span>
                     <span style="background:rgba(0,140,149,.12);color:#008c95;padding:2px 6px;border-radius:4px;font-size:.65rem;font-weight:600">CF</span>
                     <span style="font-weight:700;color:${noteColor};min-width:32px;text-align:right">${points > 0 ? '+' : ''}${points}</span>
-                    ${canManage && noteId ? `<button onclick="deleteAutoNote('${noteId}');closeModal();setTimeout(loadPuantaj,500)" style="background:none;border:none;color:#e74c3c;cursor:pointer;padding:2px 4px;font-size:.65rem;opacity:.5" title="Sil">✕</button>` : ''}
                 </div>
             `;
         });
         
         if (tumCFPuanlar.length > 15) {
             body += `<div style="text-align:center;color:var(--tx3);font-size:.7rem;padding:6px">+${tumCFPuanlar.length - 15} kayıt daha</div>`;
+        }
+        
+        // Toplu silme butonu
+        if (canManage) {
+            body += `<button onclick="deleteSelectedCFNotes()" style="margin-top:8px;width:100%;padding:8px;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.2);color:#e74c3c;border-radius:6px;font-size:.75rem;cursor:pointer;display:none" id="cfDeleteSelectedBtn">Seçilenleri Sil</button>`;
         }
     }
     
@@ -12090,6 +12098,7 @@ function showPersonelPuanDetay(personelId, personName) {
                     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                     Manuel Değerlendirmeler
                     <span style="color:var(--tx3);font-weight:400">(${manuelPuanlar.length})</span>
+                    ${canManage ? `<label style="margin-left:auto;display:flex;align-items:center;gap:4px;font-size:.7rem;color:var(--tx3);cursor:pointer"><input type="checkbox" id="manuelSelectAll" onchange="document.querySelectorAll('.manuel-checkbox').forEach(c=>c.checked=this.checked)" style="cursor:pointer">Tümü</label>` : ''}
                 </div>
         `;
         
@@ -12106,14 +12115,19 @@ function showPersonelPuanDetay(personelId, personName) {
             
             body += `
                 <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-size:.8rem">
-                    <span style="color:${starColor};font-size:.75rem;letter-spacing:-1px">${yildizStr}</span>
+                    ${canManage ? `<input type="checkbox" class="manuel-checkbox" data-id="${puan.id}" style="cursor:pointer;margin:0">` : ''}
+                    <span style="color:${starColor};font-size:.7rem;letter-spacing:-1px;min-width:50px">${yildizStr}</span>
                     <span style="color:var(--tx3);min-width:40px">${tarih}</span>
                     <span style="flex:1;color:var(--tx)">${ikonHtml}${puan.note || '-'}</span>
                     <span style="font-weight:700;color:${puanColor};min-width:32px;text-align:right">${puanEtki > 0 ? '+' : ''}${puanEtki}</span>
-                    ${canManage ? `<button onclick="deletePuantajEntry('${puan.id}');closeModal();setTimeout(loadPuantaj,500)" style="background:none;border:none;color:#e74c3c;cursor:pointer;padding:2px 4px;font-size:.65rem;opacity:.5" title="Sil">✕</button>` : ''}
                 </div>
             `;
         });
+        
+        // Toplu silme butonu
+        if (canManage) {
+            body += `<button onclick="deleteSelectedManuelNotes()" style="margin-top:8px;width:100%;padding:8px;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.2);color:#e74c3c;border-radius:6px;font-size:.75rem;cursor:pointer;display:none" id="manuelDeleteSelectedBtn">Seçilenleri Sil</button>`;
+        }
         
         body += `</div>`;
     }
@@ -12130,6 +12144,26 @@ function showPersonelPuanDetay(personelId, personName) {
     
     const modalTitle = personelData.displayName || formatDisplayName(personName);
     showModal(`${modalTitle} - Puan Detayı`, body, footer);
+    
+    // Checkbox event listeners (modal açıldıktan sonra)
+    setTimeout(() => {
+        // CF checkboxları
+        document.querySelectorAll('.cf-checkbox').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const btn = document.getElementById('cfDeleteSelectedBtn');
+                const anyChecked = document.querySelector('.cf-checkbox:checked');
+                if (btn) btn.style.display = anyChecked ? 'block' : 'none';
+            });
+        });
+        // Manuel checkboxları
+        document.querySelectorAll('.manuel-checkbox').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const btn = document.getElementById('manuelDeleteSelectedBtn');
+                const anyChecked = document.querySelector('.manuel-checkbox:checked');
+                if (btn) btn.style.display = anyChecked ? 'block' : 'none';
+            });
+        });
+    }, 100);
 }
 
 // Otomatik puantaj notu sil
@@ -12150,6 +12184,70 @@ async function deleteAutoNote(noteId, source = 'AP') {
             loadPuantaj(); // Sayfayı yenile
         } catch (e) {
             console.error('Silme hatası:', e);
+            toast('Silme işlemi başarısız', 'error');
+        }
+    }, 'danger');
+}
+
+// Seçili CF notlarını toplu sil
+async function deleteSelectedCFNotes() {
+    const canManagePoints = ['yonetici', 'bolge_muduru', 'magaza_muduru', 'mudur', 'admin'].includes(currentUser?.role);
+    if (!canManagePoints) {
+        toast('Bu işlem için yetkiniz yok', 'error');
+        return;
+    }
+    
+    const selected = document.querySelectorAll('.cf-checkbox:checked');
+    if (selected.length === 0) {
+        toast('Silinecek kayıt seçin', 'warning');
+        return;
+    }
+    
+    confirmModal('Toplu Silme', `${selected.length} CF kaydını silmek istediğinize emin misiniz?`, async () => {
+        try {
+            const batch = db.batch();
+            selected.forEach(cb => {
+                const id = cb.dataset.id;
+                if (id) batch.delete(db.collection('puantaj').doc(id));
+            });
+            await batch.commit();
+            toast(`${selected.length} kayıt silindi`, 'success');
+            closeModal();
+            setTimeout(loadPuantaj, 500);
+        } catch (e) {
+            console.error('Toplu silme hatası:', e);
+            toast('Silme işlemi başarısız', 'error');
+        }
+    }, 'danger');
+}
+
+// Seçili manuel notlarını toplu sil
+async function deleteSelectedManuelNotes() {
+    const canManagePoints = ['yonetici', 'bolge_muduru', 'magaza_muduru', 'mudur', 'admin'].includes(currentUser?.role);
+    if (!canManagePoints) {
+        toast('Bu işlem için yetkiniz yok', 'error');
+        return;
+    }
+    
+    const selected = document.querySelectorAll('.manuel-checkbox:checked');
+    if (selected.length === 0) {
+        toast('Silinecek kayıt seçin', 'warning');
+        return;
+    }
+    
+    confirmModal('Toplu Silme', `${selected.length} manuel kaydı silmek istediğinize emin misiniz?`, async () => {
+        try {
+            const batch = db.batch();
+            selected.forEach(cb => {
+                const id = cb.dataset.id;
+                if (id) batch.delete(db.collection('puantaj').doc(id));
+            });
+            await batch.commit();
+            toast(`${selected.length} kayıt silindi`, 'success');
+            closeModal();
+            setTimeout(loadPuantaj, 500);
+        } catch (e) {
+            console.error('Toplu silme hatası:', e);
             toast('Silme işlemi başarısız', 'error');
         }
     }, 'danger');
