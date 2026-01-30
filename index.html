@@ -2532,7 +2532,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0310 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260130-0320 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -10775,6 +10775,14 @@ async function loadPrimSettings() {
 
 // Prim Ayarlarını Düzenle
 function editPrimSettings() {
+    // Yetki kontrolü
+    const perms = window.userAdvancedPermissions || {};
+    const canEdit = currentUser?.role === 'yonetici' || perms.pages?.primSistemi?.edit === true;
+    if (!canEdit) {
+        toast('Bu işlem için yetkiniz yok', 'error');
+        return;
+    }
+    
     const s = primSettingsCache || {};
     const tiersJson = JSON.stringify(s.tiers || [], null, 2);
     
@@ -10818,6 +10826,14 @@ function editPrimSettings() {
 
 // Prim Ayarlarını Kaydet
 async function savePrimSettings() {
+    // Yetki kontrolü
+    const perms = window.userAdvancedPermissions || {};
+    const canEdit = currentUser?.role === 'yonetici' || perms.pages?.primSistemi?.edit === true;
+    if (!canEdit) {
+        toast('Bu işlem için yetkiniz yok', 'error');
+        return;
+    }
+    
     try {
         let tiers = [];
         try {
@@ -10854,7 +10870,9 @@ async function loadPrimSistemiPage() {
     const container = document.getElementById('primSistemiContainer');
     if (!container) return;
     
-    const canEdit = ['yonetici', 'bolge_muduru'].includes(currentUser?.role);
+    // Yetki kontrolü - yönetici her zaman, diğerleri matrise göre
+    const perms = window.userAdvancedPermissions || {};
+    const canEdit = currentUser?.role === 'yonetici' || perms.pages?.primSistemi?.edit === true;
     const aylar = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
     const currentMonth = aylar[new Date().getMonth() + 1];
     const currentYear = new Date().getFullYear();
