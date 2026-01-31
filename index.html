@@ -2562,7 +2562,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0430 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0500 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -15496,7 +15496,7 @@ function showArsivDetail(period) {
 }
 
 /**
- * Personel arşiv detayını göster
+ * Personel arşiv detayını göster (Kayıt sayfasıyla birebir aynı)
  */
 function showPersonelArsivDetail(period, personelId) {
     const donemler = window.arsivDataCache || {};
@@ -15509,111 +15509,157 @@ function showPersonelArsivDetail(period, personelId) {
     
     if (!p) return;
     
-    // toplamPuan hesapla
-    const toplamPuan = (p.otomatikPuan || 0) + (p.manuelPuan || 0) + (p.personelEksiPuan || 0);
+    // Puanlar ve istatistikler
+    const otomatikPuan = p.otomatikPuan || 0;
+    const manuelPuan = p.manuelPuan || 0;
+    const personelEksiPuan = p.personelEksiPuan || 0;
+    const toplamPuan = otomatikPuan + manuelPuan + personelEksiPuan;
+    
+    const cfKayitlar = p.otomatikKayitlar || [];
+    const manuelKayitlar = p.manuelKayitlar || [];
+    const personelEksiKayitlar = p.personelEksiKayitlar || [];
+    
+    // Eksik/Tam sayıları
+    const missed = cfKayitlar.filter(k => k.points < 0).length;
+    const onTime = cfKayitlar.filter(k => k.points > 0).length;
     
     const [yil, ay] = period.split('-');
     const ayAdi = getMonthName(ay);
-    const puanColor = toplamPuan >= 0 ? '#27ae60' : '#e74c3c';
+    
+    // Rol bilgileri
+    const role = p.role || 'barista';
+    const roleLabels = {
+        'bolge_muduru': 'Bölge Müdürü',
+        'magaza_muduru': 'Mağaza Müdürü',
+        'mudur_yardimcisi': 'Müdür Yardımcısı',
+        'magaza_mudur_yardimcisi': 'Müdür Yardımcısı',
+        'barista': 'Barista / Servis',
+        'kidemli_barista': 'Kıdemli Barista',
+        'part_time': 'Part Time'
+    };
+    const position = roleLabels[role] || 'Barista / Servis';
+    const isSupervisorRole = ['magaza_muduru', 'mudur_yardimcisi', 'magaza_mudur_yardimcisi'].includes(role);
+    
+    // Yıldız hesaplama (performans bazlı)
+    const yildizDeger = Math.max(1, Math.min(5, Math.round(3 + toplamPuan / 10)));
+    const yildizYuzde = Math.round((yildizDeger / 5) * 100);
+    const yildizColor = yildizDeger >= 4 ? '#f1c40f' : (yildizDeger >= 3 ? '#95a5a6' : '#e74c3c');
     
     let html = `
         <div style="max-height:70vh;overflow-y:auto">
-            <!-- Özet -->
-            <div style="background:linear-gradient(135deg,rgba(155,89,182,.1),rgba(155,89,182,.05));border-radius:12px;padding:16px;margin-bottom:16px">
-                <div style="display:flex;justify-content:space-between;align-items:center">
+            <!-- Özet Kart - Kayıt sayfasıyla aynı -->
+            <div style="background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(255,134,116,.05));border-radius:12px;padding:16px;margin-bottom:16px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
                     <div>
-                        <div style="font-size:1.1rem;font-weight:700;color:var(--tx)">${p.name || p.codeName}</div>
-                        <div style="font-size:.85rem;color:var(--tx2)">${p.role || '-'} · ${ayAdi} ${yil}</div>
+                        <div style="font-size:1.1rem;font-weight:700;color:var(--tx)">${p.codeName || p.name}</div>
+                        <div style="position:relative;display:inline-flex;font-size:1rem;letter-spacing:1px;margin-top:4px">
+                            <span style="color:#ddd">☆☆☆☆☆</span>
+                            <span style="position:absolute;left:0;top:0;overflow:hidden;width:${yildizYuzde}%;white-space:nowrap;color:${yildizColor}">★★★★★</span>
+                        </div>
                     </div>
                     <div style="text-align:right">
-                        <div style="font-size:1.8rem;font-weight:800;color:${puanColor}">${toplamPuan >= 0 ? '+' : ''}${toplamPuan}</div>
+                        <div style="font-size:1.8rem;font-weight:800;color:${toplamPuan >= 0 ? '#27ae60' : '#e74c3c'}">${toplamPuan >= 0 ? '+' : ''}${toplamPuan}</div>
                         <div style="font-size:.7rem;color:var(--tx3)">TOPLAM PUAN</div>
                     </div>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px">
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
                     <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
-                        <div style="font-size:1rem;font-weight:700;color:#008c95">${p.otomatikPuan || 0}</div>
+                        <div style="font-size:1rem;font-weight:700;color:${otomatikPuan >= 0 ? '#27ae60' : '#e74c3c'}">${otomatikPuan >= 0 ? '+' : ''}${otomatikPuan}</div>
                         <div style="font-size:.65rem;color:var(--tx3)">CF Puan</div>
                     </div>
                     <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
-                        <div style="font-size:1rem;font-weight:700;color:#3498db">${p.manuelPuan || 0}</div>
+                        <div style="font-size:1rem;font-weight:700;color:${manuelPuan >= 0 ? '#27ae60' : '#e74c3c'}">${manuelPuan >= 0 ? '+' : ''}${manuelPuan}</div>
                         <div style="font-size:.65rem;color:var(--tx3)">Manuel</div>
                     </div>
                     <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
-                        <div style="font-size:1rem;font-weight:700;color:#9b59b6">${p.personelEksiPuan || 0}</div>
-                        <div style="font-size:.65rem;color:var(--tx3)">P. Eksi</div>
+                        <div style="font-size:1rem;font-weight:700;color:#e74c3c">${missed}</div>
+                        <div style="font-size:.65rem;color:var(--tx3)">Eksik</div>
+                    </div>
+                    <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
+                        <div style="font-size:1rem;font-weight:700;color:#27ae60">${onTime}</div>
+                        <div style="font-size:.65rem;color:var(--tx3)">Tam</div>
                     </div>
                 </div>
             </div>
             
-            <!-- CF Kayıtlar -->
+            <!-- CF Puanlar - Kayıt sayfasıyla aynı format -->
             <div style="margin-bottom:16px">
-                <div style="font-size:.85rem;font-weight:600;color:var(--tx);margin-bottom:8px;display:flex;align-items:center;gap:6px">
-                    <span style="background:rgba(0,140,149,.15);color:#008c95;padding:2px 8px;border-radius:4px;font-size:.7rem">CF</span>
-                    Check Puanları (${p.otomatikKayitlar?.length || 0})
+                <div style="font-size:.85rem;font-weight:600;color:var(--tx);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                    Check Sisteminden
+                    <span style="font-size:.65rem;background:rgba(0,140,149,.15);color:#008c95;padding:2px 8px;border-radius:4px;font-weight:600">CF</span>
+                    <span style="color:var(--tx3);font-weight:400">(${cfKayitlar.length})</span>
                 </div>
     `;
     
-    if (p.otomatikKayitlar?.length > 0) {
-        p.otomatikKayitlar.slice(0, 20).forEach(k => {
-            const kPuanColor = k.points >= 0 ? '#27ae60' : '#e74c3c';
+    if (cfKayitlar.length === 0) {
+        html += `<div style="text-align:center;color:var(--tx3);font-size:.8rem;padding:16px;background:var(--bg2);border-radius:8px">Henüz CF puanı yok</div>`;
+    } else {
+        // Tarihe göre sırala (yeni önce)
+        const sortedCF = [...cfKayitlar].sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 15);
+        
+        sortedCF.forEach(k => {
+            const dateStr = k.date || '';
+            const tarih = dateStr ? dateStr.substring(5).split('-').reverse().join('.') : '-';
+            const points = k.points || 0;
+            const noteColor = points > 0 ? '#27ae60' : (points < 0 ? '#e74c3c' : 'var(--tx3)');
+            
+            // Status'a göre yıldız
+            const starCount = points > 0 ? 5 : 1;
+            const starStr = '★'.repeat(starCount) + '☆'.repeat(5 - starCount);
+            const starColor = points > 0 ? '#f1c40f' : '#e74c3c';
+            
+            // Check tipi ve saat
+            const checkTip = k.checkTypeName || k.checkType || 'Check';
+            const checkSaat = k.checkTime || '';
+            
             html += `
                 <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-size:.8rem">
-                    <span style="color:var(--tx3);min-width:40px">${k.date?.substring(5) || '-'}</span>
-                    <span style="flex:1;color:var(--tx)">${k.checkType || '-'} ${k.checkTime ? '· ' + k.checkTime : ''}</span>
-                    <span style="font-weight:700;color:${kPuanColor}">${k.points >= 0 ? '+' : ''}${k.points}</span>
+                    <span style="color:${starColor};font-size:.7rem;letter-spacing:-1px;min-width:50px">${starStr}</span>
+                    <span style="color:var(--tx3);min-width:40px">${tarih}</span>
+                    <span style="flex:1;color:var(--tx)">${checkTip}${checkSaat ? ' · ' + checkSaat : ''}</span>
+                    <span style="background:rgba(0,140,149,.12);color:#008c95;padding:2px 6px;border-radius:4px;font-size:.65rem;font-weight:600">CF</span>
+                    <span style="font-weight:700;color:${noteColor};min-width:32px;text-align:right">${points > 0 ? '+' : ''}${points}</span>
                 </div>
             `;
         });
-        if (p.otomatikKayitlar.length > 20) {
-            html += `<div style="text-align:center;color:var(--tx3);font-size:.7rem;padding:4px">+${p.otomatikKayitlar.length - 20} kayıt daha</div>`;
+        
+        if (cfKayitlar.length > 15) {
+            html += `<div style="text-align:center;color:var(--tx3);font-size:.7rem;padding:6px">+${cfKayitlar.length - 15} kayıt daha</div>`;
         }
-    } else {
-        html += `<div style="text-align:center;color:var(--tx3);font-size:.8rem;padding:12px;background:var(--bg2);border-radius:6px">Kayıt yok</div>`;
-    }
-    
-    html += `</div>
-            <!-- Manuel Kayıtlar -->
-            <div style="margin-bottom:16px">
-                <div style="font-size:.85rem;font-weight:600;color:var(--tx);margin-bottom:8px;display:flex;align-items:center;gap:6px">
-                    <span style="background:rgba(52,152,219,.15);color:#3498db;padding:2px 8px;border-radius:4px;font-size:.7rem">Manuel</span>
-                    Manuel Puanlar (${p.manuelKayitlar?.length || 0})
-                </div>
-    `;
-    
-    if (p.manuelKayitlar?.length > 0) {
-        p.manuelKayitlar.slice(0, 10).forEach(k => {
-            const kPuanColor = k.points >= 0 ? '#27ae60' : '#e74c3c';
-            html += `
-                <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-size:.8rem">
-                    <span style="color:var(--tx3);min-width:40px">${k.date?.substring(5) || '-'}</span>
-                    <span style="flex:1;color:var(--tx)">${k.note || '-'}</span>
-                    <span style="font-weight:700;color:${kPuanColor}">${k.points >= 0 ? '+' : ''}${k.points}</span>
-                </div>
-            `;
-        });
-    } else {
-        html += `<div style="text-align:center;color:var(--tx3);font-size:.8rem;padding:12px;background:var(--bg2);border-radius:6px">Kayıt yok</div>`;
     }
     
     html += `</div>`;
     
-    // Personel Eksisi Kayıtları (varsa)
-    if (p.personelEksiKayitlar?.length > 0) {
+    // Manuel Puanlar
+    if (manuelKayitlar.length > 0) {
         html += `
-            <div>
-                <div style="font-size:.85rem;font-weight:600;color:var(--tx);margin-bottom:8px;display:flex;align-items:center;gap:6px">
-                    <span style="background:rgba(155,89,182,.15);color:#9b59b6;padding:2px 8px;border-radius:4px;font-size:.7rem">P.Eksi</span>
-                    Personel Eksisi (${p.personelEksiKayitlar.length})
+            <div style="margin-bottom:16px">
+                <div style="font-size:.85rem;font-weight:600;color:var(--tx);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    Manuel Değerlendirmeler
+                    <span style="color:var(--tx3);font-weight:400">(${manuelKayitlar.length})</span>
                 </div>
         `;
         
-        p.personelEksiKayitlar.forEach(k => {
+        manuelKayitlar.slice(0, 15).forEach(k => {
+            const dateStr = k.date || '';
+            const tarih = dateStr ? dateStr.substring(5).split('-').reverse().join('.') : '-';
+            const points = k.points || 0;
+            const puanColor = points < 0 ? '#e74c3c' : (points > 0 ? '#27ae60' : 'var(--tx3)');
+            
+            // Yıldız (score'dan)
+            const score = k.score || 3;
+            const yildiz = Math.max(1, Math.min(5, score));
+            const yildizStr = '★'.repeat(yildiz) + '☆'.repeat(5-yildiz);
+            const starColor = yildiz >= 4 ? '#f1c40f' : (yildiz >= 3 ? '#95a5a6' : '#e74c3c');
+            
             html += `
                 <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-size:.8rem">
-                    <span style="color:var(--tx3);min-width:40px">${k.date?.substring(5) || '-'}</span>
-                    <span style="flex:1;color:var(--tx)">${k.personelName} - ${k.checkTypeName || k.checkType} ${k.checkTime ? '· ' + k.checkTime : ''}</span>
-                    <span style="font-weight:700;color:#9b59b6">${k.penalty}</span>
+                    <span style="color:${starColor};font-size:.7rem;letter-spacing:-1px;min-width:50px">${yildizStr}</span>
+                    <span style="color:var(--tx3);min-width:40px">${tarih}</span>
+                    <span style="flex:1;color:var(--tx)">${k.note || '-'}</span>
+                    <span style="font-weight:700;color:${puanColor};min-width:32px;text-align:right">${points > 0 ? '+' : ''}${points}</span>
                 </div>
             `;
         });
@@ -15621,9 +15667,55 @@ function showPersonelArsivDetail(period, personelId) {
         html += `</div>`;
     }
     
+    // Personel Checklist Doldurmaması (Sadece Müdür/Yardımcı için)
+    if (isSupervisorRole) {
+        const personelEksiTotal = personelEksiKayitlar.reduce((sum, r) => sum + (r.penalty || 0), 0);
+        
+        html += `
+            <div style="margin-top:12px">
+                <div style="font-size:.85rem;font-weight:600;color:var(--tx);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+                    <svg width="14" height="14" fill="none" stroke="#9b59b6" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                    <span style="color:#9b59b6">Personel Checklist Doldurmaması</span>
+                    <span style="color:var(--tx3);font-weight:400">(${personelEksiKayitlar.length})</span>
+                    ${personelEksiTotal !== 0 ? `<span style="margin-left:auto;font-size:.75rem;font-weight:700;color:#9b59b6">${personelEksiTotal}</span>` : ''}
+                </div>
+        `;
+        
+        if (personelEksiKayitlar.length === 0) {
+            html += `<div style="text-align:center;color:var(--tx3);font-size:.8rem;padding:16px;background:var(--bg2);border-radius:8px">Personel eksisi kaydı yok 👍</div>`;
+        } else {
+            const sortedRecords = [...personelEksiKayitlar].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            
+            sortedRecords.slice(0, 15).forEach(k => {
+                const dateStr = k.date || '';
+                const tarih = dateStr ? dateStr.substring(5).split('-').reverse().join('.') : '-';
+                const penalty = k.penalty || 0;
+                const personelName = k.personelName || 'Personel';
+                const checkTypeName = k.checkTypeName || k.checkType || 'Check';
+                const checkTime = k.checkTime || '';
+                
+                html += `
+                    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-size:.8rem">
+                        <span style="color:var(--tx3);min-width:40px">${tarih}</span>
+                        <span style="flex:1;color:var(--tx)">
+                            <span style="font-weight:600;color:#9b59b6">${personelName}</span> - ${checkTypeName}${checkTime ? ' · ' + checkTime : ''}
+                        </span>
+                        <span style="font-weight:700;color:#9b59b6;min-width:32px;text-align:right">${penalty}</span>
+                    </div>
+                `;
+            });
+            
+            if (personelEksiKayitlar.length > 15) {
+                html += `<div style="text-align:center;color:var(--tx3);font-size:.7rem;padding:6px">+${personelEksiKayitlar.length - 15} kayıt daha</div>`;
+            }
+        }
+        
+        html += `</div>`;
+    }
+    
     html += `</div>`;
     
-    showModal(`${p.name || p.codeName} - ${ayAdi} ${yil}`, html, '<button class="btn btn-ghost" onclick="closeModal()">Kapat</button>');
+    showModal(`${p.codeName || p.name} - ${ayAdi} ${yil}`, html, '<button class="btn btn-ghost" onclick="closeModal()">Kapat</button>');
 }
 
 function getMonthName(ay) {
