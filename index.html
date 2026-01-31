@@ -2614,7 +2614,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0710 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0720 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -12816,8 +12816,22 @@ async function fillMissingSupervisorPenalties(branch, month) {
         
         let writtenCount = 0;
         
+        // Personel rol cache'i (bölge müdürü kontrolü için)
+        const personelRoleCache = {};
+        const personelSnap = await db.collection('personel').where('status', '==', 'active').get();
+        personelSnap.forEach(doc => {
+            personelRoleCache[doc.id] = doc.data().role;
+        });
+        
         for (const doc of missedChecks.docs) {
             const check = doc.data();
+            
+            // ⚠️ BÖLGE MÜDÜRÜ KONTROLÜ: Checklist doldurmayan kişi bölge müdürü ise penalty yazılmaz
+            const personelRole = personelRoleCache[check.personelId];
+            if (personelRole === 'bolge_muduru') {
+                console.log(`[SupervisorPenalty] Bölge müdürü atlandı: ${check.personelName}`);
+                continue;
+            }
             
             // Bu check için penalty yazılmış mı kontrol et
             const checkTypeId = canonicalChecklistTypeId?.(check.checkType) || check.checkType?.toLowerCase().replace(/[^a-z]/g, '') || 'gunluk';
