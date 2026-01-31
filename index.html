@@ -2562,7 +2562,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0240 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0250 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -20902,10 +20902,11 @@ const DEFAULT_ARCHIVE_SETTINGS = {
     enabled: true,
     dayOfMonth: 1,          // Her ayın kaçında arşivle (1-28)
     hour: 5,                // Arşivleme saati (0-23)
-    minute: 0,              // Dakika (0-59)
+    minute: 0,              // Arşivleme dakikası (0, 15, 30, 45)
     autoReset: false,       // Otomatik sıfırlama aktif mi?
     autoResetDayOfMonth: 2, // Her ayın kaçında sıfırla (arşivden 1 gün sonra önerilir)
     autoResetHour: 3,       // Sıfırlama saati
+    autoResetMinute: 0,     // Sıfırlama dakikası
     lastArchived: {},       // { "Tuzla Port": "2026-01", "Şişli": "2026-01" }
     lastReset: {}           // { "Tuzla Port": "2026-01", "Şişli": "2026-01" }
 };
@@ -21166,6 +21167,7 @@ async function checkAndRunArchive() {
         const now = new Date();
         const today = now.getDate();
         const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
         
         // Geçen ayı hesapla
         const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -21175,8 +21177,16 @@ async function checkAndRunArchive() {
         const lastArchived = settings.lastArchived || {};
         const lastReset = settings.lastReset || {};
         
+        // Zaman kontrolü için yardımcı fonksiyon
+        const isTimeReached = (targetHour, targetMinute) => {
+            if (currentHour > targetHour) return true;
+            if (currentHour === targetHour && currentMinute >= targetMinute) return true;
+            return false;
+        };
+        
         // === 1. OTOMATİK ARŞİVLEME ===
-        if (settings.enabled && today === settings.dayOfMonth && currentHour >= settings.hour) {
+        const archiveMinute = settings.minute || 0;
+        if (settings.enabled && today === settings.dayOfMonth && isTimeReached(settings.hour, archiveMinute)) {
             for (const branch of branches) {
                 if (lastArchived[branch] === lastMonthStr) {
                     console.log(`[Archive] ${branch} - ${lastMonthStr} zaten arşivlenmiş`);
@@ -21187,7 +21197,8 @@ async function checkAndRunArchive() {
         }
         
         // === 2. OTOMATİK SIFIRLAMA ===
-        if (settings.autoReset && today === settings.autoResetDayOfMonth && currentHour >= settings.autoResetHour) {
+        const resetMinute = settings.autoResetMinute || 0;
+        if (settings.autoReset && today === settings.autoResetDayOfMonth && isTimeReached(settings.autoResetHour, resetMinute)) {
             for (const branch of branches) {
                 // Önce arşivlenmiş mi kontrol et
                 if (lastArchived[branch] !== lastMonthStr) {
@@ -25407,8 +25418,14 @@ function renderArchiveSettings() {
     // Saat seçenekleri (0-23)
     let hourOptions = '';
     for (let h = 0; h <= 23; h++) {
-        hourOptions += `<option value="${h}" ${settings.hour === h ? 'selected' : ''}>${String(h).padStart(2, '0')}:00</option>`;
+        hourOptions += `<option value="${h}" ${settings.hour === h ? 'selected' : ''}>${String(h).padStart(2, '0')}</option>`;
     }
+    
+    // Dakika seçenekleri (0, 15, 30, 45)
+    let minuteOptions = '';
+    [0, 15, 30, 45].forEach(m => {
+        minuteOptions += `<option value="${m}" ${settings.minute === m ? 'selected' : ''}>${String(m).padStart(2, '0')}</option>`;
+    });
     
     // Sıfırlama gün seçenekleri
     let resetDayOptions = '';
@@ -25419,8 +25436,14 @@ function renderArchiveSettings() {
     // Sıfırlama saat seçenekleri
     let resetHourOptions = '';
     for (let h = 0; h <= 23; h++) {
-        resetHourOptions += `<option value="${h}" ${settings.autoResetHour === h ? 'selected' : ''}>${String(h).padStart(2, '0')}:00</option>`;
+        resetHourOptions += `<option value="${h}" ${settings.autoResetHour === h ? 'selected' : ''}>${String(h).padStart(2, '0')}</option>`;
     }
+    
+    // Sıfırlama dakika seçenekleri
+    let resetMinuteOptions = '';
+    [0, 15, 30, 45].forEach(m => {
+        resetMinuteOptions += `<option value="${m}" ${settings.autoResetMinute === m ? 'selected' : ''}>${String(m).padStart(2, '0')}</option>`;
+    });
     
     container.innerHTML = `
         <div style="background:var(--bg3);border-radius:12px;padding:20px;margin-bottom:16px">
@@ -25453,9 +25476,12 @@ function renderArchiveSettings() {
                 <div class="form-group">
                     <label class="form-label">Arşivleme Saati</label>
                     <div style="display:flex;align-items:center;gap:8px">
-                        <span style="font-size:.85rem;color:var(--tx2)">Saat</span>
-                        <select id="archiveHour" class="form-input" style="width:100px">
+                        <select id="archiveHour" class="form-input" style="width:70px">
                             ${hourOptions}
+                        </select>
+                        <span style="font-size:.85rem;color:var(--tx2)">:</span>
+                        <select id="archiveMinute" class="form-input" style="width:70px">
+                            ${minuteOptions}
                         </select>
                     </div>
                 </div>
@@ -25499,9 +25525,12 @@ function renderArchiveSettings() {
                 <div class="form-group">
                     <label class="form-label">Sıfırlama Saati</label>
                     <div style="display:flex;align-items:center;gap:8px">
-                        <span style="font-size:.85rem;color:var(--tx2)">Saat</span>
-                        <select id="autoResetHour" class="form-input" style="width:100px">
+                        <select id="autoResetHour" class="form-input" style="width:70px">
                             ${resetHourOptions}
+                        </select>
+                        <span style="font-size:.85rem;color:var(--tx2)">:</span>
+                        <select id="autoResetMinute" class="form-input" style="width:70px">
+                            ${resetMinuteOptions}
                         </select>
                     </div>
                 </div>
@@ -25615,20 +25644,23 @@ async function saveArchiveSettings() {
         const enabled = document.getElementById('archiveEnabled')?.checked ?? true;
         const dayOfMonth = parseInt(document.getElementById('archiveDayOfMonth')?.value) || 1;
         const hour = parseInt(document.getElementById('archiveHour')?.value) || 5;
+        const minute = parseInt(document.getElementById('archiveMinute')?.value) || 0;
         
         // Otomatik sıfırlama ayarları
         const autoReset = document.getElementById('autoResetEnabled')?.checked ?? false;
         const autoResetDayOfMonth = parseInt(document.getElementById('autoResetDayOfMonth')?.value) || 2;
         const autoResetHour = parseInt(document.getElementById('autoResetHour')?.value) || 3;
+        const autoResetMinute = parseInt(document.getElementById('autoResetMinute')?.value) || 0;
         
         const newSettings = {
             enabled,
             dayOfMonth,
             hour,
-            minute: 0,
+            minute,
             autoReset,
             autoResetDayOfMonth,
             autoResetHour,
+            autoResetMinute,
             lastArchived: SYSTEM_CONFIG.archiveSettings?.lastArchived || {},
             lastReset: SYSTEM_CONFIG.archiveSettings?.lastReset || {}
         };
