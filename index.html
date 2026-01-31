@@ -2562,7 +2562,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0305 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0315 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -15080,7 +15080,10 @@ async function loadPuantajArsiv() {
             
             // Personel verilerini ekle
             Object.entries(d.personnel || {}).forEach(([pid, p]) => {
-                donemler[period].personnel[pid] = p;
+                // toplamPuan hesapla
+                const pToplamPuan = (p.otomatikPuan || 0) + (p.manuelPuan || 0) + (p.personelEksiPuan || 0);
+                
+                donemler[period].personnel[pid] = { ...p, toplamPuan: pToplamPuan };
                 donemler[period].personnelCount++;
                 toplamPersonel++;
                 
@@ -15094,10 +15097,10 @@ async function loadPuantajArsiv() {
                 
                 toplamKayit += (p.otomatikKayitlar?.length || 0) + (p.manuelKayitlar?.length || 0);
                 
-                if (p.toplamPuan < 0) {
+                if (pToplamPuan < 0) {
                     donemler[period].negatif++;
                     toplamNegatif++;
-                } else if (p.toplamPuan > 0) {
+                } else if (pToplamPuan > 0) {
                     donemler[period].pozitif++;
                     toplamPozitif++;
                 }
@@ -15361,12 +15364,15 @@ function showArsivDetail(period) {
     const [yil, ay] = period.split('-');
     const ayAdi = getMonthName(ay);
     
-    // Personel listesi (puana göre sırala) - yeni yapı: personnel
+    // Personel listesi - toplamPuan hesapla
     const personelList = Object.entries(data.personnel || data.personeller || {})
-        .map(([id, p]) => ({ id, ...p }))
-        .sort((a, b) => (b.toplamPuan || 0) - (a.toplamPuan || 0));
+        .map(([id, p]) => {
+            const toplamPuan = (p.otomatikPuan || 0) + (p.manuelPuan || 0) + (p.personelEksiPuan || 0);
+            return { id, ...p, toplamPuan };
+        })
+        .sort((a, b) => b.toplamPuan - a.toplamPuan);
     
-    const toplam = personelList.reduce((sum, p) => sum + (p.toplamPuan || 0), 0);
+    const toplam = personelList.reduce((sum, p) => sum + p.toplamPuan, 0);
     const kayitSayisi = personelList.reduce((sum, p) => 
         sum + (p.otomatikKayitlar?.length || 0) + (p.manuelKayitlar?.length || 0), 0);
     
@@ -15379,21 +15385,23 @@ function showArsivDetail(period) {
             <button onclick="document.getElementById('arsivDetailPanel').style.display='none'" style="padding:8px 16px;background:var(--bg3);border:none;border-radius:8px;color:var(--tx);cursor:pointer;font-weight:500">Kapat</button>
         </div>
         
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
     `;
     
     personelList.forEach(p => {
-        const puanColor = p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx)');
-        const bgColor = p.toplamPuan < 0 ? 'rgba(231,76,60,.03)' : 'var(--bg3)';
+        const puanColor = p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx2)');
+        const bgColor = p.toplamPuan < 0 ? 'rgba(231,76,60,.05)' : 'var(--bg3)';
         
         html += `
             <div onclick="showPersonelArsivDetail('${period}', '${p.id}')" style="background:${bgColor};border:1px solid var(--cardBorder);border-radius:10px;padding:12px;cursor:pointer;transition:all .2s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
-                <div style="font-weight:600;color:var(--tx);margin-bottom:4px;font-size:.9rem">${p.codeName || p.name || 'Bilinmeyen'}</div>
-                <div style="font-size:.7rem;color:var(--tx3);margin-bottom:8px">${p.role || '-'}</div>
-                <div style="display:flex;align-items:center;justify-content:space-between">
-                    <span style="font-size:1.4rem;font-weight:800;color:${puanColor}">${p.toplamPuan > 0 ? '+' : ''}${p.toplamPuan || 0}</span>
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+                    <div>
+                        <div style="font-weight:600;color:var(--tx);font-size:.85rem">${p.codeName || p.name || 'Bilinmeyen'}</div>
+                        <div style="font-size:.7rem;color:var(--tx3)">${p.role || '-'}</div>
+                    </div>
+                    <span style="font-size:1.1rem;font-weight:700;color:${puanColor}">${p.toplamPuan > 0 ? '+' : ''}${p.toplamPuan}</span>
                 </div>
-                <div style="display:flex;gap:6px;margin-top:8px;font-size:.65rem">
+                <div style="display:flex;gap:8px;font-size:.75rem;color:var(--tx2)">
                     <span style="color:#008c95">CF: ${p.otomatikPuan || 0}</span>
                     <span style="color:#3498db">M: ${p.manuelPuan || 0}</span>
                     ${p.personelEksiPuan ? `<span style="color:#9b59b6">P: ${p.personelEksiPuan}</span>` : ''}
@@ -15423,9 +15431,12 @@ function showPersonelArsivDetail(period, personelId) {
     
     if (!p) return;
     
+    // toplamPuan hesapla
+    const toplamPuan = (p.otomatikPuan || 0) + (p.manuelPuan || 0) + (p.personelEksiPuan || 0);
+    
     const [yil, ay] = period.split('-');
     const ayAdi = getMonthName(ay);
-    const puanColor = p.toplamPuan >= 0 ? '#27ae60' : '#e74c3c';
+    const puanColor = toplamPuan >= 0 ? '#27ae60' : '#e74c3c';
     
     let html = `
         <div style="max-height:70vh;overflow-y:auto">
@@ -15437,7 +15448,7 @@ function showPersonelArsivDetail(period, personelId) {
                         <div style="font-size:.85rem;color:var(--tx2)">${p.role || '-'} · ${ayAdi} ${yil}</div>
                     </div>
                     <div style="text-align:right">
-                        <div style="font-size:1.8rem;font-weight:800;color:${puanColor}">${p.toplamPuan >= 0 ? '+' : ''}${p.toplamPuan || 0}</div>
+                        <div style="font-size:1.8rem;font-weight:800;color:${puanColor}">${toplamPuan >= 0 ? '+' : ''}${toplamPuan}</div>
                         <div style="font-size:.7rem;color:var(--tx3)">TOPLAM PUAN</div>
                     </div>
                 </div>
