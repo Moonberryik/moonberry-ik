@@ -2614,7 +2614,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0600 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0605 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -15942,20 +15942,18 @@ function renderPersonelChips() {
     
     container.innerHTML = personeller.map((p, idx) => {
         const isSelected = window.comparisonState.selectedPersonel.includes(p.id);
-        const color = isSelected ? COMPARISON_COLORS[window.comparisonState.selectedPersonel.indexOf(p.id) % COMPARISON_COLORS.length] : 'var(--bg3)';
+        const color = isSelected ? COMPARISON_COLORS[window.comparisonState.selectedPersonel.indexOf(p.id) % COMPARISON_COLORS.length] : 'var(--tx3)';
         const initial = (p.codeName || p.name || '?').charAt(0).toUpperCase();
+        
+        const bgStyle = isSelected 
+            ? `background:${color}15;border:2px solid ${color};box-shadow:0 2px 8px ${color}30` 
+            : 'background:var(--bg3);border:2px solid transparent';
         
         return `
             <div onclick="togglePersonelSelection('${p.id}')" 
                 id="chip_${p.id}"
-                style="display:flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border-radius:24px;cursor:pointer;transition:all .2s;
-                    ${isSelected 
-                        ? `background:${color}15;border:2px solid ${color};box-shadow:0 2px 8px ${color}30` 
-                        : 'background:var(--bg3);border:2px solid transparent'}"
-                onmouseover="if(!${isSelected}) this.style.borderColor='var(--cardBorder)'"
-                onmouseout="if(!${isSelected}) this.style.borderColor='transparent'">
-                <div style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:600;color:#fff;
-                    background:${isSelected ? color : 'var(--tx3)'}">${initial}</div>
+                style="display:flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border-radius:24px;cursor:pointer;transition:all .2s;${bgStyle}">
+                <div style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:600;color:#fff;background:${color}">${initial}</div>
                 <div>
                     <div style="font-size:.8rem;font-weight:${isSelected ? '600' : '500'};color:${isSelected ? color : 'var(--tx)'}">${p.codeName || p.name}</div>
                 </div>
@@ -16154,12 +16152,15 @@ function updateComparisonRanking() {
         const color = p.total >= 0 ? '#27ae60' : '#e74c3c';
         const isSelected = window.comparisonState.selectedPersonel.includes(p.id);
         const selectedColor = isSelected ? COMPARISON_COLORS[window.comparisonState.selectedPersonel.indexOf(p.id) % COMPARISON_COLORS.length] : null;
+        const bgNormal = isSelected ? (selectedColor + '10') : 'var(--bg3)';
+        const bgHover = isSelected ? (selectedColor + '15') : 'var(--bg4)';
+        const borderColor = isSelected ? selectedColor : 'transparent';
         
         return `
             <div onclick="togglePersonelSelection('${p.id}')" 
-                style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${isSelected ? selectedColor + '10' : 'var(--bg3)'};border-radius:8px;cursor:pointer;transition:all .15s;border:1px solid ${isSelected ? selectedColor : 'transparent'}"
-                onmouseover="this.style.background='${isSelected ? selectedColor + '15' : 'var(--bg4)'}'"
-                onmouseout="this.style.background='${isSelected ? selectedColor + '10' : 'var(--bg3)}'">
+                style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${bgNormal};border-radius:8px;cursor:pointer;transition:all .15s;border:1px solid ${borderColor}"
+                onmouseover="this.style.background='${bgHover}'"
+                onmouseout="this.style.background='${bgNormal}'">
                 <span style="font-size:1rem;min-width:24px;text-align:center">${medal}</span>
                 <div style="flex:1;min-width:0">
                     <div style="font-size:.8rem;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.codeName || p.name}</div>
