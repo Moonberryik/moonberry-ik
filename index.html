@@ -2614,7 +2614,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0615 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0635 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -6961,18 +6961,28 @@ function formatPhoneNumber(phone) {
         digits = digits.substring(1);
     }
     
-    // Başındaki 90'ı kaldır (varsa)
-    if (digits.startsWith('90') && digits.length > 10) {
+    // Başındaki 90'ı kaldır - Türkiye ülke kodu (12 hane: 905XXXXXXXXX)
+    if (digits.startsWith('90') && digits.length >= 12) {
         digits = digits.substring(2);
+    }
+    
+    // 95 ile başlıyorsa ve 11 hane ise, 9'u kaldır
+    // (Kullanıcı 905 yerine 95 yazdı: 95312345678 → 5312345678)
+    if (digits.startsWith('95') && digits.length === 11) {
+        digits = digits.substring(1);
     }
     
     // 10 rakam olmalı (5XX XXX XX XX)
     if (digits.length !== 10) {
-        // Format yapılamadı, olduğu gibi döndür
         return phone;
     }
     
-    // Format: +90 XXX XXX XX XX
+    // İlk rakam 5 olmalı (Türkiye cep telefonu)
+    if (!digits.startsWith('5')) {
+        return phone;
+    }
+    
+    // Format: +90 5XX XXX XX XX
     return `+90 ${digits.substring(0, 3)} ${digits.substring(3, 6)} ${digits.substring(6, 8)} ${digits.substring(8, 10)}`;
 }
 
@@ -7184,11 +7194,20 @@ function selectPersonelBank(bankName) {
 function formatPhoneInput(input) {
     let value = input.value.replace(/\D/g, '');
     
-    // Başındaki 0 veya 90'ı kaldır
+    // Başındaki 0'ı kaldır (05xx → 5xx)
     if (value.startsWith('0')) value = value.substring(1);
-    if (value.startsWith('90') && value.length > 10) value = value.substring(2);
     
-    // Max 10 rakam
+    // Başındaki 90'ı kaldır - Türkiye ülke kodu
+    if (value.startsWith('90') && value.length >= 12) {
+        value = value.substring(2);
+    }
+    
+    // 9 ile başlıyorsa ve hemen 5 geliyorsa, 9'u kaldır (95xx → 5xx)
+    if (value.startsWith('95') && value.length >= 10) {
+        value = value.substring(1);
+    }
+    
+    // Max 10 rakam (5XX XXX XX XX)
     value = value.substring(0, 10);
     
     // Format: +90 5XX XXX XX XX
@@ -16891,7 +16910,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         limits: { shift_history_weeks: 1 }
     },
     magaza_mudur_yardimcisi: {
-        pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, primSistemi: { view: true, edit: false }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
+        pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true, add: true }, puantaj: { view: true, edit: true }, primSistemi: { view: true, edit: false }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false, admin_yedekler: false },
@@ -16899,7 +16918,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         limits: { shift_history_weeks: 5 }
     },
     magaza_muduru: {
-        pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, primSistemi: { view: true, edit: false }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
+        pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true, add: true }, puantaj: { view: true, edit: true }, primSistemi: { view: true, edit: false }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false, admin_yedekler: false },
