@@ -2562,7 +2562,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0500 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0530 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -15135,149 +15135,226 @@ async function loadPuantajArsiv() {
             const ayAdilar = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
             
             // Her ay için toplam puanları hesapla
-            const aylikPuanlar = aylar.map(ay => {
+            const aylikPuanlar = aylar.map((ay, idx) => {
                 const period = `${yil}-${ay}`;
                 const d = donemler[period];
-                if (!d) return { total: 0, otomatik: 0, manuel: 0, personelEksi: 0, personelCount: 0 };
+                if (!d) return { ayIdx: idx, total: 0, otomatik: 0, manuel: 0, personelEksi: 0, personelCount: 0, hasData: false };
                 
                 let total = 0, otomatik = 0, manuel = 0, personelEksi = 0;
                 Object.values(d.personnel).forEach(p => {
-                    total += p.toplamPuan || 0;
+                    const pToplam = (p.otomatikPuan || 0) + (p.manuelPuan || 0) + (p.personelEksiPuan || 0);
+                    total += pToplam;
                     otomatik += p.otomatikPuan || 0;
                     manuel += p.manuelPuan || 0;
                     personelEksi += p.personelEksiPuan || 0;
                 });
                 
-                return { total, otomatik, manuel, personelEksi, personelCount: d.personnelCount };
+                return { ayIdx: idx, total, otomatik, manuel, personelEksi, personelCount: d.personnelCount, hasData: true };
             });
             
-            const maxVal = Math.max(...aylikPuanlar.map(a => Math.abs(a.total)), 1);
-            const chartHeight = 150;
-            const chartWidth = 340;
-            const barWidth = 18;
-            const gap = 10;
+            // Sadece veri olan ayları filtrele
+            const veriOlanAylar = aylikPuanlar.filter(a => a.hasData);
             
-            let barHtml = `<svg width="100%" height="${chartHeight + 40}" viewBox="0 0 ${chartWidth + 30} ${chartHeight + 40}" preserveAspectRatio="xMidYMid meet">`;
-            
-            // Y ekseni çizgisi
-            barHtml += `<line x1="30" y1="10" x2="30" y2="${chartHeight + 10}" stroke="var(--cardBorder)" stroke-width="1"/>`;
-            // X ekseni çizgisi (ortada - 0 çizgisi)
-            barHtml += `<line x1="30" y1="${chartHeight/2 + 10}" x2="${chartWidth + 20}" y2="${chartHeight/2 + 10}" stroke="var(--cardBorder)" stroke-width="1" stroke-dasharray="4"/>`;
-            
-            // Çizgi grafik için noktalar
-            let linePoints = [];
-            
-            aylar.forEach((ay, i) => {
-                const data = aylikPuanlar[i];
-                const x = 40 + i * (barWidth + gap);
-                const centerY = chartHeight/2 + 10;
+            if (veriOlanAylar.length === 0) {
+                trendChart.innerHTML = `
+                    <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--tx3)">
+                        <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="opacity:.5;margin-bottom:12px">
+                            <path d="M3 3v18h18"/><path d="M18 9l-5 5-4-4-3 3"/>
+                        </svg>
+                        <div style="font-size:.85rem">Bu yıla ait veri yok</div>
+                    </div>`;
+            } else if (veriOlanAylar.length === 1) {
+                // Tek ay varsa özel görünüm
+                const d = veriOlanAylar[0];
+                const puanColor = d.total >= 0 ? '#27ae60' : '#e74c3c';
+                trendChart.innerHTML = `
+                    <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                        <div style="font-size:.75rem;color:var(--tx3);margin-bottom:8px">${ayAdilar[d.ayIdx]} ${yil}</div>
+                        <div style="font-size:2.5rem;font-weight:800;color:${puanColor};line-height:1">${d.total >= 0 ? '+' : ''}${d.total}</div>
+                        <div style="font-size:.7rem;color:var(--tx3);margin-top:4px">Toplam Puan</div>
+                        <div style="display:flex;gap:16px;margin-top:16px">
+                            <div style="text-align:center">
+                                <div style="font-size:1rem;font-weight:700;color:#008c95">${d.otomatik}</div>
+                                <div style="font-size:.6rem;color:var(--tx3)">CF</div>
+                            </div>
+                            <div style="text-align:center">
+                                <div style="font-size:1rem;font-weight:700;color:#3498db">${d.manuel >= 0 ? '+' : ''}${d.manuel}</div>
+                                <div style="font-size:.6rem;color:var(--tx3)">Manuel</div>
+                            </div>
+                            <div style="text-align:center">
+                                <div style="font-size:1rem;font-weight:700;color:#9b59b6">${d.personelEksi}</div>
+                                <div style="font-size:.6rem;color:var(--tx3)">P.Eksi</div>
+                            </div>
+                        </div>
+                        <div style="font-size:.65rem;color:var(--tx3);margin-top:12px;opacity:.7">Trend için daha fazla ay gerekli</div>
+                    </div>`;
+            } else {
+                // Birden fazla ay - bar chart göster
+                const maxVal = Math.max(...veriOlanAylar.map(a => Math.abs(a.total)), 1);
+                const chartHeight = 140;
+                const barWidth = Math.min(28, Math.floor(280 / veriOlanAylar.length) - 8);
+                const gap = 8;
+                const chartWidth = veriOlanAylar.length * (barWidth + gap) + 40;
                 
-                // Bar yüksekliği (pozitif yukarı, negatif aşağı)
-                const barHeight = data.total !== 0 ? Math.abs(data.total / maxVal) * (chartHeight/2 - 10) : 0;
-                const y = data.total >= 0 ? centerY - barHeight : centerY;
-                const color = data.total >= 0 ? '#27ae60' : '#e74c3c';
+                let barHtml = `<svg width="100%" height="${chartHeight + 35}" viewBox="0 0 ${chartWidth} ${chartHeight + 35}" preserveAspectRatio="xMidYMid meet">`;
                 
-                if (barHeight > 0) {
-                    barHtml += `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" fill="${color}" rx="3" style="cursor:pointer;opacity:0.8" onclick="showArsivDetail('${yil}-${ay}')">
-                        <title>${ayAdilar[i]}: ${data.total > 0 ? '+' : ''}${data.total} puan (${data.personelCount} kişi)</title>
-                    </rect>`;
-                }
+                // Arka plan grid
+                barHtml += `<rect x="30" y="5" width="${chartWidth - 40}" height="${chartHeight}" fill="var(--bg3)" rx="8" opacity="0.3"/>`;
                 
-                // Çizgi grafik noktası
-                const lineY = centerY - (data.total / maxVal) * (chartHeight/2 - 10);
-                linePoints.push(`${x + barWidth/2},${lineY}`);
+                // 0 çizgisi
+                const centerY = chartHeight/2 + 5;
+                barHtml += `<line x1="35" y1="${centerY}" x2="${chartWidth - 10}" y2="${centerY}" stroke="var(--cardBorder)" stroke-width="1" stroke-dasharray="4,4"/>`;
                 
-                // Ay etiketi
-                barHtml += `<text x="${x + barWidth/2}" y="${chartHeight + 30}" text-anchor="middle" font-size="9" fill="var(--tx3)">${ayAdilar[i]}</text>`;
+                // Çizgi grafik noktaları
+                let linePoints = [];
                 
-                // Puan değeri (bar üstünde/altında)
-                if (data.total !== 0) {
-                    const textY = data.total >= 0 ? y - 4 : y + barHeight + 12;
-                    barHtml += `<text x="${x + barWidth/2}" y="${textY}" text-anchor="middle" font-size="8" fill="${color}" font-weight="600">${data.total > 0 ? '+' : ''}${data.total}</text>`;
-                }
-            });
-            
-            // Çizgi grafik
-            if (linePoints.length > 1) {
-                barHtml += `<polyline points="${linePoints.join(' ')}" fill="none" stroke="#9b59b6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
-                // Noktalar
-                linePoints.forEach((point, i) => {
-                    const [px, py] = point.split(',');
-                    barHtml += `<circle cx="${px}" cy="${py}" r="4" fill="#9b59b6" stroke="#fff" stroke-width="2"/>`;
+                veriOlanAylar.forEach((data, i) => {
+                    const x = 40 + i * (barWidth + gap);
+                    
+                    // Bar
+                    const barHeight = data.total !== 0 ? Math.abs(data.total / maxVal) * (chartHeight/2 - 15) : 0;
+                    const y = data.total >= 0 ? centerY - barHeight : centerY;
+                    const color = data.total >= 0 ? '#27ae60' : '#e74c3c';
+                    
+                    if (barHeight > 0) {
+                        barHtml += `
+                            <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" fill="${color}" rx="4" style="cursor:pointer;transition:opacity .2s" 
+                                onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'" opacity="0.85"
+                                onclick="showArsivDetail('${yil}-${aylar[data.ayIdx]}')">
+                                <title>${ayAdilar[data.ayIdx]}: ${data.total > 0 ? '+' : ''}${data.total} (${data.personelCount} kişi)</title>
+                            </rect>`;
+                        
+                        // Puan değeri
+                        const textY = data.total >= 0 ? y - 6 : y + barHeight + 14;
+                        barHtml += `<text x="${x + barWidth/2}" y="${textY}" text-anchor="middle" font-size="10" fill="${color}" font-weight="700">${data.total > 0 ? '+' : ''}${data.total}</text>`;
+                    }
+                    
+                    // Çizgi noktası
+                    const lineY = centerY - (data.total / maxVal) * (chartHeight/2 - 15);
+                    linePoints.push({ x: x + barWidth/2, y: lineY, period: `${yil}-${aylar[data.ayIdx]}` });
+                    
+                    // Ay etiketi
+                    barHtml += `<text x="${x + barWidth/2}" y="${chartHeight + 22}" text-anchor="middle" font-size="10" fill="var(--tx2)" font-weight="500">${ayAdilar[data.ayIdx]}</text>`;
                 });
+                
+                // Trend çizgisi
+                if (linePoints.length > 1) {
+                    const pathD = linePoints.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+                    barHtml += `<path d="${pathD}" fill="none" stroke="#9b59b6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>`;
+                    
+                    linePoints.forEach(p => {
+                        barHtml += `<circle cx="${p.x}" cy="${p.y}" r="5" fill="#9b59b6" stroke="var(--cardBg)" stroke-width="2" style="cursor:pointer" onclick="showArsivDetail('${p.period}')"/>`;
+                    });
+                }
+                
+                barHtml += '</svg>';
+                
+                // Legend - kompakt
+                barHtml += `
+                    <div style="display:flex;justify-content:center;gap:12px;margin-top:4px;font-size:.65rem">
+                        <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;background:#27ae60;border-radius:2px"></div><span style="color:var(--tx3)">Pozitif</span></div>
+                        <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;background:#e74c3c;border-radius:2px"></div><span style="color:var(--tx3)">Negatif</span></div>
+                        <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:3px;background:#9b59b6;border-radius:1px"></div><span style="color:var(--tx3)">Trend</span></div>
+                    </div>`;
+                
+                trendChart.innerHTML = barHtml;
             }
-            
-            barHtml += '</svg>';
-            
-            // Legend
-            barHtml += `
-                <div style="display:flex;justify-content:center;gap:16px;margin-top:8px;font-size:.7rem">
-                    <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:12px;background:#27ae60;border-radius:2px"></div><span style="color:var(--tx3)">Pozitif</span></div>
-                    <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:12px;background:#e74c3c;border-radius:2px"></div><span style="color:var(--tx3)">Negatif</span></div>
-                    <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:3px;background:#9b59b6;border-radius:2px"></div><span style="color:var(--tx3)">Trend</span></div>
-                </div>
-            `;
-            
-            trendChart.innerHTML = barHtml;
         }
         
-        // Pie Chart - Puan dağılımı (Otomatik / Manuel / Personel Eksisi)
+        // Pie Chart - Premium Donut (Puan dağılımı)
         if (pieChart) {
-            const total = Math.abs(toplamOtomatik) + Math.abs(toplamManuel) + Math.abs(toplamPersonelEksi);
+            const cfAbs = Math.abs(toplamOtomatik);
+            const manuelAbs = Math.abs(toplamManuel);
+            const pEksiAbs = Math.abs(toplamPersonelEksi);
+            const total = cfAbs + manuelAbs + pEksiAbs;
             
             if (total > 0) {
                 const segments = [
-                    { value: Math.abs(toplamOtomatik), label: 'CF (Otomatik)', color: '#008c95' },
-                    { value: Math.abs(toplamManuel), label: 'Manuel', color: '#3498db' },
-                    { value: Math.abs(toplamPersonelEksi), label: 'Personel Eksisi', color: '#9b59b6' }
+                    { value: cfAbs, label: 'CF (Otomatik)', color: '#008c95', raw: toplamOtomatik },
+                    { value: manuelAbs, label: 'Manuel', color: '#3498db', raw: toplamManuel },
+                    { value: pEksiAbs, label: 'Personel Eksisi', color: '#9b59b6', raw: toplamPersonelEksi }
                 ].filter(s => s.value > 0);
                 
-                let startAngle = 0;
-                let pieHtml = '<svg width="140" height="140" viewBox="0 0 140 140">';
+                const size = 130;
+                const cx = size / 2;
+                const cy = size / 2;
+                const outerR = 55;
+                const innerR = 38;
                 
-                segments.forEach(seg => {
+                let startAngle = -90; // Üstten başla
+                let pieHtml = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`;
+                
+                // Arka plan ring
+                pieHtml += `<circle cx="${cx}" cy="${cy}" r="${(outerR + innerR) / 2}" fill="none" stroke="var(--bg3)" stroke-width="${outerR - innerR}" opacity="0.5"/>`;
+                
+                segments.forEach((seg, idx) => {
                     const percentage = seg.value / total;
                     const angle = percentage * 360;
                     const endAngle = startAngle + angle;
                     
-                    const startRad = (startAngle - 90) * Math.PI / 180;
-                    const endRad = (endAngle - 90) * Math.PI / 180;
+                    // Arc path için hesaplamalar
+                    const startRad = startAngle * Math.PI / 180;
+                    const endRad = endAngle * Math.PI / 180;
+                    const midR = (outerR + innerR) / 2;
                     
-                    const x1 = 70 + 55 * Math.cos(startRad);
-                    const y1 = 70 + 55 * Math.sin(startRad);
-                    const x2 = 70 + 55 * Math.cos(endRad);
-                    const y2 = 70 + 55 * Math.sin(endRad);
+                    const x1 = cx + midR * Math.cos(startRad);
+                    const y1 = cy + midR * Math.sin(startRad);
+                    const x2 = cx + midR * Math.cos(endRad);
+                    const y2 = cy + midR * Math.sin(endRad);
                     
                     const largeArc = angle > 180 ? 1 : 0;
                     
-                    pieHtml += `<path d="M70,70 L${x1},${y1} A55,55 0 ${largeArc},1 ${x2},${y2} Z" fill="${seg.color}" style="cursor:pointer">
-                        <title>${seg.label}: ${seg.value} (${Math.round(percentage*100)}%)</title>
-                    </path>`;
+                    // Donut segment (stroke ile çizilen arc)
+                    pieHtml += `
+                        <circle cx="${cx}" cy="${cy}" r="${midR}" fill="none" 
+                            stroke="${seg.color}" stroke-width="${outerR - innerR}"
+                            stroke-dasharray="${percentage * 2 * Math.PI * midR} ${2 * Math.PI * midR}"
+                            stroke-dashoffset="${-startAngle / 360 * 2 * Math.PI * midR - Math.PI * midR / 2}"
+                            style="cursor:pointer;transition:opacity .2s"
+                            onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.9'" opacity="0.9">
+                            <title>${seg.label}: ${seg.raw} (${Math.round(percentage * 100)}%)</title>
+                        </circle>`;
                     
                     startAngle = endAngle;
                 });
                 
-                // Merkez daire (donut efekti)
-                pieHtml += '<circle cx="70" cy="70" r="30" fill="var(--cardBg)"/>';
-                pieHtml += `<text x="70" y="75" text-anchor="middle" font-size="12" font-weight="700" fill="var(--tx)">${total}</text>`;
+                // Merkez metin
+                const toplamPuan = toplamOtomatik + toplamManuel + toplamPersonelEksi;
+                const toplamColor = toplamPuan >= 0 ? '#27ae60' : '#e74c3c';
+                pieHtml += `
+                    <text x="${cx}" y="${cy - 4}" text-anchor="middle" font-size="18" font-weight="800" fill="${toplamColor}">${toplamPuan >= 0 ? '+' : ''}${toplamPuan}</text>
+                    <text x="${cx}" y="${cy + 12}" text-anchor="middle" font-size="9" fill="var(--tx3)">TOPLAM</text>
+                `;
+                
                 pieHtml += '</svg>';
                 
-                // Legend
-                pieHtml += '<div style="margin-left:16px;font-size:.75rem">';
+                // Legend - dikey, sağda
+                pieHtml += '<div style="margin-left:20px;display:flex;flex-direction:column;justify-content:center;gap:10px">';
                 segments.forEach(seg => {
-                    pieHtml += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-                        <div style="width:10px;height:10px;background:${seg.color};border-radius:2px"></div>
-                        <span style="color:var(--tx2)">${seg.label}</span>
-                        <span style="color:var(--tx);font-weight:600;margin-left:auto">${seg.value}</span>
-                    </div>`;
+                    const pct = Math.round((seg.value / total) * 100);
+                    pieHtml += `
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <div style="width:12px;height:12px;background:${seg.color};border-radius:3px;flex-shrink:0"></div>
+                            <div>
+                                <div style="font-size:.7rem;color:var(--tx2)">${seg.label}</div>
+                                <div style="font-size:.85rem;font-weight:700;color:var(--tx)">${seg.raw} <span style="font-weight:400;color:var(--tx3);font-size:.7rem">(${pct}%)</span></div>
+                            </div>
+                        </div>`;
                 });
                 pieHtml += '</div>';
                 
                 pieChart.innerHTML = pieHtml;
                 pieChart.style.display = 'flex';
                 pieChart.style.alignItems = 'center';
+                pieChart.style.justifyContent = 'center';
             } else {
-                pieChart.innerHTML = '<div style="color:var(--tx3);font-size:.85rem">Veri yok</div>';
+                pieChart.innerHTML = `
+                    <div style="text-align:center;color:var(--tx3)">
+                        <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="opacity:.4;margin-bottom:8px">
+                            <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+                        </svg>
+                        <div style="font-size:.85rem">Veri yok</div>
+                    </div>`;
             }
         }
         
