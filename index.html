@@ -2614,7 +2614,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0635 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0645 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -9711,14 +9711,13 @@ async function loadPersonelList() {
     const container = document.getElementById('personelListContainer');
     if (!container) return;
     
-    // "Yeni Personel" butonu yetki kontrolü
+    // "Yeni Personel" butonu yetki kontrolü - special.add_personel
     const btnNewPersonel = document.getElementById('btnNewPersonel');
     if (btnNewPersonel) {
-        const isYonetici = currentUser?.role === 'yonetici';
         const perms = window.userAdvancedPermissions;
-        const canAddPersonel = isYonetici || perms?.pages?.personel?.add === true;
+        const canAddPersonel = perms?.special?.add_personel === true;
         btnNewPersonel.style.display = canAddPersonel ? '' : 'none';
-        console.log('[Personel] Yeni Personel butonu:', canAddPersonel ? 'görünür' : 'gizli');
+        console.log('[Personel] Yeni Personel butonu:', canAddPersonel ? 'görünür' : 'gizli', '| Rol:', currentUser?.role);
     }
     
     container.innerHTML = '<p style="color:var(--tx2);text-align:center;padding:20px">Yükleniyor...</p>';
@@ -16881,6 +16880,7 @@ const PERMISSION_STRUCTURE = {
         { id: 'admin_yedekler', label: 'Yedekler' }
     ],
     special: [
+        { id: 'add_personel', label: 'Personel ekleyebilir' },
         { id: 'print_shift', label: 'Shift planını yazdırabilir' },
         { id: 'create_shift_week', label: 'Yeni shift haftası oluşturabilir' },
         { id: 'view_checklist_history', label: 'Geçmiş checklisti görebilir' },
@@ -16906,7 +16906,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: false, edit: false }, tutanak: { view: false, edit: false }, savunma: { view: false, edit: false }, fesih: { view: false, edit: false }, istifa: { view: false, edit: false }, ibraname: { view: false, edit: false } },
         forms: { borc: { view: false, edit: false }, avans: { view: false, edit: false }, zimmet: { view: false, edit: false } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: false, admin_sablonlar: false, admin_oturumlar: false, admin_yedekler: false },
-        special: { print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false, manage_branches: false, run_autopuan: true },
+        special: { add_personel: false, print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false, manage_branches: false, run_autopuan: true },
         limits: { shift_history_weeks: 1 }
     },
     magaza_mudur_yardimcisi: {
@@ -16914,7 +16914,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false, admin_yedekler: false },
-        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false, manage_branches: false, run_autopuan: true },
+        special: { add_personel: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false, manage_branches: false, run_autopuan: true },
         limits: { shift_history_weeks: 5 }
     },
     magaza_muduru: {
@@ -16922,23 +16922,23 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false, admin_yedekler: false },
-        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false, manage_branches: false, run_autopuan: true },
+        special: { add_personel: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false, manage_branches: false, run_autopuan: true },
         limits: { shift_history_weeks: 5 }
     },
     bolge_muduru: {
-        pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, primSistemi: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
+        pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true, add: true }, puantaj: { view: true, edit: true }, primSistemi: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: true }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: true, admin_kullanicilar: false, admin_puantaj: true, admin_subeler: true, admin_pozisyonlar: true, admin_ihlaller: true, admin_sablonlar: true, admin_oturumlar: true, admin_yedekler: false },
-        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true, view_password: true, change_others_password: true, add_announcement: true, manage_branches: false, run_autopuan: true },
+        special: { add_personel: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true, view_password: true, change_others_password: true, add_announcement: true, manage_branches: false, run_autopuan: true },
         limits: { shift_history_weeks: 999 }
     },
     yonetici: {
-        pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
+        pages: { dashboard: { view: true, edit: true }, personel: { view: true, edit: true, add: true }, puantaj: { view: true, edit: true }, shift: { view: true, edit: true }, checklist: { view: true, edit: true }, katalog: { view: true, edit: true } },
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: true }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: true, admin_kullanicilar: true, admin_puantaj: true, admin_subeler: true, admin_pozisyonlar: true, admin_ihlaller: true, admin_sablonlar: true, admin_oturumlar: true, admin_yedekler: true },
-        special: { print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true, view_password: true, change_others_password: true, add_announcement: true, manage_branches: true, run_autopuan: true },
+        special: { add_personel: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true, view_password: true, change_others_password: true, add_announcement: true, manage_branches: true, run_autopuan: true },
         limits: { shift_history_weeks: 999 }
     }
 };
@@ -17586,18 +17586,13 @@ async function loadUserAvatar() {
 async function loadUserAdvancedPermissions() {
     if (!currentUser) return;
     
-    // Yönetici için de applyAdvancedPermissions çağrılmalı (tab'ları açmak için)
-    if (currentUser.role === 'yonetici') {
-        window.userAdvancedPermissions = null;
-        applyAdvancedPermissions();
-        return;
-    }
-    
     try {
+        // Önce Firebase'den özelleştirilmiş izinleri kontrol et
         const doc = await db.collection('advancedPermissions').doc(currentUser.role).get();
         if (doc.exists) {
             window.userAdvancedPermissions = doc.data();
         } else {
+            // Firebase'de yoksa varsayılan izinleri kullan
             window.userAdvancedPermissions = DEFAULT_ROLE_PERMISSIONS[currentUser.role] || null;
         }
         
@@ -17605,6 +17600,9 @@ async function loadUserAdvancedPermissions() {
         applyAdvancedPermissions();
     } catch (error) {
         console.error('Kullanıcı izin yükleme hatası:', error);
+        // Hata durumunda varsayılan izinleri kullan
+        window.userAdvancedPermissions = DEFAULT_ROLE_PERMISSIONS[currentUser.role] || null;
+        applyAdvancedPermissions();
     }
 }
 
@@ -17746,10 +17744,10 @@ function applyAdvancedPermissions() {
     // Sidebar'ı yetkilere göre güncelle
     updateSidebarByPermissions(perms);
     
-    // "Yeni Personel" butonu yetkisi - personel.add yetkisi olmayan göremez
+    // "Yeni Personel" butonu yetkisi - special.add_personel yetkisi olmayan göremez
     const btnNewPersonel = document.getElementById('btnNewPersonel');
     if (btnNewPersonel) {
-        const canAddPersonel = perms.pages?.personel?.add === true;
+        const canAddPersonel = perms.special?.add_personel === true;
         btnNewPersonel.style.display = canAddPersonel ? '' : 'none';
         console.log('[Permission] Yeni Personel butonu:', canAddPersonel ? 'görünür' : 'gizli');
     }
