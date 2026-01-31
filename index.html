@@ -2562,7 +2562,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0315 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0430 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -15368,7 +15368,10 @@ function showArsivDetail(period) {
     const personelList = Object.entries(data.personnel || data.personeller || {})
         .map(([id, p]) => {
             const toplamPuan = (p.otomatikPuan || 0) + (p.manuelPuan || 0) + (p.personelEksiPuan || 0);
-            return { id, ...p, toplamPuan };
+            const autoMissed = (p.otomatikKayitlar || []).filter(k => k.points < 0).length;
+            const autoOnTime = (p.otomatikKayitlar || []).filter(k => k.points > 0).length;
+            const kayitSayisi = (p.manuelKayitlar || []).length;
+            return { id, ...p, toplamPuan, autoMissed, autoOnTime, kayitSayisi };
         })
         .sort((a, b) => b.toplamPuan - a.toplamPuan);
     
@@ -15385,26 +15388,101 @@ function showArsivDetail(period) {
             <button onclick="document.getElementById('arsivDetailPanel').style.display='none'" style="padding:8px 16px;background:var(--bg3);border:none;border-radius:8px;color:var(--tx);cursor:pointer;font-weight:500">Kapat</button>
         </div>
         
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
     `;
     
     personelList.forEach(p => {
+        // Rol renkleri
+        const role = p.role || 'barista';
+        const isMudurRole = ['magaza_muduru', 'mudur_yardimcisi', 'magaza_mudur_yardimcisi'].includes(role);
+        const isBolgeMuduru = role === 'bolge_muduru';
+        
+        const roleColors = {
+            'bolge_muduru': '#1a5276',
+            'magaza_muduru': '#008c95',
+            'mudur_yardimcisi': '#16a085',
+            'magaza_mudur_yardimcisi': '#16a085',
+            'barista': '#ff8674',
+            'kidemli_barista': '#e67e22',
+            'part_time': '#9b59b6'
+        };
+        const roleColor = roleColors[role] || '#ff8674';
+        
+        const roleLabels = {
+            'bolge_muduru': 'Bölge Müdürü',
+            'magaza_muduru': 'Mağaza Müdürü',
+            'mudur_yardimcisi': 'Müdür Yardımcısı',
+            'magaza_mudur_yardimcisi': 'Müdür Yardımcısı',
+            'barista': 'Barista / Servis',
+            'kidemli_barista': 'Kıdemli Barista',
+            'part_time': 'Part Time'
+        };
+        const position = roleLabels[role] || 'Barista / Servis';
+        
         const puanColor = p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx2)');
-        const bgColor = p.toplamPuan < 0 ? 'rgba(231,76,60,.05)' : 'var(--bg3)';
+        const puanSign = p.toplamPuan > 0 ? '+' : '';
+        
+        // Badge
+        const badges = {
+            'bolge_muduru': { badge: 'BÖLGE', icon: '👔', gradient: 'linear-gradient(135deg,#1a5276,#2980b9)' },
+            'magaza_muduru': { badge: 'MÜDÜR', icon: '☕', gradient: 'linear-gradient(135deg,#008c95,#00b4a8)' },
+            'mudur_yardimcisi': { badge: 'YARDIMCI', icon: '🎯', gradient: 'linear-gradient(135deg,#16a085,#1abc9c)' },
+            'magaza_mudur_yardimcisi': { badge: 'YARDIMCI', icon: '🎯', gradient: 'linear-gradient(135deg,#16a085,#1abc9c)' },
+            'barista': { badge: 'BARİSTA', icon: '🧃', gradient: 'linear-gradient(135deg,#ff8674,#ff6b5b)' },
+            'kidemli_barista': { badge: 'KIDEMLİ', icon: '⭐', gradient: 'linear-gradient(135deg,#e67e22,#f39c12)' },
+            'part_time': { badge: 'PART TIME', icon: '⏰', gradient: 'linear-gradient(135deg,#9b59b6,#8e44ad)' }
+        };
+        const roleStyle = badges[role] || badges['barista'];
         
         html += `
-            <div onclick="showPersonelArsivDetail('${period}', '${p.id}')" style="background:${bgColor};border:1px solid var(--cardBorder);border-radius:10px;padding:12px;cursor:pointer;transition:all .2s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-                    <div>
-                        <div style="font-weight:600;color:var(--tx);font-size:.85rem">${p.codeName || p.name || 'Bilinmeyen'}</div>
-                        <div style="font-size:.7rem;color:var(--tx3)">${p.role || '-'}</div>
+            <div style="position:relative;background:linear-gradient(135deg,${roleColor}08,var(--cardBg));border:2px solid ${roleColor}30;border-left:4px solid ${roleColor};border-radius:12px;padding:16px;transition:all .2s;cursor:pointer" onclick="showPersonelArsivDetail('${period}', '${p.id}')" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                <!-- Header -->
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <div style="width:36px;height:36px;background:${roleStyle.gradient};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;font-weight:600">
+                            ${(p.codeName || p.name || '?').charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                                <span style="font-weight:600;font-size:.95rem;color:var(--tx)">${p.codeName || p.name || 'Bilinmeyen'}</span>
+                                <span style="font-size:.55rem;background:${roleColor}15;color:${roleColor};padding:2px 6px;border-radius:4px;font-weight:700">${roleStyle.icon} ${roleStyle.badge}</span>
+                            </div>
+                            <div style="font-size:.75rem;color:${roleColor};font-weight:500;margin-top:2px">${position}</div>
+                        </div>
                     </div>
-                    <span style="font-size:1.1rem;font-weight:700;color:${puanColor}">${p.toplamPuan > 0 ? '+' : ''}${p.toplamPuan}</span>
+                    <div style="text-align:right">
+                        <div style="font-size:1.4rem;font-weight:800;color:${puanColor};line-height:1">${puanSign}${p.toplamPuan}</div>
+                        <div style="font-size:.65rem;color:var(--tx3);text-transform:uppercase">toplam</div>
+                    </div>
                 </div>
-                <div style="display:flex;gap:8px;font-size:.75rem;color:var(--tx2)">
-                    <span style="color:#008c95">CF: ${p.otomatikPuan || 0}</span>
-                    <span style="color:#3498db">M: ${p.manuelPuan || 0}</span>
-                    ${p.personelEksiPuan ? `<span style="color:#9b59b6">P: ${p.personelEksiPuan}</span>` : ''}
+                
+                <!-- Puan Detayı -->
+                <div style="display:flex;gap:6px;margin-bottom:12px;background:var(--bg3);padding:10px;border-radius:8px">
+                    <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
+                        <div style="font-size:.6rem;color:var(--tx3);margin-bottom:2px">Otomatik</div>
+                        <div style="font-size:.85rem;font-weight:700;color:${p.otomatikPuan > 0 ? '#27ae60' : p.otomatikPuan < 0 ? '#e74c3c' : 'var(--tx2)'}">${p.otomatikPuan > 0 ? '+' : ''}${p.otomatikPuan || 0}</div>
+                    </div>
+                    <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
+                        <div style="font-size:.6rem;color:var(--tx3);margin-bottom:2px">Manuel</div>
+                        <div style="font-size:.85rem;font-weight:700;color:${p.manuelPuan > 0 ? '#27ae60' : p.manuelPuan < 0 ? '#e74c3c' : 'var(--tx2)'}">${p.manuelPuan > 0 ? '+' : ''}${p.manuelPuan || 0}</div>
+                    </div>
+                    ${isMudurRole ? `
+                    <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
+                        <div style="font-size:.6rem;color:#9b59b6;margin-bottom:2px">Personel</div>
+                        <div style="font-size:.85rem;font-weight:700;color:${p.personelEksiPuan < 0 ? '#9b59b6' : 'var(--tx2)'}">${p.personelEksiPuan || 0}</div>
+                    </div>` : ''}
+                    <div style="flex:1;text-align:center">
+                        <div style="font-size:.6rem;color:var(--tx3);margin-bottom:2px">Toplam</div>
+                        <div style="font-size:.85rem;font-weight:700;color:${puanColor}">${puanSign}${p.toplamPuan}</div>
+                    </div>
+                </div>
+                
+                <!-- Mini Stats -->
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    ${p.autoMissed > 0 ? `<span style="font-size:.65rem;padding:3px 6px;background:rgba(231,76,60,.12);color:#c0392b;border-radius:4px">${p.autoMissed} eksik check</span>` : ''}
+                    ${p.autoOnTime > 0 ? `<span style="font-size:.65rem;padding:3px 6px;background:rgba(39,174,96,.12);color:#1e8449;border-radius:4px">${p.autoOnTime} tam check</span>` : ''}
+                    ${p.kayitSayisi > 0 ? `<span style="font-size:.65rem;padding:3px 6px;background:rgba(52,152,219,.12);color:#2980b9;border-radius:4px">${p.kayitSayisi} manuel</span>` : ''}
+                    ${p.autoMissed === 0 && p.kayitSayisi === 0 ? `<span style="font-size:.65rem;padding:3px 6px;background:var(--bg3);color:var(--tx3);border-radius:4px">Kayıt yok</span>` : ''}
                 </div>
             </div>
         `;
