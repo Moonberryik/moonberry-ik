@@ -1654,6 +1654,58 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                     </div>
                     
+                    <!-- Personel Karşılaştırma Bölümü -->
+                    <div id="arsivComparisonSection" style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;margin-bottom:20px;display:none">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                            <div style="font-weight:600;font-size:.95rem;color:var(--tx);display:flex;align-items:center;gap:8px">
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 8v8m-8-4v4m4-12v12"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                                Personel Karşılaştırma
+                            </div>
+                            <button onclick="toggleComparisonSection()" style="background:none;border:none;color:var(--tx3);cursor:pointer;font-size:.75rem;display:flex;align-items:center;gap:4px">
+                                <span id="comparisonToggleText">Gizle</span>
+                                <svg id="comparisonToggleIcon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></svg>
+                            </button>
+                        </div>
+                        
+                        <div id="comparisonContent">
+                            <!-- Metrik Seçimi - Pills -->
+                            <div style="margin-bottom:16px">
+                                <div style="font-size:.7rem;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Metrik</div>
+                                <div id="metricPills" style="display:flex;gap:6px;flex-wrap:wrap">
+                                    <!-- Dinamik olarak doldurulacak -->
+                                </div>
+                            </div>
+                            
+                            <!-- Personel Seçimi - Avatar Chips -->
+                            <div style="margin-bottom:16px">
+                                <div style="font-size:.7rem;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Personel Seçin <span style="font-weight:400">(max 5)</span></div>
+                                <div id="personelChips" style="display:flex;gap:8px;flex-wrap:wrap;max-height:120px;overflow-y:auto">
+                                    <!-- Dinamik olarak doldurulacak -->
+                                </div>
+                            </div>
+                            
+                            <!-- Çizgi Grafik -->
+                            <div style="background:var(--bg3);border-radius:10px;padding:16px;margin-bottom:16px">
+                                <div id="comparisonChart" style="height:180px;position:relative">
+                                    <div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:.85rem">
+                                        Karşılaştırmak için personel seçin
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Sıralama Tablosu -->
+                            <div>
+                                <div style="font-size:.7rem;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:6px">
+                                    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>
+                                    <span id="rankingTitle">Sıralama (Toplam)</span>
+                                </div>
+                                <div id="comparisonRanking" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+                                    <!-- Dinamik olarak doldurulacak -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- Aylık Dönem Kartları -->
                     <div id="puantajArsivContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
                         <p style="color:var(--tx2);text-align:center;padding:40px;grid-column:1/-1">Arşiv yükleniyor...</p>
@@ -2562,7 +2614,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0530 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0600 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -15424,6 +15476,9 @@ async function loadPuantajArsiv() {
         // Cache'e kaydet
         window.arsivDataCache = donemler;
         
+        // Karşılaştırma bölümünü initialize et
+        initComparisonSection(donemler, yil);
+        
     } catch (error) {
         console.error('Arşiv yükleme hatası:', error);
         container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);grid-column:1/-1">Yükleme hatası! ' + error.message + '</div>';
@@ -15793,6 +15848,340 @@ function showPersonelArsivDetail(period, personelId) {
     html += `</div>`;
     
     showModal(`${p.codeName || p.name} - ${ayAdi} ${yil}`, html, '<button class="btn btn-ghost" onclick="closeModal()">Kapat</button>');
+}
+
+// ==================== PERSONEL KARŞILAŞTIRMA ====================
+
+// Global state
+window.comparisonState = {
+    selectedPersonel: [],
+    selectedMetric: 'toplam',
+    donemler: {},
+    yil: new Date().getFullYear().toString()
+};
+
+const COMPARISON_COLORS = ['#008c95', '#ff8674', '#3498db', '#9b59b6', '#f39c12', '#e74c3c', '#1abc9c'];
+const METRICS = [
+    { id: 'toplam', label: 'Toplam', icon: '📊' },
+    { id: 'otomatik', label: 'CF Puan', icon: '⚡' },
+    { id: 'manuel', label: 'Manuel', icon: '✋' },
+    { id: 'personelEksi', label: 'P. Eksi', icon: '👥' }
+];
+
+function initComparisonSection(donemler, yil) {
+    const section = document.getElementById('arsivComparisonSection');
+    if (!section) return;
+    
+    // Veri olan ayları bul
+    const veriOlanAylar = Object.keys(donemler).filter(p => p.startsWith(yil));
+    
+    if (veriOlanAylar.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+    
+    section.style.display = 'block';
+    
+    // State güncelle
+    window.comparisonState.donemler = donemler;
+    window.comparisonState.yil = yil;
+    window.comparisonState.selectedPersonel = [];
+    
+    // Tüm personelleri topla (tüm aylardan unique)
+    const allPersonel = new Map();
+    Object.entries(donemler).forEach(([period, data]) => {
+        if (!period.startsWith(yil)) return;
+        Object.entries(data.personnel || {}).forEach(([id, p]) => {
+            if (!allPersonel.has(id)) {
+                allPersonel.set(id, {
+                    id,
+                    codeName: p.codeName || p.name,
+                    name: p.name,
+                    role: p.role
+                });
+            }
+        });
+    });
+    
+    window.comparisonState.allPersonel = Array.from(allPersonel.values());
+    
+    // Metrik Pills render
+    renderMetricPills();
+    
+    // Personel Chips render
+    renderPersonelChips();
+    
+    // Sıralama render
+    updateComparisonRanking();
+}
+
+function renderMetricPills() {
+    const container = document.getElementById('metricPills');
+    if (!container) return;
+    
+    container.innerHTML = METRICS.map(m => `
+        <button onclick="selectMetric('${m.id}')" 
+            id="metric_${m.id}"
+            style="padding:8px 14px;border-radius:20px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px;
+                ${window.comparisonState.selectedMetric === m.id 
+                    ? 'background:linear-gradient(135deg,#008c95,#00b4a8);color:#fff;border:none;box-shadow:0 2px 8px rgba(0,140,149,.3)' 
+                    : 'background:var(--bg3);color:var(--tx2);border:1px solid var(--cardBorder)'}"
+            onmouseover="if(window.comparisonState.selectedMetric !== '${m.id}') this.style.borderColor='#008c95'"
+            onmouseout="if(window.comparisonState.selectedMetric !== '${m.id}') this.style.borderColor='var(--cardBorder)'">
+            <span>${m.icon}</span>
+            <span>${m.label}</span>
+        </button>
+    `).join('');
+}
+
+function renderPersonelChips() {
+    const container = document.getElementById('personelChips');
+    if (!container) return;
+    
+    const personeller = window.comparisonState.allPersonel || [];
+    
+    container.innerHTML = personeller.map((p, idx) => {
+        const isSelected = window.comparisonState.selectedPersonel.includes(p.id);
+        const color = isSelected ? COMPARISON_COLORS[window.comparisonState.selectedPersonel.indexOf(p.id) % COMPARISON_COLORS.length] : 'var(--bg3)';
+        const initial = (p.codeName || p.name || '?').charAt(0).toUpperCase();
+        
+        return `
+            <div onclick="togglePersonelSelection('${p.id}')" 
+                id="chip_${p.id}"
+                style="display:flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border-radius:24px;cursor:pointer;transition:all .2s;
+                    ${isSelected 
+                        ? `background:${color}15;border:2px solid ${color};box-shadow:0 2px 8px ${color}30` 
+                        : 'background:var(--bg3);border:2px solid transparent'}"
+                onmouseover="if(!${isSelected}) this.style.borderColor='var(--cardBorder)'"
+                onmouseout="if(!${isSelected}) this.style.borderColor='transparent'">
+                <div style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:600;color:#fff;
+                    background:${isSelected ? color : 'var(--tx3)'}">${initial}</div>
+                <div>
+                    <div style="font-size:.8rem;font-weight:${isSelected ? '600' : '500'};color:${isSelected ? color : 'var(--tx)'}">${p.codeName || p.name}</div>
+                </div>
+                ${isSelected ? `<svg width="14" height="14" fill="${color}" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+function selectMetric(metricId) {
+    window.comparisonState.selectedMetric = metricId;
+    renderMetricPills();
+    updateComparisonChart();
+    updateComparisonRanking();
+}
+
+function togglePersonelSelection(personelId) {
+    const selected = window.comparisonState.selectedPersonel;
+    const idx = selected.indexOf(personelId);
+    
+    if (idx > -1) {
+        // Kaldır
+        selected.splice(idx, 1);
+    } else if (selected.length < 5) {
+        // Ekle (max 5)
+        selected.push(personelId);
+    } else {
+        toast('En fazla 5 personel seçebilirsiniz', 'warning');
+        return;
+    }
+    
+    renderPersonelChips();
+    updateComparisonChart();
+}
+
+function updateComparisonChart() {
+    const container = document.getElementById('comparisonChart');
+    if (!container) return;
+    
+    const { selectedPersonel, selectedMetric, donemler, yil, allPersonel } = window.comparisonState;
+    
+    if (selectedPersonel.length === 0) {
+        container.innerHTML = `
+            <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--tx3)">
+                <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="opacity:.4;margin-bottom:8px">
+                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                </svg>
+                <div style="font-size:.85rem">Karşılaştırmak için personel seçin</div>
+            </div>`;
+        return;
+    }
+    
+    // Veri olan ayları bul
+    const aylar = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+    const ayAdilar = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+    
+    const veriOlanAylar = aylar.map((ay, idx) => {
+        const period = `${yil}-${ay}`;
+        return donemler[period] ? { ay, idx, period } : null;
+    }).filter(Boolean);
+    
+    if (veriOlanAylar.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--tx3);font-size:.85rem">Bu yılda veri yok</div>';
+        return;
+    }
+    
+    // Her personel için her aydaki metrik değerini hesapla
+    const personelData = selectedPersonel.map((pid, pIdx) => {
+        const pInfo = allPersonel.find(p => p.id === pid);
+        const color = COMPARISON_COLORS[pIdx % COMPARISON_COLORS.length];
+        
+        const values = veriOlanAylar.map(({ period }) => {
+            const d = donemler[period];
+            const p = d?.personnel?.[pid];
+            if (!p) return 0;
+            
+            const toplam = (p.otomatikPuan || 0) + (p.manuelPuan || 0) + (p.personelEksiPuan || 0);
+            
+            switch (selectedMetric) {
+                case 'otomatik': return p.otomatikPuan || 0;
+                case 'manuel': return p.manuelPuan || 0;
+                case 'personelEksi': return p.personelEksiPuan || 0;
+                default: return toplam;
+            }
+        });
+        
+        return { id: pid, name: pInfo?.codeName || pInfo?.name || pid, color, values };
+    });
+    
+    // Grafik çiz
+    const chartHeight = 150;
+    const chartWidth = Math.max(300, veriOlanAylar.length * 50 + 60);
+    const paddingLeft = 40;
+    const paddingRight = 20;
+    const paddingTop = 15;
+    const paddingBottom = 25;
+    
+    const allValues = personelData.flatMap(p => p.values);
+    const maxVal = Math.max(...allValues.map(Math.abs), 1);
+    
+    const graphHeight = chartHeight - paddingTop - paddingBottom;
+    const graphWidth = chartWidth - paddingLeft - paddingRight;
+    const stepX = graphWidth / Math.max(veriOlanAylar.length - 1, 1);
+    const centerY = paddingTop + graphHeight / 2;
+    
+    let svg = `<svg width="100%" height="${chartHeight}" viewBox="0 0 ${chartWidth} ${chartHeight}" preserveAspectRatio="xMidYMid meet">`;
+    
+    // Arka plan
+    svg += `<rect x="${paddingLeft}" y="${paddingTop}" width="${graphWidth}" height="${graphHeight}" fill="var(--bg2)" rx="6" opacity="0.5"/>`;
+    
+    // 0 çizgisi
+    svg += `<line x1="${paddingLeft}" y1="${centerY}" x2="${chartWidth - paddingRight}" y2="${centerY}" stroke="var(--cardBorder)" stroke-width="1" stroke-dasharray="4,4"/>`;
+    
+    // Ay etiketleri
+    veriOlanAylar.forEach((ayData, i) => {
+        const x = paddingLeft + i * stepX;
+        svg += `<text x="${x}" y="${chartHeight - 5}" text-anchor="middle" font-size="10" fill="var(--tx2)">${ayAdilar[ayData.idx]}</text>`;
+    });
+    
+    // Her personel için çizgi
+    personelData.forEach(pData => {
+        const points = pData.values.map((val, i) => {
+            const x = paddingLeft + i * stepX;
+            const y = centerY - (val / maxVal) * (graphHeight / 2 - 5);
+            return { x, y, val };
+        });
+        
+        // Çizgi
+        if (points.length > 1) {
+            const pathD = points.map((pt, i) => `${i === 0 ? 'M' : 'L'}${pt.x},${pt.y}`).join(' ');
+            svg += `<path d="${pathD}" fill="none" stroke="${pData.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>`;
+        }
+        
+        // Noktalar
+        points.forEach(pt => {
+            svg += `
+                <circle cx="${pt.x}" cy="${pt.y}" r="5" fill="${pData.color}" stroke="var(--cardBg)" stroke-width="2" style="cursor:pointer">
+                    <title>${pData.name}: ${pt.val >= 0 ? '+' : ''}${pt.val}</title>
+                </circle>`;
+        });
+    });
+    
+    svg += '</svg>';
+    
+    // Legend
+    svg += `<div style="display:flex;justify-content:center;gap:16px;margin-top:8px;flex-wrap:wrap">`;
+    personelData.forEach(pData => {
+        svg += `
+            <div style="display:flex;align-items:center;gap:5px;font-size:.7rem">
+                <div style="width:10px;height:3px;background:${pData.color};border-radius:2px"></div>
+                <span style="color:var(--tx2)">${pData.name}</span>
+            </div>`;
+    });
+    svg += '</div>';
+    
+    container.innerHTML = svg;
+}
+
+function updateComparisonRanking() {
+    const container = document.getElementById('comparisonRanking');
+    const titleEl = document.getElementById('rankingTitle');
+    if (!container) return;
+    
+    const { selectedMetric, donemler, yil, allPersonel } = window.comparisonState;
+    const metricInfo = METRICS.find(m => m.id === selectedMetric);
+    
+    if (titleEl) {
+        titleEl.textContent = `Sıralama (${metricInfo?.label || 'Toplam'})`;
+    }
+    
+    // Tüm personellerin toplam puanını hesapla (seçili yıl için)
+    const rankings = allPersonel.map(p => {
+        let total = 0;
+        Object.entries(donemler).forEach(([period, data]) => {
+            if (!period.startsWith(yil)) return;
+            const pData = data.personnel?.[p.id];
+            if (!pData) return;
+            
+            const toplam = (pData.otomatikPuan || 0) + (pData.manuelPuan || 0) + (pData.personelEksiPuan || 0);
+            
+            switch (selectedMetric) {
+                case 'otomatik': total += pData.otomatikPuan || 0; break;
+                case 'manuel': total += pData.manuelPuan || 0; break;
+                case 'personelEksi': total += pData.personelEksiPuan || 0; break;
+                default: total += toplam;
+            }
+        });
+        
+        return { ...p, total };
+    }).sort((a, b) => b.total - a.total);
+    
+    const medals = ['🥇', '🥈', '🥉'];
+    
+    container.innerHTML = rankings.slice(0, 10).map((p, idx) => {
+        const medal = idx < 3 ? medals[idx] : `<span style="color:var(--tx3);font-size:.75rem">${idx + 1}.</span>`;
+        const color = p.total >= 0 ? '#27ae60' : '#e74c3c';
+        const isSelected = window.comparisonState.selectedPersonel.includes(p.id);
+        const selectedColor = isSelected ? COMPARISON_COLORS[window.comparisonState.selectedPersonel.indexOf(p.id) % COMPARISON_COLORS.length] : null;
+        
+        return `
+            <div onclick="togglePersonelSelection('${p.id}')" 
+                style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${isSelected ? selectedColor + '10' : 'var(--bg3)'};border-radius:8px;cursor:pointer;transition:all .15s;border:1px solid ${isSelected ? selectedColor : 'transparent'}"
+                onmouseover="this.style.background='${isSelected ? selectedColor + '15' : 'var(--bg4)'}'"
+                onmouseout="this.style.background='${isSelected ? selectedColor + '10' : 'var(--bg3)}'">
+                <span style="font-size:1rem;min-width:24px;text-align:center">${medal}</span>
+                <div style="flex:1;min-width:0">
+                    <div style="font-size:.8rem;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.codeName || p.name}</div>
+                    <div style="font-size:.65rem;color:var(--tx3)">${p.role || '-'}</div>
+                </div>
+                <div style="font-size:.9rem;font-weight:700;color:${color}">${p.total >= 0 ? '+' : ''}${p.total}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function toggleComparisonSection() {
+    const content = document.getElementById('comparisonContent');
+    const text = document.getElementById('comparisonToggleText');
+    const icon = document.getElementById('comparisonToggleIcon');
+    
+    if (!content) return;
+    
+    const isHidden = content.style.display === 'none';
+    content.style.display = isHidden ? 'block' : 'none';
+    if (text) text.textContent = isHidden ? 'Gizle' : 'Göster';
+    if (icon) icon.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
 }
 
 function getMonthName(ay) {
