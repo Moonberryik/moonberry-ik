@@ -8089,8 +8089,8 @@ async function saveBranch() {
     try {
         // Kaynak şube - ilk mevcut şube (genelde Tuzla Port)
         const sourceSourceBranch = STATE.branches[0] || 'Tuzla Port';
-        const sourceBranchKey = sourceSourceBranch.replace(/[^a-zA-Z0-9]/g, '_');
-        const newBranchKey = name.replace(/[^a-zA-Z0-9]/g, '_');
+        const sourceBranchKey = branchToKey(sourceSourceBranch);
+        const newBranchKey = branchToKey(name);
         const branchCreatedDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
         
         // 1. STATE.branches'a ekle (10%)
@@ -8630,7 +8630,7 @@ async function executeDeleteBranch(branchName, index) {
         statusEl.textContent = msg;
     };
     
-    const branchKey = branchName.replace(/[^a-zA-Z0-9]/g, '_');
+    const branchKey = branchToKey(branchName);
     let totalDeleted = 0;
     
     try {
@@ -21532,9 +21532,16 @@ function canonicalChecklistTypeId(typeId) {
     return CHECKLIST_TYPE_ALIAS[t] || t; // Alias yoksa lowercase versiyonu döndür
 }
 
+// Şube/isim → Document ID key (Türkçe→Latin dönüşümü)
+// Tüm sistemde tutarlı ID formatı için bu fonksiyon kullanılmalı
+function branchToKey(str) {
+    const turkishMap = {'ş':'s','Ş':'S','ı':'i','İ':'I','ğ':'g','Ğ':'G','ü':'u','Ü':'U','ö':'o','Ö':'O','ç':'c','Ç':'C'};
+    return (str || '').split('').map(c => turkishMap[c] || c).join('').replace(/\s+/g, '_').replace(/[()]/g, '');
+}
+
 function sanitize(str) {
-    // Türkçe karakterleri koru, sadece boşlukları _ yap ve parantezleri kaldır
-    return (str || '').replace(/\s+/g, '_').replace(/[()]/g, '');
+    // branchToKey ile aynı - geriye uyumluluk için
+    return branchToKey(str);
 }
 
 function dailyDocIdCandidates(branch, typeId) {
@@ -22814,7 +22821,7 @@ async function checkSingleTimeSlot(branch, checkType, timeSlot, date, shiftPerso
     if (now < deadline) return;
     
     // Bu check doldurulmuş mu?
-    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType}_${date}_${timeStr.replace(':', '')}`;
+    const submissionId = `${branchToKey(branch)}_${checkType}_${date}_${timeStr.replace(':', '')}`;
     
     try {
         const existing = await db.collection('checklistSubmissions').doc(submissionId).get();
@@ -22871,7 +22878,7 @@ async function checkDeadlineBasedCheck(branch, checkType, date, shiftPersonnel, 
     if (now < deadline) return;
     
     // Bu check doldurulmuş mu?
-    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType}_${date}`;
+    const submissionId = `${branchToKey(branch)}_${checkType}_${date}`;
     
     try {
         const existing = await db.collection('checklistSubmissions').doc(submissionId).get();
@@ -23431,7 +23438,7 @@ async function loadTodayChecks() {
         
         // Platform kartı HER ZAMAN görünür
         {
-            const platformSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_platform_${todayStr}_${(activePlatformTime || '').replace(':', '')}`;
+            const platformSubmissionId = `${branchToKey(branch)}_platform_${todayStr}_${(activePlatformTime || '').replace(':', '')}`;
             let platformCompleted = false;
             try {
                 if (activePlatformTime) {
@@ -23602,7 +23609,7 @@ async function loadTodayChecks() {
             // NOT: Saatler Check & Puantaj Kuralları'ndan (shifts) geliyor
             // periods eski yapı - artık kullanılmıyor, shifts öncelikli
             
-            const temizlikSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_aylik_${todayStr}_${currentShiftType}`;
+            const temizlikSubmissionId = `${branchToKey(branch)}_aylik_${todayStr}_${currentShiftType}`;
             let temizlikCompleted = false;
             
             try {
@@ -23698,7 +23705,7 @@ async function loadTodayChecks() {
             const acilisDeadline = acilisRules.deadline || '11:00';
             const acilisLateWindow = acilisRules.lateWindow || 30;
             
-            const acilisSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_acilis_${todayStr}`;
+            const acilisSubmissionId = `${branchToKey(branch)}_acilis_${todayStr}`;
             let acilisCompleted = false;
             try {
                 const doc = await db.collection('checklistSubmissions').doc(acilisSubmissionId).get();
@@ -23787,7 +23794,7 @@ async function loadTodayChecks() {
             const kapanisDeadline = kapanisRules.deadline || '02:00';
             const kapanisLateWindow = kapanisRules.lateWindow || 30;
             
-            const kapanisSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_kapanis_${todayStr}`;
+            const kapanisSubmissionId = `${branchToKey(branch)}_kapanis_${todayStr}`;
             let kapanisCompleted = false;
             try {
                 const doc = await db.collection('checklistSubmissions').doc(kapanisSubmissionId).get();
@@ -23991,7 +23998,7 @@ async function loadTodayChecks() {
         const displayGunlukEnd = displayGunlukSlot?.end || displayGunlukTime;
         
         {
-            const gunlukSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_guncel_${todayStr}_${displayGunlukTime.replace(':', '')}`;
+            const gunlukSubmissionId = `${branchToKey(branch)}_guncel_${todayStr}_${displayGunlukTime.replace(':', '')}`;
             let gunlukCompleted = false;
             try {
                 const doc = await db.collection('checklistSubmissions').doc(gunlukSubmissionId).get();
@@ -24098,7 +24105,7 @@ async function loadTodayChecks() {
         
         // 6. Müdür Kontrol (sadece müdürler için)
         if (isFullAdmin || isStoreManager) {
-            const mudurSubmissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_mudur_${todayStr}`;
+            const mudurSubmissionId = `${branchToKey(branch)}_mudur_${todayStr}`;
             let mudurCompleted = false;
             try {
                 const doc = await db.collection('checklistSubmissions').doc(mudurSubmissionId).get();
@@ -25176,7 +25183,7 @@ async function loadLeaderboard() {
             const persons = byBranch[branch] || [];
             const top3 = persons.slice(0, 3);
             const remaining = persons.slice(3);
-            const branchId = branch.replace(/[^a-zA-Z0-9]/g, '_');
+            const branchId = branchToKey(branch);
             
             html += `
                 <div style="padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--cardBorder)">
@@ -25637,7 +25644,7 @@ async function loadAllChecksOverview() {
                                 typeName: checkType.name,
                                 timeSlot,
                                 date: dateStr,
-                                submissionId: `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType.id}_${dateStr}_${timeSlot.replace(':', '')}`
+                                submissionId: `${branchToKey(branch)}_${checkType.id}_${dateStr}_${timeSlot.replace(':', '')}`
                             });
                             currentDate.setDate(currentDate.getDate() + 1);
                         }
@@ -25916,7 +25923,7 @@ async function saveManualCheck(branch, type, timeSlot, date) {
     }
     
     try {
-        const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}_${date}_${timeSlot.replace(':', '')}`;
+        const submissionId = `${branchToKey(branch)}_${type}_${date}_${timeSlot.replace(':', '')}`;
         const rules = CHECK_RULES[type];
         let points = 0;
         
@@ -26970,7 +26977,7 @@ async function addNewChecklistType() {
         });
         
         // 2. checklists koleksiyonuna boş belge oluştur
-        const checklistDocId = `${selectedChecklistTypeBranch.replace(/[^a-zA-Z0-9]/g, '_')}_${id}`;
+        const checklistDocId = `${branchToKey(selectedChecklistTypeBranch)}_${id}`;
         await db.collection('checklists').doc(checklistDocId).set({
             branch: selectedChecklistTypeBranch,
             type: id,
@@ -27022,7 +27029,7 @@ async function saveChecklistTypesConfig() {
         // 2. Her tür için checklists koleksiyonunda belge var mı kontrol et, yoksa oluştur
         for (const [branch, types] of Object.entries(checklistTypesData)) {
             for (const type of types) {
-                const checklistDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type.id}`;
+                const checklistDocId = `${branchToKey(branch)}_${type.id}`;
                 try {
                     const doc = await db.collection('checklists').doc(checklistDocId).get();
                     if (!doc.exists) {
@@ -28789,7 +28796,7 @@ async function loadChecklistTodayPanel() {
                     if (!window) continue;
                     if (!isAdmin && (window.isMissed || window.isBeforeWindow)) continue;
                     
-                    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${checkType.id}_${todayStr}_${timeSlot.replace(':', '')}`;
+                    const submissionId = `${branchToKey(branch)}_${checkType.id}_${todayStr}_${timeSlot.replace(':', '')}`;
                     let isCompleted = false;
                     
                     try {
@@ -28870,7 +28877,7 @@ async function loadChecklistTodayPanel() {
                 const currentMinutes = now.getHours() * 60 + now.getMinutes();
                 const deadlineMinutes = 11 * 60; // 11:00
                 if (currentMinutes <= deadlineMinutes || isAdmin) {
-                    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_acilis_${todayStr}`;
+                    const submissionId = `${branchToKey(branch)}_acilis_${todayStr}`;
                     let isCompleted = false;
                     try {
                         const doc = await db.collection('checklistSubmissions').doc(submissionId).get();
@@ -28907,7 +28914,7 @@ async function loadChecklistTodayPanel() {
                 const now = new Date();
                 const currentHour = now.getHours();
                 if (currentHour >= 18 || isAdmin) {
-                    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_kapanis_${todayStr}`;
+                    const submissionId = `${branchToKey(branch)}_kapanis_${todayStr}`;
                     let isCompleted = false;
                     try {
                         const doc = await db.collection('checklistSubmissions').doc(submissionId).get();
@@ -29071,21 +29078,13 @@ function selectChecklistType(typeId) {
         }
     });
     
-    // Time slot güncelle
-    const selectedBtn = document.querySelector(`.checklist-type-btn[data-type="${typeId}"]`);
-    const timeSlots = selectedBtn?.dataset.timeslots?.split(',').filter(Boolean) || [];
+    // Time slot - DEVRE DIŞI (kullanılmıyor)
     const timeSlotGroup = document.getElementById('checklistTimeSlotGroup');
     const timeSlotSelect = document.getElementById('checklistTimeSlot');
     
-    if (timeSlots.length > 0) {
-        timeSlotGroup.style.display = 'block';
-        let tsHtml = '<option value="">-- Seçin --</option>';
-        timeSlots.forEach(ts => { tsHtml += `<option value="${ts}">${ts}</option>`; });
-        timeSlotSelect.innerHTML = tsHtml;
-    } else {
-        timeSlotGroup.style.display = 'none';
-        timeSlotSelect.innerHTML = '<option value="">-- Seçin --</option>';
-    }
+    // Saat dilimi seçimi kaldırıldı - her zaman gizli
+    timeSlotGroup.style.display = 'none';
+    timeSlotSelect.innerHTML = '<option value="">-- Seçin --</option>';
     
     loadChecklist();
 }
@@ -30667,7 +30666,7 @@ async function saveAllChecklistItemEdits(branch, type) {
         'aylik_temizlik': 'aylik', 'temizlik': 'aylik'
     };
     const mappedType = TYPE_ID_MAP[type] || type;
-    const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${mappedType}`;
+    const checklistId = `${branchToKey(branch)}_${mappedType}`;
     
     // Mevcut dokümanı çek
     try {
@@ -31350,7 +31349,7 @@ function renderBadges(badges) {
 // ==================== GÖREV ATAMALARINI TEMİZLE (Shift değişiminde) ====================
 async function clearTaskAssignmentsForBranch(branch, weekStart) {
     try {
-        const branchKey = branch.replace(/[^a-zA-Z0-9]/g, '_');
+        const branchKey = branchToKey(branch);
         
         // Haftalık atamaları sil
         const weeklyDocId = `${branchKey}_${weekStart}`;
@@ -31427,7 +31426,7 @@ async function getWeeklyTaskAssignments(branch, weekStart) {
  * shiftPersonnel listesi varsa ve birden fazla kişi varsa aktif
  */
 async function getDailyTaskAssignments(branch, type, date, items = [], personnel = []) {
-    const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}_${date}`;
+    const assignmentDocId = `${branchToKey(branch)}_${type}_${date}`;
     
     try {
         const existingDoc = await db.collection('dailyTaskAssignments').doc(assignmentDocId).get();
@@ -31480,7 +31479,7 @@ async function distributeDailyTasks(branch, type, date, items, personnel) {
         return null;
     }
     
-    const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}_${date}`;
+    const assignmentDocId = `${branchToKey(branch)}_${type}_${date}`;
     
     try {
         // Görevleri eşit dağıt
@@ -31519,7 +31518,7 @@ async function distributeDailyTasks(branch, type, date, items, personnel) {
  * Günlük görev atamasını temizle (paylaşımı kaldır)
  */
 async function clearDailyTaskAssignments(branch, type, date) {
-    const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}_${date}`;
+    const assignmentDocId = `${branchToKey(branch)}_${type}_${date}`;
     
     try {
         await db.collection('dailyTaskAssignments').doc(assignmentDocId).delete();
@@ -31535,7 +31534,7 @@ async function clearDailyTaskAssignments(branch, type, date) {
  * Tek bir günlük görevi başka personele ata
  */
 async function reassignDailyTask(branch, type, date, taskId, newPersonel) {
-    const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}_${date}`;
+    const assignmentDocId = `${branchToKey(branch)}_${type}_${date}`;
     
     try {
         await db.collection('dailyTaskAssignments').doc(assignmentDocId).update({
@@ -31553,11 +31552,11 @@ async function reassignDailyTask(branch, type, date, taskId, newPersonel) {
 }
 
 async function generateWeeklyTaskAssignments(branch, weekStart) {
-    const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekStart}`;
+    const assignmentDocId = `${branchToKey(branch)}_${weekStart}`;
     
     try {
         // 1. Haftalık görevleri al
-        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_haftalik`;
+        const checklistId = `${branchToKey(branch)}_haftalik`;
         const checklistDoc = await db.collection('checklists').doc(checklistId).get();
         
         if (!checklistDoc.exists) {
@@ -31615,7 +31614,7 @@ async function generateWeeklyTaskAssignments(branch, weekStart) {
         try {
             const prevWeekStart = new Date(weekStart);
             prevWeekStart.setDate(prevWeekStart.getDate() - 7);
-            const prevDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${formatDateLocal(prevWeekStart)}`;
+            const prevDocId = `${branchToKey(branch)}_${formatDateLocal(prevWeekStart)}`;
             const prevDoc = await db.collection('weeklyTaskAssignments').doc(prevDocId).get();
             if (prevDoc.exists) {
                 rotationIndex = ((prevDoc.data().rotationIndex || 0) + 1) % activePersonnel.length;
@@ -31655,7 +31654,7 @@ async function generateWeeklyTaskAssignments(branch, weekStart) {
  * Tek bir görevi başka personele ata (müdür yetkisi)
  */
 async function reassignWeeklyTask(branch, weekStart, taskId, newPersonel) {
-    const assignmentDocId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekStart}`;
+    const assignmentDocId = `${branchToKey(branch)}_${weekStart}`;
     
     try {
         await db.collection('weeklyTaskAssignments').doc(assignmentDocId).update({
@@ -31856,7 +31855,7 @@ async function updateChecklistOrder() {
     
     if (!branch || !type) return;
     
-    const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
+    const checklistId = `${branchToKey(branch)}_${type}`;
     
     try {
         const checklistRef = db.collection('checklists').doc(checklistId);
@@ -31909,7 +31908,7 @@ async function deleteSelectedChecklistItems(branch, type) {
     if (!confirm(`${selected.length} madde silinecek. Emin misiniz?`)) return;
     
     try {
-        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
+        const checklistId = `${branchToKey(branch)}_${type}`;
         const checklistRef = db.collection('checklists').doc(checklistId);
         const doc = await checklistRef.get();
         
@@ -32167,7 +32166,7 @@ async function renderPlatformChecklistWithStatus(container, branch, date, active
     }
     
     // Saat bazlı submission ID
-    const submissionId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_platform_${date}_${selectedTimeSlot.replace(':', '')}`;
+    const submissionId = `${branchToKey(branch)}_platform_${date}_${selectedTimeSlot.replace(':', '')}`;
     
     // Önce mevcut submission'ı kontrol et
     let submittedData = null;
@@ -32699,7 +32698,7 @@ async function confirmAndSaveChecklist(branch, type, date, timeSlot, personName,
 // Checklist'i kaydet ve paylaş
 async function saveChecklistAndShare(branch, type, date, timeSlot, personName, responses, actualMinutes, expectedMinutes, doneCount, totalCount, skippedItems = []) {
     try {
-        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
+        const checklistId = `${branchToKey(branch)}_${type}`;
         const submissionId = `${checklistId}_${date}${timeSlot ? '_' + timeSlot.replace(':', '') : ''}`;
         
         // Puan hesaplama
@@ -33325,7 +33324,7 @@ async function addChecklistItem(branch, type) {
     const penalty = document.getElementById('newChecklistItemPenalty')?.value?.trim();
     
     try {
-        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
+        const checklistId = `${branchToKey(branch)}_${type}`;
         const checklistRef = db.collection('checklists').doc(checklistId);
         const doc = await checklistRef.get();
         
@@ -33375,7 +33374,7 @@ async function deleteChecklistItem(itemId) {
     const type = document.getElementById('checklistType')?.value;
     
     try {
-        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
+        const checklistId = `${branchToKey(branch)}_${type}`;
         const checklistRef = db.collection('checklists').doc(checklistId);
         const doc = await checklistRef.get();
         
@@ -33407,7 +33406,7 @@ async function showEditChecklistItemModal(itemId) {
     }
     
     try {
-        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
+        const checklistId = `${branchToKey(branch)}_${type}`;
         const checklistRef = db.collection('checklists').doc(checklistId);
         const doc = await checklistRef.get();
         
@@ -33539,7 +33538,7 @@ async function editChecklistItem(itemId, branch, type) {
     }
     
     try {
-        const checklistId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
+        const checklistId = `${branchToKey(branch)}_${type}`;
         const checklistRef = db.collection('checklists').doc(checklistId);
         const doc = await checklistRef.get();
         
@@ -34187,7 +34186,7 @@ async function handleTemizlikItemClick(branch, itemId, itemText, personId, perso
 // Temizlik maddesini tamamla
 async function completeTemizlikItem(branch, itemId, itemText, personId, personName) {
     const now = new Date();
-    const docId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${itemId}_${formatDateLocal(now)}_${Date.now()}`;
+    const docId = `${branchToKey(branch)}_${itemId}_${formatDateLocal(now)}_${Date.now()}`;
     
     try {
         // Cooldown kontrolü
@@ -34601,7 +34600,7 @@ async function getAssignmentPool(branch) {
 // Haftalık atama oluştur veya mevcut atamayı al (migration + shift sync)
 async function getOrCreateWeeklyAssignments(branch) {
     const weekId = getWeekId();
-    const docId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekId}`;
+    const docId = `${branchToKey(branch)}_${weekId}`;
     
     try {
         // Mevcut atamayı kontrol et
@@ -34715,7 +34714,7 @@ async function getOrCreateWeeklyAssignments(branch) {
 // Shift değişikliklerinde atamaları sync et
 async function syncWeeklyAssignmentsWithShift(branch, existingData, currentPool, removedUniqueIds, addedUniqueIds, docIdToUniqueId, uniqueIdToDocId, uniqueIdToPersonnel) {
     const weekId = getWeekId();
-    const docId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekId}`;
+    const docId = `${branchToKey(branch)}_${weekId}`;
     
     let assignments = [...(existingData.assignments || [])];
     
@@ -34863,7 +34862,7 @@ async function syncWeeklyAssignmentsWithShift(branch, existingData, currentPool,
 
 // Yeni haftalık atama oluştur (round-robin)
 async function createWeeklyAssignments(branch, weekId) {
-    const branchKey = branch.replace(/[^a-zA-Z0-9]/g, '_');
+    const branchKey = branchToKey(branch);
     const docId = `${branchKey}_${weekId}`;
     
     try {
@@ -34973,7 +34972,7 @@ async function createWeeklyAssignments(branch, weekId) {
 // Bir maddeyi tamamla
 async function completeWeeklyItem(branch, itemId, personnelId) {
     const weekId = getWeekId();
-    const docId = `${branch.replace(/[^a-zA-Z0-9]/g, '_')}_${weekId}`;
+    const docId = `${branchToKey(branch)}_${weekId}`;
     
     try {
         const doc = await db.collection('weeklyAssignments').doc(docId).get();
