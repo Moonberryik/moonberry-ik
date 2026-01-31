@@ -1000,7 +1000,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         <div class="form-group"><label class="form-label">Ad Soyad</label><input type="text" id="soz_ad" class="form-input" placeholder="Personel adı"></div>
                         <div class="form-group"><label class="form-label">TC Kimlik</label><input type="text" id="soz_tc" class="form-input" placeholder="11 hane" maxlength="11"></div>
                         <div class="form-group full"><label class="form-label">Adres</label><input type="text" id="soz_adres" class="form-input" placeholder="İkametgah adresi"></div>
-                        <div class="form-group"><label class="form-label">Cep Telefonu</label><input type="text" id="soz_telefon" class="form-input" placeholder="+90 5XX XXX XX XX"></div>
+                        <div class="form-group"><label class="form-label">Cep Telefonu</label><input type="tel" id="soz_telefon" class="form-input" placeholder="+90 5XX XXX XX XX" oninput="formatPhoneInput(this)"></div>
                         <div class="form-group"><label class="form-label">IBAN</label><input type="text" id="soz_iban" class="form-input" placeholder="TR..."></div>
                         <div class="form-group"><label class="form-label">İşe Başlama</label><input type="date" id="soz_baslama" class="form-input"></div>
                         <div class="form-group"><label class="form-label">Brüt Ücret (TL)</label><input type="text" id="soz_ucret" class="form-input" placeholder="25.000"></div>
@@ -2614,7 +2614,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
     </div>
     <script>
 // ==================== FIREBASE CONFIG ====================
-console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0645 - PRİM SİSTEMİ');
+console.log('🔷 Moonberry İK v2.9 yüklendi - BUILD 20260131-0700 - PRİM SİSTEMİ');
 const firebaseConfig = {
     apiKey: "AIzaSyCbc-8oWwOj2eR0J19f3T-UYT9vGI8PL7M",
     authDomain: "moonberry-ik.firebaseapp.com",
@@ -6472,7 +6472,7 @@ async function loadMyProfile() {
                         </div>
                         <div style="display:flex;align-items:center;gap:8px">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2" style="flex-shrink:0"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                            <input type="tel" id="myProfile_phone" value="${p.phone || ''}" class="form-input" style="flex:1" placeholder="+90 5XX XXX XX XX">
+                            <input type="tel" id="myProfile_phone" value="${p.phone || ''}" class="form-input" style="flex:1" placeholder="+90 5XX XXX XX XX" oninput="formatPhoneInput(this)">
                         </div>
                         <div style="display:flex;align-items:center;gap:8px">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2" style="flex-shrink:0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -7194,18 +7194,14 @@ function selectPersonelBank(bankName) {
 function formatPhoneInput(input) {
     let value = input.value.replace(/\D/g, '');
     
-    // Başındaki 0'ı kaldır (05xx → 5xx)
-    if (value.startsWith('0')) value = value.substring(1);
-    
-    // Başındaki 90'ı kaldır - Türkiye ülke kodu
-    if (value.startsWith('90') && value.length >= 12) {
-        value = value.substring(2);
-    }
-    
-    // 9 ile başlıyorsa ve hemen 5 geliyorsa, 9'u kaldır (95xx → 5xx)
-    if (value.startsWith('95') && value.length >= 10) {
-        value = value.substring(1);
-    }
+    // Tüm gereksiz prefix'leri temizle (90, 0, 95 - loop ile)
+    let prevLen;
+    do {
+        prevLen = value.length;
+        if (value.startsWith('90')) value = value.substring(2);  // 90xxx → xxx
+        if (value.startsWith('0')) value = value.substring(1);   // 0xxx → xxx
+        if (value.startsWith('95')) value = value.substring(1);  // 95xx → 5xx
+    } while (value.length !== prevLen && value.length > 0);
     
     // Max 10 rakam (5XX XXX XX XX)
     value = value.substring(0, 10);
