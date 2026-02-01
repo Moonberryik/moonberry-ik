@@ -2702,6 +2702,16 @@ function normalizePersonelId(name) {
         .replace(/^_|_$/g, '');
 }
 
+// Puan formatla - küsüratı temizle
+function formatPoints(val) {
+    if (val === null || val === undefined) return '0';
+    // Küsüratı 2 basamağa yuvarla
+    const rounded = Math.round(val * 100) / 100;
+    // Tam sayıysa noktasız göster, değilse max 2 basamak
+    if (rounded % 1 === 0) return String(rounded);
+    return rounded.toFixed(2).replace(/\.?0+$/, '');
+}
+
 // Tam isimden kısa görüntü formatı: "BÜŞRA SÖĞÜT" → "Büşra S."
 function formatDisplayName(fullName) {
     if (!fullName) return '';
@@ -12517,7 +12527,7 @@ async function updatePrimCalcPoints() {
         notesSnap.forEach(doc => {
             const d = doc.data();
             if (d.date >= monthStart && d.date <= monthEnd) {
-                totalPoints += d.points || 0;
+                totalPoints = Math.round((totalPoints + (d.points || 0)) * 100) / 100;
                 if (d.status === 'onTime') onTime++;
                 else if (d.status === 'late') late++;
                 else if (d.status === 'missed') missed++;
@@ -12532,9 +12542,12 @@ async function updatePrimCalcPoints() {
         
         puantajSnap.forEach(doc => {
             const d = doc.data();
-            totalPoints += getPointsFromStar(d.score || 3);
+            totalPoints = Math.round((totalPoints + getPointsFromStar(d.score || 3)) * 100) / 100;
             manual++;
         });
+        
+        // Format için küsüratı temizle
+        const displayPoints = totalPoints % 1 === 0 ? totalPoints : totalPoints.toFixed(2).replace(/\.?0+$/, '');
         
         // Göster
         const details = [];
@@ -12547,7 +12560,7 @@ async function updatePrimCalcPoints() {
         
         const color = totalPoints > 0 ? '#27ae60' : totalPoints < 0 ? '#e74c3c' : 'var(--tx)';
         pointsTotal.style.color = color;
-        pointsTotal.textContent = (totalPoints > 0 ? '+' : '') + totalPoints + ' puan';
+        pointsTotal.textContent = (totalPoints > 0 ? '+' : '') + displayPoints + ' puan';
         
     } catch (e) {
         console.error('Puan yükleme hatası:', e);
@@ -22316,8 +22329,9 @@ let CHECK_RULES = {
             araci: { deadline: '19:00', window: { start: '11:00', end: '19:00' } },
             kapanisci: { deadline: '02:00', window: { start: '16:00', end: '02:00' } }
         },
-        points: { onTime: 1, late: -1, missed: -1 },
-        supervisorPenalty: -0.5,
+        // Puanlar Firebase'den gelir - null = henüz yüklenmedi
+        points: { onTime: null, late: null, missed: null },
+        supervisorPenalty: null,
         note: 'Her personel kendi shift türüne göre 1 kere yapmalı'
     },
     haftalik: {
@@ -25827,14 +25841,14 @@ async function showMonthlyPointsModal() {
     let onTime = 0, late = 0, missed = 0;
     
     checkData.forEach(c => {
-        totalPoints += c.points;
+        totalPoints = Math.round((totalPoints + (c.points || 0)) * 100) / 100;
         if (c.status === 'onTime') onTime++;
         else if (c.status === 'late') late++;
         else if (c.status === 'missed') missed++;
     });
     
     manualData.forEach(m => {
-        totalPoints += m.points;
+        totalPoints = Math.round((totalPoints + (m.points || 0)) * 100) / 100;
     });
     
     // Check listesi HTML
@@ -25850,7 +25864,7 @@ async function showMonthlyPointsModal() {
                 </div>
                 <div style="display:flex;align-items:center;gap:8px">
                     <span style="font-size:.6rem;color:${statusColor}">${statusText}</span>
-                    <span style="font-weight:700;color:${c.points >= 0 ? '#27ae60' : '#e74c3c'};font-size:.8rem">${c.points > 0 ? '+' : ''}${c.points}</span>
+                    <span style="font-weight:700;color:${c.points >= 0 ? '#27ae60' : '#e74c3c'};font-size:.8rem">${c.points > 0 ? '+' : ''}${formatPoints(c.points)}</span>
                 </div>
             </div>
         `;
@@ -25865,16 +25879,17 @@ async function showMonthlyPointsModal() {
                     <div style="font-size:.85rem;color:#DAA520">${stars}</div>
                     <div style="font-size:.6rem;color:var(--tx3)">${m.by || 'Yönetici'}</div>
                 </div>
-                <span style="font-weight:700;color:${m.points >= 0 ? '#27ae60' : '#e74c3c'};font-size:.8rem">${m.points > 0 ? '+' : ''}${m.points}</span>
+                <span style="font-weight:700;color:${m.points >= 0 ? '#27ae60' : '#e74c3c'};font-size:.8rem">${m.points > 0 ? '+' : ''}${formatPoints(m.points)}</span>
             </div>
         `;
     }).join('') : '<div style="text-align:center;padding:16px;color:var(--tx3);font-size:.75rem">Bu ay değerlendirme yok</div>';
     
     const pointColor = totalPoints > 0 ? '#27ae60' : totalPoints < 0 ? '#e74c3c' : 'var(--tx)';
+    const displayPoints = totalPoints % 1 === 0 ? totalPoints : totalPoints.toFixed(2).replace(/\.?0+$/, '');
     
     const body = `
         <div style="text-align:center;margin-bottom:20px">
-            <div style="font-size:2.5rem;font-weight:800;color:${pointColor}">${totalPoints > 0 ? '+' : ''}${totalPoints}</div>
+            <div style="font-size:2.5rem;font-weight:800;color:${pointColor}">${totalPoints > 0 ? '+' : ''}${displayPoints}</div>
             <div style="font-size:.8rem;color:var(--tx3)">Toplam Puan</div>
         </div>
         
@@ -28387,17 +28402,17 @@ function renderCheckRuleDetails(type) {
             <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
                 <div style="background:rgba(39,174,96,.08);border:1px solid rgba(39,174,96,.2);border-radius:10px;padding:12px;text-align:center">
                     <div style="font-size:.7rem;color:#27ae60;font-weight:600;margin-bottom:6px">VAKTİNDE</div>
-                    <input type="number" class="form-input" id="checkRule_${type}_onTime" value="${rule.points?.onTime || 0}" onchange="autoSaveCheckRules()" style="font-size:1.1rem;font-weight:700;text-align:center;color:#27ae60;background:transparent;border:none;width:100%">
+                    <input type="number" step="0.1" class="form-input" id="checkRule_${type}_onTime" value="${rule.points?.onTime ?? 0}" onchange="autoSaveCheckRules()" style="font-size:1.1rem;font-weight:700;text-align:center;color:#27ae60;background:transparent;border:none;width:100%">
                     <div style="font-size:.6rem;color:var(--tx3);margin-top:2px">puan</div>
                 </div>
                 <div style="background:rgba(243,156,18,.08);border:1px solid rgba(243,156,18,.2);border-radius:10px;padding:12px;text-align:center">
                     <div style="font-size:.7rem;color:#f39c12;font-weight:600;margin-bottom:6px">GEÇ</div>
-                    <input type="number" class="form-input" id="checkRule_${type}_late" value="${rule.points?.late || 0}" onchange="autoSaveCheckRules()" style="font-size:1.1rem;font-weight:700;text-align:center;color:#f39c12;background:transparent;border:none;width:100%">
+                    <input type="number" step="0.1" class="form-input" id="checkRule_${type}_late" value="${rule.points?.late ?? 0}" onchange="autoSaveCheckRules()" style="font-size:1.1rem;font-weight:700;text-align:center;color:#f39c12;background:transparent;border:none;width:100%">
                     <div style="font-size:.6rem;color:var(--tx3);margin-top:2px">puan</div>
                 </div>
                 <div style="background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.2);border-radius:10px;padding:12px;text-align:center">
                     <div style="font-size:.7rem;color:#e74c3c;font-weight:600;margin-bottom:6px">YAPILMADI</div>
-                    <input type="number" class="form-input" id="checkRule_${type}_missed" value="${rule.points?.missed || -1}" onchange="autoSaveCheckRules()" style="font-size:1.1rem;font-weight:700;text-align:center;color:#e74c3c;background:transparent;border:none;width:100%">
+                    <input type="number" step="0.1" class="form-input" id="checkRule_${type}_missed" value="${rule.points?.missed ?? -1}" onchange="autoSaveCheckRules()" style="font-size:1.1rem;font-weight:700;text-align:center;color:#e74c3c;background:transparent;border:none;width:100%">
                     <div style="font-size:.6rem;color:var(--tx3);margin-top:2px">puan</div>
                 </div>
                 <div style="background:rgba(155,89,182,.08);border:1px solid rgba(155,89,182,.2);border-radius:10px;padding:12px;text-align:center">
@@ -28856,9 +28871,9 @@ async function saveAdvancedCheckRules() {
         
         if (onTimeEl || latePointsEl || missedEl) {
             rule.points = {
-                onTime: parseInt(onTimeEl?.value) || 0,
-                late: parseInt(latePointsEl?.value) || 0,
-                missed: parseInt(missedEl?.value) ?? -1
+                onTime: parseFloat(onTimeEl?.value) || 0,
+                late: parseFloat(latePointsEl?.value) || 0,
+                missed: parseFloat(missedEl?.value) ?? -1
             };
         } else {
             // Form elementi yoksa mevcut değerleri koru
@@ -30194,6 +30209,12 @@ async function loadChecklist() {
                     </div>
                 `;
                 checklistLoadingLock = false;
+                
+                // Pop-up otomatik aç (500ms sonra)
+                setTimeout(() => {
+                    openTemizlikStatusModal('${branch}');
+                }, 500);
+                
                 return;
             }
             // Tek ise normal devam - tüm checklistlere erişebilir
@@ -35735,10 +35756,36 @@ async function renderTemizlikChecklist(container, branch, date) {
             `;
             
             if (people.length === 0) {
+                // Saat geçti mi kontrol et
+                const shiftRules = TEMIZLIK_SHIFT_RULES || {};
+                const shiftTypeKey = shiftType === 'acilis' ? 'acilisci' : shiftType === 'kapanis' ? 'kapanisci' : 'araci';
+                const deadline = shiftRules[shiftTypeKey]?.window?.end || shiftRules[shiftTypeKey]?.deadline || '23:59';
+                
+                const now = new Date();
+                const [dH, dM] = deadline.split(':').map(Number);
+                let deadlineDate = new Date(now);
+                deadlineDate.setHours(dH, dM, 0, 0);
+                
+                // Gece geçişi kontrolü (01:00, 02:00 gibi)
+                if (dH < 6) {
+                    deadlineDate.setDate(deadlineDate.getDate() + 1);
+                }
+                
+                const isDeadlinePassed = now > deadlineDate;
+                const shiftLabel = shiftConfig.label.toLowerCase();
+                
+                const message = isDeadlinePassed 
+                    ? `${shiftConfig.label} doldurma saati (${deadline}) geçti. Maddeler diğer vardiyalara aktarıldı.`
+                    : `Bu vardiyada personel yok. Maddeler diğer vardiyalara dağıtıldı.`;
+                
                 html += `
                     <div style="padding:20px;background:var(--bg3);border-radius:10px;text-align:center;color:var(--tx2);display:flex;align-items:center;justify-content:center;gap:8px">
-                        <svg width="18" height="18" fill="none" stroke="#f39c12" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                        Bu vardiyada personel yok. Maddeler diğer vardiyalara dağıtıldı.
+                        <svg width="18" height="18" fill="none" stroke="${isDeadlinePassed ? '#e74c3c' : '#f39c12'}" stroke-width="2" viewBox="0 0 24 24">
+                            ${isDeadlinePassed 
+                                ? '<circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>' 
+                                : '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'}
+                        </svg>
+                        ${message}
                     </div>
                 `;
             } else {
