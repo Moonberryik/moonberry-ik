@@ -22734,292 +22734,21 @@ function minutesToTime(minutes) {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 }
 
-// İş günü bitiş saatini hesapla (tüm şubelerin en geç kapanışı + late window)
+// İş günü bitiş saatini hesapla (tüm şubelerin en geç kapanışı)
 function getBusinessDayEndHour() {
-    let maxClosingMinutes = 2 * 60; // varsayılan 02:00
+    let maxClosingHour = 2; // varsayılan
     const allBranches = STATE.branches || ['Tuzla Port'];
-    const today = new Date();
-    
     for (const br of allBranches) {
-        const closingTime = getBranchClosingTime(br, today);
+        const closingTime = getBranchClosingTime(br);
         if (closingTime) {
-            const [h, m] = closingTime.split(':').map(Number);
-            let closingMinutes = h * 60 + (m || 0);
-            
-            // Gece saati ise (00:00-06:00 arası) - ertesi güne ait
-            if (h >= 0 && h <= 6) {
-                // Late window ekle (config'den al)
-                const lateWindow = CHECK_RULES?.kapanis?.lateWindow || DEFAULT_CHECK_RULES?.kapanis?.lateWindow || 30;
-                closingMinutes += lateWindow;
-                
-                if (closingMinutes > maxClosingMinutes) {
-                    maxClosingMinutes = closingMinutes;
-                }
+            const [h] = closingTime.split(':').map(Number);
+            // Gece saati ise (00:00-06:00 arası)
+            if (h >= 0 && h <= 6 && h > maxClosingHour) {
+                maxClosingHour = h;
             }
         }
     }
-    
-    // Dakikayı saate çevir (yukarı yuvarla)
-    return Math.ceil(maxClosingMinutes / 60);
-}
-
-// Şube bazlı iş günü bitiş saatini hesapla (kapanış + late window)
-function getBranchBusinessDayEndTime(branch, date = new Date()) {
-    const closingTime = getBranchClosingTime(branch, date);
-    const [h, m] = closingTime.split(':').map(Number);
-    
-    // Late window ekle
-    const lateWindow = CHECK_RULES?.kapanis?.lateWindow || DEFAULT_CHECK_RULES?.kapanis?.lateWindow || 30;
-    
-    let totalMinutes = h * 60 + (m || 0) + lateWindow;
-    
-    // Gece geçişi için düzeltme
-    if (h >= 0 && h <= 6) {
-        // Zaten ertesi gün
-    } else if (totalMinutes >= 24 * 60) {
-        totalMinutes = totalMinutes % (24 * 60);
-    }
-    
-    const endH = Math.floor(totalMinutes / 60) % 24;
-    const endM = totalMinutes % 60;
-    
-    return `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
-}
-
-// Müdür bugün çalışıyor mu kontrol et
-async function isMudurWorking(branch, date = new Date()) {
-    try {
-        // Şubedeki müdürü bul
-        const personelSnap = await db.collection('personel')
-            .where('branch', '==', branch)
-            .where('role', '==', 'magaza_muduru')
-            .limit(1)
-            .get();
-        
-        if (personelSnap.empty) {
-            console.log('[Müdür] Şubede müdür yok:', branch);
-            return { hasMudur: false, isWorking: false, mudur: null };
-        }
-        
-        const mudurDoc = personelSnap.docs[0];
-        const mudur = mudurDoc.data();
-        
-        // Shift verisi al
-        const weekStart = getWeekStart(date);
-        const weekKey = formatDateLocal(weekStart);
-        let dayIndex = date.getDay() - 1;
-        if (dayIndex < 0) dayIndex = 6;
-        
-        const shiftSnap = await db.collection('shifts')
-            .where('branch', '==', branch)
-            .where('weekStart', '==', weekKey)
-            .limit(1)
-            .get();
-        
-        if (shiftSnap.empty) {
-            console.log('[Müdür] Shift verisi yok:', branch, weekKey);
-            return { hasMudur: true, isWorking: true, mudur: mudur }; // Varsayılan çalışıyor
-        }
-        
-        const shiftData = shiftSnap.docs[0].data();
-        const personelShifts = shiftData.personelShifts || {};
-        const personelFullNames = shiftData.personelFullNames || {};
-        
-        // Müdürün shift key'ini bul
-        const mudurKey = Object.keys(personelShifts).find(k => 
-            k === mudur.uniqueId || 
-            k === normalizePersonelId(mudur.name) ||
-            personelFullNames[k] === mudur.name
-        );
-        
-        if (!mudurKey) {
-            console.log('[Müdür] Shift verisinde müdür bulunamadı:', mudur.name);
-            return { hasMudur: true, isWorking: true, mudur: mudur }; // Varsayılan çalışıyor
-        }
-        
-        const mudurShift = personelShifts[mudurKey]?.[dayIndex] || '';
-        // * işaretini temizle ve kontrol et
-        const cleanShift = mudurShift.replace(/^\*+/, '').replace(/\*+$/, '').trim().toUpperCase();
-        
-        // OFF durumları
-        const offStatuses = ['OFF', 'İ', 'İZİN', 'IZIN', '-', 'X', 'Y.İ', 'RAPOR', 'RAPORLU', 'HASTALIK', 'ÜCRETSİZ', 'UCRETSIZ', ''];
-        const isOff = offStatuses.includes(cleanShift);
-        
-        console.log('[Müdür]', mudur.name, '| Shift:', mudurShift, '| Clean:', cleanShift, '| Çalışıyor:', !isOff);
-        
-        return { 
-            hasMudur: true, 
-            isWorking: !isOff, 
-            mudur: mudur,
-            shift: mudurShift,
-            cleanShift: cleanShift
-        };
-        
-    } catch (e) {
-        console.error('[Müdür] Kontrol hatası:', e);
-        return { hasMudur: false, isWorking: false, mudur: null, error: e.message };
-    }
-}
-
-// Müdür yardımcısını al (her iki rol formatını da destekle)
-async function getMudurYardimcisi(branch) {
-    try {
-        // Her iki rol formatını da kontrol et
-        const snap = await db.collection('personel')
-            .where('branch', '==', branch)
-            .where('role', 'in', ['magaza_mudur_yardimcisi', 'mudur_yardimcisi'])
-            .limit(1)
-            .get();
-        
-        if (snap.empty) return null;
-        
-        const doc = snap.docs[0];
-        return { ...doc.data(), docId: doc.id };
-    } catch (e) {
-        console.error('[Müdür Yardımcısı] Hata:', e);
-        return null;
-    }
-}
-
-// Müdür checklisti kimin sorumluluğunda
-async function getMudurCheckResponsible(branch, date = new Date()) {
-    const mudurStatus = await isMudurWorking(branch, date);
-    
-    // Müdür çalışıyorsa müdür sorumlu
-    if (mudurStatus.isWorking && mudurStatus.mudur) {
-        return {
-            responsible: mudurStatus.mudur,
-            role: 'magaza_muduru',
-            reason: 'Müdür çalışıyor'
-        };
-    }
-    
-    // Müdür çalışmıyorsa yardımcıyı kontrol et
-    const yardimci = await getMudurYardimcisi(branch);
-    
-    if (yardimci) {
-        // Yardımcının da çalışıp çalışmadığını kontrol et
-        const weekStart = getWeekStart(date);
-        const weekKey = formatDateLocal(weekStart);
-        let dayIndex = date.getDay() - 1;
-        if (dayIndex < 0) dayIndex = 6;
-        
-        try {
-            const shiftSnap = await db.collection('shifts')
-                .where('branch', '==', branch)
-                .where('weekStart', '==', weekKey)
-                .limit(1)
-                .get();
-            
-            if (!shiftSnap.empty) {
-                const shiftData = shiftSnap.docs[0].data();
-                const personelShifts = shiftData.personelShifts || {};
-                const personelFullNames = shiftData.personelFullNames || {};
-                
-                const yardimciKey = Object.keys(personelShifts).find(k => 
-                    k === yardimci.uniqueId || 
-                    k === normalizePersonelId(yardimci.name) ||
-                    personelFullNames[k] === yardimci.name
-                );
-                
-                if (yardimciKey) {
-                    const yardimciShift = personelShifts[yardimciKey]?.[dayIndex] || '';
-                    const cleanShift = yardimciShift.replace(/^\*+/, '').replace(/\*+$/, '').trim().toUpperCase();
-                    const offStatuses = ['OFF', 'İ', 'İZİN', 'IZIN', '-', 'X', 'Y.İ', 'RAPOR', 'RAPORLU', ''];
-                    
-                    if (!offStatuses.includes(cleanShift)) {
-                        console.log('[Müdür Check] Müdür OFF, yardımcı devralıyor:', yardimci.name);
-                        return {
-                            responsible: yardimci,
-                            role: 'magaza_mudur_yardimcisi',
-                            reason: 'Müdür izinli/raporlu, yardımcı devralıyor',
-                            mudurStatus: mudurStatus
-                        };
-                    }
-                }
-            }
-        } catch (e) {
-            console.warn('[Müdür Check] Yardımcı shift kontrolü hatası:', e);
-        }
-    }
-    
-    // Müdür de yardımcı da yok/çalışmıyor
-    return {
-        responsible: mudurStatus.mudur, // Yine de müdürü döndür (kayıt için)
-        role: 'magaza_muduru',
-        reason: mudurStatus.hasMudur ? 'Müdür izinli, yardımcı yok/çalışmıyor' : 'Şubede müdür yok',
-        mudurStatus: mudurStatus,
-        noOneAvailable: true
-    };
-}
-
-// Müdür yardımcısı bugün müdür görevini üstleniyor mu?
-async function isMudurYardimcisiActingAsMudur(branch, date = new Date()) {
-    const responsible = await getMudurCheckResponsible(branch, date);
-    return responsible.role === 'magaza_mudur_yardimcisi';
-}
-
-// Müdür yardımcısı diğer checklistlerden muaf mı?
-// (Müdür yokken müdür görevini üstleniyorsa ve tek başına değilse muaf)
-async function shouldExemptMudurYardimcisi(branch, date = new Date()) {
-    const isActingAsMudur = await isMudurYardimcisiActingAsMudur(branch, date);
-    
-    if (!isActingAsMudur) {
-        return { exempt: false, reason: 'Müdür çalışıyor, yardımcı normal görevde' };
-    }
-    
-    // Yardımcı müdür görevini üstleniyor - tek başına mı kontrol et
-    const weekStart = getWeekStart(date);
-    const weekKey = formatDateLocal(weekStart);
-    let dayIndex = date.getDay() - 1;
-    if (dayIndex < 0) dayIndex = 6;
-    
-    try {
-        const shiftSnap = await db.collection('shifts')
-            .where('branch', '==', branch)
-            .where('weekStart', '==', weekKey)
-            .limit(1)
-            .get();
-        
-        if (shiftSnap.empty) {
-            return { exempt: false, reason: 'Shift verisi yok' };
-        }
-        
-        const shiftData = shiftSnap.docs[0].data();
-        const personelShifts = shiftData.personelShifts || {};
-        
-        // Bugün kaç kişi çalışıyor?
-        let workingCount = 0;
-        const offStatuses = ['OFF', 'İ', 'İZİN', 'IZIN', '-', 'X', 'Y.İ', 'RAPOR', 'RAPORLU', ''];
-        
-        Object.values(personelShifts).forEach(days => {
-            const todayShift = days[dayIndex] || '';
-            const cleanShift = todayShift.replace(/^\*+/, '').replace(/\*+$/, '').trim().toUpperCase();
-            if (!offStatuses.includes(cleanShift)) {
-                workingCount++;
-            }
-        });
-        
-        // Tek başına ise muaf değil (tüm işleri yapmalı)
-        if (workingCount <= 1) {
-            return { 
-                exempt: false, 
-                reason: 'Tek başına çalışıyor, tüm görevler ona ait',
-                workingCount: workingCount
-            };
-        }
-        
-        // Birden fazla kişi var - müdür yardımcısı sadece müdür checklistinden sorumlu
-        return {
-            exempt: true,
-            reason: 'Müdür görevi üstlenmiş, diğer checklistlerden muaf',
-            workingCount: workingCount
-        };
-        
-    } catch (e) {
-        console.error('[Muafiyet] Hata:', e);
-        return { exempt: false, reason: 'Hata: ' + e.message };
-    }
+    return maxClosingHour;
 }
 
 // Kapanış shift başlangıç saatini hesapla
@@ -23934,8 +23663,6 @@ async function loadTodayChecks() {
     // ========== PERSONEL ROL BİLGİLERİNİ VE MUAFİYETLERİ YÜKLE ==========
     const personelRoleMap = {}; // uniqueId/displayName → role
     const checklistExemptSet = new Set(); // Muaf personel ID'leri
-    const mudurYardimcisiExemptMap = {}; // branch → {exempt, yardimciId, yardimciName}
-    
     try {
         const personelSnap = await db.collection('personel').get();
         personelSnap.forEach(doc => {
@@ -23973,39 +23700,6 @@ async function loadTodayChecks() {
         console.warn('Personel rol bilgisi yüklenemedi:', e);
     }
     
-    // Müdür yardımcısı muafiyetlerini kontrol et (her şube için)
-    for (const branch of branches) {
-        try {
-            const exemptStatus = await shouldExemptMudurYardimcisi(branch, today);
-            if (exemptStatus.exempt) {
-                const yardimci = await getMudurYardimcisi(branch);
-                if (yardimci) {
-                    mudurYardimcisiExemptMap[branch] = {
-                        exempt: true,
-                        yardimciId: yardimci.uniqueId,
-                        yardimciName: yardimci.name,
-                        yardimciCodeName: yardimci.codeName,
-                        reason: exemptStatus.reason
-                    };
-                    // Muaf set'e ekle
-                    if (yardimci.uniqueId) checklistExemptSet.add(yardimci.uniqueId);
-                    if (yardimci.codeName) checklistExemptSet.add(yardimci.codeName);
-                    if (yardimci.name) {
-                        checklistExemptSet.add(yardimci.name);
-                        checklistExemptSet.add(normalizePersonelId(yardimci.name));
-                        const firstName = yardimci.name.split(' ')[0];
-                        const lastName = yardimci.name.split(' ').slice(1).join(' ');
-                        const lastInitial = lastName?.charAt(0) || '';
-                        checklistExemptSet.add(`${firstName} ${lastInitial}.`);
-                    }
-                    console.log('[Dashboard] Müdür yardımcısı muaf:', branch, yardimci.name, exemptStatus.reason);
-                }
-            }
-        } catch (e) {
-            console.warn('[Dashboard] Müdür yardımcısı muafiyet kontrolü hatası:', branch, e);
-        }
-    }
-    
     // Shift verilerini yükle
     const shiftData = {};
     const rawShiftData = {}; // Ham shift verisi (adaletli atama için)
@@ -24033,12 +23727,10 @@ async function loadTodayChecks() {
                     
                     for (const [uniqueIdOrName, days] of Object.entries(personelShifts)) {
                         const todayShift = days[dayIndex] || '';
-                        // * işaretlerini baştan ve sondan temizle
-                        const cleanShift = todayShift.replace(/^\*+/, '').replace(/\*+$/, '').trim().toUpperCase();
+                        const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
                         
-                        // OFF, İZİN, RAPOR durumlarını atla
-                        const offStatuses = ['OFF', 'İ', 'İZİN', 'IZIN', '-', 'X', 'Y.İ', 'RAPOR', 'RAPORLU', 'HASTALIK', 'ÜCRETSİZ', 'UCRETSIZ', ''];
-                        if (offStatuses.includes(cleanShift)) continue;
+                        // OFF, İZİN durumlarını atla
+                        if (cleanShift === 'OFF' || cleanShift === 'İ' || cleanShift === '-' || cleanShift === 'X' || cleanShift === 'Y.İ') continue;
                         
                         // personelNames (codeName) KULLAN - en doğru format
                         const displayName = personelNames[uniqueIdOrName] || formatDisplayName(personelFullNames[uniqueIdOrName] || uniqueIdOrName.replace(/_/g, ' '));
@@ -24060,19 +23752,17 @@ async function loadTodayChecks() {
                             name: displayName, 
                             shift: todayShift,
                             role: role, // ROL EKLENDİ
-                            branch: branch, // BRANCH EKLENDİ
                             shiftStart: shiftTime?.startHour ?? 10,
                             shiftEnd: shiftTime?.endHour ?? 19
                         };
                         
-                        if (cleanShift === 'A' || cleanShift.includes('AÇILI') || cleanShift === 'AÇILIŞ') {
+                        if (cleanShift === 'A' || cleanShift.includes('AÇILI')) {
                             acilisPersonel.push(displayName);
                             allActive.push({ ...personInfo, type: 'acilis' });
-                        } else if (cleanShift === 'K' || cleanShift.includes('KAPANI') || cleanShift === 'KAPANIŞ') {
+                        } else if (cleanShift === 'K' || cleanShift.includes('KAPANI')) {
                             kapanisPersonel.push(displayName);
                             allActive.push({ ...personInfo, type: 'kapanis' });
-                        } else if (cleanShift) {
-                            // Ara shift (saat formatında: 12:00/21:00)
+                        } else if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-') {
                             araPersonel.push(displayName);
                             allActive.push({ ...personInfo, type: 'ara' });
                         }
@@ -24103,105 +23793,77 @@ async function loadTodayChecks() {
     }
     
     // ========== ROL BAZLI FİLTRELEME FONKSİYONU ==========
-    // checkType: hangi check tipi (acilis, kapanis, gunluk, mudur, platform, temizlik)
-    // shiftType: hangi shift tipini tercih et (acilis, kapanis, ara, null=hepsi)
-    function filterPersonnelForCheck(allActiveList, checkType, shiftType = null, branchName = null) {
+    // checkType: 'mudur' → sadece müdür/yardımcı
+    // checkType: diğerleri → barista varsa sadece baristalar, yoksa müdür
+    // + ŞU ANKİ SAATTE SHIFT'İ DEVAM EDENLER
+    function filterPersonnelForCheck(allActiveList, checkType) {
         if (!allActiveList || allActiveList.length === 0) return [];
+        
+        // ŞU ANKİ SAATTE AKTİF OLANLARI FİLTRELE
+        const nowHour = new Date().getHours();
+        const nowMinute = new Date().getMinutes();
+        const nowTotalMinutes = nowHour * 60 + nowMinute;
+        
+        const currentlyWorking = allActiveList.filter(p => {
+            const startHour = p.shiftStart ?? 10;
+            const endHour = p.shiftEnd ?? 19;
+            const startMinutes = startHour * 60;
+            let endMinutes = endHour * 60;
+            
+            // Gece geçişi kontrolü (örn: 16:00-01:00)
+            if (endHour < startHour) {
+                endMinutes += 24 * 60; // +24 saat
+                let adjustedNow = nowTotalMinutes;
+                if (nowHour < endHour) adjustedNow += 24 * 60;
+                return adjustedNow >= startMinutes && adjustedNow <= endMinutes;
+            }
+            
+            return nowTotalMinutes >= startMinutes && nowTotalMinutes <= endMinutes;
+        });
+        
+        // Şu an çalışan yoksa boş döndür
+        if (currentlyWorking.length === 0) return [];
         
         // Müdür Kontrol: sadece mağaza müdürü veya yardımcı
         if (checkType === 'mudur') {
-            // Önce müdürü ara
-            const mudur = allActiveList.find(p => p.role === 'magaza_muduru');
+            const mudur = currentlyWorking.find(p => p.role === 'magaza_muduru');
             if (mudur) return [mudur.name];
-            // Müdür yoksa yardımcı
-            const yardimci = allActiveList.find(p => p.role === 'mudur_yardimcisi' || p.role === 'magaza_mudur_yardimcisi');
+            const yardimci = currentlyWorking.find(p => p.role === 'mudur_yardimcisi' || p.role === 'magaza_mudur_yardimcisi');
             if (yardimci) return [yardimci.name];
-            // Bölge müdürü
-            const bolge = allActiveList.find(p => p.role === 'bolge_muduru');
+            const bolge = currentlyWorking.find(p => p.role === 'bolge_muduru');
             if (bolge) return [bolge.name];
             return [];
         }
         
-        // Shift tipine göre filtrele
-        let filteredList = allActiveList;
-        if (shiftType) {
-            const shiftFiltered = allActiveList.filter(p => p.type === shiftType);
-            if (shiftFiltered.length > 0) {
-                filteredList = shiftFiltered;
-            }
-        }
+        // Diğer checkler: Önce baristalar (müdür HARİÇ)
+        const baristalar = currentlyWorking.filter(p => 
+            p.role !== 'magaza_muduru' && 
+            p.role !== 'mudur_yardimcisi' && 
+            p.role !== 'magaza_mudur_yardimcisi' &&
+            p.role !== 'bolge_muduru'
+        );
         
-        // AÇILIŞ ve KAPANIŞ kartları için: O shift'teki HERKES dahil (muafiyet uygulanmaz)
-        // Çünkü shift'te tek kişi varsa o kişi dolduracak
-        if (checkType === 'acilis' || checkType === 'kapanis') {
-            // Sadece mağaza müdürünü hariç tut (müdür ayrı check var)
-            const shiftPersonnel = filteredList.filter(p => p.role !== 'magaza_muduru' && p.role !== 'bolge_muduru');
-            if (shiftPersonnel.length > 0) {
-                return shiftPersonnel.map(p => p.name);
-            }
-            // Shift'te sadece müdür varsa müdür dolduracak
-            const mudur = filteredList.find(p => p.role === 'magaza_muduru');
-            if (mudur) return [mudur.name];
-            return [];
-        }
-        
-        // DİĞER KARTLAR (temizlik, günlük, platform): Müdür yardımcısı muafiyeti uygulanır
-        // AMA sadece birden fazla kişi çalışıyorsa
-        
-        // Muaf yardımcı bilgisi
-        const exemptYardimciIds = new Set();
-        if (branchName && mudurYardimcisiExemptMap[branchName]?.exempt) {
-            const yardimciInfo = mudurYardimcisiExemptMap[branchName];
-            if (yardimciInfo.yardimciId) exemptYardimciIds.add(yardimciInfo.yardimciId);
-            if (yardimciInfo.yardimciName) exemptYardimciIds.add(yardimciInfo.yardimciName);
-            if (yardimciInfo.yardimciCodeName) exemptYardimciIds.add(yardimciInfo.yardimciCodeName);
-        }
-        
-        // Baristalar (müdür ve bölge müdürü hariç)
-        const baristalar = filteredList.filter(p => {
-            if (p.role === 'magaza_muduru') return false;
-            if (p.role === 'bolge_muduru') return false;
-            
-            // Müdür yardımcısı muafsa VE birden fazla kişi varsa hariç tut
-            if ((p.role === 'mudur_yardimcisi' || p.role === 'magaza_mudur_yardimcisi')) {
-                // Muafiyet sadece başka barista varsa geçerli
-                const otherBaristas = filteredList.filter(x => 
-                    x.id !== p.id && 
-                    x.role !== 'magaza_muduru' && 
-                    x.role !== 'bolge_muduru' &&
-                    x.role !== 'mudur_yardimcisi' &&
-                    x.role !== 'magaza_mudur_yardimcisi'
-                );
-                
-                if (otherBaristas.length > 0 && (exemptYardimciIds.has(p.id) || exemptYardimciIds.has(p.name))) {
-                    console.log('[Filter] Müdür yardımcısı muaf, başka barista var:', otherBaristas.map(x => x.name));
-                    return false;
-                }
-                // Tek başına veya muaf değilse dahil et
-            }
-            
-            return true;
-        });
-        
-        if (baristalar.length > 0) {
-            return baristalar.map(p => p.name);
-        }
-        
-        // Barista yok - müdür yardımcısı (muaf olsa bile tek ise dahil)
-        const yardimcilar = filteredList.filter(p => 
+        // Müdür yardımcısını da ekle (barista gibi çalışır)
+        const yardimcilar = currentlyWorking.filter(p => 
             p.role === 'mudur_yardimcisi' || p.role === 'magaza_mudur_yardimcisi'
         );
         
+        // Barista varsa: baristalar + müdür yardımcıları
+        if (baristalar.length > 0) {
+            return [...baristalar, ...yardimcilar].map(p => p.name);
+        }
+        
+        // Barista yok ama yardımcı var: yardımcı
         if (yardimcilar.length > 0) {
             return yardimcilar.map(p => p.name);
         }
         
-        // Mağaza müdürü (TEK BAŞINA)
-        const mudur = filteredList.find(p => p.role === 'magaza_muduru');
+        // Barista ve yardımcı yok: mağaza müdürü (TEK BAŞINA)
+        const mudur = currentlyWorking.find(p => p.role === 'magaza_muduru');
         if (mudur) return [mudur.name];
         
-        // Bölge müdürü
-        const bolge = filteredList.find(p => p.role === 'bolge_muduru');
+        // En son bölge müdürü (gösterilir ama puan almaz)
+        const bolge = currentlyWorking.find(p => p.role === 'bolge_muduru');
         if (bolge) return [bolge.name];
         
         return [];
@@ -24387,9 +24049,9 @@ async function loadTodayChecks() {
             }
             
             if (rawData?.allActive) {
-                // ÖNCELİKLE ROL FİLTRELEMESİ UYGULA (açılış shift'i tercih et)
+                // ÖNCELİKLE ROL FİLTRELEMESİ UYGULA
                 // Barista varsa müdür görünmez
-                const filteredActive = filterPersonnelForCheck(rawData.allActive, 'platform', 'acilis', branch)
+                const filteredActive = filterPersonnelForCheck(rawData.allActive, 'platform')
                     .map(name => rawData.allActive.find(p => p.name === name))
                     .filter(Boolean);
                 
@@ -24400,7 +24062,6 @@ async function loadTodayChecks() {
                     case 10:
                         // 10:00 → Açılışçıya
                         platformPersonnel = workingActive.filter(p => p.type === 'acilis').map(p => p.name);
-                        if (platformPersonnel.length === 0) platformPersonnel = workingActive.map(p => p.name).slice(0, 2);
                         platformSubLabel = 'Açılışçı';
                         break;
                     case 12:
@@ -24591,8 +24252,8 @@ async function loadTodayChecks() {
                 kapanisci: 'kapanis'
             };
             const temizlikPersonnelRaw = getShiftPersonnel(branch, shiftToPersonnelType[currentShiftType] || 'all');
-            // ROL FİLTRELEMESİ: Barista varsa müdür görünmez, muaf yardımcı hariç
-            const temizlikPersonnel = filterPersonnelForCheck(rawShiftData[branch]?.allActive || [], 'temizlik', null, branch);
+            // ROL FİLTRELEMESİ: Barista varsa müdür görünmez
+            const temizlikPersonnel = filterPersonnelForCheck(rawShiftData[branch]?.allActive || [], 'temizlik');
             
             branchChecks.push({
                 id: 'temizlik',
@@ -24679,8 +24340,8 @@ async function loadTodayChecks() {
             }
             
             const acilisPersonnelRaw = getShiftPersonnel(branch, 'acilis');
-            // ROL FİLTRELEMESİ: Açılış shift'indeki baristalar, muaf yardımcı hariç
-            const acilisPersonnel = filterPersonnelForCheck(rawShiftData[branch]?.allActive || [], 'acilis', 'acilis', branch);
+            // ROL + SHIFT SAATİ FİLTRELEMESİ: Şu an aktif ve barista öncelikli
+            const acilisPersonnel = filterPersonnelForCheck(rawShiftData[branch]?.allActive || [], 'acilis');
             
             branchChecks.push({
                 id: 'acilis',
@@ -24765,8 +24426,8 @@ async function loadTodayChecks() {
             }
             
             const kapanisPersonnelRaw = getShiftPersonnel(branch, 'kapanis');
-            // ROL FİLTRELEMESİ: Kapanış shift'indeki baristalar, muaf yardımcı hariç
-            const kapanisPersonnel = filterPersonnelForCheck(rawShiftData[branch]?.allActive || [], 'kapanis', 'kapanis', branch);
+            // ROL + SHIFT SAATİ FİLTRELEMESİ: Şu an aktif ve barista öncelikli
+            const kapanisPersonnel = filterPersonnelForCheck(rawShiftData[branch]?.allActive || [], 'kapanis');
             
             branchChecks.push({
                 id: 'kapanis',
@@ -24934,12 +24595,12 @@ async function loadTodayChecks() {
             
             // Gece saatlerinde (00:00-02:00) kapanışçılara ata
             if (isLateNight) {
-                gunlukPersonnel = filterPersonnelForCheck(rawShiftData[branch]?.allActive || [], 'gunluk', 'kapanis', branch);
+                gunlukPersonnel = filterPersonnelForCheck(rawShiftData[branch]?.allActive || [], 'gunluk');
                 gunlukSubLabel = 'Kapanışçı';
                 console.log('[Günlük] Gece saati - aktif personele atandı:', gunlukPersonnel);
             } else if (rawData?.allActive) {
-                // ROL FİLTRELEMESİ: Barista varsa müdür görünmez, muaf yardımcı hariç
-                const filteredActive = filterPersonnelForCheck(rawData.allActive, 'gunluk', null, branch)
+                // ROL + SHIFT SAATİ FİLTRELEMESİ: Barista varsa müdür görünmez
+                const filteredActive = filterPersonnelForCheck(rawData.allActive, 'gunluk')
                     .map(name => rawData.allActive.find(p => p.name === name))
                     .filter(Boolean);
                 const workingActive = filteredActive.length > 0 ? filteredActive : rawData.allActive;
@@ -25099,11 +24760,8 @@ async function loadTodayChecks() {
                     }
                     if (!shift) return false;
                     const todayShift = shift[rawData.dayIndex] || '';
-                    // * işaretlerini baştan ve sondan temizle
-                    const cleanShift = todayShift.replace(/^\*+/, '').replace(/\*+$/, '').trim().toUpperCase();
-                    // OFF durumları genişletildi
-                    const offStatuses = ['OFF', 'İ', 'İZİN', 'IZIN', 'Y.İ', '-', 'X', 'RAPOR', 'RAPORLU', 'HASTALIK', 'ÜCRETSİZ', 'UCRETSIZ', ''];
-                    return offStatuses.includes(cleanShift);
+                    const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
+                    return cleanShift === 'OFF' || cleanShift === 'İ' || cleanShift === 'Y.İ' || cleanShift === '-' || cleanShift === 'X';
                 };
                 
                 // Sırayla kontrol et: Müdür → Yardımcı → Bölge Müdürü
@@ -25270,22 +24928,9 @@ async function loadTodayChecks() {
                         
                         subLabel = `${completedCount}/${allAssignments.length} tamamlandı`;
                         
-                        // Atanan personelleri göster - Muaf personeli filtrele
+                        // Atanan personelleri göster - TÜM İSİMLER
                         const uniquePersonnel = [...new Set(allAssignments.map(a => a.personnelName))];
-                        // Müdür yardımcısı muafsa listeden çıkar
-                        const filteredPersonnel = uniquePersonnel.filter(name => {
-                            const exemptInfo = mudurYardimcisiExemptMap[branch];
-                            if (exemptInfo?.exempt) {
-                                // Yardımcının adını kontrol et
-                                const yardimciName = exemptInfo.yardimciCodeName || exemptInfo.yardimciName || '';
-                                if (name === yardimciName || name.includes(yardimciName.split(' ')[0])) {
-                                    console.log('[Haftalık] Muaf yardımcı filtrelendi:', name);
-                                    return false;
-                                }
-                            }
-                            return true;
-                        });
-                        personnelTags = filteredPersonnel;
+                        personnelTags = uniquePersonnel;
                         
                         isActive = pendingCount > 0;
                     }
