@@ -22742,8 +22742,11 @@ function getBranchOpeningTime(branch) {
 
 // Saat string'ini dakikaya çevir (00:00 = 1440 olarak hesapla gece için)
 function timeToMinutes(timeStr, forNight = false) {
-    const [h, m] = timeStr.split(':').map(Number);
-    let minutes = h * 60 + m;
+    if (!timeStr || typeof timeStr !== 'string') return 0;
+    const parts = timeStr.split(':');
+    if (parts.length < 2) return 0;
+    const [h, m] = parts.map(Number);
+    let minutes = (h || 0) * 60 + (m || 0);
     if (forNight && h < 6) minutes += 1440; // Gece saatleri için ertesi güne ekle
     return minutes;
 }
@@ -23057,7 +23060,10 @@ function getCheckTimeWindow(checkType, targetTime, branch, date = new Date()) {
     const rules = CHECK_RULES[checkType];
     if (!rules) return null;
     
-    const targetMinutes = timeToMinutes(targetTime);
+    // targetTime null/undefined kontrolü
+    if (!targetTime && !rules.deadline) return null;
+    
+    const targetMinutes = targetTime ? timeToMinutes(targetTime) : 0;
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     
@@ -30183,6 +30189,102 @@ async function loadChecklist() {
         await renderTemizlikChecklist(container, branch, date);
         checklistLoadingLock = false;
         return;
+    }
+    
+    // ==================== SÜRE KONTROLÜ (Açılış/Kapanış/Müdür) ====================
+    // Bu checklistler için deadline geçmişse bilgilendirme göster
+    const deadlineTypes = ['acilis', 'kapanis', 'mudur'];
+    if (deadlineTypes.includes(type)) {
+        const rules = CHECK_RULES[type] || {};
+        const deadline = rules.deadline;
+        const lateWindow = rules.lateWindow || 30;
+        
+        if (deadline) {
+            const now = new Date();
+            const currentHour = now.getHours();
+            const currentMinutes = now.getMinutes();
+            const nowTotalMinutes = currentHour * 60 + currentMinutes;
+            
+            const [dH, dM] = deadline.split(':').map(Number);
+            let deadlineMinutes = dH * 60 + dM;
+            
+            // Gece geçişi kontrolü (kapanış checklistleri için)
+            const dayEndHour = getBusinessDayEndHour();
+            if (dH < 12 && (type === 'kapanis' || type === 'mudur')) {
+                // Gece yarısından sonraki deadline
+                if (currentHour >= 12) {
+                    // Henüz gece olmadı - deadline ertesi gün
+                    deadlineMinutes += 24 * 60;
+                }
+            }
+            
+            // Şu anki saati ayarla (gece geçişi için)
+            let adjustedNow = nowTotalMinutes;
+            if (currentHour < dayEndHour && currentHour >= 0 && currentHour < 6) {
+                adjustedNow += 24 * 60;
+            }
+            
+            const deadlineWithLate = deadlineMinutes + lateWindow;
+            const isExpired = adjustedNow > deadlineWithLate;
+            
+            // Yöneticiler için geçmiş checklistleri görüntüleme izni
+            const isManager = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
+            
+            if (isExpired && !isManager) {
+                // Süre dolmuş - bilgilendirme göster
+                const typeNames = {
+                    'acilis': 'Açılış Hazırlıkları',
+                    'kapanis': 'Kapanış Hazırlıkları',
+                    'mudur': 'Müdür Kontrolleri'
+                };
+                const typeName = typeNames[type] || type;
+                const missedPoints = rules.points?.missed || -2;
+                
+                container.innerHTML = `
+                    <div style="text-align:center;padding:60px 20px">
+                        <div style="width:90px;height:90px;margin:0 auto 24px;background:linear-gradient(135deg,rgba(231,76,60,.15),rgba(231,76,60,.25));border-radius:50%;display:flex;align-items:center;justify-content:center">
+                            <svg width="48" height="48" fill="none" stroke="#e74c3c" stroke-width="1.5" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 6v6l4 2"/>
+                            </svg>
+                        </div>
+                        <div style="font-size:1.4rem;font-weight:700;color:var(--tx);margin-bottom:12px">Doldurma Süresi Doldu</div>
+                        <div style="color:var(--tx2);max-width:400px;margin:0 auto;line-height:1.6;font-size:1rem">
+                            <strong>${typeName}</strong> checklisti için doldurma süresi sona erdi.
+                        </div>
+                        
+                        <div style="margin-top:24px;padding:16px 24px;background:var(--bg3);border-radius:12px;display:inline-block">
+                            <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;justify-content:center">
+                                <div style="text-align:center">
+                                    <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Son Doldurma Saati</div>
+                                    <div style="font-size:1.2rem;font-weight:700;color:#e74c3c">${deadline}</div>
+                                </div>
+                                <div style="width:1px;height:40px;background:var(--cardBorder)"></div>
+                                <div style="text-align:center">
+                                    <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Tolerans</div>
+                                    <div style="font-size:1.2rem;font-weight:600;color:var(--tx)">+${lateWindow} dk</div>
+                                </div>
+                                <div style="width:1px;height:40px;background:var(--cardBorder)"></div>
+                                <div style="text-align:center">
+                                    <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Puan Etkisi</div>
+                                    <div style="font-size:1.2rem;font-weight:700;color:#e74c3c">${missedPoints} puan</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top:24px;font-size:.85rem;color:var(--tx3)">
+                            Bu checklist artık doldurulamaz. Bir sonraki vardiya için hazır olun.
+                        </div>
+                        
+                        <button onclick="showPage('home')" style="margin-top:24px;background:linear-gradient(135deg,#008c95,#008c95dd);color:white;border:none;padding:12px 28px;border-radius:10px;font-weight:600;cursor:pointer;font-size:.95rem">
+                            Ana Sayfaya Dön
+                        </button>
+                    </div>
+                `;
+                checklistLoadingLock = false;
+                return;
+            }
+        }
     }
     
     // Otomatik saat belirleme - mevcut Türkiye saati
