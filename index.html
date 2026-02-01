@@ -17208,6 +17208,9 @@ async function getPositionPermissions(positionId, baseRole) {
 }
 
 // Matrix değişiklik handler
+// Otomatik kaydetme için debounce timer
+let matrixAutoSaveTimer = null;
+
 function handleMatrixChange(element) {
     const posId = element.dataset.pos;
     const cat = element.dataset.cat;
@@ -17236,8 +17239,14 @@ function handleMatrixChange(element) {
     // Kaydedilmemiş değişiklik flag
     matrixHasUnsavedChanges = true;
     
-    // Değişiklik göstergesi
-    document.getElementById('matrixSaveStatus').innerHTML = '<span style="color:var(--yellow)">● Kaydedilmemiş değişiklikler var</span>';
+    // Kaydetme göstergesi
+    document.getElementById('matrixSaveStatus').innerHTML = '<span style="color:var(--yellow)">● Kaydediliyor...</span>';
+    
+    // Debounce ile otomatik kaydet (500ms sonra)
+    if (matrixAutoSaveTimer) clearTimeout(matrixAutoSaveTimer);
+    matrixAutoSaveTimer = setTimeout(() => {
+        saveMatrixPermissions();
+    }, 500);
 }
 
 // Tüm matrix izinlerini kaydet
