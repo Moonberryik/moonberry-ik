@@ -2408,7 +2408,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">
                             Personelin shift saati dışında hangi bölümlere erişebileceğini ayarlayın. 
                             Kapalı olan bölümler shift saatinden 1 saat önce ve 1 saat sonra erişilebilir.
-                            <strong>Yönetici, Bölge Müdürü ve Mağaza Müdürü</strong> bu kısıtlamalardan muaftır.
+                            <strong>Yönetici</strong> bu kısıtlamalardan her zaman muaftır.
                         </p>
                         
                         <div id="shiftAccessSettingsContainer" style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px">
@@ -22473,11 +22473,8 @@ async function checkShiftAccess(branch = null, date = null, area = null) {
     const targetBranch = branch || currentUser?.branch;
     const targetDate = date || new Date();
     
-    // Muaf roller
-    const exemptRoles = ['yonetici', 'bolge_muduru', 'magaza_muduru'];
-    const isExempt = exemptRoles.includes(currentUser?.role);
-    
-    if (isExempt) {
+    // Sadece yönetici her zaman muaf
+    if (currentUser?.role === 'yonetici') {
         return {
             hasAccess: true,
             isExempt: true,
