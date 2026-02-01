@@ -32156,16 +32156,21 @@ async function renderPlatformChecklistWithStatus(container, branch, date, active
     let selectedTimeSlot = activeTimeSlot;
     if (!selectedTimeSlot) {
         const dayEndHour = getBusinessDayEndHour();
-        const isLateNight = currentHour >= 0 && currentHour < dayEndHour;
         
-        if (isLateNight) {
-            // Gece yarısından sonra - son slot
-            selectedTimeSlot = timeSlots[timeSlots.length - 1];
+        // Gece saatleri (00:00 - dayEndHour arası) → 00:00 slotu aktif
+        if (currentHour >= 0 && currentHour < dayEndHour) {
+            // 00:00 slotu varsa onu kullan
+            if (timeSlots.includes('00:00')) {
+                selectedTimeSlot = '00:00';
+            } else {
+                // Son slotu kullan
+                selectedTimeSlot = timeSlots[timeSlots.length - 1];
+            }
         } else {
-            // En yakın aktif slotu bul (şu an veya 15dk içinde başlayacak)
+            // Normal saatlerde en yakın aktif slotu bul
             for (const timeStr of timeSlots) {
                 const [h, m] = timeStr.split(':').map(Number);
-                const slotMinutes = h * 60 + m;
+                const slotMinutes = h * 60 + (m || 0);
                 const diff = slotMinutes - currentMinutes;
                 // -60dk (geçmiş 1 saat) ile +60dk (gelecek 1 saat) arası
                 if (diff >= -60 && diff <= 60) {
@@ -32177,7 +32182,7 @@ async function renderPlatformChecklistWithStatus(container, branch, date, active
             if (!selectedTimeSlot) {
                 for (const timeStr of timeSlots) {
                     const [h, m] = timeStr.split(':').map(Number);
-                    const slotMinutes = h * 60 + m;
+                    const slotMinutes = h * 60 + (m || 0);
                     if (slotMinutes > currentMinutes) {
                         selectedTimeSlot = timeStr;
                         break;
@@ -32206,7 +32211,7 @@ async function renderPlatformChecklistWithStatus(container, branch, date, active
     renderPlatformChecklist(container, branch, date, selectedTimeSlot, submittedData);
 }
 
-// Platform checklist render - YENİ MOBİL UYUMLU TASARIM
+// Platform checklist render - PREMIUM MİNİMALİST TASARIM
 async function renderPlatformChecklist(container, branch, date, timeSlot, submittedData) {
     const isSubmitted = !!submittedData;
     
@@ -32248,10 +32253,21 @@ async function renderPlatformChecklist(container, branch, date, timeSlot, submit
         <div class="platform-check-container">
             <!-- Header -->
             <div style="text-align:center;margin-bottom:24px">
-                <div style="font-size:1.4rem;font-weight:700;color:var(--tx);margin-bottom:4px">📱 Platform Check</div>
+                <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px">
+                    <svg width="24" height="24" fill="none" stroke="var(--tx)" stroke-width="2" viewBox="0 0 24 24">
+                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                        <line x1="12" y1="18" x2="12.01" y2="18"/>
+                    </svg>
+                    <span style="font-size:1.4rem;font-weight:700;color:var(--tx)">Platform Check</span>
+                </div>
                 <div style="font-size:1.1rem;font-weight:600;color:#008c95">${timeRange}</div>
                 <div style="font-size:.85rem;color:var(--tx2);margin-top:4px">${dateStr}</div>
-                ${isSubmitted ? `<div style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.85rem;font-weight:600;margin-top:12px">✓ Tamamlandı</div>` : ''}
+                ${isSubmitted ? `
+                    <div style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.85rem;font-weight:600;margin-top:12px">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                        Tamamlandı
+                    </div>
+                ` : ''}
             </div>
             
             <!-- Sorumlu -->
@@ -32261,7 +32277,7 @@ async function renderPlatformChecklist(container, branch, date, timeSlot, submit
                 <input type="hidden" id="checklistPersonName" value="${isSubmitted ? (submittedData?.personName || '') : (currentUser?.name || '')}" autocomplete="off">
             </div>
             
-            <!-- Platform Kartları - Mobil Uyumlu Grid -->
+            <!-- Platform Kartları - Tek Sütun Layout -->
             <div class="platform-brands-grid">
     `;
     
@@ -32289,26 +32305,23 @@ async function renderPlatformChecklist(container, branch, date, timeSlot, submit
             const isOpen = savedValue === 'open';
             const isClosed = savedValue === 'closed';
             
-            // Platform kısa adı
-            const shortName = platform.replace('Yemek Sepeti', 'YS').replace('Getir Yemek', 'GY').replace('Trendyol', 'TY').replace('Migros', 'MG');
-            
             html += `
                             <div class="platform-item">
-                                <div style="font-size:.75rem;color:var(--tx2);margin-bottom:8px;font-weight:600;text-align:center">${shortName}</div>
-                                <div style="display:flex;gap:8px;justify-content:center">
+                                <div style="font-size:.8rem;color:var(--tx2);margin-bottom:10px;font-weight:600;text-align:center">${platform}</div>
+                                <div style="display:flex;gap:10px;justify-content:center">
                                     <button type="button" class="platform-btn ${isOpen ? 'active' : ''}" 
                                         ${isSubmitted ? 'disabled' : `onclick="selectPlatformStatus(this, '${key}', 'open', '${brand.color}')"`}
-                                        style="width:40px;height:40px;border-radius:10px;border:2px solid ${isOpen ? brand.color : 'var(--cardBorder)'};
+                                        style="width:44px;height:44px;border-radius:12px;border:2px solid ${isOpen ? brand.color : 'var(--cardBorder)'};
                                         background:${isOpen ? brand.color : 'var(--bg2)'};color:${isOpen ? '#fff' : 'var(--tx3)'};
-                                        font-size:1.2rem;cursor:${isSubmitted ? 'not-allowed' : 'pointer'};transition:all .2s">
-                                        ✓
+                                        cursor:${isSubmitted ? 'not-allowed' : 'pointer'};transition:all .2s;display:flex;align-items:center;justify-content:center">
+                                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
                                     </button>
                                     <button type="button" class="platform-btn ${isClosed ? 'active' : ''}"
                                         ${isSubmitted ? 'disabled' : `onclick="selectPlatformStatus(this, '${key}', 'closed', '${brand.color}')"`}
-                                        style="width:40px;height:40px;border-radius:10px;border:2px solid ${isClosed ? '#e74c3c' : 'var(--cardBorder)'};
+                                        style="width:44px;height:44px;border-radius:12px;border:2px solid ${isClosed ? '#e74c3c' : 'var(--cardBorder)'};
                                         background:${isClosed ? '#e74c3c' : 'var(--bg2)'};color:${isClosed ? '#fff' : 'var(--tx3)'};
-                                        font-size:1.2rem;cursor:${isSubmitted ? 'not-allowed' : 'pointer'};transition:all .2s">
-                                        ✗
+                                        cursor:${isSubmitted ? 'not-allowed' : 'pointer'};transition:all .2s;display:flex;align-items:center;justify-content:center">
+                                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                                     </button>
                                 </div>
                                 <input type="hidden" name="platform_${key}" value="${savedValue || ''}">
@@ -32329,58 +32342,49 @@ async function renderPlatformChecklist(container, branch, date, timeSlot, submit
             <!-- Submit Button -->
             ${!isSubmitted ? `
                 <div style="margin-top:24px">
-                    <button class="btn btn-primary" style="width:100%;padding:16px;font-size:1rem" 
+                    <button class="btn btn-primary" style="width:100%;padding:16px;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:8px" 
                         onclick="submitPlatformChecklist('${branch}', '${date}', '${timeSlot}')">
-                        ✅ Platform Check'i Tamamla
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                        Platform Check'i Tamamla
                     </button>
                 </div>
             ` : ''}
             
             <!-- Bilgi -->
-            <div style="margin-top:16px;padding:12px;background:var(--bg3);border-radius:10px;font-size:.8rem;color:var(--tx2);text-align:center">
-                <strong>✓</strong> = Platform açık ve çalışıyor &nbsp;&nbsp; <strong>✗</strong> = Sorun var / Kapalı
+            <div style="margin-top:16px;padding:12px;background:var(--bg3);border-radius:10px;font-size:.8rem;color:var(--tx2);text-align:center;display:flex;justify-content:center;gap:20px">
+                <span style="display:flex;align-items:center;gap:4px">
+                    <svg width="14" height="14" fill="none" stroke="#27ae60" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                    Açık / Çalışıyor
+                </span>
+                <span style="display:flex;align-items:center;gap:4px">
+                    <svg width="14" height="14" fill="none" stroke="#e74c3c" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Sorun / Kapalı
+                </span>
             </div>
         </div>
         
         <style>
             .platform-brands-grid {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
+                display: flex;
+                flex-direction: column;
                 gap: 16px;
             }
             .platform-grid {
                 display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 16px;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 12px;
             }
             .platform-item {
-                padding: 12px;
+                padding: 12px 8px;
                 background: var(--bg3);
                 border-radius: 12px;
             }
             .platform-btn:hover:not(:disabled) {
                 transform: scale(1.05);
+                box-shadow: 0 4px 12px rgba(0,0,0,.15);
             }
             .platform-btn:active:not(:disabled) {
                 transform: scale(0.95);
-            }
-            
-            /* Mobil uyumluluk */
-            @media (max-width: 768px) {
-                .platform-brands-grid {
-                    grid-template-columns: 1fr;
-                }
-                .platform-grid {
-                    grid-template-columns: repeat(4, 1fr);
-                    gap: 8px;
-                }
-                .platform-item {
-                    padding: 8px;
-                }
-                .platform-btn {
-                    width: 36px !important;
-                    height: 36px !important;
-                }
             }
             
             @media (max-width: 480px) {
@@ -33029,6 +33033,9 @@ function showPlatformCompleteModal(date, timeSlot, personName, moonberryOpen, mo
     const dateStr = new Date(date).toLocaleDateString('tr-TR', {day: 'numeric', month: 'long', year: 'numeric'});
     const submitTimeStr = new Date().toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'});
     
+    const checkIcon = `<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24" style="vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg>`;
+    const xIcon = `<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24" style="vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+    
     const modal = document.createElement('div');
     modal.id = 'platformCompleteModal';
     modal.innerHTML = `
@@ -33037,23 +33044,30 @@ function showPlatformCompleteModal(date, timeSlot, personName, moonberryOpen, mo
                 <div style="width:70px;height:70px;background:linear-gradient(135deg,rgba(39,174,96,.2),rgba(39,174,96,.1));border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
                     <svg width="36" height="36" fill="none" stroke="#27ae60" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                 </div>
-                <h3 style="font-size:1.3rem;font-weight:700;color:var(--tx);margin-bottom:6px">Platform Check Tamamlandı!</h3>
+                <h3 style="font-size:1.3rem;font-weight:700;color:var(--tx);margin-bottom:6px">Platform Check Tamamlandı</h3>
                 <p style="color:#008c95;font-weight:600;font-size:1.1rem;margin-bottom:4px">${timeSlot} Kontrolü</p>
-                <p style="color:var(--tx2);font-size:.85rem;margin-bottom:20px">${dateStr} • ${submitTimeStr}</p>
+                <p style="color:var(--tx2);font-size:.85rem;margin-bottom:20px">${dateStr} · ${submitTimeStr}</p>
                 
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
                     <div style="background:#008c95;border-radius:12px;padding:14px;color:#fff">
-                        <div style="font-weight:700;font-size:.9rem;margin-bottom:6px">MOONBERRY</div>
-                        <div style="font-size:.85rem">✓ ${moonberryOpen} &nbsp; ✗ ${moonberryClosed}</div>
+                        <div style="font-weight:700;font-size:.9rem;margin-bottom:8px">MOONBERRY</div>
+                        <div style="font-size:.85rem;display:flex;justify-content:center;gap:12px">
+                            <span>${checkIcon} ${moonberryOpen}</span>
+                            <span>${xIcon} ${moonberryClosed}</span>
+                        </div>
                     </div>
                     <div style="background:#ff8674;border-radius:12px;padding:14px;color:#fff">
-                        <div style="font-weight:700;font-size:.9rem;margin-bottom:6px">SUNBERRY</div>
-                        <div style="font-size:.85rem">✓ ${sunberryOpen} &nbsp; ✗ ${sunberryClosed}</div>
+                        <div style="font-weight:700;font-size:.9rem;margin-bottom:8px">SUNBERRY</div>
+                        <div style="font-size:.85rem;display:flex;justify-content:center;gap:12px">
+                            <span>${checkIcon} ${sunberryOpen}</span>
+                            <span>${xIcon} ${sunberryClosed}</span>
+                        </div>
                     </div>
                 </div>
                 
-                <button onclick="document.getElementById('platformCompleteModal').remove(); loadChecklist();" class="btn btn-primary" style="width:100%;padding:14px">
-                    ✓ Tamam
+                <button onclick="document.getElementById('platformCompleteModal').remove(); loadChecklist();" class="btn btn-primary" style="width:100%;padding:14px;display:flex;align-items:center;justify-content:center;gap:8px">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                    Tamam
                 </button>
             </div>
         </div>
