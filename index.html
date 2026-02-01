@@ -10426,11 +10426,26 @@ async function savePersonel() {
     try {
         // Email ve şifre varsa işlem yap
         if (email && password) {
-            // Credentials koleksiyonuna kaydet (tek kaynak)
-            const personelDocId = editId || 'new_' + Date.now();
-            await saveCredential(email, password, personelDocId);
-            console.log('✅ Credentials kaydedildi:', email);
-            toast('Şifre kaydedildi ✓', 'success');
+            // Yetki kontrolü - assign_password yetkisi gerekli
+            const perms = window.userAdvancedPermissions;
+            const canAssignPassword = currentUser?.role === 'yonetici' || perms?.special?.assign_password;
+            
+            if (!canAssignPassword) {
+                console.warn('⚠️ Şifre atama yetkisi yok!');
+                toast('Şifre atama yetkiniz yok', 'error');
+            } else {
+                // Credentials koleksiyonuna kaydet (tek kaynak)
+                const personelDocId = editId || 'new_' + Date.now();
+                const credResult = await saveCredential(email, password, personelDocId);
+                
+                if (credResult) {
+                    console.log('✅ Credentials kaydedildi:', email);
+                    toast('Şifre kaydedildi ✓', 'success');
+                } else {
+                    console.error('❌ Credentials kaydedilemedi:', email);
+                    toast('Şifre kaydedilemedi!', 'error');
+                }
+            }
         }
         
         // passwordPlain kaldı ise temizle
@@ -10613,11 +10628,17 @@ async function showPersonelPreview(docId) {
         
         const p = doc.data();
         
-        // Yetki kontrolleri (dinamik - rol bazlı)
+        // Yetki kontrolleri (dinamik - Firebase izinlerinden)
         const isYonetici = currentUser?.role === 'yonetici';
         const isBolgeMuduru = currentUser?.role === 'bolge_muduru';
-        const canViewPassword = isYonetici; // Sadece yönetici şifre görebilir
-        const canChangePassword = isYonetici || isBolgeMuduru; // Yönetici veya bölge müdürü değiştirebilir
+        const perms = window.userAdvancedPermissions;
+        
+        // Şifre görme yetkisi (yönetici VEYA view_password yetkisi olan)
+        const canViewPassword = isYonetici || perms?.special?.view_password === true;
+        // Şifre değiştirme yetkisi (yönetici VEYA change_others_password yetkisi olan)
+        const canChangePassword = isYonetici || perms?.special?.change_others_password === true;
+        // Şifre atama yetkisi
+        const canAssignPassword = isYonetici || perms?.special?.assign_password === true;
         
         // Şifre bilgisi (sadece admin için)
         let passwordHtml = '';
@@ -10733,12 +10754,12 @@ async function showPersonelPreview(docId) {
                         </div>
                     </div>
                     
-                    <!-- Şifre (Sadece Admin) -->
+                    <!-- Şifre (Yetkili Kullanıcılar) -->
                     ${canViewPassword ? `
                     <div>
                         <div style="font-size:.7rem;font-weight:600;color:#e74c3c;margin-bottom:8px;display:flex;align-items:center;gap:6px">
                             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                            Şifre (Sadece Yönetici Görebilir)
+                            Şifre (Yetkili Kullanıcı)
                         </div>
                         ${passwordHtml || '<div style="padding:10px 12px;background:var(--bg3);border-radius:8px;font-size:.85rem;color:var(--tx3)">Şifre atanmamış</div>'}
                     </div>
