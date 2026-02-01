@@ -22381,7 +22381,9 @@ async function checkShiftAccess(branch = null, date = null, area = null) {
     
     // Kullanıcının pozisyon yetkilerini kontrol et
     if (area) {
-        const perms = await getPositionPermissions(currentUser?.positionId, currentUser?.role);
+        // positionId veya role kullan (hangisi varsa)
+        const permKey = currentUser?.positionId || currentUser?.role;
+        const perms = await getPositionPermissions(permKey, currentUser?.role);
         const bypassKey = `shift_bypass_${area}`;
         
         if (perms?.special?.[bypassKey] === true) {
@@ -32762,28 +32764,6 @@ async function renderPlatformChecklist(container, branch, date, activeSlot, subm
     
     // Puanlar config'den
     const points = pointsConfig || { onTime: 0, missed: -2 };
-    
-    // G16: Kullanıcının shift durumunu kontrol et
-    const userShiftStatus = await checkCurrentUserShift(branch, date);
-    const isManager = userShiftStatus.isManager;
-    const hasShift = userShiftStatus.hasShift;
-    
-    // Shift yoksa uyarı göster (yöneticiler hariç)
-    if (!hasShift && !isManager && !isSubmitted) {
-        container.innerHTML = `
-            <div style="text-align:center;padding:60px 20px">
-                <div style="width:80px;height:80px;margin:0 auto 20px;background:linear-gradient(135deg,#fee2e2,#fecaca);border-radius:50%;display:flex;align-items:center;justify-content:center">
-                    <svg width="40" height="40" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10"/>
-                        <path d="M12 8v4M12 16h.01"/>
-                    </svg>
-                </div>
-                <div style="font-size:1.2rem;font-weight:600;color:var(--tx);margin-bottom:8px">Şu An Shift'iniz Yok</div>
-                <div style="color:var(--tx2);margin-bottom:20px">Bu şubede bugün için aktif bir shift kaydınız bulunmuyor.</div>
-            </div>
-        `;
-        return;
-    }
     
     // Dinamik platformlar - config/system.platforms'dan (PLATFORMS global)
     const platforms = PLATFORMS || [];
