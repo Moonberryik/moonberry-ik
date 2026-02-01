@@ -24100,12 +24100,32 @@ async function loadTodayChecks() {
     function filterPersonnelForCheck(allActiveList, checkType) {
         if (!allActiveList || allActiveList.length === 0) return [];
         
+        // ==================== PART-TIME MUAF KONTROLÜ ====================
+        // checklistExempt: true olan personeli baştan hariç tut
+        let filteredList = allActiveList.filter(p => {
+            if (!p || !p.name) return false;
+            // checklistExemptSet içinde varsa hariç tut
+            const isExempt = checklistExemptSet.has(p.name) || 
+                             checklistExemptSet.has(p.codeName) ||
+                             checklistExemptSet.has(p.uniqueId) ||
+                             checklistExemptSet.has(formatDisplayName(p.name));
+            if (isExempt) {
+                console.log('[filterPersonnel] Muaf personel hariç tutuldu:', p.name);
+            }
+            return !isExempt;
+        });
+        
+        // Eğer herkes muafsa orijinal listeyi kullan (en az 1 kişi lazım)
+        if (filteredList.length === 0) {
+            filteredList = allActiveList;
+        }
+        
         // ŞU ANKİ SAATTE AKTİF OLANLARI FİLTRELE
         const nowHour = new Date().getHours();
         const nowMinute = new Date().getMinutes();
         const nowTotalMinutes = nowHour * 60 + nowMinute;
         
-        const currentlyWorking = allActiveList.filter(p => {
+        const currentlyWorking = filteredList.filter(p => {
             const startHour = p.shiftStart ?? 10;
             const endHour = p.shiftEnd ?? 19;
             const startMinutes = startHour * 60;
@@ -30224,7 +30244,9 @@ async function loadChecklist() {
     
     // CHECK_RULES'dan bu tip için kuralları al
     const rules = CHECK_RULES[mappedType] || CHECK_RULES[type] || {};
-    const deadline = rules.deadline;
+    // Haftalık ve Temizlik için deadline kontrolü yapılmaz - bunlar shift/hafta bazlı
+    const skipDeadlineCheck = ['haftalik', 'aylik', 'temizlik'].includes(mappedType);
+    const deadline = skipDeadlineCheck ? null : rules.deadline;
     const lateWindow = rules.lateWindow || 30;
     const typeNames = {
         'acilis': 'Açılış Hazırlıkları',
@@ -30951,6 +30973,49 @@ async function loadChecklist() {
             }
         }
         
+        // ==================== PART-TIME (CHECKLİST MUAF) KONTROLÜ ====================
+        // checklistExempt: true olan personeli hariç tut (tek kişi değilse)
+        if (shiftPersonnel.length > 1) {
+            try {
+                const exemptPersonnel = [];
+                const personelSnapshot = await db.collection('personel')
+                    .where('branch', '==', branch)
+                    .where('checklistExempt', '==', true)
+                    .get();
+                
+                personelSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    // Tüm isim varyasyonlarını ekle
+                    exemptPersonnel.push(data.name);
+                    exemptPersonnel.push(formatDisplayName(data.name));
+                    if (data.codeName) exemptPersonnel.push(data.codeName);
+                    exemptPersonnel.push(data.name?.split(' ')[0]);
+                });
+                
+                if (exemptPersonnel.length > 0) {
+                    const filteredPersonnel = shiftPersonnel.filter(p => {
+                        if (!p) return false;
+                        const pLower = p.toLowerCase();
+                        const pNorm = normalizeTurkishChars(p);
+                        return !exemptPersonnel.some(ep => {
+                            if (!ep) return false;
+                            const epLower = ep.toLowerCase();
+                            const epNorm = normalizeTurkishChars(ep);
+                            return epLower === pLower || epNorm === pNorm;
+                        });
+                    });
+                    
+                    // Sadece en az 1 kişi kalırsa filtrele
+                    if (filteredPersonnel.length > 0 && filteredPersonnel.length !== shiftPersonnel.length) {
+                        console.log('[Part-time Muaf] Checklist muaf personel hariç tutuldu:', shiftPersonnel.length - filteredPersonnel.length);
+                        shiftPersonnel = filteredPersonnel;
+                    }
+                }
+            } catch (e) {
+                console.warn('Part-time muafiyet kontrolü hatası:', e);
+            }
+        }
+        
         // Temizlik ve Bakım için mağaza müdürlerini hariç tut (tek kişi değilse)
         if (type === 'aylik' && shiftPersonnel.length > 1) {
             try {
@@ -31105,8 +31170,10 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
         
         if (type === 'acilis') {
             // Açılış: 09:00 - 11:00 arası (BRANCH_HOURS'a göre dinamik olabilir)
-            const branchHours = BRANCH_HOURS[branch] || { open: '09:00', close: '23:00' };
-            const [openHour, openMin] = branchHours.open.split(':').map(Number);
+            const openingTime = getBranchOpeningTime(branch) || '09:00';
+            const openingParts = openingTime.split(':');
+            const openHour = parseInt(openingParts[0]) || 9;
+            const openMin = parseInt(openingParts[1]) || 0;
             const openTotalMinutes = openHour * 60 + openMin;
             const deadlineMinutes = openTotalMinutes + 120; // Açılıştan 2 saat sonraya kadar
             
@@ -31114,20 +31181,32 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
                 isInTimeWindow = false;
                 const deadlineHour = Math.floor(deadlineMinutes / 60);
                 const deadlineMin = deadlineMinutes % 60;
-                timeWindowMessage = `Açılış checklisti ${branchHours.open} - ${String(deadlineHour).padStart(2,'0')}:${String(deadlineMin).padStart(2,'0')} saatleri arasında doldurulabilir.`;
+                timeWindowMessage = `Açılış checklisti ${openingTime} - ${String(deadlineHour).padStart(2,'0')}:${String(deadlineMin).padStart(2,'0')} saatleri arasında doldurulabilir.`;
             }
         } else if (type === 'kapanis') {
             // Kapanış: Kapanıştan 2 saat önce - kapanış saatine kadar
-            const branchHours = BRANCH_HOURS[branch] || { open: '09:00', close: '23:00' };
-            const [closeHour, closeMin] = branchHours.close.split(':').map(Number);
-            const closeTotalMinutes = closeHour * 60 + closeMin;
-            const startMinutes = closeTotalMinutes - 120; // Kapanıştan 2 saat önce
+            const closingTime = getBranchClosingTime(branch) || '23:00';
+            const closingParts = closingTime.split(':');
+            const closeHour = parseInt(closingParts[0]) || 23;
+            const closeMin = parseInt(closingParts[1]) || 0;
+            let closeTotalMinutes = closeHour * 60 + closeMin;
             
-            if (currentTotalMinutes < startMinutes) {
+            // Gece geçişi kontrolü (00:00-06:00 arası kapanış)
+            if (closeHour < 12) {
+                closeTotalMinutes += 24 * 60; // Ertesi güne taşı
+            }
+            
+            const startMinutes = closeTotalMinutes - 120; // Kapanıştan 2 saat önce
+            let adjustedCurrentMinutes = currentTotalMinutes;
+            if (currentHour >= 0 && currentHour < 6) {
+                adjustedCurrentMinutes += 24 * 60;
+            }
+            
+            if (adjustedCurrentMinutes < startMinutes) {
                 isInTimeWindow = false;
-                const startHour = Math.floor(startMinutes / 60);
+                const startHour = Math.floor((startMinutes % (24 * 60)) / 60);
                 const startMin = startMinutes % 60;
-                timeWindowMessage = `Kapanış checklisti ${String(startHour).padStart(2,'0')}:${String(startMin).padStart(2,'0')} - ${branchHours.close} saatleri arasında doldurulabilir.`;
+                timeWindowMessage = `Kapanış checklisti ${String(startHour).padStart(2,'0')}:${String(startMin).padStart(2,'0')} - ${closingTime} saatleri arasında doldurulabilir.`;
             }
         }
     }
