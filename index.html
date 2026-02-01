@@ -22069,8 +22069,8 @@ let TEMIZLIK_SHIFT_RULES = {
     }
 };
 
-// PLATFORM CHECK SAATLERİ
-let PLATFORM_CHECK_TIMES = ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'];
+// PLATFORM CHECK SAATLERİ - config/system.checkRules.platform.timeSlots'tan yüklenir
+let PLATFORM_CHECK_TIMES = []; // Dinamik - config'den yüklenecek
 
 let CHECK_RULES = {
     gunluk: {
@@ -22089,8 +22089,8 @@ let CHECK_RULES = {
     },
     platform: {
         name: 'Platform Check',
-        timeSlots: PLATFORM_CHECK_TIMES, // 10:00, 12:00, 15:00, 18:00, 21:00, 00:00
-        window: { before: 30, after: 30 }, // Her saat için ±30 dakika
+        timeSlots: [], // Dinamik - config/system.checkRules.platform.timeSlots'tan yüklenecek [{start, end}, ...]
+        window: { before: 30, after: 30 },
         lateWindow: 30,
         points: { onTime: 1, late: -1, missed: -1 },
         supervisorPenalty: -0.3
@@ -28244,6 +28244,12 @@ async function loadSystemConfig() {
                     };
                 });
                 console.log('[Config] CHECK_RULES merged with supervisorPenalty');
+                
+                // Platform Check timeSlots'ı PLATFORM_CHECK_TIMES'a da yükle
+                if (firebaseRules.platform?.timeSlots && Array.isArray(firebaseRules.platform.timeSlots)) {
+                    PLATFORM_CHECK_TIMES = firebaseRules.platform.timeSlots;
+                    console.log('[Config] PLATFORM_CHECK_TIMES yüklendi:', PLATFORM_CHECK_TIMES.length, 'aralık');
+                }
             }
         }
         
@@ -32136,78 +32142,71 @@ function showWeeklyCompletionPopup(taskCount) {
 
 // Platform checklist render with status (zaman durumlu)
 async function renderPlatformChecklistWithStatus(container, branch, date, activeTimeSlot = null) {
-    // Dinamik saat dilimleri - config/system.platformCheckTimes'dan (PLATFORM_CHECK_TIMES global)
-    const timeSlots = PLATFORM_CHECK_TIMES || CHECK_RULES?.platform?.timeSlots || [];
+    // Dinamik saat dilimleri - config/system.checkRules.platform.timeSlots'tan
+    // Format: [{start: "10:00", end: "11:00"}, ...]
+    const platformRules = CHECK_RULES?.platform || {};
+    const timeSlots = platformRules.timeSlots || [];
     
-    if (timeSlots.length === 0) {
+    if (!timeSlots.length || !Array.isArray(timeSlots)) {
         container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--tx2)">
             <div style="font-size:1.1rem;margin-bottom:8px">Platform Check saatleri tanımlanmamış</div>
-            <div style="font-size:.85rem">Yönetim Paneli → Online Platform Kontrolleri → Saat Dilimleri</div>
+            <div style="font-size:.85rem">Yönetim Paneli → Check & Puantaj Kuralları → Platform</div>
         </div>`;
         return;
     }
     
-    // Aktif saat belirle
+    // Aktif saat aralığını belirle
     const now = new Date();
     const currentHour = now.getHours();
-    const currentMinutes = currentHour * 60 + now.getMinutes();
-    const dayEndHour = typeof getBusinessDayEndHour === 'function' ? getBusinessDayEndHour() : 4;
+    const currentMin = now.getMinutes();
+    const currentTotalMin = currentHour * 60 + currentMin;
     
-    // Dashboard'dan gelen timeSlot kullan veya otomatik belirle
-    let selectedTimeSlot = activeTimeSlot;
-    let isValidSlot = false;
+    // Aktif slot bul
+    let activeSlot = null;
     
-    if (!selectedTimeSlot) {
-        // Her slot için kontrol et - sadece aktif olan gösterilsin
-        for (const timeStr of timeSlots) {
-            const [h, m] = timeStr.split(':').map(Number);
-            const slotStart = h * 60 + (m || 0);
-            const slotEnd = slotStart + 60; // 1 saatlik pencere
-            
-            // 00:00 slotu için özel: sadece 00:00-01:00 arası (saat 0)
-            if (timeStr === '00:00') {
-                if (currentHour === 0) {
-                    selectedTimeSlot = timeStr;
-                    isValidSlot = true;
-                    break;
-                }
-            } else {
-                // Diğer slotlar: slot başlangıcından 30dk önce ile slot bitişine kadar
-                if (currentMinutes >= slotStart - 30 && currentMinutes < slotEnd) {
-                    selectedTimeSlot = timeStr;
-                    isValidSlot = true;
-                    break;
-                }
-            }
-        }
-    } else {
-        // Dashboard'dan gelen slot - geçerliliğini kontrol et
-        const [h, m] = selectedTimeSlot.split(':').map(Number);
-        const slotStart = h * 60 + (m || 0);
-        const slotEnd = slotStart + 60;
+    for (const slot of timeSlots) {
+        if (!slot.start || !slot.end) continue;
         
-        if (selectedTimeSlot === '00:00') {
-            isValidSlot = (currentHour === 0);
+        const [startH, startM] = slot.start.split(':').map(Number);
+        const [endH, endM] = slot.end.split(':').map(Number);
+        
+        let startMin = startH * 60 + (startM || 0);
+        let endMin = endH * 60 + (endM || 0);
+        
+        // Gece yarısı geçişi (örn: 23:00-01:00)
+        if (endMin < startMin) {
+            // Gece yarısından önce mi sonra mı?
+            if (currentTotalMin >= startMin || currentTotalMin < endMin) {
+                activeSlot = slot;
+                break;
+            }
         } else {
-            isValidSlot = (currentMinutes >= slotStart - 30 && currentMinutes < slotEnd);
+            // Normal aralık
+            if (currentTotalMin >= startMin && currentTotalMin < endMin) {
+                activeSlot = slot;
+                break;
+            }
         }
     }
     
     // Aktif slot yoksa bilgi mesajı göster
-    if (!selectedTimeSlot || !isValidSlot) {
+    if (!activeSlot) {
         // Sonraki slotu bul
         let nextSlot = null;
-        for (const timeStr of timeSlots) {
-            const [h] = timeStr.split(':').map(Number);
-            const slotStart = h * 60;
-            if (slotStart > currentMinutes) {
-                nextSlot = timeStr;
+        for (const slot of timeSlots) {
+            if (!slot.start) continue;
+            const [h, m] = slot.start.split(':').map(Number);
+            const slotStart = h * 60 + (m || 0);
+            if (slotStart > currentTotalMin) {
+                nextSlot = slot;
                 break;
             }
         }
         if (!nextSlot && timeSlots.length > 0) {
-            nextSlot = timeSlots[0] + ' (yarın)';
+            nextSlot = timeSlots[0];
         }
+        
+        const nextText = nextSlot ? `${nextSlot.start} - ${nextSlot.end}` : '';
         
         container.innerHTML = `
             <div style="text-align:center;padding:60px 20px">
@@ -32218,21 +32217,24 @@ async function renderPlatformChecklistWithStatus(container, branch, date, active
                     </svg>
                 </div>
                 <div style="font-size:1.2rem;font-weight:600;color:var(--tx);margin-bottom:8px">Şu An Kontrol Saati Değil</div>
-                <div style="color:var(--tx2);margin-bottom:16px">Platform kontrolü sadece belirlenen saat dilimlerinde yapılabilir.</div>
-                <div style="padding:16px;background:var(--bg3);border-radius:12px;max-width:300px;margin:0 auto">
-                    <div style="font-size:.85rem;color:var(--tx2);margin-bottom:8px">
-                        <strong>Kontrol Saatleri:</strong><br>
-                        ${timeSlots.join(', ')}
+                <div style="color:var(--tx2);margin-bottom:16px">Platform kontrolü sadece belirlenen saat aralıklarında yapılabilir.</div>
+                <div style="padding:16px;background:var(--bg3);border-radius:12px;max-width:320px;margin:0 auto">
+                    <div style="font-size:.85rem;color:var(--tx2);margin-bottom:12px">
+                        <strong>Kontrol Aralıkları:</strong>
                     </div>
-                    ${nextSlot ? `<div style="font-size:.9rem;color:#008c95;font-weight:600;margin-top:8px">Sonraki: ${nextSlot}</div>` : ''}
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center">
+                        ${timeSlots.map(s => `<span style="padding:6px 12px;background:var(--bg2);border-radius:8px;font-size:.85rem;font-weight:500">${s.start} - ${s.end}</span>`).join('')}
+                    </div>
+                    ${nextText ? `<div style="font-size:.9rem;color:#008c95;font-weight:600;margin-top:12px">Sonraki: ${nextText}</div>` : ''}
                 </div>
             </div>
         `;
         return;
     }
     
-    // Saat bazlı submission ID
-    const submissionId = `${branchToKey(branch)}_platform_${date}_${selectedTimeSlot.replace(':', '')}`;
+    // Saat bazlı submission ID - slot start kullan
+    const slotKey = activeSlot.start.replace(':', '');
+    const submissionId = `${branchToKey(branch)}_platform_${date}_${slotKey}`;
     
     // Önce mevcut submission'ı kontrol et
     let submittedData = null;
@@ -32245,13 +32247,18 @@ async function renderPlatformChecklistWithStatus(container, branch, date, active
         console.warn('Platform submission kontrol hatası:', e);
     }
     
-    // Ana render fonksiyonunu çağır
-    renderPlatformChecklist(container, branch, date, selectedTimeSlot, submittedData);
+    // Ana render fonksiyonunu çağır - slot bilgisiyle
+    renderPlatformChecklist(container, branch, date, activeSlot, submittedData, platformRules.points);
 }
 
 // Platform checklist render - PREMIUM MİNİMALİST TASARIM
-async function renderPlatformChecklist(container, branch, date, timeSlot, submittedData) {
+async function renderPlatformChecklist(container, branch, date, activeSlot, submittedData, pointsConfig) {
     const isSubmitted = !!submittedData;
+    const timeSlot = activeSlot.start; // Submission için
+    const timeRange = `${activeSlot.start} - ${activeSlot.end}`;
+    
+    // Puanlar config'den
+    const points = pointsConfig || { onTime: 0, missed: -2 };
     
     // G16: Kullanıcının shift durumunu kontrol et
     const userShiftStatus = await checkCurrentUserShift(branch, date);
@@ -32276,12 +32283,12 @@ async function renderPlatformChecklist(container, branch, date, timeSlot, submit
     }
     
     // Dinamik platformlar - config/system.platforms'dan (PLATFORMS global)
-    const platforms = PLATFORMS;
+    const platforms = PLATFORMS || [];
     
-    // Saat aralığını hesapla (örn: 15:00 → 15:00-16:00)
-    const [slotH] = timeSlot.split(':').map(Number);
-    const nextHour = (slotH + 1) % 24;
-    const timeRange = `${timeSlot} - ${String(nextHour).padStart(2, '0')}:00`;
+    if (!platforms.length) {
+        container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--tx2)">Platformlar tanımlanmamış</div>`;
+        return;
+    }
     
     // Tarih formatı
     const dateObj = new Date(date);
@@ -32313,6 +32320,12 @@ async function renderPlatformChecklist(container, branch, date, timeSlot, submit
                 <div style="font-size:.8rem;color:var(--tx2);margin-bottom:4px">Sorumlu</div>
                 <div style="font-size:1rem;font-weight:600;color:var(--tx)">${isSubmitted ? (submittedData?.personName || '-') : (currentUser?.name || '-')}</div>
                 <input type="hidden" id="checklistPersonName" value="${isSubmitted ? (submittedData?.personName || '') : (currentUser?.name || '')}" autocomplete="off">
+            </div>
+            
+            <!-- Puan Bilgisi -->
+            <div style="margin-bottom:20px;padding:10px 16px;background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(0,140,149,.05));border-radius:10px;text-align:center;font-size:.8rem;color:var(--tx2)">
+                Doldurulursa: <strong style="color:#27ae60">${points.onTime >= 0 ? '+' : ''}${points.onTime} puan</strong> · 
+                Doldurulmazsa: <strong style="color:#e74c3c">${points.missed} puan</strong>
             </div>
             
             <!-- Platform Kartları - Tek Sütun Layout -->
@@ -33035,6 +33048,11 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
         const submissionId = `${branchToKey(branch)}_platform_${date}_${timeSlotKey}`;
         const now = new Date();
         
+        // Puanları config'den al
+        const platformRules = CHECK_RULES?.platform || {};
+        const pointsConfig = platformRules.points || { onTime: 0, late: 0, missed: -2 };
+        const earnedPoints = pointsConfig.onTime || 0;
+        
         await db.collection('checklistSubmissions').doc(submissionId).set({
             type: 'platform',
             checklistType: 'platform',
@@ -33050,7 +33068,7 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
                 moonberry: { open: moonberryOpen, closed: moonberryClosed },
                 sunberry: { open: sunberryOpen, closed: sunberryClosed }
             },
-            points: 0,
+            points: earnedPoints,
             pointStatus: 'completed',
             status: 'completed',
             userRole: currentUser?.role
@@ -33058,7 +33076,7 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
         
         // Başarı mesajı
         toast('Platform Check kaydedildi!', 'success');
-        showPlatformCompleteModal(date, timeSlot, personName, moonberryOpen, moonberryClosed, sunberryOpen, sunberryClosed);
+        showPlatformCompleteModal(date, timeSlot, personName, moonberryOpen, moonberryClosed, sunberryOpen, sunberryClosed, earnedPoints);
         
     } catch (error) {
         console.error('Platform check kayıt hatası:', error);
@@ -33067,12 +33085,15 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
 }
 
 // Platform check tamamlandı modal'ı
-function showPlatformCompleteModal(date, timeSlot, personName, moonberryOpen, moonberryClosed, sunberryOpen, sunberryClosed) {
+function showPlatformCompleteModal(date, timeSlot, personName, moonberryOpen, moonberryClosed, sunberryOpen, sunberryClosed, earnedPoints = 0) {
     const dateStr = new Date(date).toLocaleDateString('tr-TR', {day: 'numeric', month: 'long', year: 'numeric'});
     const submitTimeStr = new Date().toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'});
     
     const checkIcon = `<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24" style="vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg>`;
     const xIcon = `<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24" style="vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+    
+    const pointsText = earnedPoints > 0 ? `+${earnedPoints}` : (earnedPoints === 0 ? '0' : earnedPoints);
+    const pointsColor = earnedPoints > 0 ? '#27ae60' : (earnedPoints === 0 ? 'var(--tx2)' : '#e74c3c');
     
     const modal = document.createElement('div');
     modal.id = 'platformCompleteModal';
@@ -33101,6 +33122,12 @@ function showPlatformCompleteModal(date, timeSlot, personName, moonberryOpen, mo
                             <span>${xIcon} ${sunberryClosed}</span>
                         </div>
                     </div>
+                </div>
+                
+                <!-- Puan Bilgisi -->
+                <div style="padding:12px;background:var(--bg3);border-radius:10px;margin-bottom:20px;font-size:.9rem">
+                    <span style="color:var(--tx2)">Kazanılan Puan:</span>
+                    <strong style="color:${pointsColor};margin-left:8px">${pointsText}</strong>
                 </div>
                 
                 <button onclick="document.getElementById('platformCompleteModal').remove(); loadChecklist();" class="btn btn-primary" style="width:100%;padding:14px;display:flex;align-items:center;justify-content:center;gap:8px">
