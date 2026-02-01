@@ -498,6 +498,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
 .ann-tada{animation:ann-tada 1s ease-in-out infinite}
 .ann-rubber{animation:ann-rubber 1s ease-in-out infinite}
 .ann-flash{animation:ann-flash 1.5s ease-in-out infinite}
+
+/* Toggle Switch */
+.toggle-switch{position:relative;display:inline-block;width:48px;height:26px}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;cursor:pointer;inset:0;background:var(--bg4);transition:.3s;border-radius:26px}
+.toggle-slider:before{position:absolute;content:"";height:20px;width:20px;left:3px;bottom:3px;background:#fff;transition:.3s;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle-switch input:checked + .toggle-slider{background:#008c95}
+.toggle-switch input:checked + .toggle-slider:before{transform:translateX(22px)}
+.toggle-switch input:focus + .toggle-slider{box-shadow:0 0 0 3px rgba(0,140,149,.2)}
     </style>
 </head>
 <body>
@@ -2381,6 +2390,114 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                                     </label>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                    
+                    <!-- SHIFT DIŞI ERİŞİM AYARLARI -->
+                    <div class="admin-card" style="margin-top:20px">
+                        <div class="admin-card-header">
+                            <div class="admin-card-title">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                    <path d="M7 11V7a5 5 0 0110 0v4"/>
+                                </svg>
+                                Shift Dışı Erişim Ayarları
+                            </div>
+                            <button class="btn btn-sm btn-primary" onclick="saveShiftAccessSettings()">Kaydet</button>
+                        </div>
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">
+                            Personelin shift saati dışında hangi bölümlere erişebileceğini ayarlayın. 
+                            Kapalı olan bölümler shift saatinden 1 saat önce ve 1 saat sonra erişilebilir.
+                            <strong>Yönetici, Bölge Müdürü ve Mağaza Müdürü</strong> bu kısıtlamalardan muaftır.
+                        </p>
+                        
+                        <div id="shiftAccessSettingsContainer" style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px">
+                            <!-- Dashboard -->
+                            <div style="background:var(--bg3);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between">
+                                <div style="display:flex;align-items:center;gap:12px">
+                                    <div style="width:40px;height:40px;background:linear-gradient(135deg,#008c95,#00b4a0);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                                        <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24">
+                                            <rect x="3" y="3" width="7" height="7"/>
+                                            <rect x="14" y="3" width="7" height="7"/>
+                                            <rect x="14" y="14" width="7" height="7"/>
+                                            <rect x="3" y="14" width="7" height="7"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight:600;color:var(--tx)">Dashboard Görevler</div>
+                                        <div style="font-size:.75rem;color:var(--tx2)">Bugünkü görevler kartları</div>
+                                    </div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="shiftAccess_dashboard" data-area="dashboard">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            
+                            <!-- Checklistler -->
+                            <div style="background:var(--bg3);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between">
+                                <div style="display:flex;align-items:center;gap:12px">
+                                    <div style="width:40px;height:40px;background:linear-gradient(135deg,#27ae60,#2ecc71);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                                        <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24">
+                                            <path d="M9 11l3 3L22 4"/>
+                                            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight:600;color:var(--tx)">Checklistler</div>
+                                        <div style="font-size:.75rem;color:var(--tx2)">Tüm checklist formları</div>
+                                    </div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="shiftAccess_checklist" data-area="checklist">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            
+                            <!-- Prim Sistemi -->
+                            <div style="background:var(--bg3);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between">
+                                <div style="display:flex;align-items:center;gap:12px">
+                                    <div style="width:40px;height:40px;background:linear-gradient(135deg,#f1c40f,#f39c12);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                                        <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24">
+                                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight:600;color:var(--tx)">Prim Sistemi</div>
+                                        <div style="font-size:.75rem;color:var(--tx2)">Aylık puan ve prim görüntüleme</div>
+                                    </div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="shiftAccess_prim" data-area="prim" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            
+                            <!-- Performans -->
+                            <div style="background:var(--bg3);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between">
+                                <div style="display:flex;align-items:center;gap:12px">
+                                    <div style="width:40px;height:40px;background:linear-gradient(135deg,#9b59b6,#8e44ad);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                                        <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24">
+                                            <line x1="18" y1="20" x2="18" y2="10"/>
+                                            <line x1="12" y1="20" x2="12" y2="4"/>
+                                            <line x1="6" y1="20" x2="6" y2="14"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight:600;color:var(--tx)">Performans</div>
+                                        <div style="font-size:.75rem;color:var(--tx2)">Performans ve istatistikler</div>
+                                    </div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="shiftAccess_performans" data-area="performans" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top:16px;padding:12px 16px;background:rgba(0,140,149,.08);border-radius:10px;font-size:.8rem;color:var(--tx2)">
+                            <strong style="color:#008c95">Not:</strong> Switch kapalıysa, personel sadece shift saatinde (±1 saat) erişebilir. 
+                            Switch açıksa, personel her zaman erişebilir.
                         </div>
                     </div>
                     
@@ -6270,7 +6387,10 @@ function switchAdminTab(tab, btn) {
         renderBranchHoursSettings();
         renderArchiveSettings();
     }
-    if (tab === 'checkKurallari') renderCheckRulesSettings();
+    if (tab === 'checkKurallari') {
+        renderCheckRulesSettings();
+        loadShiftAccessSettings();
+    }
     if (tab === 'checklistTurleri') loadChecklistTypesConfig();
     if (tab === 'tumCheckler') {
         populateSubeSelect('allChecksBranchFilter', true);
@@ -18872,6 +18992,60 @@ function addPlatformCheckTime() {
     addPlatformCheckTimeSlot('14:00', '15:00');
 }
 
+// ==================== SHIFT DIŞI ERİŞİM AYARLARI ====================
+
+// Varsayılan shift erişim ayarları
+const DEFAULT_SHIFT_ACCESS_SETTINGS = {
+    dashboard: false,   // Kapalı - shift saatinde erişim
+    checklist: false,   // Kapalı - shift saatinde erişim
+    prim: true,         // Açık - her zaman erişim
+    performans: true    // Açık - her zaman erişim
+};
+
+// Global değişken
+let SHIFT_ACCESS_SETTINGS = { ...DEFAULT_SHIFT_ACCESS_SETTINGS };
+
+// Shift erişim ayarlarını kaydet
+async function saveShiftAccessSettings() {
+    const settings = {};
+    const areas = ['dashboard', 'checklist', 'prim', 'performans'];
+    
+    areas.forEach(area => {
+        const checkbox = document.getElementById(`shiftAccess_${area}`);
+        settings[area] = checkbox?.checked || false;
+    });
+    
+    try {
+        await db.collection('config').doc('system').update({
+            shiftAccessSettings: settings,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        SHIFT_ACCESS_SETTINGS = settings;
+        toast('Shift erişim ayarları kaydedildi', 'success');
+        console.log('[Config] shiftAccessSettings kaydedildi:', settings);
+    } catch (e) {
+        console.error('Kayıt hatası:', e);
+        toast('Kayıt hatası!', 'error');
+    }
+}
+
+// Shift erişim ayarlarını yükle
+function loadShiftAccessSettings() {
+    const settings = SYSTEM_CONFIG?.shiftAccessSettings || SHIFT_ACCESS_SETTINGS || DEFAULT_SHIFT_ACCESS_SETTINGS;
+    SHIFT_ACCESS_SETTINGS = settings;
+    
+    const areas = ['dashboard', 'checklist', 'prim', 'performans'];
+    areas.forEach(area => {
+        const checkbox = document.getElementById(`shiftAccess_${area}`);
+        if (checkbox) {
+            checkbox.checked = settings[area] !== false; // undefined veya true ise checked
+        }
+    });
+    
+    console.log('[Config] shiftAccessSettings yüklendi:', settings);
+}
+
 function removePlatformCheckTime() {
     const container = document.getElementById('platformCheckTimesContainer');
     const rows = container.querySelectorAll('.platform-time-row');
@@ -22295,7 +22469,7 @@ function getShiftHours(shiftStr, branch, date = new Date()) {
  * @param {Date} date - Tarih (opsiyonel, bugün kullanılır)
  * @returns {Promise<object>} - {hasAccess, isExempt, shiftInfo, message}
  */
-async function checkShiftAccess(branch = null, date = null) {
+async function checkShiftAccess(branch = null, date = null, area = null) {
     const targetBranch = branch || currentUser?.branch;
     const targetDate = date || new Date();
     
@@ -22307,6 +22481,19 @@ async function checkShiftAccess(branch = null, date = null) {
         return {
             hasAccess: true,
             isExempt: true,
+            shiftInfo: null,
+            message: null
+        };
+    }
+    
+    // Alan için shift dışı erişim açık mı kontrol et
+    const accessSettings = SHIFT_ACCESS_SETTINGS || DEFAULT_SHIFT_ACCESS_SETTINGS || {};
+    if (area && accessSettings[area] === true) {
+        // Bu alan için shift dışı erişim açık - her zaman erişim var
+        return {
+            hasAccess: true,
+            isExempt: false,
+            bypassedBySettings: true,
             shiftInfo: null,
             message: null
         };
@@ -23366,7 +23553,7 @@ async function loadTodayChecks() {
     
     // Shift erişim kontrolü (saat bazlı, ±1 saat tolerans)
     const userBranch = currentUser?.branch || STATE.branches?.[0] || 'Tuzla Port';
-    const accessResult = await checkShiftAccess(userBranch !== 'all' ? userBranch : STATE.branches?.[0]);
+    const accessResult = await checkShiftAccess(userBranch !== 'all' ? userBranch : STATE.branches?.[0], null, 'dashboard');
     
     if (!accessResult.hasAccess) {
         // Kilit ekranı göster
@@ -28673,6 +28860,12 @@ async function loadSystemConfig() {
             BRANCH_HOURS = SYSTEM_CONFIG.branchHours || {};
             SHIFT_DURATION = SYSTEM_CONFIG.shiftDuration || 9;
             
+            // Shift erişim ayarlarını yükle
+            if (SYSTEM_CONFIG.shiftAccessSettings) {
+                SHIFT_ACCESS_SETTINGS = SYSTEM_CONFIG.shiftAccessSettings;
+                console.log('[Config] SHIFT_ACCESS_SETTINGS yüklendi:', SHIFT_ACCESS_SETTINGS);
+            }
+            
             // CHECK_RULES merge - Firebase'den gelen kuralları mevcut default'larla birleştir
             // supervisorPenalty gibi yeni alanlar korunur
             if (SYSTEM_CONFIG.checkRules) {
@@ -29625,7 +29818,7 @@ async function loadChecklist() {
     }
     
     // Shift erişim kontrolü (saat bazlı, ±1 saat tolerans)
-    const accessResult = await checkShiftAccess(branch, new Date(date));
+    const accessResult = await checkShiftAccess(branch, new Date(date), 'checklist');
     
     if (!accessResult.hasAccess) {
         container.innerHTML = renderShiftLockScreen(accessResult, 'checklist');
