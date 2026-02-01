@@ -13635,6 +13635,10 @@ async function loadPuantaj() {
             const isDanger = p.primDurumu === 'prim_yok';
             const puanColor = p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx)');
             const puanSign = p.toplamPuan > 0 ? '+' : '';
+            const displayToplamPuan = formatPoints(p.toplamPuan);
+            const displayOtomatikPuan = formatPoints(p.otomatikPuan || 0);
+            const displayManuelPuan = formatPoints(p.manuelPuan || 0);
+            const displayPersonelEksiPuan = formatPoints(p.personelEksiPuan || 0);
             
             // === SOL KENARLIK RENKLERİ ===
             // Barista/servis: Sunberry (#ff8674) - HER ZAMAN
@@ -13735,7 +13739,7 @@ async function loadPuantaj() {
                             </div>
                         </div>
                         <div style="text-align:right">
-                            <div style="font-size:1.4rem;font-weight:800;color:${puanColor};line-height:1">${puanSign}${p.toplamPuan}</div>
+                            <div style="font-size:1.4rem;font-weight:800;color:${puanColor};line-height:1">${puanSign}${displayToplamPuan}</div>
                             <div style="font-size:.65rem;color:var(--tx3);text-transform:uppercase">toplam</div>
                         </div>
                     </div>
@@ -13745,26 +13749,26 @@ async function loadPuantaj() {
                         <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
                             <div style="font-size:.6rem;color:var(--tx3);margin-bottom:2px">Otomatik</div>
                             <div style="font-size:.85rem;font-weight:700;color:${p.otomatikPuan > 0 ? '#27ae60' : p.otomatikPuan < 0 ? '#e74c3c' : 'var(--tx2)'}">
-                                ${p.otomatikPuan > 0 ? '+' : ''}${p.otomatikPuan || 0}
+                                ${p.otomatikPuan > 0 ? '+' : ''}${displayOtomatikPuan}
                             </div>
                         </div>
                         <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
                             <div style="font-size:.6rem;color:var(--tx3);margin-bottom:2px">Manuel</div>
                             <div style="font-size:.85rem;font-weight:700;color:${p.manuelPuan > 0 ? '#27ae60' : p.manuelPuan < 0 ? '#e74c3c' : 'var(--tx2)'}">
-                                ${p.manuelPuan > 0 ? '+' : ''}${p.manuelPuan || 0}
+                                ${p.manuelPuan > 0 ? '+' : ''}${displayManuelPuan}
                             </div>
                         </div>
                         ${isMudurRole ? `
                         <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
                             <div style="font-size:.6rem;color:#9b59b6;margin-bottom:2px">Personel</div>
                             <div style="font-size:.85rem;font-weight:700;color:${p.personelEksiPuan < 0 ? '#9b59b6' : 'var(--tx2)'}">
-                                ${p.personelEksiPuan || 0}
+                                ${displayPersonelEksiPuan}
                             </div>
                         </div>` : ''}
                         <div style="flex:1;text-align:center">
                             <div style="font-size:.6rem;color:var(--tx3);margin-bottom:2px">Toplam</div>
                             <div style="font-size:.85rem;font-weight:700;color:${puanColor}">
-                                ${puanSign}${p.toplamPuan}
+                                ${puanSign}${displayToplamPuan}
                             </div>
                         </div>
                     </div>
@@ -14205,14 +14209,15 @@ function showPersonelPuanDetay(personelId, personName) {
             const status = note.status || 'missed';
             const checkType = note.checkType || note.type || 'gunluk';
             const canonicalType = canonicalChecklistTypeId?.(checkType) || checkType.toLowerCase().replace(/[^a-z]/g, '');
-            const rules = CHECK_RULES[canonicalType] || CHECK_RULES['gunluk'] || { points: { onTime: 2, late: -2, missed: -2 } };
+            const rules = CHECK_RULES[canonicalType] || CHECK_RULES['gunluk'] || {};
             
-            // Önce note.points kullan (tam sayı ise), değilse status'a göre hesapla
+            // Önce note.points kullan (sayı ise), değilse status'a göre hesapla
+            // Number.isFinite hem tam sayı hem ondalıklı sayıları kabul eder
             let points = note.points;
-            if (points === undefined || points === null || !Number.isInteger(points)) {
-                if (status === 'onTime') points = rules.points?.onTime || 2;
-                else if (status === 'late') points = rules.points?.late || -2;
-                else points = rules.points?.missed || -2;
+            if (points === undefined || points === null || !Number.isFinite(points)) {
+                if (status === 'onTime') points = rules.points?.onTime ?? 0;
+                else if (status === 'late') points = rules.points?.late ?? 0;
+                else points = rules.points?.missed ?? -1;
             }
             
             const noteColor = points > 0 ? '#27ae60' : (points < 0 ? '#e74c3c' : 'var(--tx3)');
@@ -26316,8 +26321,8 @@ function renderSimpleCheckCard(name, deadline, branch, isCompleted, isMissed, is
     const GREEN = '#27ae60';
     const GRAY = '#9ca3af';
     
-    const missedPoints = rules?.points?.missed || -2;
-    const onTimePoints = rules?.points?.onTime || 1;
+    const missedPoints = rules?.points?.missed ?? -1;
+    const onTimePoints = rules?.points?.onTime ?? 0;
     
     // Şube rengi
     const isMoonberry = true; // Tüm şubeler Moonberry teal rengi
@@ -26397,9 +26402,9 @@ function renderCheckCard(checkType, timeSlot, branch, isCompleted, submissionDat
     
     // Puan kuralları
     const rules = CHECK_RULES[checkType.id];
-    const missedPoints = rules?.points?.missed || -2;
-    const latePoints = rules?.points?.late || -2;
-    const onTimePoints = rules?.points?.onTime || 1;
+    const missedPoints = rules?.points?.missed ?? -1;
+    const latePoints = rules?.points?.late ?? 0;
+    const onTimePoints = rules?.points?.onTime ?? 0;
     
     let bgColor = 'var(--bg3)';
     let accentColor = 'var(--tx3)';
