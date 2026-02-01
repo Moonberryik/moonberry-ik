@@ -2280,21 +2280,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                     <!-- Checklist Saatleri Ayarları -->
                     <div class="admin-card" style="margin-top:20px">
                         <div class="admin-card-header">
-                            <div class="admin-card-title">📱 Platform Check Saatleri</div>
-                            <button class="btn btn-sm btn-ghost" onclick="savePlatformCheckTimes()">💾 Kaydet</button>
+                            <div class="admin-card-title">
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                                Platform Check Saat Aralıkları
+                            </div>
+                            <button class="btn btn-sm btn-primary" onclick="savePlatformCheckTimes()">Kaydet</button>
                         </div>
-                        <p style="color:var(--txdark2);font-size:.85rem;margin-bottom:16px">Platform check'lerinin yapılması gereken saatleri düzenleyin. Her saat için belirlenen tolerans süresi geçerlidir.</p>
-                        <div style="display:flex;flex-wrap:wrap;gap:8px" id="platformCheckTimesContainer">
-                            <input type="time" class="form-input platform-time" value="10:00" style="width:100px">
-                            <input type="time" class="form-input platform-time" value="12:00" style="width:100px">
-                            <input type="time" class="form-input platform-time" value="15:00" style="width:100px">
-                            <input type="time" class="form-input platform-time" value="18:00" style="width:100px">
-                            <input type="time" class="form-input platform-time" value="21:00" style="width:100px">
-                            <input type="time" class="form-input platform-time" value="00:00" style="width:100px">
+                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">Platform kontrollerinin yapılabileceği saat aralıklarını belirleyin. Sadece bu aralıklarda kontrol yapılabilir.</p>
+                        <div id="platformCheckTimesContainer" style="display:flex;flex-direction:column;gap:10px">
+                            <!-- Aralıklar buraya yüklenecek -->
                         </div>
                         <div style="display:flex;gap:8px;margin-top:12px">
-                            <button class="btn btn-sm btn-ghost" onclick="addPlatformCheckTime()" style="font-size:.75rem">+ Saat Ekle</button>
-                            <button class="btn btn-sm btn-ghost" onclick="removePlatformCheckTime()" style="font-size:.75rem;color:var(--danger)">- Saat Çıkar</button>
+                            <button class="btn btn-sm btn-ghost" onclick="addPlatformCheckTimeSlot()" style="font-size:.8rem">+ Aralık Ekle</button>
                         </div>
                     </div>
                     
@@ -18770,55 +18767,118 @@ async function deletePuantajRule(id) {
     });
 }
 
-// ==================== PLATFORM CHECK SAATLERİ ====================
+// ==================== PLATFORM CHECK SAAT ARALIKLARI ====================
+
+// Platform saat aralıklarını kaydet - config/system.checkRules.platform.timeSlots'a
 async function savePlatformCheckTimes() {
-    const inputs = document.querySelectorAll('.platform-time');
-    const times = [];
-    inputs.forEach(input => {
-        if (input.value) times.push(input.value);
+    const container = document.getElementById('platformCheckTimesContainer');
+    const rows = container.querySelectorAll('.platform-time-row');
+    const timeSlots = [];
+    
+    rows.forEach(row => {
+        const startInput = row.querySelector('.platform-time-start');
+        const endInput = row.querySelector('.platform-time-end');
+        if (startInput?.value && endInput?.value) {
+            timeSlots.push({
+                start: startInput.value,
+                end: endInput.value
+            });
+        }
     });
     
-    if (times.length === 0) {
-        toast('En az bir saat belirleyin', 'error');
+    if (timeSlots.length === 0) {
+        toast('En az bir saat aralığı belirleyin', 'error');
         return;
     }
     
     try {
-        await db.collection('systemConfig').doc('checkRules').set({
-            platformCheckTimes: times,
+        // config/system.checkRules.platform.timeSlots'a kaydet
+        const sysDoc = await db.collection('config').doc('system').get();
+        const currentData = sysDoc.exists ? sysDoc.data() : {};
+        const checkRules = currentData.checkRules || {};
+        const platformRules = checkRules.platform || {};
+        
+        platformRules.timeSlots = timeSlots;
+        checkRules.platform = platformRules;
+        
+        await db.collection('config').doc('system').set({
+            checkRules: checkRules,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
         
-        // Yerel değişkeni güncelle
-        PLATFORM_CHECK_TIMES.length = 0;
-        PLATFORM_CHECK_TIMES.push(...times);
-        CHECK_RULES.platform.timeSlots = times;
+        // Global değişkenleri güncelle
+        PLATFORM_CHECK_TIMES = timeSlots;
+        if (CHECK_RULES.platform) {
+            CHECK_RULES.platform.timeSlots = timeSlots;
+        }
         
-        toast('Platform check saatleri kaydedildi', 'success');
+        toast('Platform check saat aralıkları kaydedildi', 'success');
+        console.log('[Config] Platform timeSlots kaydedildi:', timeSlots);
     } catch (error) {
         console.error('Kayıt hatası:', error);
         toast('Kayıt hatası!', 'error');
     }
 }
 
-// Platform saat ekleme/çıkarma
-function addPlatformCheckTime() {
+// Yeni saat aralığı ekle
+function addPlatformCheckTimeSlot(start = '10:00', end = '11:00') {
     const container = document.getElementById('platformCheckTimesContainer');
-    const input = document.createElement('input');
-    input.type = 'time';
-    input.className = 'form-input platform-time';
-    input.value = '14:00';
-    input.style.width = '100px';
-    container.appendChild(input);
+    
+    const row = document.createElement('div');
+    row.className = 'platform-time-row';
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);border-radius:8px';
+    
+    row.innerHTML = `
+        <input type="time" class="form-input platform-time-start" value="${start}" style="width:110px;padding:8px">
+        <span style="color:var(--tx2)">—</span>
+        <input type="time" class="form-input platform-time-end" value="${end}" style="width:110px;padding:8px">
+        <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--danger);cursor:pointer;padding:4px 8px;font-size:1.1rem">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+    `;
+    
+    container.appendChild(row);
+}
+
+// Config'den platform saat aralıklarını yükle
+function loadPlatformCheckTimeSlots() {
+    const container = document.getElementById('platformCheckTimesContainer');
+    if (!container) return;
+    
+    container.innerHTML = ''; // Temizle
+    
+    const timeSlots = CHECK_RULES?.platform?.timeSlots || PLATFORM_CHECK_TIMES || [];
+    
+    if (timeSlots.length === 0) {
+        // Varsayılan bir aralık ekle
+        addPlatformCheckTimeSlot('10:00', '11:00');
+        return;
+    }
+    
+    timeSlots.forEach(slot => {
+        if (typeof slot === 'object' && slot.start && slot.end) {
+            addPlatformCheckTimeSlot(slot.start, slot.end);
+        } else if (typeof slot === 'string') {
+            // Eski format desteği - string ise 1 saat ekle
+            const [h] = slot.split(':').map(Number);
+            const endHour = String((h + 1) % 24).padStart(2, '0');
+            addPlatformCheckTimeSlot(slot, `${endHour}:00`);
+        }
+    });
+}
+
+// Eski fonksiyonlar (geriye uyumluluk)
+function addPlatformCheckTime() {
+    addPlatformCheckTimeSlot('14:00', '15:00');
 }
 
 function removePlatformCheckTime() {
     const container = document.getElementById('platformCheckTimesContainer');
-    const inputs = container.querySelectorAll('.platform-time');
-    if (inputs.length > 1) {
-        inputs[inputs.length - 1].remove();
+    const rows = container.querySelectorAll('.platform-time-row');
+    if (rows.length > 1) {
+        rows[rows.length - 1].remove();
     } else {
-        toast('En az bir saat olmalı', 'warning');
+        toast('En az bir saat aralığı olmalı', 'warning');
     }
 }
 
@@ -18954,31 +19014,32 @@ async function saveTemizlikShiftRules() {
 // ==================== AYARLARI YÜKLE ====================
 async function loadCheckRulesSettings() {
     try {
+        // Platform check saat aralıklarını config/system'dan yükle
+        const sysDoc = await db.collection('config').doc('system').get();
+        if (sysDoc.exists) {
+            const sysData = sysDoc.data();
+            const platformTimeSlots = sysData?.checkRules?.platform?.timeSlots;
+            
+            if (platformTimeSlots && Array.isArray(platformTimeSlots) && platformTimeSlots.length > 0) {
+                // Global değişkenleri güncelle
+                PLATFORM_CHECK_TIMES = platformTimeSlots;
+                if (CHECK_RULES.platform) {
+                    CHECK_RULES.platform.timeSlots = platformTimeSlots;
+                }
+                
+                // UI'ı yükle
+                loadPlatformCheckTimeSlots();
+                console.log('[Config] Platform timeSlots yüklendi:', platformTimeSlots.length, 'aralık');
+            } else {
+                // Varsayılan aralık ekle
+                loadPlatformCheckTimeSlots();
+            }
+        }
+        
+        // Eski systemConfig'den diğer ayarları yükle (temizlik shift kuralları vs)
         const doc = await db.collection('systemConfig').doc('checkRules').get();
         if (doc.exists) {
             const data = doc.data();
-            
-            // Platform check saatlerini yükle
-            if (data.platformCheckTimes && data.platformCheckTimes.length > 0) {
-                const container = document.getElementById('platformCheckTimesContainer');
-                if (container) {
-                    container.innerHTML = '';
-                    data.platformCheckTimes.forEach(time => {
-                        const input = document.createElement('input');
-                        input.type = 'time';
-                        input.className = 'form-input platform-time';
-                        input.value = time;
-                        input.style.width = '100px';
-                        container.appendChild(input);
-                    });
-                }
-                // Global değişkeni güncelle
-                PLATFORM_CHECK_TIMES.length = 0;
-                PLATFORM_CHECK_TIMES.push(...data.platformCheckTimes);
-                CHECK_RULES.platform.timeSlots = data.platformCheckTimes;
-            }
-            
-            // Temizlik shift kurallarını yükle
             if (data.temizlikShiftRules) {
                 const rules = data.temizlikShiftRules;
                 if (rules.acilisci) {
