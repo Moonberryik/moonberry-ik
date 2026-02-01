@@ -11594,13 +11594,18 @@ async function loadPrimSistemiPage() {
             branchTypes.forEach(type => {
                 const typeId = type.id || type.name?.toLowerCase();
                 const rules = CHECK_RULES[typeId] || CHECK_RULES[canonicalChecklistTypeId?.(typeId)] || {};
-                const points = rules.points || { onTime: 1, late: 0, missed: -1 };
+                const points = rules.points;
+                
+                if (!points) {
+                    console.warn(`[Rapor] ${typeId} için points tanımsız`);
+                    return;
+                }
                 
                 checkRulesData.push({
                     name: type.name || rules.name || typeId,
-                    onTime: points.onTime ?? 1,
-                    late: points.late ?? 0,
-                    missed: points.missed ?? -1
+                    onTime: points.onTime,
+                    late: points.late,
+                    missed: points.missed
                 });
             });
         }
@@ -11614,9 +11619,9 @@ async function loadPrimSistemiPage() {
                     if (rule.points) {
                         checkRulesData.push({
                             name: rule.name || id,
-                            onTime: rule.points.onTime ?? 1,
-                            late: rule.points.late ?? 0,
-                            missed: rule.points.missed ?? -1
+                            onTime: rule.points.onTime,
+                            late: rule.points.late,
+                            missed: rule.points.missed
                         });
                     }
                 });
@@ -12190,19 +12195,19 @@ async function showCheckRulesEditModal() {
     
     let rowsHtml = checkTypes.map(ct => {
         const rule = CHECK_RULES[ct.id] || {};
-        const pts = rule.points || { onTime: 0, late: 0, missed: 0 };
-        const supPenalty = rule.supervisorPenalty ?? -0.5;
+        const pts = rule.points || {};
+        const supPenalty = rule.supervisorPenalty ?? '';
         return `
             <div style="display:grid;grid-template-columns:1fr repeat(4,60px);gap:6px;align-items:center;padding:10px 12px;background:var(--bg2);border-radius:8px">
                 <div style="font-weight:600;color:var(--tx);font-size:.75rem">${ct.name}</div>
-                <input type="number" data-check="${ct.id}" data-field="onTime" value="${pts.onTime}" 
-                    style="width:100%;padding:6px;border:1px solid var(--bg4);border-radius:6px;background:rgba(39,174,96,.08);color:#27ae60;font-weight:700;text-align:center;font-size:.8rem">
-                <input type="number" data-check="${ct.id}" data-field="late" value="${pts.late}" 
-                    style="width:100%;padding:6px;border:1px solid var(--bg4);border-radius:6px;background:rgba(230,126,34,.08);color:#e67e22;font-weight:700;text-align:center;font-size:.8rem">
-                <input type="number" data-check="${ct.id}" data-field="missed" value="${pts.missed}" 
-                    style="width:100%;padding:6px;border:1px solid var(--bg4);border-radius:6px;background:rgba(231,76,60,.08);color:#e74c3c;font-weight:700;text-align:center;font-size:.8rem">
+                <input type="number" data-check="${ct.id}" data-field="onTime" value="${pts.onTime ?? ''}" 
+                    style="width:100%;padding:6px;border:1px solid var(--bg4);border-radius:6px;background:rgba(39,174,96,.08);color:#27ae60;font-weight:700;text-align:center;font-size:.8rem" placeholder="-">
+                <input type="number" data-check="${ct.id}" data-field="late" value="${pts.late ?? ''}" 
+                    style="width:100%;padding:6px;border:1px solid var(--bg4);border-radius:6px;background:rgba(230,126,34,.08);color:#e67e22;font-weight:700;text-align:center;font-size:.8rem" placeholder="-">
+                <input type="number" data-check="${ct.id}" data-field="missed" value="${pts.missed ?? ''}" 
+                    style="width:100%;padding:6px;border:1px solid var(--bg4);border-radius:6px;background:rgba(231,76,60,.08);color:#e74c3c;font-weight:700;text-align:center;font-size:.8rem" placeholder="-">
                 <input type="number" step="0.1" data-check="${ct.id}" data-field="supervisorPenalty" value="${supPenalty}" 
-                    style="width:100%;padding:6px;border:1px solid var(--bg4);border-radius:6px;background:rgba(155,89,182,.08);color:#9b59b6;font-weight:700;text-align:center;font-size:.8rem">
+                    style="width:100%;padding:6px;border:1px solid var(--bg4);border-radius:6px;background:rgba(155,89,182,.08);color:#9b59b6;font-weight:700;text-align:center;font-size:.8rem" placeholder="-">
             </div>
         `;
     }).join('');
@@ -12756,12 +12761,16 @@ async function getSupervisorsOnDuty(branch, date, hour) {
 async function writeSupervisorPenalty(params) {
     const { personelId, personelName, checkType, checkTime, date, branch } = params;
     
-    // CHECK_RULES'dan penalty değerini al
+    // CHECK_RULES'dan penalty değerini al - HARDCODED YOK
     const checkTypeId = canonicalChecklistTypeId?.(checkType) || checkType.toLowerCase().replace(/[^a-z]/g, '');
-    const rules = CHECK_RULES[checkTypeId] || CHECK_RULES['gunluk'] || {};
-    const penalty = rules.supervisorPenalty ?? -0.5;
+    const rules = CHECK_RULES[checkTypeId] || {};
+    const penalty = rules.supervisorPenalty;
     
-    // Penalty 0 ise yazma
+    // Penalty tanımsız veya 0 ise yazma
+    if (penalty === undefined) {
+        console.warn(`[SupervisorPenalty] ${checkTypeId}.supervisorPenalty tanımsız!`);
+        return;
+    }
     if (penalty === 0) return;
     
     // Check saatini parse et
@@ -12971,10 +12980,14 @@ async function fillMissingSupervisorPenalties(branch, month) {
                 // Zaten varsa atla
                 if (existingIds.has(penaltyId)) continue;
                 
-                // Penalty yaz
-                const rules = CHECK_RULES[checkTypeId] || CHECK_RULES['gunluk'] || {};
-                const penalty = rules.supervisorPenalty ?? -0.5;
+                // Penalty yaz - HARDCODED YOK
+                const rules = CHECK_RULES[checkTypeId] || {};
+                const penalty = rules.supervisorPenalty;
                 
+                if (penalty === undefined) {
+                    console.warn(`[SupervisorPenalty] ${checkTypeId}.supervisorPenalty tanımsız!`);
+                    continue;
+                }
                 if (penalty === 0) continue;
                 
                 await db.collection('supervisorPenalties').doc(penaltyId).set({
@@ -23609,8 +23622,12 @@ async function checkSingleTimeSlot(branch, checkType, timeSlot, date, shiftPerso
     checkTime.setHours(slotHour, slotMinute, 0, 0);
     
     // Geç doldurum penceresi
-    const lateWindow = rules.lateWindow || 30;
-    const deadline = new Date(checkTime.getTime() + (rules.window?.after || 30) * 60000 + lateWindow * 60000);
+    if (rules.lateWindow === undefined) {
+        console.warn(`[MissedCheck] ${checkType}.lateWindow tanımsız!`);
+    }
+    const lateWindow = rules.lateWindow ?? 0;
+    const windowAfter = rules.window?.after ?? 0;
+    const deadline = new Date(checkTime.getTime() + windowAfter * 60000 + lateWindow * 60000);
     
     // Henüz süresi dolmamış
     if (now < deadline) return;
@@ -24249,8 +24266,8 @@ async function loadTodayChecks() {
         
         // 1. Platform Check
         // Platform Check - CHECK_RULES'tan değerleri al
-        const platformRules = CHECK_RULES.platform || DEFAULT_CHECK_RULES.platform || {};
-        const platformLateWindow = platformRules.lateWindow || 30; // dakika
+        const platformRules = CHECK_RULES.platform || {};
+        const platformLateWindow = platformRules.lateWindow ?? 0; // dakika
         
         // TimeSlots'u CHECK_RULES'tan al - {start, end} formatını destekle
         let platformSlots = []; // [{start: "10:00", end: "11:00"}, ...]
@@ -24483,7 +24500,7 @@ async function loadTodayChecks() {
                 remainingMinutes: activePlatformSlot && !platformCompleted && !isPlatformMissed ? platformRemainingMinutes : null,
                 remainingText: activePlatformSlot && !platformCompleted && !isPlatformMissed ? `${platformRemainingMinutes}dk` : '',
                 personnel: platformPersonnel,
-                points: (CHECK_RULES.platform || DEFAULT_CHECK_RULES.platform || {}).points || { onTime: 0, late: 0, missed: -1 },
+                points: CHECK_RULES.platform?.points || {},
                 priority: platformCompleted ? 90 : (isPlatformMissed ? 99 : (activePlatformSlot ? 10 : 50)),
                 onClick: isPlatformMissed ? '' : `goToChecklist('${branch}', 'platform', '${displayPlatformSlot?.start || '10:00'}')`
             });
@@ -24495,11 +24512,11 @@ async function loadTodayChecks() {
         {
             // CHECK_RULES'dan ayarları al
             const temizlikRules = CHECK_RULES.aylik || CHECK_RULES.temizlik || {};
-            const temizlikShifts = temizlikRules.shifts || {
-                acilisci: { deadline: '15:00', window: { start: '10:00', end: '15:00' } },
-                araci: { deadline: '19:00', window: { start: '11:00', end: '19:00' } },
-                kapanisci: { deadline: '02:00', window: { start: '16:00', end: '02:00' } }
-            };
+            const temizlikShifts = temizlikRules.shifts;
+            
+            if (!temizlikShifts) {
+                console.warn('[Dashboard] CHECK_RULES.aylik.shifts tanımsız!');
+            }
             
             // Personelin vardiya tipini belirle (açılışçı, aracı, kapanışçı)
             // Şu anki saate göre hangi vardiya aktif?
@@ -24530,7 +24547,7 @@ async function loadTodayChecks() {
             const shiftConfig = temizlikShifts[currentShiftType] || temizlikShifts.araci;
             let temizlikActiveFrom = shiftConfig.window?.start || '10:00';
             let temizlikDeadline = shiftConfig.window?.end || shiftConfig.deadline || '18:00';
-            let temizlikLateWindow = temizlikRules.lateWindow || 30;
+            let temizlikLateWindow = temizlikRules.lateWindow ?? 0;
             
             // NOT: Saatler Check & Puantaj Kuralları'ndan (shifts) geliyor
             // periods eski yapı - artık kullanılmıyor, shifts öncelikli
@@ -24635,7 +24652,7 @@ async function loadTodayChecks() {
                 remainingMinutes: temizlikRemainingMinutes,
                 remainingText: '',
                 personnel: temizlikPersonnel,
-                points: CHECK_RULES.aylik?.points || CHECK_RULES.temizlik?.points || { onTime: 1, late: 0, missed: -1 },
+                points: CHECK_RULES.aylik?.points || {},
                 priority: temizlikCompleted ? 90 : (isTemizlikMissed ? 99 : (isTemizlikActive ? 15 : 70)),
                 onClick: isTemizlikMissed ? '' : `goToChecklist('${branch}', 'aylik', '${currentShiftType}')`
             });
@@ -24646,9 +24663,13 @@ async function loadTodayChecks() {
         // 3. Açılış Hazırlıkları
         {
             const acilisRules = CHECK_RULES.acilis || {};
-            const acilisActiveFrom = acilisRules.activeFrom || '09:00';
-            const acilisDeadline = acilisRules.deadline || '11:00';
-            const acilisLateWindow = acilisRules.lateWindow || 30;
+            const acilisActiveFrom = acilisRules.activeFrom;
+            const acilisDeadline = acilisRules.deadline;
+            const acilisLateWindow = acilisRules.lateWindow;
+            
+            if (!acilisActiveFrom || !acilisDeadline) {
+                console.warn('[Dashboard] CHECK_RULES.acilis.activeFrom/deadline tanımsız!');
+            }
             
             const acilisSubmissionId = `${branchToKey(branch)}_acilis_${todayStr}`;
             let acilisCompleted = false;
@@ -24723,7 +24744,7 @@ async function loadTodayChecks() {
                 remainingMinutes: acilisRemainingMinutes,
                 remainingText: '',
                 personnel: acilisPersonnel,
-                points: acilisRules.points || { onTime: 3, late: 0, missed: -2 },
+                points: acilisRules.points || {},
                 priority: acilisCompleted ? 95 : (isAcilisMissed ? 99 : (isAcilisActive ? 5 : 70)),
                 onClick: isAcilisMissed ? '' : `goToChecklist('${branch}', 'acilis', null)`
             });
@@ -24734,10 +24755,13 @@ async function loadTodayChecks() {
         // 4. Kapanış Hazırlıkları
         {
             const kapanisRules = CHECK_RULES.kapanis || {};
-            // Saatler Check & Puantaj Kuralları'ndan geliyor
-            const kapanisActiveFrom = kapanisRules.activeFrom || '22:00';
-            const kapanisDeadline = kapanisRules.deadline || '02:00';
-            const kapanisLateWindow = kapanisRules.lateWindow || 30;
+            const kapanisActiveFrom = kapanisRules.activeFrom;
+            const kapanisDeadline = kapanisRules.deadline;
+            const kapanisLateWindow = kapanisRules.lateWindow;
+            
+            if (!kapanisActiveFrom || !kapanisDeadline) {
+                console.warn('[Dashboard] CHECK_RULES.kapanis.activeFrom/deadline tanımsız!');
+            }
             
             const kapanisSubmissionId = `${branchToKey(branch)}_kapanis_${todayStr}`;
             let kapanisCompleted = false;
@@ -24809,7 +24833,7 @@ async function loadTodayChecks() {
                 remainingMinutes: kapanisRemainingMinutes,
                 remainingText: '',
                 personnel: kapanisPersonnel,
-                points: kapanisRules.points || { onTime: 4, late: 0, missed: -2 },
+                points: kapanisRules.points || {},
                 priority: kapanisCompleted ? 95 : (isKapanisMissed ? 99 : (isKapanisActive ? 5 : 70)),
                 onClick: isKapanisMissed ? '' : `goToChecklist('${branch}', 'kapanis', null)`
             });
@@ -24819,8 +24843,12 @@ async function loadTodayChecks() {
         
         // 5. Günlük Genel Check (14:00, 18:00, 22:00 - her zaman göster)
         // Günlük Check - CHECK_RULES'tan saat ve lateWindow değerlerini al
-        const gunlukRules = CHECK_RULES.gunluk || DEFAULT_CHECK_RULES.gunluk || {};
-        const gunlukLateWindow = gunlukRules.lateWindow || 30; // dakika
+        const gunlukRules = CHECK_RULES.gunluk || {};
+        const gunlukLateWindow = gunlukRules.lateWindow;
+        
+        if (gunlukLateWindow === undefined) {
+            console.warn('[Dashboard] CHECK_RULES.gunluk.lateWindow tanımsız!');
+        }
         
         // TimeSlots'u CHECK_RULES'tan al - {start, end} formatını destekle
         let gunlukSlots = []; // [{start: "14:00", end: "16:00"}, ...]
@@ -25040,7 +25068,7 @@ async function loadTodayChecks() {
                 remainingMinutes: isGunlukActive && !gunlukCompleted ? gunlukRemainingMinutes : null,
                 remainingText: isGunlukActive && !gunlukCompleted ? `${gunlukRemainingMinutes}dk` : '',
                 personnel: gunlukPersonnel,
-                points: (CHECK_RULES.gunluk || DEFAULT_CHECK_RULES.gunluk || {}).points || { onTime: 1, late: 0, missed: -2 },
+                points: CHECK_RULES.gunluk?.points || {},
                 priority: gunlukCompleted ? 92 : (isGunlukActive ? 15 : 70),
                 onClick: `goToChecklist('${branch}', 'gunluk', '${displayGunlukTime}')`
             });
@@ -25094,7 +25122,7 @@ async function loadTodayChecks() {
             let isMudurCheckMissed = false;
             
             // Deadline CHECK_RULES'tan gelir (shift bitişine göre DEĞİL)
-            const mudurLateWindow = mudurRules.lateWindow || 30;
+            const mudurLateWindow = mudurRules.lateWindow ?? 0;
             const mudurDeadline = mudurDeadlineRule; // CHECK_RULES'tan gelen deadline
             
             // Firebase'den müdür, yardımcı ve bölge müdürü bilgisi al
@@ -25227,7 +25255,7 @@ async function loadTodayChecks() {
                 remainingMinutes: mudurRemainingMinutes,
                 remainingText: isMudurCheckMissed ? '⚠️ GEÇTİ' : '',
                 personnel: [mudurPersonnel],
-                points: CHECK_RULES.mudur?.points || { onTime: 10, late: 0, missed: -10 },
+                points: CHECK_RULES.mudur?.points || {},
                 priority: mudurCompleted ? 93 : (isMudurCheckMissed ? 99 : (isMudurTimeActive ? 25 : 70)),
                 onClick: (!mudurCompleted && !isMudurCheckMissed) ? `goToChecklist('${branch}', 'mudur', null)` : ''
             });
@@ -25237,10 +25265,14 @@ async function loadTodayChecks() {
         
         // 7. Haftalık Görevler (Round-Robin - Personel Bazlı)
         {
-            const haftalikRules = CHECK_RULES.haftalik || DEFAULT_CHECK_RULES.haftalik || {};
-            const haftalikActiveFrom = haftalikRules.activeFrom || '09:00';
-            const haftalikDeadline = haftalikRules.deadline || '23:00';
-            const haftalikLateWindow = haftalikRules.lateWindow || 30;
+            const haftalikRules = CHECK_RULES.haftalik || {};
+            const haftalikActiveFrom = haftalikRules.activeFrom;
+            const haftalikDeadline = haftalikRules.deadline;
+            const haftalikLateWindow = haftalikRules.lateWindow;
+            
+            if (!haftalikActiveFrom || !haftalikDeadline) {
+                console.warn('[Dashboard] CHECK_RULES.haftalik.activeFrom/deadline tanımsız!');
+            }
             
             // Personel ID'sini belirle
             let personnelId = currentUser?.personelId || currentUser?.uniqueId || currentUser?.id;
@@ -25352,7 +25384,7 @@ async function loadTodayChecks() {
                 canStillFill: canStillFill,
                 remainingText: remainingText,
                 personnel: personnelTags,
-                points: haftalikRules.points || { onTime: 1, late: 0, missed: -2 },
+                points: haftalikRules.points || {},
                 priority: isActive ? 25 : (isAllDone ? 75 : 85),
                 onClick: `goToChecklist('${branch}', 'haftalik', null)`,
                 weeklySummary: weeklySummary,
@@ -25562,7 +25594,7 @@ async function loadTodayChecks() {
             if (check.points && check.activeFrom && check.deadline) {
                 // Geç bitiş saatini hesapla
                 const [dH, dM] = check.deadline.split(':').map(Number);
-                const lateEndMin = dH * 60 + dM + (check.lateWindow || 30);
+                const lateEndMin = dH * 60 + dM + (check.lateWindow ?? 0);
                 const lateEndH = Math.floor(lateEndMin / 60) % 24;
                 const lateEndM = lateEndMin % 60;
                 const lateEndStr = `${String(lateEndH).padStart(2, '0')}:${String(lateEndM).padStart(2, '0')}`;
@@ -28364,7 +28396,7 @@ function renderCheckRuleDetails(type) {
                 
                 <div style="margin-top:16px;background:var(--bg3);border-radius:10px;padding:14px">
                     <div style="font-size:.75rem;color:var(--tx3);margin-bottom:6px">⏱️ Geç Toleransı (dakika)</div>
-                    <input type="number" class="form-input" id="checkRule_${type}_lateWindow" value="${rule.lateWindow || 30}" min="0" max="180" onchange="autoSaveCheckRules()" style="font-size:1rem;font-weight:600;width:100px">
+                    <input type="number" class="form-input" id="checkRule_${type}_lateWindow" value="${rule.lateWindow ?? 0}" min="0" max="180" onchange="autoSaveCheckRules()" style="font-size:1rem;font-weight:600;width:100px">
                     <div style="font-size:.65rem;color:var(--tx3);margin-top:4px">Son teslim saatinden sonra kaç dakika geç yapılabilir</div>
                 </div>
                 
@@ -28905,22 +28937,22 @@ async function saveAdvancedCheckRules() {
         
         if (onTimeEl || latePointsEl || missedEl) {
             rule.points = {
-                onTime: parseFloat(onTimeEl?.value) || 0,
-                late: parseFloat(latePointsEl?.value) || 0,
-                missed: parseFloat(missedEl?.value) ?? -1
+                onTime: onTimeEl?.value !== '' ? parseFloat(onTimeEl.value) : null,
+                late: latePointsEl?.value !== '' ? parseFloat(latePointsEl.value) : null,
+                missed: missedEl?.value !== '' ? parseFloat(missedEl.value) : null
             };
         } else {
             // Form elementi yoksa mevcut değerleri koru
-            rule.points = existingRule.points || baseRule.points || { onTime: 0, late: 0, missed: -1 };
+            rule.points = existingRule.points || baseRule.points || {};
         }
         
         // supervisorPenalty - form'dan oku (MÜDÜRE sütunu)
         const supervisorPenaltyEl = document.getElementById(`checkRule_${type}_supervisorPenalty`);
-        if (supervisorPenaltyEl) {
-            rule.supervisorPenalty = parseFloat(supervisorPenaltyEl.value) || 0;
+        if (supervisorPenaltyEl && supervisorPenaltyEl.value !== '') {
+            rule.supervisorPenalty = parseFloat(supervisorPenaltyEl.value);
         } else {
             // Form elementi yoksa mevcut değeri koru
-            rule.supervisorPenalty = existingRule.supervisorPenalty ?? baseRule.supervisorPenalty ?? -0.5;
+            rule.supervisorPenalty = existingRule.supervisorPenalty ?? baseRule.supervisorPenalty ?? null;
         }
         
         // Responsible shift
@@ -30311,7 +30343,7 @@ async function loadChecklist() {
     // Haftalık ve Temizlik için deadline kontrolü yapılmaz - bunlar shift/hafta bazlı
     const skipDeadlineCheck = ['haftalik', 'aylik', 'temizlik'].includes(mappedType);
     const deadline = skipDeadlineCheck ? null : rules.deadline;
-    const lateWindow = rules.lateWindow || 30;
+    const lateWindow = rules.lateWindow ?? 0;
     const typeNames = {
         'acilis': 'Açılış Hazırlıkları',
         'kapanis': 'Kapanış Hazırlıkları', 
@@ -33755,8 +33787,11 @@ async function renderPlatformChecklist(container, branch, date, activeSlot, subm
     const timeSlot = activeSlot.start; // Submission için
     const timeRange = `${activeSlot.start} - ${activeSlot.end}`;
     
-    // Puanlar config'den
-    const points = pointsConfig || { onTime: 0, missed: -2 };
+    // Puanlar config'den - HARDCODED YOK
+    if (!pointsConfig) {
+        console.warn('[Platform] pointsConfig tanımsız!');
+    }
+    const points = pointsConfig || {};
     
     // Dinamik platformlar - config/system.platforms'dan (PLATFORMS global)
     const platforms = PLATFORMS || [];
@@ -34278,7 +34313,7 @@ async function saveChecklistAndShare(branch, type, date, timeSlot, personName, r
                     pointStatus = 'onTime';
                 } else {
                     // Geç penceresi kontrolü
-                    const lateWindow = rules.lateWindow || 30;
+                    const lateWindow = rules.lateWindow ?? 0;
                     const lateDeadline = new Date(deadlineTime.getTime() + lateWindow * 60000);
                     
                     if (now <= lateDeadline) {
@@ -34550,10 +34585,14 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
         const submissionId = `${branchToKey(branch)}_platform_${date}_${timeSlotKey}`;
         const now = new Date();
         
-        // Puanları config'den al
+        // Puanları config'den al - HARDCODED YOK
         const platformRules = CHECK_RULES?.platform || {};
-        const pointsConfig = platformRules.points || { onTime: 0, late: 0, missed: -2 };
-        const earnedPoints = pointsConfig.onTime || 0;
+        const pointsConfig = platformRules.points || {};
+        
+        if (pointsConfig.onTime === undefined) {
+            console.warn('[Platform] CHECK_RULES.platform.points.onTime tanımsız!');
+        }
+        const earnedPoints = pointsConfig.onTime ?? 0;
         
         await db.collection('checklistSubmissions').doc(submissionId).set({
             type: 'platform',
