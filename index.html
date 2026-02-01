@@ -35252,40 +35252,89 @@ async function distributeTemizlikItems(branch, date) {
         'HER SHIFT': 'hershift'
     };
     
-    allItems = allItems.map(item => {
-        if (!item.shift && item.responsible) {
-            const shiftType = responsibleToShift[item.responsible.toUpperCase()] || 'hershift';
-            return { ...item, shift: shiftType };
-        }
-        return item;
-    });
+    // Bugünün tarihi (ayın kaçı)
+    const dayOfMonth = new Date(date).getDate();
     
-    // "HER SHIFT" maddelerini tüm kategorilere ekle
+    // Tarih filtrelemesi yap ve shift alanını ayarla
+    allItems = allItems
+        .filter(item => {
+            // dates alanı varsa sadece o günlerde aktif
+            if (item.dates && Array.isArray(item.dates) && item.dates.length > 0) {
+                return item.dates.includes(dayOfMonth);
+            }
+            // dates yoksa her gün aktif
+            return true;
+        })
+        .map(item => {
+            if (!item.shift && item.responsible) {
+                const shiftType = responsibleToShift[item.responsible.toUpperCase()] || 'hershift';
+                return { ...item, shift: shiftType };
+            }
+            return item;
+        });
+    
+    console.log('[Temizlik] Bugün aktif maddeler:', allItems.length, '/', 'Ayın', dayOfMonth + '. günü');
+    
+    // "HER SHIFT" maddelerini ayır
     const herShiftItems = allItems.filter(i => i.shift === 'hershift');
+    // Sadece belirli shift'e ait maddeler (HER SHIFT hariç)
+    const shiftSpecificItems = allItems.filter(i => i.shift !== 'hershift');
     
     // Maddeleri shift kategorisine göre grupla
+    // HER SHIFT maddelerini UNIQUE ID ile her kategoriye ekle
     const itemsByShift = {
-        acilis: [...allItems.filter(i => i.shift === 'acilis'), ...herShiftItems.map(i => ({...i, shift: 'acilis'}))],
-        araci: [...allItems.filter(i => i.shift === 'araci'), ...herShiftItems.map(i => ({...i, shift: 'araci'}))],
-        kapanis: [...allItems.filter(i => i.shift === 'kapanis'), ...herShiftItems.map(i => ({...i, shift: 'kapanis'}))]
+        acilis: [
+            ...shiftSpecificItems.filter(i => i.shift === 'acilis'),
+            // HER SHIFT maddelerini unique ID ile ekle
+            ...herShiftItems.map(i => ({
+                ...i, 
+                id: i.id + '_acilis',  // Unique ID: maddeId_shiftTuru
+                originalId: i.id,
+                shift: 'acilis'
+            }))
+        ],
+        araci: [
+            ...shiftSpecificItems.filter(i => i.shift === 'araci'),
+            ...herShiftItems.map(i => ({
+                ...i, 
+                id: i.id + '_araci',
+                originalId: i.id,
+                shift: 'araci'
+            }))
+        ],
+        kapanis: [
+            ...shiftSpecificItems.filter(i => i.shift === 'kapanis'),
+            ...herShiftItems.map(i => ({
+                ...i, 
+                id: i.id + '_kapanis',
+                originalId: i.id,
+                shift: 'kapanis'
+            }))
+        ]
     };
     
     // Aracı yoksa maddelerini açılış ve kapanışa dağıt
+    // AMA: HER SHIFT maddelerinin araci kopyalarını DAĞITMA (zaten açılış/kapanışta var)
     if (personnel.araci.length === 0 && itemsByShift.araci.length > 0) {
-        const araciItems = itemsByShift.araci;
-        const half = Math.ceil(araciItems.length / 2);
+        // Sadece SHIFT'e ÖZEL araci maddelerini dağıt (HER SHIFT kopyaları hariç)
+        const shiftSpecificAraciItems = itemsByShift.araci.filter(item => !item.originalId);
         
-        // Yarısını açılışa, yarısını kapanışa
-        araciItems.slice(0, half).forEach(item => {
-            item.shift = 'acilis';
-            itemsByShift.acilis.push(item);
-        });
-        araciItems.slice(half).forEach(item => {
-            item.shift = 'kapanis';
-            itemsByShift.kapanis.push(item);
-        });
+        if (shiftSpecificAraciItems.length > 0) {
+            const half = Math.ceil(shiftSpecificAraciItems.length / 2);
+            
+            // Yarısını açılışa, yarısını kapanışa
+            shiftSpecificAraciItems.slice(0, half).forEach(item => {
+                itemsByShift.acilis.push({ ...item, shift: 'acilis' });
+            });
+            shiftSpecificAraciItems.slice(half).forEach(item => {
+                itemsByShift.kapanis.push({ ...item, shift: 'kapanis' });
+            });
+            console.log('[Temizlik] Aracı yok, shift-özel maddeler dağıtıldı:', half, 'açılışa,', shiftSpecificAraciItems.length - half, 'kapanışa');
+        } else {
+            console.log('[Temizlik] Aracı yok, taşınacak shift-özel madde yok (sadece HER SHIFT var)');
+        }
+        
         itemsByShift.araci = [];
-        console.log('[Temizlik] Aracı yok, maddeler dağıtıldı:', half, 'açılışa,', araciItems.length - half, 'kapanışa');
     }
     
     // Her kategorideki maddeleri personele eşit dağıt
@@ -35563,6 +35612,18 @@ async function renderTemizlikChecklist(container, branch, date) {
                         const points = item.points?.done || 1;
                         const safeItemText = (item.text || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
                         
+                        // Kategori bilgisi: responsible, shift veya dates'e göre
+                        let categoryInfo = '';
+                        if (item.responsible) {
+                            categoryInfo = item.responsible;
+                        } else if (item.shift) {
+                            const shiftLabels = { acilis: 'Açılış', araci: 'Ara Vardiya', kapanis: 'Kapanış', hershift: 'Her Vardiya' };
+                            categoryInfo = shiftLabels[item.shift] || item.shift;
+                        }
+                        if (item.dates && item.dates.length > 0) {
+                            categoryInfo += ` (Ayın ${item.dates.join(', ')}. günleri)`;
+                        }
+                        
                         html += `
                             <div class="temizlik-item ${isCompleted ? 'completed' : ''}" 
                                  style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg2);border-radius:8px;border:1px solid ${isCompleted ? '#27ae60' : 'var(--bg4)'};${isCompleted ? 'opacity:.7' : ''}">
@@ -35570,9 +35631,9 @@ async function renderTemizlikChecklist(container, branch, date) {
                                 <div style="flex:1">
                                     <div style="font-size:.9rem;color:var(--tx);${isCompleted ? 'text-decoration:line-through' : ''}">${item.text}</div>
                                     <div style="font-size:.7rem;color:var(--tx3);margin-top:2px">
-                                        ${item.category} • <span style="color:${points > 0 ? '#27ae60' : '#e74c3c'}">${points > 0 ? '+' : ''}${points} puan</span>
+                                        ${categoryInfo ? categoryInfo + ' • ' : ''}<span style="color:${points > 0 ? '#27ae60' : '#e74c3c'}">${points > 0 ? '+' : ''}${points} puan</span>
                                         ${isCompleted && cooldown.lastCompletedBy ? ` • ✅ ${cooldown.lastCompletedBy}` : ''}
-                                        ${isCompleted && cooldown.remainingHours ? ` • ⏰ ${cooldown.remainingHours}s sonra aktif` : ''}
+                                        ${isCompleted && cooldown.remainingHours ? ` • ⏰ ${cooldown.remainingHours} saat sonra aktif` : ''}
                                     </div>
                                 </div>
                                 
