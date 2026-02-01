@@ -23926,6 +23926,52 @@ async function loadTodayChecks() {
         console.warn('Personel rol bilgisi yüklenemedi:', e);
     }
     
+    // Müdür yardımcısı muafiyeti - müdür OFF ise ve yardımcı tek değilse
+    // Yardımcı diğer checklistlerden muaf olur (sadece müdür checklistinden sorumlu)
+    const mudurYardimcisiExemptMap = {}; // branch → { exempt, yardimciName, ... }
+    for (const branch of branches) {
+        try {
+            const mudurStatus = await isMudurWorking(branch, today);
+            
+            // Müdür çalışmıyorsa
+            if (!mudurStatus.isWorking) {
+                const yardimci = await getMudurYardimcisi(branch);
+                if (yardimci) {
+                    const isAlone = await isMudurYardimcisiAlone(branch, today);
+                    
+                    // Tek değilse muaf (sadece müdür checklistinden sorumlu)
+                    if (!isAlone) {
+                        mudurYardimcisiExemptMap[branch] = {
+                            exempt: true,
+                            yardimciId: yardimci.uniqueId,
+                            yardimciName: yardimci.name,
+                            yardimciCodeName: yardimci.codeName,
+                            reason: 'Müdür izinli, sadece müdür checklistinden sorumlu'
+                        };
+                        
+                        // Muaf listesine ekle (tüm formatlar)
+                        if (yardimci.uniqueId) checklistExemptSet.add(yardimci.uniqueId);
+                        if (yardimci.codeName) checklistExemptSet.add(yardimci.codeName);
+                        if (yardimci.name) {
+                            checklistExemptSet.add(yardimci.name);
+                            checklistExemptSet.add(normalizePersonelId(yardimci.name));
+                            const firstName = yardimci.name.split(' ')[0];
+                            const lastName = yardimci.name.split(' ').slice(1).join(' ');
+                            const lastInitial = lastName?.charAt(0) || '';
+                            checklistExemptSet.add(`${firstName} ${lastInitial}.`);
+                        }
+                        
+                        console.log('[Dashboard] Müdür yardımcısı muaf:', yardimci.name, '- Müdür OFF');
+                    } else {
+                        console.log('[Dashboard] Müdür yardımcısı TEK:', yardimci.name, '- Tüm görevlerden sorumlu');
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('[Dashboard] Müdür yardımcısı muafiyet kontrolü hatası:', branch, e);
+        }
+    }
+    
     // Shift verilerini yükle
     const shiftData = {};
     const rawShiftData = {}; // Ham shift verisi (adaletli atama için)
@@ -24909,8 +24955,12 @@ async function loadTodayChecks() {
             if (gunlukCompleted) completedChecks++;
         }
         
-        // 6. Müdür Kontrol (sadece müdürler için)
-        if (isFullAdmin || isStoreManager) {
+        // 6. Müdür Kontrol (müdürler VE müdür yardımcıları için)
+        // Müdür yardımcısı: müdür OFF ise görür
+        const isMudurYardimcisiRole = ['mudur_yardimcisi', 'magaza_mudur_yardimcisi'].includes(currentUser?.role);
+        const shouldShowMudurCheck = isFullAdmin || isStoreManager || isMudurYardimcisiRole;
+        
+        if (shouldShowMudurCheck) {
             const mudurSubmissionId = `${branchToKey(branch)}_mudur_${todayStr}`;
             let mudurCompleted = false;
             try {
