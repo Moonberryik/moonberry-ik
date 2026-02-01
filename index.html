@@ -28564,7 +28564,10 @@ function renderTimeSlotCard(type, timeOrSlot, idx, rule) {
 
 // Saate saat ekle helper
 function addHours(timeStr, hours) {
-    const [h, m] = timeStr.split(':').map(Number);
+    if (!timeStr || typeof timeStr !== 'string') return '00:00';
+    const parts = timeStr.split(':');
+    const h = parseInt(parts[0]) || 0;
+    const m = parseInt(parts[1]) || 0;
     const newH = (h + hours) % 24;
     return `${String(newH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
@@ -30088,18 +30091,20 @@ async function loadChecklist() {
     if (checklistLoadingLock) return;
     checklistLoadingLock = true;
     
-    const branch = document.getElementById('checklistSube')?.value;
-    const type = document.getElementById('checklistType')?.value;
-    const date = document.getElementById('checklistDate')?.value;
     const container = document.getElementById('checklistFormContainer');
     
-    if (!branch || !type || !date || !container) {
-        checklistLoadingLock = false;
-        return;
-    }
-    
-    // Shift erişim kontrolü (saat bazlı, ±1 saat tolerans)
-    const accessResult = await checkShiftAccess(branch, new Date(date), 'checklist');
+    try {
+        const branch = document.getElementById('checklistSube')?.value;
+        const type = document.getElementById('checklistType')?.value;
+        const date = document.getElementById('checklistDate')?.value;
+        
+        if (!branch || !type || !date || !container) {
+            checklistLoadingLock = false;
+            return;
+        }
+        
+        // Shift erişim kontrolü (saat bazlı, ±1 saat tolerans)
+        const accessResult = await checkShiftAccess(branch, new Date(date), 'checklist');
     
     if (!accessResult.hasAccess) {
         container.innerHTML = renderShiftLockScreen(accessResult, 'checklist');
@@ -30191,99 +30196,180 @@ async function loadChecklist() {
         return;
     }
     
-    // ==================== SÜRE KONTROLÜ (Açılış/Kapanış/Müdür) ====================
-    // Bu checklistler için deadline geçmişse bilgilendirme göster
-    const deadlineTypes = ['acilis', 'kapanis', 'mudur'];
-    if (deadlineTypes.includes(type)) {
-        const rules = CHECK_RULES[type] || {};
-        const deadline = rules.deadline;
-        const lateWindow = rules.lateWindow || 30;
+    // ==================== GENEL SÜRE KONTROLÜ (TÜM CHECKLİSTLER) ====================
+    // Önce bu checklist'in daha önce doldurulup doldurulmadığını kontrol et
+    const canonType = canonicalChecklistTypeId(type);
+    const TYPE_ID_MAP_PRE = {
+        'guncel': 'guncel', 'gunluk': 'guncel', 'gunluk_check': 'guncel', 'gunluk_genel': 'guncel',
+        'acilis_hazirlik': 'acilis', 'kapanis_hazirlik': 'kapanis',
+        'mudur_kontrol': 'mudur', 'platform_check': 'platform', 'haftalik_gorev': 'haftalik'
+    };
+    const mappedType = TYPE_ID_MAP_PRE[canonType] || canonType;
+    const checklistIdPre = `${sanitize(branch)}_${mappedType}`;
+    
+    // Submission kontrolü
+    let existingSubmission = null;
+    try {
+        // Önce timeSlot olmadan dene
+        const submissionIdBase = `${checklistIdPre}_${date}`;
+        const submissionDoc = await db.collection('checklistSubmissions').doc(submissionIdBase).get();
+        if (submissionDoc.exists) {
+            existingSubmission = submissionDoc.data();
+        }
+    } catch (e) {
+        console.log('Submission kontrol hatası (önemsiz):', e);
+    }
+    
+    // CHECK_RULES'dan bu tip için kuralları al
+    const rules = CHECK_RULES[mappedType] || CHECK_RULES[type] || {};
+    const deadline = rules.deadline;
+    const lateWindow = rules.lateWindow || 30;
+    const typeNames = {
+        'acilis': 'Açılış Hazırlıkları',
+        'kapanis': 'Kapanış Hazırlıkları', 
+        'mudur': 'Müdür Kontrolleri',
+        'gunluk': 'Günlük Genel Kontroller',
+        'guncel': 'Günlük Genel Kontroller',
+        'platform': 'Online Platform Kontrolleri',
+        'haftalik': 'Haftalık Görevler'
+    };
+    const typeName = typeNames[mappedType] || typeNames[type] || rules.name || type;
+    
+    // Eğer daha önce doldurulmuşsa "Kim doldurdu" bilgisi göster
+    if (existingSubmission && existingSubmission.completedAt) {
+        const completedAt = existingSubmission.completedAt?.toDate?.() || new Date(existingSubmission.completedAt);
+        const completedBy = existingSubmission.completedByName || existingSubmission.completedBy || 'Bilinmiyor';
+        const completedTime = completedAt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+        const completedDate = completedAt.toLocaleDateString('tr-TR');
         
-        if (deadline) {
-            const now = new Date();
-            const currentHour = now.getHours();
-            const currentMinutes = now.getMinutes();
-            const nowTotalMinutes = currentHour * 60 + currentMinutes;
-            
-            const [dH, dM] = deadline.split(':').map(Number);
-            let deadlineMinutes = dH * 60 + dM;
-            
-            // Gece geçişi kontrolü (kapanış checklistleri için)
-            const dayEndHour = getBusinessDayEndHour();
-            if (dH < 12 && (type === 'kapanis' || type === 'mudur')) {
-                // Gece yarısından sonraki deadline
-                if (currentHour >= 12) {
-                    // Henüz gece olmadı - deadline ertesi gün
-                    deadlineMinutes += 24 * 60;
-                }
-            }
-            
-            // Şu anki saati ayarla (gece geçişi için)
-            let adjustedNow = nowTotalMinutes;
-            if (currentHour < dayEndHour && currentHour >= 0 && currentHour < 6) {
-                adjustedNow += 24 * 60;
-            }
-            
-            const deadlineWithLate = deadlineMinutes + lateWindow;
-            const isExpired = adjustedNow > deadlineWithLate;
-            
-            // Yöneticiler için geçmiş checklistleri görüntüleme izni
-            const isManager = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
-            
-            if (isExpired && !isManager) {
-                // Süre dolmuş - bilgilendirme göster
-                const typeNames = {
-                    'acilis': 'Açılış Hazırlıkları',
-                    'kapanis': 'Kapanış Hazırlıkları',
-                    'mudur': 'Müdür Kontrolleri'
-                };
-                const typeName = typeNames[type] || type;
-                const missedPoints = rules.points?.missed || -2;
-                
-                container.innerHTML = `
-                    <div style="text-align:center;padding:60px 20px">
-                        <div style="width:90px;height:90px;margin:0 auto 24px;background:linear-gradient(135deg,rgba(231,76,60,.15),rgba(231,76,60,.25));border-radius:50%;display:flex;align-items:center;justify-content:center">
-                            <svg width="48" height="48" fill="none" stroke="#e74c3c" stroke-width="1.5" viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10"/>
-                                <path d="M12 6v6l4 2"/>
-                            </svg>
-                        </div>
-                        <div style="font-size:1.4rem;font-weight:700;color:var(--tx);margin-bottom:12px">Doldurma Süresi Doldu</div>
-                        <div style="color:var(--tx2);max-width:400px;margin:0 auto;line-height:1.6;font-size:1rem">
-                            <strong>${typeName}</strong> checklisti için doldurma süresi sona erdi.
-                        </div>
-                        
-                        <div style="margin-top:24px;padding:16px 24px;background:var(--bg3);border-radius:12px;display:inline-block">
-                            <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;justify-content:center">
-                                <div style="text-align:center">
-                                    <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Son Doldurma Saati</div>
-                                    <div style="font-size:1.2rem;font-weight:700;color:#e74c3c">${deadline}</div>
-                                </div>
-                                <div style="width:1px;height:40px;background:var(--cardBorder)"></div>
-                                <div style="text-align:center">
-                                    <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Tolerans</div>
-                                    <div style="font-size:1.2rem;font-weight:600;color:var(--tx)">+${lateWindow} dk</div>
-                                </div>
-                                <div style="width:1px;height:40px;background:var(--cardBorder)"></div>
-                                <div style="text-align:center">
-                                    <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Puan Etkisi</div>
-                                    <div style="font-size:1.2rem;font-weight:700;color:#e74c3c">${missedPoints} puan</div>
-                                </div>
+        // Yönetici değilse sadece bilgi göster, düzenleme izni yok
+        const isManager = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
+        
+        if (!isManager) {
+            container.innerHTML = `
+                <div style="text-align:center;padding:60px 20px">
+                    <div style="width:90px;height:90px;margin:0 auto 24px;background:linear-gradient(135deg,rgba(39,174,96,.15),rgba(39,174,96,.25));border-radius:50%;display:flex;align-items:center;justify-content:center">
+                        <svg width="48" height="48" fill="none" stroke="#27ae60" stroke-width="1.5" viewBox="0 0 24 24">
+                            <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                    </div>
+                    <div style="font-size:1.4rem;font-weight:700;color:var(--tx);margin-bottom:12px">Checklist Tamamlandı</div>
+                    <div style="color:var(--tx2);max-width:400px;margin:0 auto;line-height:1.6;font-size:1rem">
+                        <strong>${typeName}</strong> bugün için zaten doldurulmuş.
+                    </div>
+                    
+                    <div style="margin-top:24px;padding:16px 24px;background:var(--bg3);border-radius:12px;display:inline-block">
+                        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;justify-content:center">
+                            <div style="text-align:center">
+                                <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Dolduran</div>
+                                <div style="font-size:1.1rem;font-weight:600;color:#27ae60">${completedBy}</div>
+                            </div>
+                            <div style="width:1px;height:40px;background:var(--cardBorder)"></div>
+                            <div style="text-align:center">
+                                <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Tarih</div>
+                                <div style="font-size:1.1rem;font-weight:600;color:var(--tx)">${completedDate}</div>
+                            </div>
+                            <div style="width:1px;height:40px;background:var(--cardBorder)"></div>
+                            <div style="text-align:center">
+                                <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Saat</div>
+                                <div style="font-size:1.1rem;font-weight:600;color:var(--tx)">${completedTime}</div>
                             </div>
                         </div>
-                        
-                        <div style="margin-top:24px;font-size:.85rem;color:var(--tx3)">
-                            Bu checklist artık doldurulamaz. Bir sonraki vardiya için hazır olun.
-                        </div>
-                        
-                        <button onclick="showPage('home')" style="margin-top:24px;background:linear-gradient(135deg,#008c95,#008c95dd);color:white;border:none;padding:12px 28px;border-radius:10px;font-weight:600;cursor:pointer;font-size:.95rem">
-                            Ana Sayfaya Dön
-                        </button>
                     </div>
-                `;
-                checklistLoadingLock = false;
-                return;
+                    
+                    <button onclick="showPage('home')" style="margin-top:24px;background:linear-gradient(135deg,#008c95,#008c95dd);color:white;border:none;padding:12px 28px;border-radius:10px;font-weight:600;cursor:pointer;font-size:.95rem">
+                        Ana Sayfaya Dön
+                    </button>
+                </div>
+            `;
+            checklistLoadingLock = false;
+            return;
+        }
+        // Yönetici ise devam et - düzenleme yapabilir
+    }
+    
+    // Deadline varsa süre kontrolü yap
+    if (deadline) {
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinutes = now.getMinutes();
+        const nowTotalMinutes = currentHour * 60 + currentMinutes;
+        
+        const deadlineParts = (deadline || '23:59').split(':');
+        const dH = parseInt(deadlineParts[0]) || 23;
+        const dM = parseInt(deadlineParts[1]) || 59;
+        let deadlineMinutes = dH * 60 + dM;
+        
+        // Gece geçişi kontrolü (kapanış checklistleri için)
+        const dayEndHour = getBusinessDayEndHour();
+        if (dH < 12 && ['kapanis', 'mudur'].includes(mappedType)) {
+            // Gece yarısından sonraki deadline
+            if (currentHour >= 12) {
+                // Henüz gece olmadı - deadline ertesi gün
+                deadlineMinutes += 24 * 60;
             }
+        }
+        
+        // Şu anki saati ayarla (gece geçişi için)
+        let adjustedNow = nowTotalMinutes;
+        if (currentHour < dayEndHour && currentHour >= 0 && currentHour < 6) {
+            adjustedNow += 24 * 60;
+        }
+        
+        const deadlineWithLate = deadlineMinutes + lateWindow;
+        const isExpired = adjustedNow > deadlineWithLate;
+        
+        // Yöneticiler için geçmiş checklistleri görüntüleme izni
+        const isManager = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
+        
+        if (isExpired && !isManager) {
+            // Süre dolmuş - bilgilendirme göster
+            const missedPoints = rules.points?.missed || -2;
+            
+            container.innerHTML = `
+                <div style="text-align:center;padding:60px 20px">
+                    <div style="width:90px;height:90px;margin:0 auto 24px;background:linear-gradient(135deg,rgba(231,76,60,.15),rgba(231,76,60,.25));border-radius:50%;display:flex;align-items:center;justify-content:center">
+                        <svg width="48" height="48" fill="none" stroke="#e74c3c" stroke-width="1.5" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 6v6l4 2"/>
+                        </svg>
+                    </div>
+                    <div style="font-size:1.4rem;font-weight:700;color:var(--tx);margin-bottom:12px">Doldurma Süresi Doldu</div>
+                    <div style="color:var(--tx2);max-width:400px;margin:0 auto;line-height:1.6;font-size:1rem">
+                        <strong>${typeName}</strong> checklisti için doldurma süresi sona erdi.
+                    </div>
+                    
+                    <div style="margin-top:24px;padding:16px 24px;background:var(--bg3);border-radius:12px;display:inline-block">
+                        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;justify-content:center">
+                            <div style="text-align:center">
+                                <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Son Doldurma Saati</div>
+                                <div style="font-size:1.2rem;font-weight:700;color:#e74c3c">${deadline}</div>
+                            </div>
+                            <div style="width:1px;height:40px;background:var(--cardBorder)"></div>
+                            <div style="text-align:center">
+                                <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Tolerans</div>
+                                <div style="font-size:1.2rem;font-weight:600;color:var(--tx)">+${lateWindow} dk</div>
+                            </div>
+                            <div style="width:1px;height:40px;background:var(--cardBorder)"></div>
+                            <div style="text-align:center">
+                                <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Puan Etkisi</div>
+                                <div style="font-size:1.2rem;font-weight:700;color:#e74c3c">${missedPoints} puan</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top:24px;font-size:.85rem;color:var(--tx3)">
+                        Bu checklist artık doldurulamaz. Bir sonraki vardiya için hazır olun.
+                    </div>
+                    
+                    <button onclick="showPage('home')" style="margin-top:24px;background:linear-gradient(135deg,#008c95,#008c95dd);color:white;border:none;padding:12px 28px;border-radius:10px;font-weight:600;cursor:pointer;font-size:.95rem">
+                        Ana Sayfaya Dön
+                    </button>
+                </div>
+            `;
+            checklistLoadingLock = false;
+            return;
         }
     }
     
@@ -30370,18 +30456,17 @@ async function loadChecklist() {
         Checklist yükleniyor...
     </div>`;
     
-    try {
-        // Type ID mapping - seed.html ve index.html arasındaki farkları çöz
-        const TYPE_ID_MAP = {
-            // seed.html → index.html uyumu
-            'guncel': 'guncel',       // seed.html'de guncel kullanılıyor
-            'gunluk': 'guncel',       // index.html'de gunluk deniyor ama guncel aranmalı
-            'gunluk_check': 'guncel',
-            'gunluk_genel': 'guncel',
-            'aylik_temizlik': 'aylik',
-            'temizlik_acilis': 'aylik',
-            'temizlik_araci': 'aylik',
-            'temizlik_kapanis': 'aylik',
+    // Type ID mapping - seed.html ve index.html arasındaki farkları çöz
+    const TYPE_ID_MAP = {
+        // seed.html → index.html uyumu
+        'guncel': 'guncel',       // seed.html'de guncel kullanılıyor
+        'gunluk': 'guncel',       // index.html'de gunluk deniyor ama guncel aranmalı
+        'gunluk_check': 'guncel',
+        'gunluk_genel': 'guncel',
+        'aylik_temizlik': 'aylik',
+        'temizlik_acilis': 'aylik',
+        'temizlik_araci': 'aylik',
+        'temizlik_kapanis': 'aylik',
             'temizlik_cizelgesi': 'aylik',
             'acilis_hazirlik': 'acilis',
             'kapanis_hazirlik': 'kapanis',
