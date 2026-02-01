@@ -30180,9 +30180,15 @@ async function loadChecklist() {
                             <br><br>
                             Diğer checklistler sizin sorumluluğunuzda değil.
                         </div>
-                        <button onclick="goToChecklist('${branch}', 'mudur', null)" style="margin-top:20px;background:linear-gradient(135deg,#008c95,#008c95dd);color:white;border:none;padding:12px 24px;border-radius:8px;font-weight:600;cursor:pointer">
-                            Müdür Checklistine Git
-                        </button>
+                        <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">
+                            <button onclick="goToChecklist('${branch}', 'mudur', null)" style="background:linear-gradient(135deg,#008c95,#008c95dd);color:white;border:none;padding:12px 24px;border-radius:8px;font-weight:600;cursor:pointer">
+                                Müdür Checklistine Git
+                            </button>
+                            <button onclick="openTemizlikStatusModal('${branch}')" style="background:var(--bg3);color:var(--tx);border:1px solid var(--bg4);padding:10px 20px;border-radius:8px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
+                                Temizlik Durumunu Gör
+                            </button>
+                        </div>
                     </div>
                 `;
                 checklistLoadingLock = false;
@@ -35288,15 +35294,63 @@ async function distributeTemizlikItems(branch, date) {
         }
     });
     
-    console.log('[Temizlik] Personel kategorileri:', {
+    console.log('[Temizlik] Personel kategorileri (muafiyet öncesi):', {
+        acilis: personnel.acilis.map(p => p.name),
+        araci: personnel.araci.map(p => p.name),
+        kapanis: personnel.kapanis.map(p => p.name)
+    });
+    
+    // Müdür yardımcısı kontrolü - Müdür OFF ise ve yardımcı TEK DEĞİLSE temizlikten muaf
+    const totalPersonnel = personnel.acilis.length + personnel.araci.length + personnel.kapanis.length;
+    
+    if (totalPersonnel > 1) {
+        try {
+            const mudurStatus = await isMudurWorking(branch, new Date(date));
+            
+            if (!mudurStatus.isWorking) {
+                // Müdür OFF - yardımcıyı bul ve temizlikten çıkar
+                const yardimci = await getMudurYardimcisi(branch);
+                
+                if (yardimci) {
+                    const yardimciNames = [
+                        yardimci.name,
+                        formatDisplayName(yardimci.name),
+                        yardimci.name?.split(' ')[0],
+                        yardimci.uniqueId,
+                        normalizePersonelId(yardimci.name)
+                    ].filter(Boolean);
+                    
+                    // Her kategoriden yardımcıyı çıkar
+                    ['acilis', 'araci', 'kapanis'].forEach(cat => {
+                        const beforeCount = personnel[cat].length;
+                        personnel[cat] = personnel[cat].filter(p => {
+                            const isYardimci = yardimciNames.some(yn => 
+                                p.name === yn || 
+                                p.id === yn ||
+                                normalizePersonelId(p.name) === normalizePersonelId(yn)
+                            );
+                            return !isYardimci;
+                        });
+                        if (personnel[cat].length < beforeCount) {
+                            console.log(`[Temizlik] Müdür yardımcısı ${cat} kategorisinden çıkarıldı:`, yardimci.name);
+                        }
+                    });
+                }
+            }
+        } catch (e) {
+            console.warn('[Temizlik] Müdür yardımcısı kontrolü hatası:', e);
+        }
+    }
+    
+    console.log('[Temizlik] Personel kategorileri (muafiyet sonrası):', {
         acilis: personnel.acilis.map(p => p.name),
         araci: personnel.araci.map(p => p.name),
         kapanis: personnel.kapanis.map(p => p.name)
     });
     
     // Bölge müdürü SADECE tek başınaysa dahil et (hiç personel yoksa)
-    const totalPersonnel = personnel.acilis.length + personnel.araci.length + personnel.kapanis.length;
-    if (totalPersonnel === 0 && personnel._bolgeMuduru?.length > 0) {
+    const totalAfterExempt = personnel.acilis.length + personnel.araci.length + personnel.kapanis.length;
+    if (totalAfterExempt === 0 && personnel._bolgeMuduru?.length > 0) {
         // Hiç personel yok, bölge müdürü aracı olarak çalışsın
         personnel.araci = personnel._bolgeMuduru;
         console.log('[Temizlik] Sadece bölge müdürü var, aracı olarak atandı');
@@ -35633,13 +35687,25 @@ async function renderTemizlikChecklist(container, branch, date) {
                 </div>
             </div>
             
-            <div style="background:var(--bg3);border:1px solid var(--bg4);border-radius:12px;padding:14px;margin-bottom:20px;display:flex;align-items:flex-start;gap:10px">
-                <div style="color:var(--primary);flex-shrink:0;margin-top:2px">${ICONS.info}</div>
-                <div style="font-size:.85rem;color:var(--tx2)">
-                    Her madde <strong>48 saat</strong> cooldown süresine sahiptir. Yapılan madde 48 saat sonra tekrar aktif olur.
-                    ${isManager ? '<br><span style="display:flex;align-items:center;gap:4px;margin-top:4px">' + ICONS.user + ' Yönetici olarak tüm personelin maddelerini görebilir ve işaretleyebilirsiniz.</span>' : ''}
-                </div>
-            </div>
+            ${(() => {
+                // Puanları CHECK_RULES'dan dinamik al
+                const temizlikRules = CHECK_RULES.aylik || {};
+                const donePoints = temizlikRules.points?.done ?? temizlikRules.points?.onTime ?? 0.2;
+                const missedPoints = temizlikRules.points?.missed ?? -0.2;
+                const doneDisplay = donePoints.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+                const missedDisplay = missedPoints.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+                
+                return `
+                    <div style="background:var(--bg3);border:1px solid var(--bg4);border-radius:12px;padding:14px;margin-bottom:20px;display:flex;align-items:flex-start;gap:10px">
+                        <div style="color:var(--primary);flex-shrink:0;margin-top:2px">${ICONS.info}</div>
+                        <div style="font-size:.85rem;color:var(--tx2)">
+                            Aylık temizlik ve bakım görevleri. Her madde belirli günlerde aktif olur ve vardiyaya göre atanır.
+                            <span style="color:#27ae60;font-weight:500">Yapılan +${doneDisplay} puan</span>, 
+                            <span style="color:#e74c3c;font-weight:500">yapılmayan ${missedDisplay} puan</span> olarak puantaja yansır.
+                        </div>
+                    </div>
+                `;
+            })()}
         `;
         
         // Her vardiya tipi için bölüm oluştur
@@ -35686,17 +35752,14 @@ async function renderTemizlikChecklist(container, branch, date) {
                     
                     html += `
                         <div style="background:${shiftConfig.bg};border:1px solid ${shiftConfig.border}33;border-radius:12px;padding:16px;margin-bottom:12px">
-                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-                                <div style="display:flex;align-items:center;gap:10px">
-                                    <div style="width:40px;height:40px;border-radius:50%;background:${shiftConfig.border};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:.9rem">
-                                        ${person.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
-                                    </div>
-                                    <div>
-                                        <div style="font-weight:600;color:var(--tx)">${person.name}</div>
-                                        <div style="font-size:.75rem;color:var(--tx3)">${person.shift} - ${personItems.length} madde</div>
-                                    </div>
+                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+                                <div style="width:40px;height:40px;border-radius:50%;background:${shiftConfig.border};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:.9rem">
+                                    ${person.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                                 </div>
-                                ${canEdit ? `<span style="font-size:.7rem;padding:4px 8px;background:#27ae60;color:#fff;border-radius:6px;display:flex;align-items:center;gap:4px"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Düzenleyebilirsin</span>` : ''}
+                                <div>
+                                    <div style="font-weight:600;color:var(--tx)">${person.name}</div>
+                                    <div style="font-size:.75rem;color:var(--tx3)">${shiftConfig.label} - ${personItems.length} madde</div>
+                                </div>
                             </div>
                             
                             <div style="display:grid;gap:8px">
@@ -35728,30 +35791,32 @@ async function renderTemizlikChecklist(container, branch, date) {
                             categoryInfo += ` (Ayın ${item.dates.join(', ')}. günleri)`;
                         }
                         
+                        // Sadece kendi maddesini görebilir - Düzenleyebilirsin badge'i kaldırıldı
+                        const canComplete = canEdit && !isCompleted;
+                        
                         html += `
                             <div class="temizlik-item ${isCompleted ? 'completed' : ''}" 
-                                 style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg2);border-radius:8px;border:1px solid ${isCompleted ? '#27ae60' : 'var(--bg4)'};${isCompleted ? 'opacity:.7' : ''}">
+                                 style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg2);border-radius:8px;border:1px solid ${isCompleted ? '#008c95' : 'var(--bg4)'};${isCompleted ? 'opacity:.8' : ''}">
                                 
                                 <div style="flex:1">
-                                    <div style="font-size:.9rem;color:var(--tx);${isCompleted ? 'text-decoration:line-through' : ''}">${item.text}</div>
+                                    <div style="font-size:.9rem;color:var(--tx);${isCompleted ? 'text-decoration:line-through;opacity:.7' : ''}">${item.text}</div>
                                     <div style="font-size:.7rem;color:var(--tx3);margin-top:2px;display:flex;align-items:center;flex-wrap:wrap;gap:4px">
                                         ${categoryInfo ? `<span>${categoryInfo}</span><span>•</span>` : ''}
                                         <span style="color:${points > 0 ? '#27ae60' : '#e74c3c'}">${points > 0 ? '+' : ''}${pointsDisplay} puan</span>
-                                        ${isCompleted && cooldown.lastCompletedBy ? `<span>•</span><span style="display:inline-flex;align-items:center;gap:2px"><svg width="12" height="12" fill="none" stroke="#27ae60" stroke-width="2" viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg> ${cooldown.lastCompletedBy}</span>` : ''}
-                                        ${isCompleted && cooldown.remainingHours ? `<span>•</span><span style="display:inline-flex;align-items:center;gap:2px"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg> ${cooldown.remainingHours} saat sonra aktif</span>` : ''}
+                                        ${isCompleted && cooldown.lastCompletedBy ? `<span>•</span><span style="display:inline-flex;align-items:center;gap:2px;color:#008c95"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg> ${cooldown.lastCompletedBy}</span>` : ''}
                                     </div>
                                 </div>
                                 
                                 ${canEdit ? `
-                                    <button class="btn btn-sm ${isCompleted ? 'btn-ghost' : 'btn-primary'}" 
+                                    <button class="btn btn-sm" 
                                             onclick="handleTemizlikItemClick('${branch}', '${item.id}', '${safeItemText}', '${safePersonId}', '${safePersonName}')"
                                             ${isCompleted ? 'disabled' : ''}
-                                            style="min-width:90px;font-size:.75rem;display:flex;align-items:center;justify-content:center;gap:4px">
-                                        ${isCompleted ? '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg> Yapıldı' : '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg> Tamamla'}
+                                            style="min-width:100px;font-size:.75rem;display:flex;align-items:center;justify-content:center;gap:6px;background:${isCompleted ? '#008c95' : '#ff8674'};color:#fff;border:none;opacity:${isCompleted ? '.7' : '1'}">
+                                        ${isCompleted ? '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg> Yapıldı' : '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg> Tamamla'}
                                     </button>
                                 ` : `
-                                    <div style="min-width:80px;text-align:center;font-size:.75rem;color:var(--tx3);display:flex;align-items:center;justify-content:center;gap:4px">
-                                        ${isCompleted ? '<svg width="14" height="14" fill="none" stroke="#27ae60" stroke-width="2" viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg> Yapıldı' : '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg> Bekliyor'}
+                                    <div style="min-width:80px;text-align:center;font-size:.75rem;display:flex;align-items:center;justify-content:center;gap:4px;color:${isCompleted ? '#008c95' : 'var(--tx3)'}">
+                                        ${isCompleted ? '<svg width="14" height="14" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg> Yapıldı' : '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg> Bekliyor'}
                                     </div>
                                 `}
                             </div>
@@ -36156,6 +36221,143 @@ async function saveTemizlikItems() {
         console.error('[Temizlik Edit] Kaydetme hatası:', e);
         toast('Kaydetme hatası: ' + e.message, 'error');
     }
+}
+
+// ============================================
+// TEMİZLİK DURUMU GÖRÜNTÜLEME MODALI
+// (Müdür yardımcısı için - yapılmayan maddeler)
+// ============================================
+
+async function openTemizlikStatusModal(branch) {
+    const date = formatDateLocal(new Date());
+    
+    // Temizlik dağıtımını al
+    const distribution = await distributeTemizlikItems(branch, date);
+    
+    if (!distribution) {
+        toast('Temizlik verisi bulunamadı', 'error');
+        return;
+    }
+    
+    // Her maddenin tamamlanma durumunu kontrol et
+    const statusByShift = {};
+    const shiftLabels = {
+        acilis: { label: 'Açılış', color: '#27ae60', icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 18a5 5 0 00-10 0"/><line x1="12" y1="2" x2="12" y2="9"/><polyline points="8,6 12,2 16,6"/></svg>' },
+        araci: { label: 'Ara Vardiya', color: '#f39c12', icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/></svg>' },
+        kapanis: { label: 'Kapanış', color: '#9b59b6', icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>' }
+    };
+    
+    for (const [shiftType, items] of Object.entries(distribution.itemsByShift)) {
+        if (items.length === 0) continue;
+        
+        const people = distribution.personnel[shiftType] || [];
+        const peopleNames = people.map(p => p.name).join(', ') || 'Atanmamış';
+        
+        let completed = 0;
+        let total = items.length;
+        const itemStatuses = [];
+        
+        for (const item of items) {
+            const cooldown = await checkTemizlikCooldown(branch, item.id, new Date());
+            const isCompleted = !cooldown.canComplete;
+            
+            if (isCompleted) completed++;
+            
+            itemStatuses.push({
+                text: item.text,
+                isCompleted,
+                completedBy: cooldown.lastCompletedBy || null
+            });
+        }
+        
+        statusByShift[shiftType] = {
+            label: shiftLabels[shiftType]?.label || shiftType,
+            color: shiftLabels[shiftType]?.color || '#666',
+            icon: shiftLabels[shiftType]?.icon || '',
+            people: peopleNames,
+            completed,
+            total,
+            items: itemStatuses
+        };
+    }
+    
+    // Modal HTML
+    const modalHtml = `
+        <div id="temizlikStatusModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto">
+            <div style="background:var(--bg);border-radius:16px;width:100%;max-width:600px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 25px 50px -12px rgba(0,0,0,.25)">
+                
+                <!-- Header -->
+                <div style="padding:20px 24px;border-bottom:1px solid var(--bg4);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <div style="width:40px;height:40px;border-radius:10px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
+                        </div>
+                        <div>
+                            <h3 style="margin:0;font-size:1.1rem;font-weight:600;color:var(--tx)">Bugünkü Temizlik Durumu</h3>
+                            <div style="font-size:.8rem;color:var(--tx2)">${branch} - ${date}</div>
+                        </div>
+                    </div>
+                    <button onclick="closeTemizlikStatusModal()" style="width:36px;height:36px;border-radius:8px;border:none;background:var(--bg3);color:var(--tx2);cursor:pointer;display:flex;align-items:center;justify-content:center">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                
+                <!-- Content -->
+                <div style="flex:1;overflow-y:auto;padding:20px 24px">
+                    ${Object.entries(statusByShift).map(([shiftType, data]) => `
+                        <div style="margin-bottom:20px">
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <span style="color:${data.color}">${data.icon}</span>
+                                    <span style="font-weight:600;color:var(--tx)">${data.label}</span>
+                                    <span style="font-size:.8rem;color:var(--tx3)">(${data.people})</span>
+                                </div>
+                                <span style="font-size:.85rem;padding:4px 10px;border-radius:12px;background:${data.completed === data.total ? 'rgba(39,174,96,.1)' : 'rgba(231,76,60,.1)'};color:${data.completed === data.total ? '#27ae60' : '#e74c3c'}">${data.completed}/${data.total}</span>
+                            </div>
+                            <div style="display:grid;gap:6px">
+                                ${data.items.map(item => `
+                                    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg2);border-radius:6px;border-left:3px solid ${item.isCompleted ? '#008c95' : '#e74c3c'}">
+                                        <svg width="14" height="14" fill="none" stroke="${item.isCompleted ? '#008c95' : '#e74c3c'}" stroke-width="2" viewBox="0 0 24 24">
+                                            ${item.isCompleted ? '<polyline points="20,6 9,17 4,12"/>' : '<circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>'}
+                                        </svg>
+                                        <span style="flex:1;font-size:.85rem;color:var(--tx);${item.isCompleted ? 'text-decoration:line-through;opacity:.7' : ''}">${item.text}</span>
+                                        ${item.isCompleted && item.completedBy ? `<span style="font-size:.75rem;color:#008c95">${item.completedBy}</span>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                    
+                    ${Object.keys(statusByShift).length === 0 ? `
+                        <div style="text-align:center;padding:40px;color:var(--tx2)">
+                            <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 12px;opacity:.5"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
+                            <div>Bugün için temizlik maddesi yok</div>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <!-- Footer -->
+                <div style="padding:16px 24px;border-top:1px solid var(--bg4);background:var(--bg2)">
+                    <div style="font-size:.8rem;color:var(--tx3);text-align:center">
+                        Yapılmayan maddelerden puan kaybı olabilir. Temizlik görevleri ilgili personele atanmıştır.
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.addEventListener('keydown', handleTemizlikStatusModalEsc);
+}
+
+function handleTemizlikStatusModalEsc(e) {
+    if (e.key === 'Escape') closeTemizlikStatusModal();
+}
+
+function closeTemizlikStatusModal() {
+    const modal = document.getElementById('temizlikStatusModal');
+    if (modal) modal.remove();
+    document.removeEventListener('keydown', handleTemizlikStatusModalEsc);
 }
 
 // Default checklist maddeleri - TÜM MADDELER FIREBASE'DEN GELİYOR
