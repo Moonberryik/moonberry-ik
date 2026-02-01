@@ -35178,6 +35178,72 @@ async function distributeTemizlikItems(branch, date) {
         console.warn('[Temizlik] Muaf personel kontrolü hatası:', e);
     }
     
+    // Mağaza saatlerini al (dinamik)
+    const branchHours = BRANCH_HOURS[branch] || { open: '10:00', close: '23:00' };
+    const openTime = getBranchOpeningTime(branch) || branchHours.open || '10:00';
+    const closeTime = getBranchClosingTime(branch) || branchHours.close || '23:00';
+    
+    const openH = parseInt(openTime.split(':')[0]) || 10;
+    let closeH = parseInt(closeTime.split(':')[0]) || 23;
+    // Gece geçişi normalizasyonu (01:00 → 25, 02:00 → 26)
+    const closeHNorm = closeH < 6 ? closeH + 24 : closeH;
+    
+    console.log('[Temizlik] Mağaza saatleri:', openTime, '-', closeTime, '| openH:', openH, 'closeHNorm:', closeHNorm);
+    
+    // Personeli kategorize etme fonksiyonu
+    function categorizeShift(shiftStr) {
+        if (!shiftStr) return null;
+        const upper = shiftStr.toUpperCase().trim();
+        
+        // OFF, İzin vb. kontrol
+        if (upper === 'OFF' || upper === 'İ' || upper === 'Y.İ' || upper === 'X' || upper === '-') {
+            return null;
+        }
+        
+        // Bölge müdürü kontrolü
+        if (upper.includes('BÖLGE') || upper.includes('BOLGE')) {
+            return 'bolge';
+        }
+        
+        // Önce kelime bazlı kontrol
+        if (upper.includes('AÇILIŞ') || upper.includes('ACILIS')) {
+            return 'acilis';
+        }
+        if (upper.includes('KAPANIŞ') || upper.includes('KAPANIS')) {
+            return 'kapanis';
+        }
+        
+        // Saat formatı kontrolü (XX:XX-XX:XX veya XX:XX / XX:XX)
+        const timeMatch = shiftStr.match(/(\d{1,2}):(\d{2})\s*[-–\/]\s*(\d{1,2}):(\d{2})/);
+        
+        if (timeMatch) {
+            const shiftStart = parseInt(timeMatch[1]);
+            let shiftEnd = parseInt(timeMatch[3]);
+            // Gece geçişi normalizasyonu
+            const shiftEndNorm = shiftEnd < 6 ? shiftEnd + 24 : shiftEnd;
+            
+            // Açılışçı: Shift başlangıcı ≈ mağaza açılış (±1 saat tolerans)
+            if (Math.abs(shiftStart - openH) <= 1) {
+                return 'acilis';
+            }
+            
+            // Kapanışçı: Shift bitişi ≈ mağaza kapanış (±1 saat tolerans)
+            if (Math.abs(shiftEndNorm - closeHNorm) <= 1) {
+                return 'kapanis';
+            }
+            
+            // Ne açılış ne kapanış → ARACI
+            return 'araci';
+        }
+        
+        // ARA kelimesi varsa
+        if (upper.includes('ARA') || upper === 'ORTA') {
+            return 'araci';
+        }
+        
+        return null; // Belirsiz
+    }
+    
     // Bugün çalışan personeli kategorize et
     const personnel = {
         acilis: [],
@@ -35187,7 +35253,7 @@ async function distributeTemizlikItems(branch, date) {
     
     Object.entries(personelShifts).forEach(([personId, shifts]) => {
         const todayShift = shifts[dayKey];
-        if (!todayShift || todayShift.toUpperCase() === 'OFF' || todayShift === '-') return;
+        if (!todayShift) return;
         
         // Checklist muaf mı kontrol et
         if (exemptPersonelIds.has(personId) || exemptPersonelIds.has(normalizePersonelId(personelFullNames[personId] || ''))) {
@@ -35196,24 +35262,30 @@ async function distributeTemizlikItems(branch, date) {
         }
         
         const personName = personelFullNames[personId] || personId;
-        const shiftUpper = todayShift.toUpperCase();
+        const category = categorizeShift(todayShift);
         
-        // BÖLGE MÜDÜRÜ checklist doldurmaz (tek başına değilse)
-        if (shiftUpper.includes('BÖLGE') || shiftUpper.includes('BOLGE')) {
+        if (!category) return; // OFF veya belirsiz
+        
+        if (category === 'bolge') {
             // Bölge müdürü - sonra kontrol edilecek
             personnel._bolgeMuduru = personnel._bolgeMuduru || [];
             personnel._bolgeMuduru.push({ id: personId, name: personName, shift: todayShift });
             return;
         }
         
-        if (shiftUpper.includes('AÇILIŞ') || shiftUpper.includes('ACILIS')) {
+        if (category === 'acilis') {
             personnel.acilis.push({ id: personId, name: personName, shift: todayShift });
-        } else if (shiftUpper.includes('KAPANIŞ') || shiftUpper.includes('KAPANIS')) {
+        } else if (category === 'kapanis') {
             personnel.kapanis.push({ id: personId, name: personName, shift: todayShift });
-        } else if (shiftUpper.includes('ARA') || shiftUpper === 'ARA') {
+        } else if (category === 'araci') {
             personnel.araci.push({ id: personId, name: personName, shift: todayShift });
         }
-        // Diğer shiftler (bilinmeyen) dahil edilmez
+    });
+    
+    console.log('[Temizlik] Personel kategorileri:', {
+        acilis: personnel.acilis.map(p => p.name),
+        araci: personnel.araci.map(p => p.name),
+        kapanis: personnel.kapanis.map(p => p.name)
     });
     
     // Bölge müdürü SADECE tek başınaysa dahil et (hiç personel yoksa)
@@ -35609,7 +35681,15 @@ async function renderTemizlikChecklist(container, branch, date) {
                     for (const item of personItems) {
                         const cooldown = await checkTemizlikCooldown(branch, item.id, new Date());
                         const isCompleted = !cooldown.canComplete;
-                        const points = item.points?.done || 1;
+                        
+                        // Puanı CHECK_RULES'dan veya item'dan al
+                        const temizlikRules = CHECK_RULES.aylik || {};
+                        const defaultPoints = temizlikRules.points?.done ?? 0.2;
+                        const points = item.points?.done ?? defaultPoints;
+                        
+                        // Türkçe virgül formatı
+                        const pointsDisplay = points.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+                        
                         const safeItemText = (item.text || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
                         
                         // Kategori bilgisi: responsible, shift veya dates'e göre
@@ -35631,7 +35711,7 @@ async function renderTemizlikChecklist(container, branch, date) {
                                 <div style="flex:1">
                                     <div style="font-size:.9rem;color:var(--tx);${isCompleted ? 'text-decoration:line-through' : ''}">${item.text}</div>
                                     <div style="font-size:.7rem;color:var(--tx3);margin-top:2px">
-                                        ${categoryInfo ? categoryInfo + ' • ' : ''}<span style="color:${points > 0 ? '#27ae60' : '#e74c3c'}">${points > 0 ? '+' : ''}${points} puan</span>
+                                        ${categoryInfo ? categoryInfo + ' • ' : ''}<span style="color:${points > 0 ? '#27ae60' : '#e74c3c'}">${points > 0 ? '+' : ''}${pointsDisplay} puan</span>
                                         ${isCompleted && cooldown.lastCompletedBy ? ` • ✅ ${cooldown.lastCompletedBy}` : ''}
                                         ${isCompleted && cooldown.remainingHours ? ` • ⏰ ${cooldown.remainingHours} saat sonra aktif` : ''}
                                     </div>
@@ -35715,10 +35795,12 @@ async function completeTemizlikItem(branch, itemId, itemText, personId, personNa
             date: formatDateLocal(now)
         });
         
-        // Puan ekle
-        const items = getDefaultChecklistItems(branch, 'aylik');
-        const item = items.find(i => i.id === itemId);
-        const points = item?.points?.done || 1;
+        // Puanı CHECK_RULES'dan al (dinamik)
+        const temizlikRules = CHECK_RULES.aylik || {};
+        const points = temizlikRules.points?.done ?? 0.2;
+        
+        // Türkçe virgül formatı (gösterim için)
+        const pointsDisplay = points.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
         
         const noteId = `temizlik_${normalizePersonelId(personName)}_${formatDateLocal(now)}_${itemId}`;
         await db.collection('puantajNotes').doc(noteId).set({
@@ -35729,14 +35811,14 @@ async function completeTemizlikItem(branch, itemId, itemText, personId, personNa
             checkType: 'temizlik',
             itemId,
             status: 'done',
-            points,
+            points,  // Nokta formatında kaydedilir (0.2)
             note: `Temizlik: ${itemText}`,
             autoGenerated: true,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        console.log(`[Temizlik] ✅ ${personName}: ${itemText} (+${points} puan)`);
-        toast(`✅ ${itemText} tamamlandı (+${points} puan)`, 'success');
+        console.log(`[Temizlik] ✅ ${personName}: ${itemText} (+${pointsDisplay} puan)`);
+        toast(`✅ ${itemText} tamamlandı (+${pointsDisplay} puan)`, 'success');
         return true;
     } catch (e) {
         console.error('[Temizlik] Tamamlama hatası:', e);
