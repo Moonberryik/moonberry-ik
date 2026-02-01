@@ -22751,6 +22751,224 @@ function getBusinessDayEndHour() {
     return maxClosingHour;
 }
 
+// ==================== MÜDÜR YARDIMCISI SİSTEMİ ====================
+
+// OFF durumları listesi
+const OFF_STATUSES = ['OFF', 'İ', 'İZİN', 'IZIN', 'Y.İ', '-', 'X', 'RAPOR', 'RAPORLU', 'HASTALIK', 'ÜCRETSİZ', 'UCRETSIZ', ''];
+
+// Shift değerini temizle (* işaretlerini kaldır)
+function cleanShiftValue(shift) {
+    if (!shift) return '';
+    return shift.replace(/^\*+/, '').replace(/\*+$/, '').trim().toUpperCase();
+}
+
+// Müdür bugün çalışıyor mu?
+async function isMudurWorking(branch, date = new Date()) {
+    try {
+        // Şubedeki müdürü bul
+        const personelSnap = await db.collection('personel')
+            .where('branch', '==', branch)
+            .where('role', '==', 'magaza_muduru')
+            .limit(1)
+            .get();
+        
+        if (personelSnap.empty) {
+            return { hasMudur: false, isWorking: false, mudur: null };
+        }
+        
+        const mudurDoc = personelSnap.docs[0];
+        const mudur = { ...mudurDoc.data(), docId: mudurDoc.id };
+        
+        // Shift verisi al
+        const weekStart = getWeekStart(date);
+        const weekKey = formatDateLocal(weekStart);
+        let dayIndex = date.getDay() - 1;
+        if (dayIndex < 0) dayIndex = 6;
+        
+        const shiftSnap = await db.collection('shifts')
+            .where('branch', '==', branch)
+            .where('weekStart', '==', weekKey)
+            .limit(1)
+            .get();
+        
+        if (shiftSnap.empty) {
+            return { hasMudur: true, isWorking: true, mudur: mudur }; // Varsayılan çalışıyor
+        }
+        
+        const shiftData = shiftSnap.docs[0].data();
+        const personelShifts = shiftData.personelShifts || {};
+        const personelFullNames = shiftData.personelFullNames || {};
+        
+        // Müdürün shift key'ini bul
+        const mudurKey = Object.keys(personelShifts).find(k => 
+            k === mudur.uniqueId || 
+            k === normalizePersonelId(mudur.name) ||
+            personelFullNames[k] === mudur.name
+        );
+        
+        if (!mudurKey) {
+            return { hasMudur: true, isWorking: true, mudur: mudur };
+        }
+        
+        const mudurShift = personelShifts[mudurKey]?.[dayIndex] || '';
+        const cleanShift = cleanShiftValue(mudurShift);
+        const isOff = OFF_STATUSES.includes(cleanShift);
+        
+        return { 
+            hasMudur: true, 
+            isWorking: !isOff, 
+            mudur: mudur,
+            shift: mudurShift,
+            cleanShift: cleanShift
+        };
+        
+    } catch (e) {
+        console.error('[Müdür] Kontrol hatası:', e);
+        return { hasMudur: false, isWorking: false, mudur: null, error: e.message };
+    }
+}
+
+// Müdür yardımcısını bul (her iki rol formatını destekle)
+async function getMudurYardimcisi(branch) {
+    try {
+        const snap = await db.collection('personel')
+            .where('branch', '==', branch)
+            .where('role', 'in', ['magaza_mudur_yardimcisi', 'mudur_yardimcisi'])
+            .limit(1)
+            .get();
+        
+        if (snap.empty) return null;
+        
+        const doc = snap.docs[0];
+        return { ...doc.data(), docId: doc.id };
+    } catch (e) {
+        console.error('[Müdür Yardımcısı] Hata:', e);
+        return null;
+    }
+}
+
+// Müdür yardımcısı bugün shiftte tek mi?
+async function isMudurYardimcisiAlone(branch, date = new Date()) {
+    try {
+        const weekStart = getWeekStart(date);
+        const weekKey = formatDateLocal(weekStart);
+        let dayIndex = date.getDay() - 1;
+        if (dayIndex < 0) dayIndex = 6;
+        
+        const shiftSnap = await db.collection('shifts')
+            .where('branch', '==', branch)
+            .where('weekStart', '==', weekKey)
+            .limit(1)
+            .get();
+        
+        if (shiftSnap.empty) return false;
+        
+        const shiftData = shiftSnap.docs[0].data();
+        const personelShifts = shiftData.personelShifts || {};
+        
+        // Bugün kaç kişi çalışıyor?
+        let workingCount = 0;
+        Object.values(personelShifts).forEach(days => {
+            const todayShift = days[dayIndex] || '';
+            const cleanShift = cleanShiftValue(todayShift);
+            if (!OFF_STATUSES.includes(cleanShift)) {
+                workingCount++;
+            }
+        });
+        
+        return workingCount <= 1;
+    } catch (e) {
+        console.error('[Müdür Yardımcısı Tek Mi] Hata:', e);
+        return false;
+    }
+}
+
+// Müdür yardımcısı durumunu kontrol et ve popup göster
+async function checkMudurYardimcisiStatus(branch) {
+    // Sadece müdür yardımcısı için çalışır
+    if (!['mudur_yardimcisi', 'magaza_mudur_yardimcisi'].includes(currentUser?.role)) {
+        return { showPopup: false };
+    }
+    
+    const mudurStatus = await isMudurWorking(branch);
+    
+    // Müdür çalışıyorsa normal devam
+    if (mudurStatus.isWorking) {
+        return { showPopup: false, mudurWorking: true };
+    }
+    
+    // Müdür çalışmıyor - yardımcı tek mi?
+    const isAlone = await isMudurYardimcisiAlone(branch);
+    
+    if (isAlone) {
+        return {
+            showPopup: true,
+            popupType: 'alone',
+            message: 'Bugün shiftte tek olduğunuz için tüm checklistlerden sorumlusunuz.',
+            mudurWorking: false,
+            isAlone: true
+        };
+    } else {
+        return {
+            showPopup: true,
+            popupType: 'mudur_role',
+            message: 'Bugün müdür izinli/raporlu olduğu için sadece Müdür Checklistinden sorumlusunuz. Diğer checklistler sizin sorumluluğunuzda değil.',
+            mudurWorking: false,
+            isAlone: false
+        };
+    }
+}
+
+// Müdür yardımcısı popup'ını göster
+function showMudurYardimcisiPopup(status) {
+    if (!status.showPopup) return;
+    
+    // Daha önce gösterildi mi kontrol et (günlük)
+    const today = formatDateLocal(new Date());
+    const popupKey = `mudurYardimcisiPopup_${today}`;
+    if (localStorage.getItem(popupKey) === 'shown') return;
+    
+    const icon = status.isAlone ? 
+        `<svg width="48" height="48" fill="none" stroke="#e67e22" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 8v4M12 16h.01"/>
+        </svg>` :
+        `<svg width="48" height="48" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>`;
+    
+    const title = status.isAlone ? 'Tek Başınasınız' : 'Müdür Görevi';
+    const bgColor = status.isAlone ? 'rgba(230, 126, 34, 0.1)' : 'rgba(0, 140, 149, 0.1)';
+    const borderColor = status.isAlone ? '#e67e22' : '#008c95';
+    
+    const popup = document.createElement('div');
+    popup.id = 'mudurYardimcisiPopup';
+    popup.innerHTML = `
+        <div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px">
+            <div style="background:var(--bg);border-radius:16px;padding:32px;max-width:400px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);border:2px solid ${borderColor}">
+                <div style="width:80px;height:80px;margin:0 auto 20px;background:${bgColor};border-radius:50%;display:flex;align-items:center;justify-content:center">
+                    ${icon}
+                </div>
+                <h3 style="font-size:1.3rem;font-weight:700;margin-bottom:12px;color:var(--tx)">${title}</h3>
+                <p style="color:var(--tx2);line-height:1.6;margin-bottom:24px">${status.message}</p>
+                <button onclick="closeMudurYardimcisiPopup()" style="background:linear-gradient(135deg,${borderColor},${borderColor}dd);color:white;border:none;padding:12px 32px;border-radius:8px;font-weight:600;cursor:pointer;font-size:1rem">
+                    Anladım
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(popup);
+    localStorage.setItem(popupKey, 'shown');
+}
+
+function closeMudurYardimcisiPopup() {
+    const popup = document.getElementById('mudurYardimcisiPopup');
+    if (popup) popup.remove();
+}
+
 // Kapanış shift başlangıç saatini hesapla
 function getClosingShiftStart(branch, date = new Date()) {
     const closingTime = getBranchClosingTime(branch, date);
@@ -23532,6 +23750,14 @@ async function loadTodayChecks() {
     // CHECKLIST_TYPES yüklü değilse yükle (dinamik isimler için gerekli)
     if (Object.keys(CHECKLIST_TYPES).length === 0) {
         await loadSystemConfig();
+    }
+    
+    // Müdür yardımcısı kontrolü ve popup
+    if (['mudur_yardimcisi', 'magaza_mudur_yardimcisi'].includes(currentUser?.role)) {
+        const yardimciStatus = await checkMudurYardimcisiStatus(userBranch !== 'all' ? userBranch : STATE.branches?.[0]);
+        if (yardimciStatus.showPopup) {
+            showMudurYardimcisiPopup(yardimciStatus);
+        }
     }
     
     // HIZLI LOADING - önce UI göster
@@ -24760,8 +24986,10 @@ async function loadTodayChecks() {
                     }
                     if (!shift) return false;
                     const todayShift = shift[rawData.dayIndex] || '';
-                    const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
-                    return cleanShift === 'OFF' || cleanShift === 'İ' || cleanShift === 'Y.İ' || cleanShift === '-' || cleanShift === 'X';
+                    // * işaretlerini baştan ve sondan temizle
+                    const cleanShift = todayShift.replace(/^\*+/, '').replace(/\*+$/, '').trim().toUpperCase();
+                    // OFF durumları genişletildi
+                    return OFF_STATUSES.includes(cleanShift);
                 };
                 
                 // Sırayla kontrol et: Müdür → Yardımcı → Bölge Müdürü
@@ -29817,6 +30045,44 @@ async function loadChecklist() {
         `;
         checklistLoadingLock = false;
         return;
+    }
+    
+    // Müdür yardımcısı erişim kontrolü (müdür yokken sadece müdür checklistine erişebilir)
+    if (['mudur_yardimcisi', 'magaza_mudur_yardimcisi'].includes(currentUser?.role)) {
+        const mudurStatus = await isMudurWorking(branch);
+        
+        // Müdür çalışmıyorsa ve müdür checklisti değilse
+        if (!mudurStatus.isWorking && type !== 'mudur') {
+            // Shiftte tek mi kontrol et
+            const isAlone = await isMudurYardimcisiAlone(branch);
+            
+            if (!isAlone) {
+                // Tek değilse diğer checklistlere erişim yok
+                container.innerHTML = `
+                    <div style="text-align:center;padding:60px 20px">
+                        <div style="width:80px;height:80px;margin:0 auto 20px;background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(0,140,149,.2));border-radius:50%;display:flex;align-items:center;justify-content:center">
+                            <svg width="40" height="40" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                        </div>
+                        <div style="font-size:1.2rem;font-weight:600;color:var(--tx);margin-bottom:8px">Müdür Görevi Aktif</div>
+                        <div style="color:var(--tx2);max-width:350px;margin:0 auto;line-height:1.6">
+                            Bugün müdür izinli/raporlu olduğu için sadece <strong>Müdür Checklisti</strong>'nden sorumlusunuz.
+                            <br><br>
+                            Diğer checklistler sizin sorumluluğunuzda değil.
+                        </div>
+                        <button onclick="goToChecklist('${branch}', 'mudur', null)" style="margin-top:20px;background:linear-gradient(135deg,#008c95,#008c95dd);color:white;border:none;padding:12px 24px;border-radius:8px;font-weight:600;cursor:pointer">
+                            Müdür Checklistine Git
+                        </button>
+                    </div>
+                `;
+                checklistLoadingLock = false;
+                return;
+            }
+            // Tek ise normal devam - tüm checklistlere erişebilir
+        }
     }
     
     // Saat dilimi kontrolü
