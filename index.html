@@ -32136,32 +32136,55 @@ function showWeeklyCompletionPopup(taskCount) {
 
 // Platform checklist render with status (zaman durumlu)
 async function renderPlatformChecklistWithStatus(container, branch, date, activeTimeSlot = null) {
+    // Dinamik saat dilimleri - config/system.platformCheckTimes'dan (PLATFORM_CHECK_TIMES global)
+    const timeSlots = PLATFORM_CHECK_TIMES || CHECK_RULES?.platform?.timeSlots || [];
+    
+    if (timeSlots.length === 0) {
+        container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--tx2)">
+            <div style="font-size:1.1rem;margin-bottom:8px">Platform Check saatleri tanımlanmamış</div>
+            <div style="font-size:.85rem">Yönetim Paneli → Online Platform Kontrolleri → Saat Dilimleri</div>
+        </div>`;
+        return;
+    }
+    
     // Aktif saat belirle
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinutes = currentHour * 60 + now.getMinutes();
-    const TIME_SLOTS = ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'];
     
     // Dashboard'dan gelen timeSlot kullan veya otomatik belirle
     let selectedTimeSlot = activeTimeSlot;
     if (!selectedTimeSlot) {
-        // Gece saatlerinde (mağaza kapanışına kadar)
         const dayEndHour = getBusinessDayEndHour();
         const isLateNight = currentHour >= 0 && currentHour < dayEndHour;
+        
         if (isLateNight) {
-            selectedTimeSlot = '00:00';
+            // Gece yarısından sonra - son slot
+            selectedTimeSlot = timeSlots[timeSlots.length - 1];
         } else {
-            // En yakın slotu bul
-            for (const timeStr of TIME_SLOTS) {
+            // En yakın aktif slotu bul (şu an veya 15dk içinde başlayacak)
+            for (const timeStr of timeSlots) {
                 const [h, m] = timeStr.split(':').map(Number);
                 const slotMinutes = h * 60 + m;
                 const diff = slotMinutes - currentMinutes;
-                if (diff >= -15 && diff <= 75) {
+                // -60dk (geçmiş 1 saat) ile +60dk (gelecek 1 saat) arası
+                if (diff >= -60 && diff <= 60) {
                     selectedTimeSlot = timeStr;
                     break;
                 }
             }
-            if (!selectedTimeSlot) selectedTimeSlot = TIME_SLOTS[0];
+            // Bulunamadıysa en yakın gelecek slotu al
+            if (!selectedTimeSlot) {
+                for (const timeStr of timeSlots) {
+                    const [h, m] = timeStr.split(':').map(Number);
+                    const slotMinutes = h * 60 + m;
+                    if (slotMinutes > currentMinutes) {
+                        selectedTimeSlot = timeStr;
+                        break;
+                    }
+                }
+            }
+            if (!selectedTimeSlot) selectedTimeSlot = timeSlots[0];
         }
     }
     
@@ -32183,7 +32206,7 @@ async function renderPlatformChecklistWithStatus(container, branch, date, active
     renderPlatformChecklist(container, branch, date, selectedTimeSlot, submittedData);
 }
 
-// Platform checklist render
+// Platform checklist render - YENİ MOBİL UYUMLU TASARIM
 async function renderPlatformChecklist(container, branch, date, timeSlot, submittedData) {
     const isSubmitted = !!submittedData;
     
@@ -32204,228 +32227,205 @@ async function renderPlatformChecklist(container, branch, date, timeSlot, submit
                 </div>
                 <div style="font-size:1.2rem;font-weight:600;color:var(--tx);margin-bottom:8px">Şu An Shift'iniz Yok</div>
                 <div style="color:var(--tx2);margin-bottom:20px">Bu şubede bugün için aktif bir shift kaydınız bulunmuyor.</div>
-                <div style="padding:16px;background:var(--bg3);border-radius:12px;text-align:left;max-width:400px;margin:0 auto">
-                    <div style="font-size:.85rem;color:var(--tx2)">
-                        <div style="margin-bottom:8px"><strong>Şube:</strong> ${branch}</div>
-                        <div style="margin-bottom:8px"><strong>Tarih:</strong> ${date}</div>
-                        <div><strong>Kullanıcı:</strong> ${currentUser?.name || '-'}</div>
-                    </div>
-                </div>
-                <div style="margin-top:20px;font-size:.8rem;color:var(--tx3)">
-                    Checklist'i doldurmak için shift'inizin olduğu bir gün gelin.
-                </div>
             </div>
         `;
         return;
     }
     
-    // Shift'ten personel al
-    let shiftPersonnel = [];
-    try {
-        const today = new Date(date);
-        const weekStart = getWeekStart(today);
-        const weekKey = formatDateLocal(weekStart);
-        let dayIndex = today.getDay() - 1;
-        if (dayIndex < 0) dayIndex = 6;
-        
-        const shiftsSnapshot = await db.collection('shifts').where('branch', '==', branch).get();
-        const allShifts = [];
-        shiftsSnapshot.forEach(doc => allShifts.push(doc.data()));
-        allShifts.sort((a, b) => (b.weekStart || '').localeCompare(a.weekStart || ''));
-        
-        const targetShift = allShifts.find(s => s.weekStart === weekKey) || allShifts[0];
-        
-        if (targetShift && targetShift.personelShifts) {
-            const personelNames = targetShift.personelNames || {};
-            const personelFullNames = targetShift.personelFullNames || {};
-            
-            for (const [uniqueId, days] of Object.entries(targetShift.personelShifts)) {
-                const todayShift = days[dayIndex] || '';
-                const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
-                
-                // BÖLGE MÜDÜRÜ HARİÇ
-                if (cleanShift && cleanShift !== 'İ' && cleanShift !== 'OFF' && cleanShift !== '-' && cleanShift !== 'X' && !cleanShift.includes('BÖLGE') && !cleanShift.includes('MÜDÜR')) {
-                    // personelNames (codeName) KULLAN
-                    const displayName = personelNames[uniqueId] || formatDisplayName(personelFullNames[uniqueId] || uniqueId.replace(/_/g, ' '));
-                    shiftPersonnel.push(displayName);
-                }
-            }
-        }
-    } catch (e) {
-        console.warn('Platform check shift alınamadı:', e.message);
-    }
+    // Dinamik platformlar - config/system.platforms'dan (PLATFORMS global)
+    const platforms = PLATFORMS;
     
-    const autoPersonName = shiftPersonnel.length > 0 ? shiftPersonnel[0] : (currentUser?.name || 'Personel');
+    // Saat aralığını hesapla (örn: 15:00 → 15:00-16:00)
+    const [slotH] = timeSlot.split(':').map(Number);
+    const nextHour = (slotH + 1) % 24;
+    const timeRange = `${timeSlot} - ${String(nextHour).padStart(2, '0')}:00`;
     
-    // Saatler
-    const TIME_SLOTS = ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'];
-    
-    // Platformlar
-    const platforms = ['TRENDYOL', 'YEMEK SEPETİ', 'GETİR YEMEK', 'MİGROS'];
+    // Tarih formatı
+    const dateObj = new Date(date);
+    const dateStr = dateObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' });
     
     let html = `
-        <div class="form-section">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
-                <div>
-                    <div style="font-size:1.3rem;font-weight:700;color:var(--tx)">📱 Platform Check</div>
-                    <div style="font-size:.85rem;color:var(--tx2)">${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})}</div>
-                </div>
-                <div style="display:flex;gap:12px;align-items:center">
-                    ${isSubmitted ? `<div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.85rem;font-weight:600">✓ Tamamlandı</div>` : ''}
-                </div>
+        <div class="platform-check-container">
+            <!-- Header -->
+            <div style="text-align:center;margin-bottom:24px">
+                <div style="font-size:1.4rem;font-weight:700;color:var(--tx);margin-bottom:4px">📱 Platform Check</div>
+                <div style="font-size:1.1rem;font-weight:600;color:#008c95">${timeRange}</div>
+                <div style="font-size:.85rem;color:var(--tx2);margin-top:4px">${dateStr}</div>
+                ${isSubmitted ? `<div style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(39,174,96,.15);color:#27ae60;border-radius:20px;font-size:.85rem;font-weight:600;margin-top:12px">✓ Tamamlandı</div>` : ''}
             </div>
             
-            <div style="margin-bottom:20px;padding:16px;background:var(--bg3);border-radius:12px">
-                <label class="form-label" style="margin-bottom:8px">👤 Sorumlu Personel</label>
-                ${isSubmitted ? `
-                    <div style="font-size:1.1rem;font-weight:600;color:var(--tx);padding:8px 0">${submittedData?.personName || '-'}</div>
-                    <input type="hidden" id="checklistPersonName" value="${submittedData?.personName || ''}" autocomplete="off">
-                ` : `
-                    <div style="font-size:1.1rem;font-weight:600;color:var(--tx);padding:8px 0">${currentUser?.name || 'Bilinmiyor'}</div>
-                    <input type="hidden" id="checklistPersonName" value="${currentUser?.name || 'Bilinmiyor'}" autocomplete="off">
-                    <div style="font-size:.75rem;color:#008c95;margin-top:4px">✓ Giriş yapan kullanıcı</div>
-                `}
+            <!-- Sorumlu -->
+            <div style="margin-bottom:20px;padding:12px 16px;background:var(--bg3);border-radius:12px;text-align:center">
+                <div style="font-size:.8rem;color:var(--tx2);margin-bottom:4px">Sorumlu</div>
+                <div style="font-size:1rem;font-weight:600;color:var(--tx)">${isSubmitted ? (submittedData?.personName || '-') : (currentUser?.name || '-')}</div>
+                <input type="hidden" id="checklistPersonName" value="${isSubmitted ? (submittedData?.personName || '') : (currentUser?.name || '')}" autocomplete="off">
             </div>
             
-            <!-- Yan yana tablolar -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;overflow-x:auto">
-                
-                <!-- MOONBERRY (Şişli) -->
-                <div style="border-radius:12px;overflow:hidden;border:1px solid var(--cardBorder)">
-                    <table style="width:100%;border-collapse:collapse" data-brand="MOONBERRY" data-branch="Şişli">
-                        <thead>
-                            <tr>
-                                <th colspan="${platforms.length + 1}" style="padding:10px;text-align:center;font-weight:700;font-size:.95rem;background:#008c95;color:#fff;letter-spacing:1px">
-                                    MOONBERRY
-                                </th>
-                            </tr>
-                            <tr style="background:#008c95">
-                                <th style="padding:8px;text-align:center;font-weight:600;color:#fff;border:1px solid rgba(255,255,255,.2);font-size:.75rem;width:60px">SAAT</th>
-                                ${platforms.map(p => `<th style="padding:6px 4px;text-align:center;font-weight:600;color:#fff;border:1px solid rgba(255,255,255,.2);font-size:.65rem">${p}</th>`).join('')}
-                            </tr>
-                        </thead>
-                        <tbody>
+            <!-- Platform Kartları - Mobil Uyumlu Grid -->
+            <div class="platform-brands-grid">
     `;
     
-    // Moonberry satırları
-    TIME_SLOTS.forEach(time => {
-        html += `<tr><td style="padding:8px;text-align:center;font-weight:700;background:#008c95;color:#fff;border:1px solid rgba(255,255,255,.2);font-size:.8rem">${time}</td>`;
+    // Markalar - Moonberry ve Sunberry
+    const brands = [
+        { name: 'MOONBERRY', color: '#008c95', key: 'moonberry' },
+        { name: 'SUNBERRY', color: '#ff8674', key: 'sunberry' }
+    ];
+    
+    brands.forEach(brand => {
+        html += `
+                <!-- ${brand.name} -->
+                <div class="platform-brand-card" style="border:2px solid ${brand.color};border-radius:16px;overflow:hidden">
+                    <div style="background:${brand.color};color:#fff;padding:12px;text-align:center;font-weight:700;font-size:1rem;letter-spacing:1px">
+                        ${brand.name}
+                    </div>
+                    <div style="padding:16px">
+                        <div class="platform-grid">
+        `;
+        
         platforms.forEach(platform => {
-            const key = `moonberry_${time}_${platform.replace(/\s/g, '_')}`;
+            const platformKey = platform.replace(/\s+/g, '_').replace(/İ/g, 'I');
+            const key = `${brand.key}_${timeSlot.replace(':', '')}_${platformKey}`;
             const savedValue = submittedData?.checks?.[key];
             const isOpen = savedValue === 'open';
             const isClosed = savedValue === 'closed';
+            
+            // Platform kısa adı
+            const shortName = platform.replace('Yemek Sepeti', 'YS').replace('Getir Yemek', 'GY').replace('Trendyol', 'TY').replace('Migros', 'MG');
+            
             html += `
-                <td style="padding:4px;text-align:center;border:1px solid var(--cardBorder);background:var(--bg2)">
-                    <div style="display:flex;gap:2px;justify-content:center">
-                        <span class="platform-btn" onclick="${isSubmitted ? '' : `selectPlatformCell(this, '${key}', 'open')`}"
-                            style="display:inline-flex;width:24px;height:24px;border-radius:6px;align-items:center;justify-content:center;font-size:.85rem;
-                            background:${isOpen ? '#008c95' : 'var(--bg3)'};border:1px solid ${isOpen ? '#008c95' : 'var(--cardBorder)'};color:${isOpen ? '#fff' : 'var(--tx3)'};cursor:pointer">✓</span>
-                        <span class="platform-btn" onclick="${isSubmitted ? '' : `selectPlatformCell(this, '${key}', 'closed')`}"
-                            style="display:inline-flex;width:24px;height:24px;border-radius:6px;align-items:center;justify-content:center;font-size:.85rem;
-                            background:${isClosed ? '#e74c3c' : 'var(--bg3)'};border:1px solid ${isClosed ? '#e74c3c' : 'var(--cardBorder)'};color:${isClosed ? '#fff' : 'var(--tx3)'};cursor:pointer">✗</span>
-                    </div>
-                    <input type="hidden" name="platform_${key}" value="${savedValue || ''}">
-                </td>`;
+                            <div class="platform-item">
+                                <div style="font-size:.75rem;color:var(--tx2);margin-bottom:8px;font-weight:600;text-align:center">${shortName}</div>
+                                <div style="display:flex;gap:8px;justify-content:center">
+                                    <button type="button" class="platform-btn ${isOpen ? 'active' : ''}" 
+                                        ${isSubmitted ? 'disabled' : `onclick="selectPlatformStatus(this, '${key}', 'open', '${brand.color}')"`}
+                                        style="width:40px;height:40px;border-radius:10px;border:2px solid ${isOpen ? brand.color : 'var(--cardBorder)'};
+                                        background:${isOpen ? brand.color : 'var(--bg2)'};color:${isOpen ? '#fff' : 'var(--tx3)'};
+                                        font-size:1.2rem;cursor:${isSubmitted ? 'not-allowed' : 'pointer'};transition:all .2s">
+                                        ✓
+                                    </button>
+                                    <button type="button" class="platform-btn ${isClosed ? 'active' : ''}"
+                                        ${isSubmitted ? 'disabled' : `onclick="selectPlatformStatus(this, '${key}', 'closed', '${brand.color}')"`}
+                                        style="width:40px;height:40px;border-radius:10px;border:2px solid ${isClosed ? '#e74c3c' : 'var(--cardBorder)'};
+                                        background:${isClosed ? '#e74c3c' : 'var(--bg2)'};color:${isClosed ? '#fff' : 'var(--tx3)'};
+                                        font-size:1.2rem;cursor:${isSubmitted ? 'not-allowed' : 'pointer'};transition:all .2s">
+                                        ✗
+                                    </button>
+                                </div>
+                                <input type="hidden" name="platform_${key}" value="${savedValue || ''}">
+                            </div>
+            `;
         });
-        html += `</tr>`;
+        
+        html += `
+                        </div>
+                    </div>
+                </div>
+        `;
     });
     
     html += `
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- SUNBERRY (Tuzla) -->
-                <div style="border-radius:12px;overflow:hidden;border:1px solid var(--cardBorder)">
-                    <table style="width:100%;border-collapse:collapse" data-brand="SUNBERRY" data-branch="Tuzla">
-                        <thead>
-                            <tr>
-                                <th colspan="${platforms.length + 1}" style="padding:10px;text-align:center;font-weight:700;font-size:.95rem;background:#ff8674;color:#fff;letter-spacing:1px">
-                                    SUNBERRY
-                                </th>
-                            </tr>
-                            <tr style="background:#ff8674">
-                                <th style="padding:8px;text-align:center;font-weight:600;color:#fff;border:1px solid rgba(255,255,255,.2);font-size:.75rem;width:60px">SAAT</th>
-                                ${platforms.map(p => `<th style="padding:6px 4px;text-align:center;font-weight:600;color:#fff;border:1px solid rgba(255,255,255,.2);font-size:.65rem">${p}</th>`).join('')}
-                            </tr>
-                        </thead>
-                        <tbody>
-    `;
-    
-    // Sunberry satırları
-    TIME_SLOTS.forEach(time => {
-        html += `<tr><td style="padding:8px;text-align:center;font-weight:700;background:#ff8674;color:#fff;border:1px solid rgba(255,255,255,.2);font-size:.8rem">${time}</td>`;
-        platforms.forEach(platform => {
-            const key = `sunberry_${time}_${platform.replace(/\s/g, '_')}`;
-            const savedValue = submittedData?.checks?.[key];
-            const isOpen = savedValue === 'open';
-            const isClosed = savedValue === 'closed';
-            html += `
-                <td style="padding:4px;text-align:center;border:1px solid var(--cardBorder);background:var(--bg2)">
-                    <div style="display:flex;gap:2px;justify-content:center">
-                        <span class="platform-btn" onclick="${isSubmitted ? '' : `selectPlatformCell(this, '${key}', 'open')`}"
-                            style="display:inline-flex;width:24px;height:24px;border-radius:6px;align-items:center;justify-content:center;font-size:.85rem;
-                            background:${isOpen ? '#ff8674' : 'var(--bg3)'};border:1px solid ${isOpen ? '#ff8674' : 'var(--cardBorder)'};color:${isOpen ? '#fff' : 'var(--tx3)'};cursor:pointer">✓</span>
-                        <span class="platform-btn" onclick="${isSubmitted ? '' : `selectPlatformCell(this, '${key}', 'closed')`}"
-                            style="display:inline-flex;width:24px;height:24px;border-radius:6px;align-items:center;justify-content:center;font-size:.85rem;
-                            background:${isClosed ? '#e74c3c' : 'var(--bg3)'};border:1px solid ${isClosed ? '#e74c3c' : 'var(--cardBorder)'};color:${isClosed ? '#fff' : 'var(--tx3)'};cursor:pointer">✗</span>
-                    </div>
-                    <input type="hidden" name="platform_${key}" value="${savedValue || ''}">
-                </td>`;
-        });
-        html += `</tr>`;
-    });
-    
-    html += `
-                        </tbody>
-                    </table>
-                </div>
             </div>
             
+            <!-- Submit Button -->
             ${!isSubmitted ? `
-                <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
-                    <button class="btn btn-primary" onclick="submitPlatformChecklist('${branch}', '${date}', '')">
+                <div style="margin-top:24px">
+                    <button class="btn btn-primary" style="width:100%;padding:16px;font-size:1rem" 
+                        onclick="submitPlatformChecklist('${branch}', '${date}', '${timeSlot}')">
                         ✅ Platform Check'i Tamamla
                     </button>
                 </div>
             ` : ''}
+            
+            <!-- Bilgi -->
+            <div style="margin-top:16px;padding:12px;background:var(--bg3);border-radius:10px;font-size:.8rem;color:var(--tx2);text-align:center">
+                <strong>✓</strong> = Platform açık ve çalışıyor &nbsp;&nbsp; <strong>✗</strong> = Sorun var / Kapalı
+            </div>
         </div>
+        
+        <style>
+            .platform-brands-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 16px;
+            }
+            .platform-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 16px;
+            }
+            .platform-item {
+                padding: 12px;
+                background: var(--bg3);
+                border-radius: 12px;
+            }
+            .platform-btn:hover:not(:disabled) {
+                transform: scale(1.05);
+            }
+            .platform-btn:active:not(:disabled) {
+                transform: scale(0.95);
+            }
+            
+            /* Mobil uyumluluk */
+            @media (max-width: 768px) {
+                .platform-brands-grid {
+                    grid-template-columns: 1fr;
+                }
+                .platform-grid {
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 8px;
+                }
+                .platform-item {
+                    padding: 8px;
+                }
+                .platform-btn {
+                    width: 36px !important;
+                    height: 36px !important;
+                }
+            }
+            
+            @media (max-width: 480px) {
+                .platform-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+        </style>
     `;
     
     container.innerHTML = html;
 }
 
-// Platform hücre seç
-function selectPlatformCell(btn, key, value) {
-    const cell = btn.closest('td');
-    const hiddenInput = cell.querySelector('input[type="hidden"]');
-    const btns = cell.querySelectorAll('.platform-btn');
+// Platform durumu seç
+function selectPlatformStatus(btn, key, value, brandColor) {
+    const item = btn.closest('.platform-item');
+    const hiddenInput = item.querySelector('input[type="hidden"]');
+    const btns = item.querySelectorAll('.platform-btn');
     const openBtn = btns[0];
     const closedBtn = btns[1];
     
-    // Marka rengini belirle
-    const isMoonberry = key.startsWith('moonberry');
-    const brandColor = isMoonberry ? '#008c95' : '#ff8674';
-    
-    // Reset
-    openBtn.style.background = 'var(--bg3)';
+    // Reset both buttons
+    openBtn.style.background = 'var(--bg2)';
     openBtn.style.borderColor = 'var(--cardBorder)';
     openBtn.style.color = 'var(--tx3)';
-    closedBtn.style.background = 'var(--bg3)';
+    openBtn.classList.remove('active');
+    
+    closedBtn.style.background = 'var(--bg2)';
     closedBtn.style.borderColor = 'var(--cardBorder)';
     closedBtn.style.color = 'var(--tx3)';
+    closedBtn.classList.remove('active');
     
+    // Set selected
     if (value === 'open') {
         hiddenInput.value = 'open';
         openBtn.style.background = brandColor;
         openBtn.style.borderColor = brandColor;
         openBtn.style.color = '#fff';
+        openBtn.classList.add('active');
     } else {
         hiddenInput.value = 'closed';
         closedBtn.style.background = '#e74c3c';
         closedBtn.style.borderColor = '#e74c3c';
         closedBtn.style.color = '#fff';
+        closedBtn.classList.add('active');
     }
 }
 
@@ -32953,10 +32953,10 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
         return;
     }
     
-    // Saatler ve platformlar
-    const TIME_SLOTS = ['10:00', '12:00', '15:00', '18:00', '21:00', '00:00'];
-    const platforms = ['TRENDYOL', 'YEMEK SEPETİ', 'GETİR YEMEK', 'MİGROS'];
+    // Dinamik platformlar - config/system.platforms'dan (PLATFORMS global)
+    const platforms = PLATFORMS;
     const brands = ['moonberry', 'sunberry'];
+    const timeSlotKey = timeSlot.replace(':', '');
     
     const checks = {};
     let allAnswered = true;
@@ -32964,23 +32964,22 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
     let sunberryOpen = 0, sunberryClosed = 0;
     
     brands.forEach(brand => {
-        TIME_SLOTS.forEach(time => {
-            platforms.forEach(platform => {
-                const key = `${brand}_${time}_${platform.replace(/\s/g, '_')}`;
-                const hiddenInput = document.querySelector(`input[name="platform_${key}"]`);
-                const value = hiddenInput?.value;
-                
-                if (!value) {
-                    allAnswered = false;
+        platforms.forEach(platform => {
+            const platformKey = platform.replace(/\s+/g, '_').replace(/İ/g, 'I');
+            const key = `${brand}_${timeSlotKey}_${platformKey}`;
+            const hiddenInput = document.querySelector(`input[name="platform_${key}"]`);
+            const value = hiddenInput?.value;
+            
+            if (!value) {
+                allAnswered = false;
+            } else {
+                checks[key] = value;
+                if (brand === 'moonberry') {
+                    value === 'open' ? moonberryOpen++ : moonberryClosed++;
                 } else {
-                    checks[key] = value;
-                    if (brand === 'moonberry') {
-                        value === 'open' ? moonberryOpen++ : moonberryClosed++;
-                    } else {
-                        value === 'open' ? sunberryOpen++ : sunberryClosed++;
-                    }
+                    value === 'open' ? sunberryOpen++ : sunberryClosed++;
                 }
-            });
+            }
         });
     });
     
@@ -32990,17 +32989,16 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
     }
     
     try {
-        const submissionId = `platform_${date}`;
+        // Saat bazlı submission ID
+        const submissionId = `${branchToKey(branch)}_platform_${date}_${timeSlotKey}`;
         const now = new Date();
-        
-        // Puan hesaplama - Platform check vaktinde = 0, dolduruldu = 0
-        // Müdür hariç herkes için kaydedilir
-        const isMudur = ['magaza_muduru', 'bolge_muduru', 'yonetici'].includes(currentUser?.role);
         
         await db.collection('checklistSubmissions').doc(submissionId).set({
             type: 'platform',
-            checklistType: 'platform', // Otomatik puanlama için
+            checklistType: 'platform',
+            branch,
             date,
+            timeSlot,
             personName,
             submittedBy: currentUser?.id,
             submittedByName: currentUser?.name || personName,
@@ -33012,12 +33010,13 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
             },
             points: 0,
             pointStatus: 'completed',
-            status: 'completed', // Otomatik puanlama için
+            status: 'completed',
             userRole: currentUser?.role
         });
         
-        // Başarı mesajı ve modal
-        showPlatformCompleteModal(date, personName, moonberryOpen, moonberryClosed, sunberryOpen, sunberryClosed);
+        // Başarı mesajı
+        toast('Platform Check kaydedildi!', 'success');
+        showPlatformCompleteModal(date, timeSlot, personName, moonberryOpen, moonberryClosed, sunberryOpen, sunberryClosed);
         
     } catch (error) {
         console.error('Platform check kayıt hatası:', error);
@@ -33026,35 +33025,34 @@ async function submitPlatformChecklist(branch, date, timeSlot) {
 }
 
 // Platform check tamamlandı modal'ı
-function showPlatformCompleteModal(date, personName, moonberryOpen, moonberryClosed, sunberryOpen, sunberryClosed) {
+function showPlatformCompleteModal(date, timeSlot, personName, moonberryOpen, moonberryClosed, sunberryOpen, sunberryClosed) {
     const dateStr = new Date(date).toLocaleDateString('tr-TR', {day: 'numeric', month: 'long', year: 'numeric'});
-    const timeStr = new Date().toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'});
+    const submitTimeStr = new Date().toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'});
     
     const modal = document.createElement('div');
     modal.id = 'platformCompleteModal';
     modal.innerHTML = `
         <div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px">
-            <div style="background:var(--bg2);border-radius:20px;max-width:480px;width:100%;padding:32px;text-align:center;border:1px solid var(--cardBorder)">
-                <div style="width:80px;height:80px;background:linear-gradient(135deg,rgba(39,174,96,.2),rgba(39,174,96,.1));border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px">
-                    <svg width="40" height="40" fill="none" stroke="#27ae60" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <div style="background:var(--bg2);border-radius:20px;max-width:400px;width:100%;padding:28px;text-align:center;border:1px solid var(--cardBorder)">
+                <div style="width:70px;height:70px;background:linear-gradient(135deg,rgba(39,174,96,.2),rgba(39,174,96,.1));border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+                    <svg width="36" height="36" fill="none" stroke="#27ae60" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                 </div>
-                <h3 style="font-size:1.4rem;font-weight:700;color:var(--tx);margin-bottom:8px">Platform Check Tamamlandı!</h3>
-                <p style="color:var(--tx2);margin-bottom:24px">${dateStr} • ${timeStr}</p>
+                <h3 style="font-size:1.3rem;font-weight:700;color:var(--tx);margin-bottom:6px">Platform Check Tamamlandı!</h3>
+                <p style="color:#008c95;font-weight:600;font-size:1.1rem;margin-bottom:4px">${timeSlot} Kontrolü</p>
+                <p style="color:var(--tx2);font-size:.85rem;margin-bottom:20px">${dateStr} • ${submitTimeStr}</p>
                 
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
-                    <div style="background:#008c95;border-radius:12px;padding:16px;color:#fff">
-                        <div style="font-weight:700;margin-bottom:8px">MOONBERRY</div>
-                        <div style="font-size:.9rem">✓ Açık: ${moonberryOpen}</div>
-                        <div style="font-size:.9rem">✗ Kapalı: ${moonberryClosed}</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+                    <div style="background:#008c95;border-radius:12px;padding:14px;color:#fff">
+                        <div style="font-weight:700;font-size:.9rem;margin-bottom:6px">MOONBERRY</div>
+                        <div style="font-size:.85rem">✓ ${moonberryOpen} &nbsp; ✗ ${moonberryClosed}</div>
                     </div>
-                    <div style="background:#ff8674;border-radius:12px;padding:16px;color:#fff">
-                        <div style="font-weight:700;margin-bottom:8px">SUNBERRY</div>
-                        <div style="font-size:.9rem">✓ Açık: ${sunberryOpen}</div>
-                        <div style="font-size:.9rem">✗ Kapalı: ${sunberryClosed}</div>
+                    <div style="background:#ff8674;border-radius:12px;padding:14px;color:#fff">
+                        <div style="font-weight:700;font-size:.9rem;margin-bottom:6px">SUNBERRY</div>
+                        <div style="font-size:.85rem">✓ ${sunberryOpen} &nbsp; ✗ ${sunberryClosed}</div>
                     </div>
                 </div>
                 
-                <button onclick="document.getElementById('platformCompleteModal').remove(); loadChecklist();" class="btn btn-primary" style="padding:14px 32px">
+                <button onclick="document.getElementById('platformCompleteModal').remove(); loadChecklist();" class="btn btn-primary" style="width:100%;padding:14px">
                     ✓ Tamam
                 </button>
             </div>
