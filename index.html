@@ -4362,6 +4362,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 role: personelData.role || userData.role,
                                 branch: personelData.branch || userData.branch || 'all',
                                 position: personelData.position || userData.position,
+                                checklistExempt: personelData.checklistExempt || false,
                                 authType: 'anonymous'
                             };
                         }
@@ -4393,6 +4394,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     role: personelData.role,
                                     branch: personelData.branch || 'all',
                                     position: personelData.position,
+                                    checklistExempt: personelData.checklistExempt || false,
                                     authType: 'email'
                                 };
                                 foundInPersonel = true;
@@ -9976,6 +9978,11 @@ async function loadPersonelList() {
                 ? `<span style="background:${roleInfo.gradient};color:#fff;padding:3px 8px;border-radius:5px;font-size:.6rem;font-weight:700;display:flex;align-items:center;gap:4px;box-shadow:0 2px 6px rgba(184,134,11,.3)">${roleInfo.icon} ${roleInfo.badge}</span>`
                 : `<span style="background:${roleInfo.color}15;color:${roleInfo.color};padding:3px 8px;border-radius:5px;font-size:.6rem;font-weight:700;display:flex;align-items:center;gap:4px">${roleInfo.icon} ${roleInfo.badge}</span>`;
             
+            // Part-time badge
+            const partTimeBadge = p.checklistExempt 
+                ? `<span style="background:rgba(0,140,149,.12);color:#008c95;padding:2px 6px;border-radius:4px;font-size:.55rem;font-weight:600;margin-left:4px">Part-time</span>` 
+                : '';
+            
             html += `
                 <div class="personel-card" data-search="${searchData}" data-branch="${p.branch || ''}" style="background:${cardBg};border:1px solid ${isPremium ? 'rgba(184,134,11,.2)' : 'var(--cardBorder)'};border-left:4px solid ${cardLeftBorder};border-radius:10px;padding:14px;transition:all .15s;${cardShadow}" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px ${isPremium ? 'rgba(184,134,11,.25)' : 'rgba(0,0,0,.08)'}'" onmouseout="this.style.transform='none';this.style.boxShadow='${isPremium ? '0 2px 12px rgba(184,134,11,.15)' : 'none'}'">
                     <!-- Header -->
@@ -9984,7 +9991,7 @@ async function loadPersonelList() {
                             ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover">` : roleInfo.icon}
                         </div>
                         <div style="flex:1;min-width:0">
-                            <div style="font-weight:600;color:var(--tx);font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name || 'İsimsiz'}</div>
+                            <div style="font-weight:600;color:var(--tx);font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center">${p.name || 'İsimsiz'}${partTimeBadge}</div>
                             <div style="font-size:.75rem;color:${roleInfo.color};font-weight:500">${p.position || 'Pozisyon yok'}</div>
                         </div>
                         ${badgeHtml}
@@ -10147,6 +10154,19 @@ function showAddPersonelModal(editId = null) {
             ${branchField}
             ${positionField}
             ${salaryField}
+            
+            <!-- Checklist Muafiyeti -->
+            ${canEditAllFields ? `
+            <div class="form-group full" style="margin-top:8px">
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:12px 16px;background:var(--bg3);border-radius:10px;border:1px solid var(--bg4)">
+                    <input type="checkbox" id="personelChecklistExempt" style="width:18px;height:18px;accent-color:#008c95">
+                    <div>
+                        <div style="font-weight:600;color:var(--tx);font-size:.9rem">Checklist Muafiyeti</div>
+                        <div style="font-size:.75rem;color:var(--tx2)">Part-time veya destek personeli - Sadece shift planında görünür, checklist ataması yapılmaz</div>
+                    </div>
+                </label>
+            </div>
+            ` : '<input type="hidden" id="personelChecklistExempt" value="">'}
         </div>
         
         ${showPasswordField ? `
@@ -10244,6 +10264,11 @@ async function loadPersonelForEdit(id) {
             document.getElementById('personelStartDate').value = p.startDate || '';
             const salaryEl = document.getElementById('personelSalary');
             if (salaryEl) salaryEl.value = p.salary || '';
+            
+            // Checklist muafiyeti
+            const checklistExemptEl = document.getElementById('personelChecklistExempt');
+            if (checklistExemptEl) checklistExemptEl.checked = p.checklistExempt || false;
+            
             // Şifre alanı - düzenleme modunda boş bırakılır (değişmeyecekse)
             
             // Şifre görme yetkisi olan için mevcut şifreyi credentials'dan al
@@ -10377,6 +10402,7 @@ async function savePersonel() {
         role,
         startDate: document.getElementById('personelStartDate').value,
         salary: document.getElementById('personelSalary').value,
+        checklistExempt: document.getElementById('personelChecklistExempt')?.checked || false,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedBy: currentUser?.username || 'admin'
     };
@@ -10633,6 +10659,7 @@ async function showPersonelPreview(docId) {
                     <div style="flex:1">
                         <div style="display:flex;align-items:center;gap:8px">
                             <span style="font-size:1.1rem;font-weight:600;color:var(--tx)">${p.name || '-'}</span>
+                            ${p.checklistExempt ? `<span style="font-size:.65rem;background:rgba(0,140,149,.15);color:#008c95;padding:2px 6px;border-radius:4px;font-weight:500">Part-time</span>` : ''}
                             <button onclick="copyToClipboard('${(p.name || '').replace(/'/g, "\\'")}', 'Ad Soyad')" style="background:none;border:none;cursor:pointer;color:var(--tx3);padding:2px;display:flex;opacity:.6;transition:opacity .2s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.6'" title="Adı Kopyala">
                                 <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                             </button>
@@ -23473,6 +23500,26 @@ async function loadTodayChecks() {
         return;
     }
     
+    // Checklist muafiyeti kontrolü - yöneticiler hariç
+    if (currentUser?.checklistExempt && !['yonetici', 'bolge_muduru'].includes(currentUser?.role)) {
+        container.innerHTML = `
+            <div style="text-align:center;padding:60px 20px">
+                <div style="width:80px;height:80px;margin:0 auto 20px;background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(0,140,149,.2));border-radius:50%;display:flex;align-items:center;justify-content:center">
+                    <svg width="40" height="40" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M9 12l2 2 4-4"/>
+                        <circle cx="12" cy="12" r="10"/>
+                    </svg>
+                </div>
+                <div style="font-size:1.2rem;font-weight:600;color:var(--tx);margin-bottom:8px">Checklist Muafiyeti</div>
+                <div style="color:var(--tx2);max-width:300px;margin:0 auto">
+                    Part-time personel olarak checklist görevleriniz bulunmamaktadır.
+                    Shift planınızı görmek için <strong>Shift Planı</strong> sayfasını ziyaret edebilirsiniz.
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
     // Dashboard için shift listener kur (ilk şube)
     if (userBranch && userBranch !== 'all') {
         setupShiftListener(userBranch);
@@ -29728,6 +29775,26 @@ async function loadChecklist() {
         return;
     }
     
+    // Checklist muafiyeti kontrolü - yöneticiler hariç
+    if (currentUser?.checklistExempt && !['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role)) {
+        container.innerHTML = `
+            <div style="text-align:center;padding:60px 20px">
+                <div style="width:80px;height:80px;margin:0 auto 20px;background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(0,140,149,.2));border-radius:50%;display:flex;align-items:center;justify-content:center">
+                    <svg width="40" height="40" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M9 12l2 2 4-4"/>
+                        <circle cx="12" cy="12" r="10"/>
+                    </svg>
+                </div>
+                <div style="font-size:1.2rem;font-weight:600;color:var(--tx);margin-bottom:8px">Checklist Muafiyeti</div>
+                <div style="color:var(--tx2);max-width:300px;margin:0 auto">
+                    Part-time personel olarak checklist görevleriniz bulunmamaktadır.
+                </div>
+            </div>
+        `;
+        checklistLoadingLock = false;
+        return;
+    }
+    
     // Saat dilimi kontrolü
     const typeOption = document.getElementById('checklistType')?.selectedOptions[0];
     const timeSlots = typeOption?.dataset.timeslots?.split(',').filter(Boolean) || [];
@@ -34306,6 +34373,22 @@ async function distributeTemizlikItems(branch, date) {
     if (dayIndex < 0) dayIndex = 6;
     const dayKey = String(dayIndex);
     
+    // Checklist muaf personeli filtrele - şubedeki tüm personeli çek
+    let exemptPersonelIds = new Set();
+    try {
+        const personelSnap = await db.collection('personel').where('branch', '==', branch).get();
+        personelSnap.docs.forEach(doc => {
+            const p = doc.data();
+            if (p.checklistExempt === true) {
+                exemptPersonelIds.add(p.uniqueId);
+                exemptPersonelIds.add(normalizePersonelId(p.name));
+                console.log('[Temizlik] Muaf personel:', p.name);
+            }
+        });
+    } catch (e) {
+        console.warn('[Temizlik] Muaf personel kontrolü hatası:', e);
+    }
+    
     // Bugün çalışan personeli kategorize et
     const personnel = {
         acilis: [],
@@ -34316,6 +34399,12 @@ async function distributeTemizlikItems(branch, date) {
     Object.entries(personelShifts).forEach(([personId, shifts]) => {
         const todayShift = shifts[dayKey];
         if (!todayShift || todayShift.toUpperCase() === 'OFF' || todayShift === '-') return;
+        
+        // Checklist muaf mı kontrol et
+        if (exemptPersonelIds.has(personId) || exemptPersonelIds.has(normalizePersonelId(personelFullNames[personId] || ''))) {
+            console.log('[Temizlik] Muaf personel atlanıyor:', personelFullNames[personId] || personId);
+            return;
+        }
         
         const personName = personelFullNames[personId] || personId;
         const shiftUpper = todayShift.toUpperCase();
