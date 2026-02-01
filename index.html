@@ -35355,28 +35355,29 @@ async function distributeTemizlikItems(branch, date) {
         kapanis: personnel.kapanis.map(p => p.name)
     });
     
-    // Müdür yardımcısı kontrolü - Müdür OFF ise ve yardımcı TEK DEĞİLSE temizlikten muaf
-    const totalPersonnel = personnel.acilis.length + personnel.araci.length + personnel.kapanis.length;
-    
-    if (totalPersonnel > 1) {
-        try {
-            const mudurStatus = await isMudurWorking(branch, new Date(date));
+    // Müdür yardımcısı kontrolü - Müdür OFF ise ve KATEGORİDE birden fazla kişi varsa yardımcı muaf
+    // ÖNEMLİ: Yardımcı kategoride TEK kişiyse muaf OLMAZ, temizlik yapar
+    try {
+        const mudurStatus = await isMudurWorking(branch, new Date(date));
+        
+        if (!mudurStatus.isWorking) {
+            // Müdür OFF - yardımcıyı bul
+            const yardimci = await getMudurYardimcisi(branch);
             
-            if (!mudurStatus.isWorking) {
-                // Müdür OFF - yardımcıyı bul ve temizlikten çıkar
-                const yardimci = await getMudurYardimcisi(branch);
+            if (yardimci) {
+                const yardimciNames = [
+                    yardimci.name,
+                    formatDisplayName(yardimci.name),
+                    yardimci.name?.split(' ')[0],
+                    yardimci.uniqueId,
+                    normalizePersonelId(yardimci.name)
+                ].filter(Boolean);
                 
-                if (yardimci) {
-                    const yardimciNames = [
-                        yardimci.name,
-                        formatDisplayName(yardimci.name),
-                        yardimci.name?.split(' ')[0],
-                        yardimci.uniqueId,
-                        normalizePersonelId(yardimci.name)
-                    ].filter(Boolean);
-                    
-                    // Her kategoriden yardımcıyı çıkar
-                    ['acilis', 'araci', 'kapanis'].forEach(cat => {
+                // Her kategoride AYRI kontrol et
+                ['acilis', 'araci', 'kapanis'].forEach(cat => {
+                    // Kategoride birden fazla kişi varsa yardımcıyı çıkar
+                    // TEK kişiyse ÇIKARMA - temizlik yapacak
+                    if (personnel[cat].length > 1) {
                         const beforeCount = personnel[cat].length;
                         personnel[cat] = personnel[cat].filter(p => {
                             const isYardimci = yardimciNames.some(yn => 
@@ -35387,14 +35388,24 @@ async function distributeTemizlikItems(branch, date) {
                             return !isYardimci;
                         });
                         if (personnel[cat].length < beforeCount) {
-                            console.log(`[Temizlik] Müdür yardımcısı ${cat} kategorisinden çıkarıldı:`, yardimci.name);
+                            console.log(`[Temizlik] Müdür yardımcısı ${cat} kategorisinden çıkarıldı (${beforeCount} kişi vardı):`, yardimci.name);
                         }
-                    });
-                }
+                    } else if (personnel[cat].length === 1) {
+                        // Tek kişi - yardımcı olsa bile temizlik yapacak
+                        const isYardimci = yardimciNames.some(yn => 
+                            personnel[cat][0].name === yn || 
+                            personnel[cat][0].id === yn ||
+                            normalizePersonelId(personnel[cat][0].name) === normalizePersonelId(yn)
+                        );
+                        if (isYardimci) {
+                            console.log(`[Temizlik] Müdür yardımcısı ${cat} kategorisinde TEK kişi, temizlik yapacak:`, yardimci.name);
+                        }
+                    }
+                });
             }
-        } catch (e) {
-            console.warn('[Temizlik] Müdür yardımcısı kontrolü hatası:', e);
         }
+    } catch (e) {
+        console.warn('[Temizlik] Müdür yardımcısı kontrolü hatası:', e);
     }
     
     console.log('[Temizlik] Personel kategorileri (muafiyet sonrası):', {
