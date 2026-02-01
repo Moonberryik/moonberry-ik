@@ -13361,7 +13361,11 @@ async function loadPuantaj() {
             }
             
             // Toplam puan = Manuel + Otomatik + Reset Bonus + Personel Eksisi
-            const toplamPuan = manuelPuan + otomatikPuan + primResetBonus + personelEksiPuan;
+            // Küsüratı temizle
+            const toplamPuan = Math.round((manuelPuan + otomatikPuan + primResetBonus + personelEksiPuan) * 100) / 100;
+            const roundedManuelPuan = Math.round(manuelPuan * 100) / 100;
+            const roundedOtomatikPuan = Math.round(otomatikPuan * 100) / 100;
+            const roundedPersonelEksiPuan = Math.round(personelEksiPuan * 100) / 100;
             
             const primDurumu = toplamPuan <= -5 ? 'prim_yok' : 'prim_var';
             
@@ -13377,9 +13381,9 @@ async function loadPuantaj() {
                 photoUrl: p.photoUrl || '',
                 startDate: p.startDate || '',  // İşe giriş tarihi - sıralama için
                 toplamPuan,
-                manuelPuan,
-                otomatikPuan,
-                personelEksiPuan, // YENİ: Müdür/yardımcı için personel eksisi
+                manuelPuan: roundedManuelPuan,
+                otomatikPuan: roundedOtomatikPuan,
+                personelEksiPuan: roundedPersonelEksiPuan, // YENİ: Müdür/yardımcı için personel eksisi
                 personelEksiKayitlar, // YENİ: Detay için
                 primDurumu, 
                 kayitSayisi, 
@@ -25677,7 +25681,7 @@ async function loadMonthlyPoints() {
             if (docDate < monthStartStr || docDate > monthEndStr) return;
             
             const points = data.points || 0;
-            totalPoints += points;
+            totalPoints = Math.round((totalPoints + points) * 100) / 100;
             
             if (data.status === 'onTime') onTimeCount++;
             else if (data.status === 'late') lateCount++;
@@ -25708,7 +25712,7 @@ async function loadMonthlyPoints() {
                     // score 1-5 arası yıldız, puana çevir: config'den dinamik
                     const score = data.score || 3;
                     const points = getPointsFromStar(score);
-                    totalPoints += points;
+                    totalPoints = Math.round((totalPoints + points) * 100) / 100;
                     manualCount++;
                 });
             }
@@ -25731,7 +25735,7 @@ async function loadMonthlyPoints() {
                 if (docDate < monthStartStr || docDate > monthEndStr) return;
                 
                 const points = data.points || 0;
-                totalPoints += points;
+                totalPoints = Math.round((totalPoints + points) * 100) / 100;
                 
                 if (data.pointStatus === 'onTime') onTimeCount++;
                 else if (data.pointStatus === 'late') lateCount++;
@@ -26608,7 +26612,7 @@ async function loadAllChecksOverview() {
             
             if (submission) {
                 completed++;
-                totalPoints += submission.points || 0;
+                totalPoints = Math.round((totalPoints + (submission.points || 0)) * 100) / 100;
             } else if (isToday) {
                 const window = getCheckTimeWindow(expected.type, expected.timeSlot, expected.branch);
                 if (window && window.isMissed) {
@@ -26620,6 +26624,9 @@ async function loadAllChecksOverview() {
                 missed++;
             }
         });
+        
+        // Puan formatla
+        const displayPoints = formatPoints(totalPoints);
         
         // Özet kartları
         html += `
@@ -26637,7 +26644,7 @@ async function loadAllChecksOverview() {
                     <div style="font-size:.8rem;color:#e74c3c;font-weight:500">Yapılmadı</div>
                 </div>
                 <div style="background:var(--bg3);border:1px solid var(--cardBorder);border-radius:12px;padding:20px;text-align:center">
-                    <div style="font-size:2rem;font-weight:700;color:${totalPoints >= 0 ? '#27ae60' : '#e74c3c'}">${totalPoints >= 0 ? '+' : ''}${totalPoints}</div>
+                    <div style="font-size:2rem;font-weight:700;color:${totalPoints >= 0 ? '#27ae60' : '#e74c3c'}">${totalPoints >= 0 ? '+' : ''}${displayPoints}</div>
                     <div style="font-size:.8rem;color:var(--tx2);font-weight:500">Toplam Puan</div>
                 </div>
             </div>
@@ -32543,7 +32550,7 @@ async function loadKPIDashboard() {
             
             notesSnapshot.forEach(doc => {
                 const data = doc.data();
-                totalPoints += (data.points || 0);
+                totalPoints = Math.round((totalPoints + (data.points || 0)) * 100) / 100;
                 if (data.status === 'onTime') onTimeChecks++;
                 else if (data.status === 'missed') missedChecks++;
             });
@@ -32557,7 +32564,7 @@ async function loadKPIDashboard() {
             puantajSnapshot.forEach(doc => {
                 const data = doc.data();
                 const score = data.score || 3;
-                totalPoints += getPointsFromStar(score);
+                totalPoints = Math.round((totalPoints + getPointsFromStar(score)) * 100) / 100;
                 manualCount++;
             });
             
@@ -32571,6 +32578,7 @@ async function loadKPIDashboard() {
         const isMoonberry = branch.toLowerCase().includes('şişli') || branch.toLowerCase().includes('sisli');
         const brandColor = isMoonberry ? '#008c95' : '#ff8674';
         const pointColor = totalPoints > 0 ? '#27ae60' : totalPoints < 0 ? '#e74c3c' : 'var(--tx2)';
+        const displayPoints = formatPoints(totalPoints);
         
         html += `
             <div style="background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:14px;padding:16px;border-left:4px solid ${brandColor}">
@@ -32589,7 +32597,7 @@ async function loadKPIDashboard() {
                         <div style="font-size:.65rem;color:var(--tx3)">Vaktinde</div>
                     </div>
                     <div>
-                        <div style="font-size:1.3rem;font-weight:700;color:${pointColor}">${totalPoints > 0 ? '+' : ''}${totalPoints}</div>
+                        <div style="font-size:1.3rem;font-weight:700;color:${pointColor}">${totalPoints > 0 ? '+' : ''}${displayPoints}</div>
                         <div style="font-size:.65rem;color:var(--tx3)">Puan</div>
                     </div>
                 </div>
