@@ -5247,11 +5247,13 @@ function goBack() { goTo(previousPage); }
 
 // Checklist sayfasına parametre ile gitme
 let _pendingChecklistParams = null;
+let _forcedTimeSlot = null; // Dashboard'dan gelen timeSlot
 
 function goToChecklist(branch, type, timeSlot) {
     // Canonical type id kullan
     const canonType = canonicalChecklistTypeId(type);
     _pendingChecklistParams = { branch, type: canonType, timeSlot };
+    _forcedTimeSlot = timeSlot; // TimeSlot'u global olarak sakla
     goTo('checklist');
 }
 
@@ -30406,15 +30408,20 @@ async function loadChecklist() {
         }
         
         // Eğer timeSlotSelect zaten geçerli bir değere sahipse (Dashboard'dan gelen), override etme
-        if (!timeSlotSelect.value || !timeSlots.includes(timeSlotSelect.value)) {
+        if (timeSlotSelect?.value && timeSlotSelect.value.includes(':')) {
+            // Dashboard'dan gelen değeri kullan
+            autoTimeSlot = timeSlotSelect.value;
+            console.log('[Checklist] Dashboard\'dan gelen timeSlot kullanılıyor:', autoTimeSlot);
+        } else if (timeSlots.length > 0) {
             timeSlotSelect.value = autoTimeSlot;
-        } else {
-            autoTimeSlot = timeSlotSelect.value; // Mevcut değeri kullan
         }
     }
     
     // Zaman bilgisi (otomatik - Türkiye saati)
-    const timeSlot = autoTimeSlot || timeSlotSelect?.value || null;
+    // Dashboard'dan gelen _forcedTimeSlot varsa onu kullan
+    const timeSlot = _forcedTimeSlot || autoTimeSlot || timeSlotSelect?.value || null;
+    console.log('[Checklist] TimeSlot belirlendi:', { _forcedTimeSlot, autoTimeSlot, selectValue: timeSlotSelect?.value, final: timeSlot });
+    _forcedTimeSlot = null; // Kullanıldıktan sonra temizle
     
     // Zaman penceresi bilgisi göster (sadece gunluk/guncel için)
     let windowInfo = '';
@@ -30475,10 +30482,9 @@ async function loadChecklist() {
             'haftalik_gorev': 'haftalik'
         };
         
-        // Canonical type id kullan
-        const canonType = canonicalChecklistTypeId(type);
-        const mappedType = TYPE_ID_MAP[canonType] || canonType;
-        const checklistId = `${sanitize(branch)}_${mappedType}`;
+        // Canonical type id kullan (yukarıda zaten tanımlı)
+        const mappedTypeInner = TYPE_ID_MAP[canonType] || canonType;
+        const checklistId = `${sanitize(branch)}_${mappedTypeInner}`;
         
         // Alternatif ID'ler - dailyDocIdCandidates helper'ı ile
         const alternativeIds = [
@@ -30507,12 +30513,12 @@ async function loadChecklist() {
         
         // Firebase'de yoksa default maddeleri kullan ve kaydet (ilk kurulum)
         if (items.length === 0) {
-            items = getDefaultChecklistItems(branch, type) || getDefaultChecklistItems(branch, mappedType);
+            items = getDefaultChecklistItems(branch, type) || getDefaultChecklistItems(branch, mappedTypeInner);
             if (items.length > 0) {
                 try {
                     await db.collection('checklists').doc(checklistId).set({
                         branch,
-                        type: mappedType,
+                        type: mappedTypeInner,
                         items,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
@@ -30898,6 +30904,53 @@ async function loadChecklist() {
             }
         }
         
+        // ==================== MÜDÜR YARDIMCISI MUAFİYETİ ====================
+        // Müdür OFF ise ve yardımcı tek değilse, yardımcıyı diğer checklistlerden hariç tut
+        // (Yardımcı sadece müdür checklistinden sorumlu olur)
+        if (shiftPersonnel.length > 1 && type !== 'mudur') {
+            try {
+                const mudurStatus = await isMudurWorking(branch, new Date(date));
+                
+                if (!mudurStatus.isWorking) {
+                    // Müdür OFF - yardımcıyı bul
+                    const yardimci = await getMudurYardimcisi(branch);
+                    
+                    if (yardimci) {
+                        const isAlone = await isMudurYardimcisiAlone(branch, new Date(date));
+                        
+                        if (!isAlone) {
+                            // Yardımcı tek değil - diğer checklistlerden hariç tut
+                            const yardimciNames = [
+                                yardimci.name,
+                                formatDisplayName(yardimci.name),
+                                yardimci.codeName,
+                                yardimci.name?.split(' ')[0]
+                            ].filter(Boolean);
+                            
+                            const filteredPersonnel = shiftPersonnel.filter(p => {
+                                if (!p) return false;
+                                const pLower = p.toLowerCase();
+                                const pNorm = normalizeTurkishChars(p);
+                                return !yardimciNames.some(yn => {
+                                    if (!yn) return false;
+                                    const ynLower = yn.toLowerCase();
+                                    const ynNorm = normalizeTurkishChars(yn);
+                                    return ynLower === pLower || ynNorm === pNorm;
+                                });
+                            });
+                            
+                            if (filteredPersonnel.length !== shiftPersonnel.length && filteredPersonnel.length > 0) {
+                                console.log('[Müdür Yardımcısı Muaf] Müdür OFF, yardımcı diğer checklistlerden hariç tutuldu:', yardimci.name);
+                                shiftPersonnel = filteredPersonnel;
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Müdür yardımcısı muafiyet kontrolü hatası:', e);
+            }
+        }
+        
         // Temizlik ve Bakım için mağaza müdürlerini hariç tut (tek kişi değilse)
         if (type === 'aylik' && shiftPersonnel.length > 1) {
             try {
@@ -31002,13 +31055,14 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
     const currentUserDisplayName = getPersonelDisplayName(currentUser) || currentUser?.name || '';
     const currentUserFirstName = currentUserDisplayName.split(' ')[0]?.toLowerCase();
     
+    // Başkasının checklistini doldurabilir yetkisi
+    const perms = window.userAdvancedPermissions;
+    const canFillOthersChecklist = perms?.special?.fill_others_checklist === true;
+    
     // shiftPersonnel listesinde kendisi var mı kontrol et
     let isAssignedToMe = false;
     
-    if (isManager) {
-        // Müdürler tüm checklere erişebilir
-        isAssignedToMe = true;
-    } else if (shiftPersonnel && shiftPersonnel.length > 0) {
+    if (shiftPersonnel && shiftPersonnel.length > 0) {
         // Personel listesinde kendisi var mı?
         isAssignedToMe = shiftPersonnel.some(p => {
             const pLower = p.toLowerCase();
@@ -31023,11 +31077,18 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
         isAssignedToMe = true;
     }
     
+    // fill_others_checklist yetkisi varsa herkese izin ver
+    if (canFillOthersChecklist && !isAssignedToMe) {
+        isAssignedToMe = true;
+        console.log('[Checklist] fill_others_checklist yetkisi ile erişim verildi');
+    }
+    
     console.log('Erişim kontrolü:', { 
         currentUserDisplayName, 
         shiftPersonnel, 
         isAssignedToMe, 
-        isManager 
+        isManager,
+        canFillOthersChecklist
     });
     
     // ==================== ZAMAN KONTROLÜ ====================
