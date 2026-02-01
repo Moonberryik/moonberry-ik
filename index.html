@@ -25168,7 +25168,10 @@ async function loadTodayChecks() {
                     isMudurCheckMissed = true;
                     canFillMudurCheck = false;
                     // Dinamik puan değeri
-                    const mudurMissedPoints = CHECK_RULES.mudur?.points?.missed || -10;
+                    if (CHECK_RULES.mudur?.points?.missed === undefined) {
+                        console.warn('[Dashboard] CHECK_RULES.mudur.points.missed tanımsız!');
+                    }
+                    const mudurMissedPoints = CHECK_RULES.mudur?.points?.missed ?? 0;
                     mudurSubLabel = `Süre doldu (${mudurMissedPoints} puan)`;
                 }
                 
@@ -30409,7 +30412,10 @@ async function loadChecklist() {
         const isManager = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
         
         if (isExpired && !isManager) {
-            const missedPoints = rules.points?.missed || -2;
+            if (rules.points?.missed === undefined) {
+                console.warn(`[loadChecklist] ${type}.points.missed tanımsız!`);
+            }
+            const missedPoints = rules.points?.missed ?? 0;
             
             // ═══════════════════════════════════════════════════════════
             // TAMAMLANMIŞ MI KONTROL ET
@@ -30421,7 +30427,8 @@ async function loadChecklist() {
                 const completedTime = completedAt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
                 const completedDate = completedAt.toLocaleDateString('tr-TR');
                 const pointStatus = existingSubmission.pointStatus || 'onTime';
-                const earnedPoints = existingSubmission.points ?? (pointStatus === 'onTime' ? (rules.points?.onTime || 1) : (rules.points?.late || 0));
+                // Puan zaten kaydedilmiş olmalı, yoksa güvenli varsayılan
+                const earnedPoints = existingSubmission.points ?? (pointStatus === 'onTime' ? (rules.points?.onTime ?? 0) : (rules.points?.late ?? 0));
                 const pointColor = earnedPoints > 0 ? '#27ae60' : earnedPoints < 0 ? '#e74c3c' : 'var(--tx2)';
                 const pointSign = earnedPoints > 0 ? '+' : '';
                 
@@ -34264,7 +34271,10 @@ async function saveChecklistAndShare(branch, type, date, timeSlot, personName, r
                 }
                 
                 if (now <= deadlineTime) {
-                    points = rules.points?.onTime || 0;
+                    if (rules.points?.onTime === undefined) {
+                        console.warn(`[submitChecklist] ${type}.points.onTime tanımsız!`);
+                    }
+                    points = rules.points?.onTime ?? 0;
                     pointStatus = 'onTime';
                 } else {
                     // Geç penceresi kontrolü
@@ -34272,16 +34282,25 @@ async function saveChecklistAndShare(branch, type, date, timeSlot, personName, r
                     const lateDeadline = new Date(deadlineTime.getTime() + lateWindow * 60000);
                     
                     if (now <= lateDeadline) {
-                        points = rules.points?.late || 0;
+                        if (rules.points?.late === undefined) {
+                            console.warn(`[submitChecklist] ${type}.points.late tanımsız!`);
+                        }
+                        points = rules.points?.late ?? 0;
                         pointStatus = 'late';
                     } else {
-                        points = rules.points?.missed || -1;
+                        if (rules.points?.missed === undefined) {
+                            console.warn(`[submitChecklist] ${type}.points.missed tanımsız!`);
+                        }
+                        points = rules.points?.missed ?? 0;
                         pointStatus = 'missed';
                     }
                 }
             } else {
                 // Deadline yoksa vaktinde sayılır
-                points = rules.points?.onTime || 0;
+                if (rules.points?.onTime === undefined) {
+                    console.warn(`[submitChecklist] ${type}.points.onTime tanımsız!`);
+                }
+                points = rules.points?.onTime ?? 0;
                 pointStatus = 'onTime';
             }
             
@@ -36219,7 +36238,11 @@ async function completeTemizlikItem(branch, itemId, itemText, personId, personNa
         
         // Puanı CHECK_RULES'dan al (dinamik)
         const temizlikRules = CHECK_RULES.aylik || {};
-        const points = temizlikRules.points?.done ?? temizlikRules.points?.onTime ?? 0.1;
+        const donePoints = temizlikRules.points?.done ?? temizlikRules.points?.onTime;
+        if (donePoints === undefined) {
+            console.warn('[Temizlik] CHECK_RULES.aylik.points.done/onTime tanımsız!');
+        }
+        const points = donePoints ?? 0;
         
         // Türkçe virgül formatı (gösterim için)
         const pointsDisplay = points.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -36435,7 +36458,11 @@ async function cleanupOldTemizlikPoints(dryRun = true) {
     
     try {
         // Doğru puan değerini al (dinamik)
-        const correctPoints = CHECK_RULES.aylik?.points?.done ?? CHECK_RULES.aylik?.points?.onTime ?? 0.1;
+        const correctPoints = CHECK_RULES.aylik?.points?.done ?? CHECK_RULES.aylik?.points?.onTime;
+        if (correctPoints === undefined) {
+            console.error('CHECK_RULES.aylik.points.done/onTime TANIMSIZ! Migration iptal.');
+            return { updated: 0, total: 0, error: 'Puan değeri tanımsız' };
+        }
         console.log('   Doğru puan değeri:', correctPoints);
         
         // +1 olan temizlik kayıtlarını bul
@@ -37704,7 +37731,10 @@ async function completeWeeklyItem(branch, itemId, personnelId) {
         console.log(`[Haftalık] ✅ Madde tamamlandı: ${assignment.itemText?.substring(0, 30)} (${assignment.personnelName})`);
         
         // Puan ekle
-        const points = rules.points?.onTime || 1;
+        if (rules.points?.onTime === undefined) {
+            console.warn('[Haftalık] rules.points.onTime tanımsız!');
+        }
+        const points = rules.points?.onTime ?? 0;
         await addWeeklyPoints(branch, personnelId, assignment.personnelName, itemId, points, 'completed');
         
         return true;
