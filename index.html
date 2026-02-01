@@ -19716,10 +19716,12 @@ async function loadShiftList() {
                 
                 if (w.weekStart === todayWeekKey) {
                     badge = ' 📍 BU HAFTA';
-                    if (!autoSelectId) { autoSelectId = w.id; autoSelectType = 'current'; }
+                    // Bu hafta HER ZAMAN öncelikli - gelecek hafta seçilmişse bile üzerine yaz
+                    autoSelectId = w.id; 
+                    autoSelectType = 'current';
                 } else if (w.weekStart === nextWeekKey) {
-                    badge = ' 🔜 GELECEKhafta';
-                    // Gelecek hafta varsa ve bu hafta yoksa, gelecek haftayı seç
+                    badge = ' 🔜 GELECEK HAFTA';
+                    // Gelecek hafta SADECE bu hafta yoksa seçilir
                     if (!autoSelectId) { autoSelectId = w.id; autoSelectType = 'next'; }
                 }
                 
@@ -35690,10 +35692,18 @@ async function renderTemizlikChecklist(container, branch, date) {
             ${(() => {
                 // Puanları CHECK_RULES'dan dinamik al
                 const temizlikRules = CHECK_RULES.aylik || {};
+                // done veya onTime - hangisi varsa
                 const donePoints = temizlikRules.points?.done ?? temizlikRules.points?.onTime ?? 0.2;
                 const missedPoints = temizlikRules.points?.missed ?? -0.2;
-                const doneDisplay = donePoints.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-                const missedDisplay = missedPoints.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+                
+                // Sayı formatı kontrolü - 0 veya tam sayı değilse göster
+                const formatPoint = (val) => {
+                    if (val === 0) return '0';
+                    return val.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+                };
+                
+                const doneDisplay = formatPoint(donePoints);
+                const missedDisplay = formatPoint(missedPoints);
                 
                 return `
                     <div style="background:var(--bg3);border:1px solid var(--bg4);border-radius:12px;padding:14px;margin-bottom:20px;display:flex;align-items:flex-start;gap:10px">
@@ -35771,8 +35781,8 @@ async function renderTemizlikChecklist(container, branch, date) {
                         
                         // Puanı CHECK_RULES'dan veya item'dan al
                         const temizlikRules = CHECK_RULES.aylik || {};
-                        const defaultPoints = temizlikRules.points?.done ?? 0.2;
-                        const points = item.points?.done ?? defaultPoints;
+                        const defaultPoints = temizlikRules.points?.done ?? temizlikRules.points?.onTime ?? 0.2;
+                        const points = item.points?.done ?? item.points?.onTime ?? defaultPoints;
                         
                         // Türkçe virgül formatı
                         const pointsDisplay = points.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -35887,7 +35897,7 @@ async function completeTemizlikItem(branch, itemId, itemText, personId, personNa
         
         // Puanı CHECK_RULES'dan al (dinamik)
         const temizlikRules = CHECK_RULES.aylik || {};
-        const points = temizlikRules.points?.done ?? 0.2;
+        const points = temizlikRules.points?.done ?? temizlikRules.points?.onTime ?? 0.2;
         
         // Türkçe virgül formatı (gösterim için)
         const pointsDisplay = points.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
