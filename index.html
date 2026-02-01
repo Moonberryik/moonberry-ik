@@ -32151,46 +32151,84 @@ async function renderPlatformChecklistWithStatus(container, branch, date, active
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinutes = currentHour * 60 + now.getMinutes();
+    const dayEndHour = typeof getBusinessDayEndHour === 'function' ? getBusinessDayEndHour() : 4;
     
     // Dashboard'dan gelen timeSlot kullan veya otomatik belirle
     let selectedTimeSlot = activeTimeSlot;
+    let isValidSlot = false;
+    
     if (!selectedTimeSlot) {
-        const dayEndHour = getBusinessDayEndHour();
-        
-        // Gece saatleri (00:00 - dayEndHour arası) → 00:00 slotu aktif
-        if (currentHour >= 0 && currentHour < dayEndHour) {
-            // 00:00 slotu varsa onu kullan
-            if (timeSlots.includes('00:00')) {
-                selectedTimeSlot = '00:00';
-            } else {
-                // Son slotu kullan
-                selectedTimeSlot = timeSlots[timeSlots.length - 1];
-            }
-        } else {
-            // Normal saatlerde en yakın aktif slotu bul
-            for (const timeStr of timeSlots) {
-                const [h, m] = timeStr.split(':').map(Number);
-                const slotMinutes = h * 60 + (m || 0);
-                const diff = slotMinutes - currentMinutes;
-                // -60dk (geçmiş 1 saat) ile +60dk (gelecek 1 saat) arası
-                if (diff >= -60 && diff <= 60) {
+        // Her slot için kontrol et - sadece aktif olan gösterilsin
+        for (const timeStr of timeSlots) {
+            const [h, m] = timeStr.split(':').map(Number);
+            const slotStart = h * 60 + (m || 0);
+            const slotEnd = slotStart + 60; // 1 saatlik pencere
+            
+            // 00:00 slotu için özel: sadece 00:00-01:00 arası (saat 0)
+            if (timeStr === '00:00') {
+                if (currentHour === 0) {
                     selectedTimeSlot = timeStr;
+                    isValidSlot = true;
+                    break;
+                }
+            } else {
+                // Diğer slotlar: slot başlangıcından 30dk önce ile slot bitişine kadar
+                if (currentMinutes >= slotStart - 30 && currentMinutes < slotEnd) {
+                    selectedTimeSlot = timeStr;
+                    isValidSlot = true;
                     break;
                 }
             }
-            // Bulunamadıysa en yakın gelecek slotu al
-            if (!selectedTimeSlot) {
-                for (const timeStr of timeSlots) {
-                    const [h, m] = timeStr.split(':').map(Number);
-                    const slotMinutes = h * 60 + (m || 0);
-                    if (slotMinutes > currentMinutes) {
-                        selectedTimeSlot = timeStr;
-                        break;
-                    }
-                }
-            }
-            if (!selectedTimeSlot) selectedTimeSlot = timeSlots[0];
         }
+    } else {
+        // Dashboard'dan gelen slot - geçerliliğini kontrol et
+        const [h, m] = selectedTimeSlot.split(':').map(Number);
+        const slotStart = h * 60 + (m || 0);
+        const slotEnd = slotStart + 60;
+        
+        if (selectedTimeSlot === '00:00') {
+            isValidSlot = (currentHour === 0);
+        } else {
+            isValidSlot = (currentMinutes >= slotStart - 30 && currentMinutes < slotEnd);
+        }
+    }
+    
+    // Aktif slot yoksa bilgi mesajı göster
+    if (!selectedTimeSlot || !isValidSlot) {
+        // Sonraki slotu bul
+        let nextSlot = null;
+        for (const timeStr of timeSlots) {
+            const [h] = timeStr.split(':').map(Number);
+            const slotStart = h * 60;
+            if (slotStart > currentMinutes) {
+                nextSlot = timeStr;
+                break;
+            }
+        }
+        if (!nextSlot && timeSlots.length > 0) {
+            nextSlot = timeSlots[0] + ' (yarın)';
+        }
+        
+        container.innerHTML = `
+            <div style="text-align:center;padding:60px 20px">
+                <div style="width:80px;height:80px;margin:0 auto 20px;background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(0,140,149,.05));border-radius:50%;display:flex;align-items:center;justify-content:center">
+                    <svg width="40" height="40" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                </div>
+                <div style="font-size:1.2rem;font-weight:600;color:var(--tx);margin-bottom:8px">Şu An Kontrol Saati Değil</div>
+                <div style="color:var(--tx2);margin-bottom:16px">Platform kontrolü sadece belirlenen saat dilimlerinde yapılabilir.</div>
+                <div style="padding:16px;background:var(--bg3);border-radius:12px;max-width:300px;margin:0 auto">
+                    <div style="font-size:.85rem;color:var(--tx2);margin-bottom:8px">
+                        <strong>Kontrol Saatleri:</strong><br>
+                        ${timeSlots.join(', ')}
+                    </div>
+                    ${nextSlot ? `<div style="font-size:.9rem;color:#008c95;font-weight:600;margin-top:8px">Sonraki: ${nextSlot}</div>` : ''}
+                </div>
+            </div>
+        `;
+        return;
     }
     
     // Saat bazlı submission ID
