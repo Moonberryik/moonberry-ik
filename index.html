@@ -25240,9 +25240,22 @@ async function loadTodayChecks() {
                         
                         subLabel = `${completedCount}/${allAssignments.length} tamamlandı`;
                         
-                        // Atanan personelleri göster - TÜM İSİMLER
+                        // Atanan personelleri göster - Muaf personeli filtrele
                         const uniquePersonnel = [...new Set(allAssignments.map(a => a.personnelName))];
-                        personnelTags = uniquePersonnel;
+                        // Müdür yardımcısı muafsa listeden çıkar
+                        const filteredPersonnel = uniquePersonnel.filter(name => {
+                            const exemptInfo = mudurYardimcisiExemptMap[branch];
+                            if (exemptInfo?.exempt) {
+                                // Yardımcının adını kontrol et
+                                const yardimciName = exemptInfo.yardimciCodeName || exemptInfo.yardimciName || '';
+                                if (name === yardimciName || name.includes(yardimciName.split(' ')[0])) {
+                                    console.log('[Haftalık] Muaf yardımcı filtrelendi:', name);
+                                    return false;
+                                }
+                            }
+                            return true;
+                        });
+                        personnelTags = filteredPersonnel;
                         
                         isActive = pendingCount > 0;
                     }
