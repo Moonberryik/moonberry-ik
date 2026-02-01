@@ -23660,13 +23660,29 @@ async function loadTodayChecks() {
     // Otomatik kaçırılan check kontrolü (tüm kullanıcılar için çalışır - güvenlik açığı yok)
     setTimeout(() => checkAndProcessMissedChecks(), 5000);
     
-    // ========== PERSONEL ROL BİLGİLERİNİ YÜKLE ==========
+    // ========== PERSONEL ROL BİLGİLERİNİ VE MUAFİYETLERİ YÜKLE ==========
     const personelRoleMap = {}; // uniqueId/displayName → role
+    const checklistExemptSet = new Set(); // Muaf personel ID'leri
     try {
         const personelSnap = await db.collection('personel').get();
         personelSnap.forEach(doc => {
             const p = doc.data();
             const role = p.role || 'barista';
+            
+            // Muaf personeli kaydet
+            if (p.checklistExempt === true) {
+                if (p.uniqueId) checklistExemptSet.add(p.uniqueId);
+                if (p.codeName) checklistExemptSet.add(p.codeName);
+                if (p.name) {
+                    checklistExemptSet.add(p.name);
+                    checklistExemptSet.add(normalizePersonelId(p.name));
+                    const firstName = p.name.split(' ')[0];
+                    const lastName = p.name.split(' ').slice(1).join(' ');
+                    const lastInitial = lastName?.charAt(0) || '';
+                    checklistExemptSet.add(`${firstName} ${lastInitial}.`);
+                }
+            }
+            
             // Tüm olası key formatları için kaydet
             if (p.uniqueId) personelRoleMap[p.uniqueId] = role;
             if (p.codeName) personelRoleMap[p.codeName] = role;
@@ -23679,6 +23695,7 @@ async function loadTodayChecks() {
                 personelRoleMap[`${firstName} ${lastInitial}.`] = role;
             }
         });
+        console.log('[Dashboard] Muaf personel sayısı:', checklistExemptSet.size);
     } catch (e) {
         console.warn('Personel rol bilgisi yüklenemedi:', e);
     }
@@ -23717,6 +23734,13 @@ async function loadTodayChecks() {
                         
                         // personelNames (codeName) KULLAN - en doğru format
                         const displayName = personelNames[uniqueIdOrName] || formatDisplayName(personelFullNames[uniqueIdOrName] || uniqueIdOrName.replace(/_/g, ' '));
+                        
+                        // Checklist muafiyeti kontrolü - muaf personeli dashboard'da gösterme
+                        if (checklistExemptSet.has(uniqueIdOrName) || checklistExemptSet.has(displayName) || 
+                            checklistExemptSet.has(personelFullNames[uniqueIdOrName])) {
+                            console.log('[Dashboard] Muaf personel atlanıyor:', displayName);
+                            continue;
+                        }
                         
                         // ROL BİLGİSİ AL
                         const role = personelRoleMap[uniqueIdOrName] || personelRoleMap[displayName] || 'barista';
