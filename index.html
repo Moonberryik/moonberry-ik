@@ -22195,7 +22195,347 @@ let CHECK_RULES = {
         supervisorPenalty: -0.5
     }
 };
-let SHIFT_DURATION = 9; // saat
+let SHIFT_DURATION = 9; // saat - config'den güncellenir
+
+// ==================== SHIFT ERİŞİM KONTROL SİSTEMİ ====================
+
+/**
+ * Shift string'ini saat aralığına çevirir
+ * @param {string} shiftStr - "AÇILIŞ", "KAPANIŞ", "18:00/22:00", "10:00-19:00" vb.
+ * @param {string} branch - Şube adı
+ * @param {Date} date - Tarih (kapanış saati gün bazlı olabilir)
+ * @returns {object|null} - {start: dakika, end: dakika} veya null (izinli/yok)
+ */
+function getShiftHours(shiftStr, branch, date = new Date()) {
+    if (!shiftStr) return null;
+    
+    const cleanShift = shiftStr.replace(/\*/g, '').trim().toUpperCase();
+    
+    // İzinli durumlar
+    if (['OFF', 'İ', 'İZİN', '-', 'X', ''].includes(cleanShift)) {
+        return null;
+    }
+    
+    // Şube saatlerini al
+    const branchHours = BRANCH_HOURS?.[branch] || {};
+    const openingTime = branchHours.opening || '10:00';
+    
+    // Kapanış saati gün bazlı olabilir
+    let closingTime = '00:00';
+    if (branchHours.closing) {
+        if (typeof branchHours.closing === 'string') {
+            closingTime = branchHours.closing;
+        } else {
+            // Gün bazlı kapanış
+            const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            const dayName = dayNames[date.getDay()];
+            closingTime = branchHours.closing[dayName] || branchHours.closing.default || '00:00';
+        }
+    }
+    
+    // Saatleri dakikaya çevir
+    const parseTime = (timeStr) => {
+        const [h, m] = (timeStr || '00:00').split(':').map(Number);
+        return h * 60 + (m || 0);
+    };
+    
+    const openingMin = parseTime(openingTime);
+    let closingMin = parseTime(closingTime);
+    
+    // Kapanış gece yarısından sonraysa (ör: 04:00) bir sonraki güne ait
+    if (closingMin < openingMin) {
+        closingMin += 24 * 60;
+    }
+    
+    const shiftDuration = (SHIFT_DURATION || 9) * 60; // dakika
+    
+    // AÇILIŞ: Mağaza açılış saatinde başlar, +shiftDuration
+    if (cleanShift === 'AÇILIŞ' || cleanShift === 'ACILIS') {
+        return {
+            start: openingMin,
+            end: openingMin + shiftDuration
+        };
+    }
+    
+    // KAPANIŞ: Mağaza kapanış saatinde biter, -shiftDuration önce başlar
+    if (cleanShift === 'KAPANIŞ' || cleanShift === 'KAPANIS') {
+        return {
+            start: closingMin - shiftDuration,
+            end: closingMin
+        };
+    }
+    
+    // Saat formatı: "18:00/22:00" veya "10:00-19:00" veya "18:00-22:00"
+    const timeMatch = cleanShift.match(/(\d{1,2}):?(\d{2})?\s*[\/\-–]\s*(\d{1,2}):?(\d{2})?/);
+    if (timeMatch) {
+        const startH = parseInt(timeMatch[1]);
+        const startM = parseInt(timeMatch[2] || '0');
+        const endH = parseInt(timeMatch[3]);
+        const endM = parseInt(timeMatch[4] || '0');
+        
+        let startMin = startH * 60 + startM;
+        let endMin = endH * 60 + endM;
+        
+        // Gece yarısı geçişi
+        if (endMin < startMin) {
+            endMin += 24 * 60;
+        }
+        
+        return { start: startMin, end: endMin };
+    }
+    
+    // Bilinmeyen format
+    console.warn('[ShiftAccess] Bilinmeyen shift formatı:', shiftStr);
+    return null;
+}
+
+/**
+ * Kullanıcının shift erişim durumunu kontrol eder
+ * @param {string} branch - Şube adı (opsiyonel, currentUser.branch kullanılır)
+ * @param {Date} date - Tarih (opsiyonel, bugün kullanılır)
+ * @returns {Promise<object>} - {hasAccess, isExempt, shiftInfo, message}
+ */
+async function checkShiftAccess(branch = null, date = null) {
+    const targetBranch = branch || currentUser?.branch;
+    const targetDate = date || new Date();
+    
+    // Muaf roller
+    const exemptRoles = ['yonetici', 'bolge_muduru', 'magaza_muduru'];
+    const isExempt = exemptRoles.includes(currentUser?.role);
+    
+    if (isExempt) {
+        return {
+            hasAccess: true,
+            isExempt: true,
+            shiftInfo: null,
+            message: null
+        };
+    }
+    
+    // Şube "all" ise veya tanımsızsa erişim yok
+    if (!targetBranch || targetBranch === 'all') {
+        return {
+            hasAccess: false,
+            isExempt: false,
+            shiftInfo: null,
+            message: 'Şube bilgisi bulunamadı'
+        };
+    }
+    
+    // Shift verisini al
+    const weekStart = getWeekStart(targetDate);
+    const weekKey = formatDateLocal(weekStart);
+    let dayIndex = targetDate.getDay() - 1;
+    if (dayIndex < 0) dayIndex = 6;
+    
+    let userShiftStr = null;
+    
+    try {
+        const shiftsSnapshot = await db.collection('shifts')
+            .where('branch', '==', targetBranch)
+            .where('weekStart', '==', weekKey)
+            .get();
+        
+        if (!shiftsSnapshot.empty) {
+            const shiftDoc = shiftsSnapshot.docs[0].data();
+            const personelShifts = shiftDoc.personelShifts || {};
+            const personelNames = shiftDoc.personelNames || {};
+            
+            // Kullanıcıyı bul - önce ID ile
+            for (const [uniqueId, days] of Object.entries(personelShifts)) {
+                if (uniqueId.includes(currentUser?.id) || uniqueId === currentUser?.id) {
+                    userShiftStr = days[dayIndex];
+                    break;
+                }
+            }
+            
+            // Bulunamadıysa isimle dene
+            if (!userShiftStr) {
+                for (const [uniqueId, name] of Object.entries(personelNames)) {
+                    if (name === currentUser?.codeName || name === currentUser?.name) {
+                        userShiftStr = personelShifts[uniqueId]?.[dayIndex];
+                        break;
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('[ShiftAccess] Shift sorgu hatası:', e.message);
+    }
+    
+    // Shift yoksa veya izinliyse
+    if (!userShiftStr) {
+        return {
+            hasAccess: false,
+            isExempt: false,
+            shiftInfo: { raw: null },
+            message: 'Bugün için shift kaydınız bulunmuyor'
+        };
+    }
+    
+    const cleanShift = userShiftStr.replace(/\*/g, '').trim().toUpperCase();
+    if (['OFF', 'İ', 'İZİN', '-', 'X'].includes(cleanShift)) {
+        return {
+            hasAccess: false,
+            isExempt: false,
+            shiftInfo: { raw: userShiftStr, type: 'off' },
+            message: 'Bugün izinlisiniz'
+        };
+    }
+    
+    // Shift saatlerini hesapla
+    const shiftHours = getShiftHours(userShiftStr, targetBranch, targetDate);
+    
+    if (!shiftHours) {
+        return {
+            hasAccess: false,
+            isExempt: false,
+            shiftInfo: { raw: userShiftStr },
+            message: 'Shift saati belirlenemedi'
+        };
+    }
+    
+    // Şu anki zamanı kontrol et
+    const now = new Date();
+    let currentMin = now.getHours() * 60 + now.getMinutes();
+    
+    // Gece yarısından sonra ve shift gece yarısını geçiyorsa düzelt
+    if (now.getHours() < 6 && shiftHours.start > 12 * 60) {
+        currentMin += 24 * 60;
+    }
+    
+    // ±1 saat tolerans
+    const toleranceMin = 60;
+    const accessStart = shiftHours.start - toleranceMin;
+    const accessEnd = shiftHours.end + toleranceMin;
+    
+    const hasAccess = currentMin >= accessStart && currentMin <= accessEnd;
+    
+    // Saat formatını oluştur
+    const formatMin = (min) => {
+        const h = Math.floor((min % (24 * 60)) / 60);
+        const m = min % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    };
+    
+    const shiftStartStr = formatMin(shiftHours.start);
+    const shiftEndStr = formatMin(shiftHours.end);
+    const accessStartStr = formatMin(accessStart);
+    const accessEndStr = formatMin(accessEnd);
+    
+    if (hasAccess) {
+        return {
+            hasAccess: true,
+            isExempt: false,
+            shiftInfo: {
+                raw: userShiftStr,
+                start: shiftStartStr,
+                end: shiftEndStr,
+                accessStart: accessStartStr,
+                accessEnd: accessEndStr
+            },
+            message: null
+        };
+    } else {
+        // Ne zaman erişim olacak?
+        let waitMessage = '';
+        if (currentMin < accessStart) {
+            const waitMin = accessStart - currentMin;
+            const waitH = Math.floor(waitMin / 60);
+            const waitM = waitMin % 60;
+            waitMessage = waitH > 0 ? `${waitH} saat ${waitM} dakika sonra` : `${waitM} dakika sonra`;
+        }
+        
+        return {
+            hasAccess: false,
+            isExempt: false,
+            shiftInfo: {
+                raw: userShiftStr,
+                start: shiftStartStr,
+                end: shiftEndStr,
+                accessStart: accessStartStr,
+                accessEnd: accessEndStr
+            },
+            message: `Shift saatiniz: ${shiftStartStr} - ${shiftEndStr}`,
+            waitMessage: waitMessage
+        };
+    }
+}
+
+/**
+ * Shift erişim kilit ekranı HTML'i oluşturur
+ * @param {object} accessResult - checkShiftAccess() sonucu
+ * @param {string} type - 'dashboard' veya 'checklist'
+ * @returns {string} - HTML
+ */
+function renderShiftLockScreen(accessResult, type = 'checklist') {
+    const { shiftInfo, message, waitMessage } = accessResult;
+    
+    const lockIcon = `<svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0110 0v4"/>
+    </svg>`;
+    
+    const clockIcon = `<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+    </svg>`;
+    
+    if (type === 'dashboard') {
+        return `
+            <div class="shift-lock-overlay" style="position:absolute;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:16px;padding:24px;text-align:center">
+                <div style="color:var(--tx2);margin-bottom:16px;opacity:.7">${lockIcon}</div>
+                <div style="font-size:1.1rem;font-weight:600;color:#fff;margin-bottom:8px">Shift Saatinde Değilsiniz</div>
+                ${shiftInfo?.start ? `
+                    <div style="display:flex;align-items:center;gap:6px;color:var(--tx2);font-size:.9rem;margin-bottom:4px">
+                        ${clockIcon}
+                        <span>${shiftInfo.start} - ${shiftInfo.end}</span>
+                    </div>
+                ` : `<div style="color:var(--tx2);font-size:.85rem">${message || 'Bugün shift kaydınız yok'}</div>`}
+                ${waitMessage ? `<div style="color:#008c95;font-size:.85rem;margin-top:8px">${waitMessage}</div>` : ''}
+            </div>
+        `;
+    }
+    
+    // Checklist full page lock
+    return `
+        <div class="shift-lock-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;padding:40px 20px;text-align:center">
+            <div style="width:100px;height:100px;background:linear-gradient(135deg,rgba(0,140,149,.15),rgba(0,140,149,.05));border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:24px">
+                <svg width="50" height="50" fill="none" stroke="#008c95" stroke-width="1.5" viewBox="0 0 24 24">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0110 0v4"/>
+                </svg>
+            </div>
+            <h2 style="font-size:1.5rem;font-weight:700;color:var(--tx);margin-bottom:12px">Shift Saatinde Değilsiniz</h2>
+            <p style="color:var(--tx2);font-size:1rem;margin-bottom:24px;max-width:400px">
+                Checklist ve kontrol panellerine sadece shift saatinizde erişebilirsiniz.
+            </p>
+            
+            <div style="padding:20px 32px;background:var(--bg3);border-radius:16px;margin-bottom:20px">
+                ${shiftInfo?.start ? `
+                    <div style="font-size:.85rem;color:var(--tx2);margin-bottom:8px">Shift Saatiniz</div>
+                    <div style="font-size:1.4rem;font-weight:700;color:#008c95;display:flex;align-items:center;justify-content:center;gap:8px">
+                        ${clockIcon}
+                        ${shiftInfo.start} - ${shiftInfo.end}
+                    </div>
+                    <div style="font-size:.8rem;color:var(--tx3);margin-top:8px">Erişim: ${shiftInfo.accessStart} - ${shiftInfo.accessEnd}</div>
+                ` : `
+                    <div style="font-size:1rem;color:var(--tx2)">${message || 'Bugün için shift kaydınız bulunmuyor'}</div>
+                `}
+            </div>
+            
+            ${waitMessage ? `
+                <div style="display:inline-flex;align-items:center;gap:8px;padding:12px 20px;background:rgba(0,140,149,.1);border-radius:10px;color:#008c95;font-weight:500">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    Erişim ${waitMessage}
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
 
 // Platform listesi - Firebase'den yüklenecek
 let PLATFORMS = ['Trendyol', 'Yemek Sepeti', 'Getir Yemek', 'Migros'];
@@ -23024,13 +23364,26 @@ async function loadTodayChecks() {
     
     if (!section || !container) return;
     
+    // Shift erişim kontrolü (saat bazlı, ±1 saat tolerans)
+    const userBranch = currentUser?.branch || STATE.branches?.[0] || 'Tuzla Port';
+    const accessResult = await checkShiftAccess(userBranch !== 'all' ? userBranch : STATE.branches?.[0]);
+    
+    if (!accessResult.hasAccess) {
+        // Kilit ekranı göster
+        container.innerHTML = `
+            <div style="position:relative;min-height:300px;display:flex;align-items:center;justify-content:center">
+                ${renderShiftLockScreen(accessResult, 'dashboard')}
+            </div>
+        `;
+        return;
+    }
+    
     // Dashboard için shift listener kur (ilk şube)
-    const userBranch = currentUser?.branch || STATE.branches?.[0] || 'Tuzla TRC';
     if (userBranch && userBranch !== 'all') {
         setupShiftListener(userBranch);
     } else {
         // Admin için ilk şubeyi dinle
-        const firstBranch = STATE.branches?.[0] || 'Tuzla TRC';
+        const firstBranch = STATE.branches?.[0] || 'Tuzla Port';
         setupShiftListener(firstBranch);
     }
     
@@ -29242,35 +29595,11 @@ async function loadChecklist() {
         return;
     }
     
-    // G16: Kullanıcının shift durumunu kontrol et
-    const userShiftStatus = await checkCurrentUserShift(branch, date);
-    const isManager = userShiftStatus.isManager;
-    const hasShift = userShiftStatus.hasShift;
+    // Shift erişim kontrolü (saat bazlı, ±1 saat tolerans)
+    const accessResult = await checkShiftAccess(branch, new Date(date));
     
-    // Shift yoksa uyarı göster ve formu disable et (yöneticiler hariç)
-    if (!hasShift && !isManager) {
-        container.innerHTML = `
-            <div style="text-align:center;padding:60px 20px">
-                <div style="width:80px;height:80px;margin:0 auto 20px;background:linear-gradient(135deg,#fee2e2,#fecaca);border-radius:50%;display:flex;align-items:center;justify-content:center">
-                    <svg width="40" height="40" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10"/>
-                        <path d="M12 8v4M12 16h.01"/>
-                    </svg>
-                </div>
-                <div style="font-size:1.2rem;font-weight:600;color:var(--tx);margin-bottom:8px">Şu An Shift'iniz Yok</div>
-                <div style="color:var(--tx2);margin-bottom:20px">Bu şubede bugün için aktif bir shift kaydınız bulunmuyor.</div>
-                <div style="padding:16px;background:var(--bg3);border-radius:12px;text-align:left;max-width:400px;margin:0 auto">
-                    <div style="font-size:.85rem;color:var(--tx2)">
-                        <div style="margin-bottom:8px"><strong>Şube:</strong> ${branch}</div>
-                        <div style="margin-bottom:8px"><strong>Tarih:</strong> ${date}</div>
-                        <div><strong>Kullanıcı:</strong> ${currentUser?.name || '-'}</div>
-                    </div>
-                </div>
-                <div style="margin-top:20px;font-size:.8rem;color:var(--tx3)">
-                    Shift'iniz olduğunu düşünüyorsanız yöneticinize başvurun.
-                </div>
-            </div>
-        `;
+    if (!accessResult.hasAccess) {
+        container.innerHTML = renderShiftLockScreen(accessResult, 'checklist');
         checklistLoadingLock = false;
         return;
     }
