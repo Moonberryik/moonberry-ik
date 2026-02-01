@@ -29079,8 +29079,9 @@ function initCheckRulesUI() {
     // Sıralama - temizlik kaldırıldı, sadece aylik var
     const orderedTypes = ['gunluk', 'platform', 'acilis', 'kapanis', 'mudur', 'aylik', 'haftalik'];
     
-    // temizlik'i listeden çıkar (aylik ile aynı)
+    // temizlik'i ve guncel'i listeden çıkar (aylik ile aynı, guncel = gunluk alias)
     allTypes.delete('temizlik');
+    allTypes.delete('guncel'); // gunluk ile aynı, duplicate önlenir
     const sortedTypes = [...allTypes].sort((a, b) => {
         const aIdx = orderedTypes.indexOf(a);
         const bIdx = orderedTypes.indexOf(b);
@@ -30408,9 +30409,68 @@ async function loadChecklist() {
         const isManager = ['yonetici', 'bolge_muduru', 'magaza_muduru'].includes(currentUser?.role);
         
         if (isExpired && !isManager) {
-            // Süre dolmuş - bilgilendirme göster
             const missedPoints = rules.points?.missed || -2;
             
+            // ═══════════════════════════════════════════════════════════
+            // TAMAMLANMIŞ MI KONTROL ET
+            // ═══════════════════════════════════════════════════════════
+            if (existingSubmission && existingSubmission.completedAt) {
+                // ✅ TAMAMLANMIŞ - Başarı mesajı göster
+                const completedAt = existingSubmission.completedAt?.toDate?.() || new Date(existingSubmission.completedAt);
+                const completedBy = existingSubmission.completedByName || existingSubmission.completedBy || 'Bilinmiyor';
+                const completedTime = completedAt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+                const completedDate = completedAt.toLocaleDateString('tr-TR');
+                const pointStatus = existingSubmission.pointStatus || 'onTime';
+                const earnedPoints = existingSubmission.points ?? (pointStatus === 'onTime' ? (rules.points?.onTime || 1) : (rules.points?.late || 0));
+                const pointColor = earnedPoints > 0 ? '#27ae60' : earnedPoints < 0 ? '#e74c3c' : 'var(--tx2)';
+                const pointSign = earnedPoints > 0 ? '+' : '';
+                
+                container.innerHTML = `
+                    <div style="text-align:center;padding:60px 20px">
+                        <div style="width:90px;height:90px;margin:0 auto 24px;background:linear-gradient(135deg,rgba(39,174,96,.15),rgba(39,174,96,.25));border-radius:50%;display:flex;align-items:center;justify-content:center">
+                            <svg width="48" height="48" fill="none" stroke="#27ae60" stroke-width="1.5" viewBox="0 0 24 24">
+                                <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                                <polyline points="22 4 12 14.01 9 11.01"/>
+                            </svg>
+                        </div>
+                        <div style="font-size:1.4rem;font-weight:700;color:#27ae60;margin-bottom:12px">✓ Başarıyla Tamamlandı</div>
+                        <div style="color:var(--tx2);max-width:400px;margin:0 auto;line-height:1.6;font-size:1rem">
+                            <strong>${typeName}</strong> checklistesi başarıyla dolduruldu.
+                        </div>
+                        
+                        <div style="margin-top:24px;padding:16px 24px;background:var(--bg3);border-radius:12px;display:inline-block">
+                            <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;justify-content:center">
+                                <div style="text-align:center">
+                                    <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Dolduran</div>
+                                    <div style="font-size:1.1rem;font-weight:600;color:#27ae60">${completedBy}</div>
+                                </div>
+                                <div style="width:1px;height:40px;background:var(--cardBorder)"></div>
+                                <div style="text-align:center">
+                                    <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Saat</div>
+                                    <div style="font-size:1.1rem;font-weight:600;color:var(--tx)">${completedTime}</div>
+                                </div>
+                                <div style="width:1px;height:40px;background:var(--cardBorder)"></div>
+                                <div style="text-align:center">
+                                    <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Puan</div>
+                                    <div style="font-size:1.1rem;font-weight:700;color:${pointColor}">${pointSign}${earnedPoints}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top:24px;font-size:.85rem;color:var(--tx3)">
+                            Bir sonraki vardiya için hazır olun. 🌟
+                        </div>
+                        
+                        <button onclick="showPage('home')" style="margin-top:24px;background:linear-gradient(135deg,#008c95,#008c95dd);color:white;border:none;padding:12px 28px;border-radius:10px;font-weight:600;cursor:pointer;font-size:.95rem">
+                            Ana Sayfaya Dön
+                        </button>
+                    </div>
+                `;
+                checklistLoadingLock = false;
+                return;
+            }
+            
+            // ❌ TAMAMLANMAMIŞ - Süre doldu bilgilendirme göster
             container.innerHTML = `
                 <div style="text-align:center;padding:60px 20px">
                     <div style="width:90px;height:90px;margin:0 auto 24px;background:linear-gradient(135deg,rgba(231,76,60,.15),rgba(231,76,60,.25));border-radius:50%;display:flex;align-items:center;justify-content:center">
@@ -33911,7 +33971,19 @@ async function submitChecklist(branch, type, date, timeSlot) {
     }
     
     if (!isManager) {
-        // Giriş yapan kullanıcının adı
+        // ═══════════════════════════════════════════════════════════
+        // 1️⃣ SHIFT KONTROLÜ - Kişi şu an shift'te mi?
+        // ═══════════════════════════════════════════════════════════
+        const shiftCheck = await checkPersonShiftToday(branch, currentUser?.name, new Date());
+        if (!shiftCheck.isWorking) {
+            console.log('[Checklist] ❌ Shift kontrolü başarısız:', shiftCheck.reason);
+            toast(`Şu an shift'inizde değilsiniz. ${shiftCheck.reason || ''}`, 'error');
+            return;
+        }
+        
+        // ═══════════════════════════════════════════════════════════
+        // 2️⃣ KENDİ ADINA MI KONTROLÜ
+        // ═══════════════════════════════════════════════════════════
         const currentUserName = currentUser?.name?.toLowerCase() || '';
         const enteredName = personName.toLowerCase();
         
@@ -33926,7 +33998,9 @@ async function submitChecklist(branch, type, date, timeSlot) {
             return;
         }
         
-        // Sorumlu personel listesini kontrol et
+        // ═══════════════════════════════════════════════════════════
+        // 3️⃣ SORUMLU PERSONEL KONTROLÜ
+        // ═══════════════════════════════════════════════════════════
         const responsibleEl = document.getElementById('responsiblePersonnelList');
         const responsibleNames = responsibleEl ? 
             Array.from(responsibleEl.querySelectorAll('span[style*="background"]')).map(s => s.textContent.trim().toLowerCase()) : [];
