@@ -35200,7 +35200,47 @@ function showChecklistSettings() {
 
 // Temizlik maddelerini shiftteki personele dinamik dağıt
 async function distributeTemizlikItems(branch, date) {
+    const dateStr = typeof date === 'string' ? date : formatDateLocal(new Date(date));
     const weekKey = getWeekKey(new Date(date));
+    const assignmentDocId = `${branchToKey(branch)}_${dateStr}`;
+    
+    // ═══════════════════════════════════════════════════════════
+    // 1️⃣ KAYITLI ATAMA VAR MI KONTROL ET
+    // ═══════════════════════════════════════════════════════════
+    try {
+        const existingAssignment = await db.collection('temizlikAssignments').doc(assignmentDocId).get();
+        
+        if (existingAssignment.exists) {
+            const savedData = existingAssignment.data();
+            const savedShiftHash = savedData.shiftHash;
+            
+            // Güncel shift hash'ini hesapla
+            const currentShiftSnap = await db.collection('shifts')
+                .where('branch', '==', branch)
+                .where('weekStart', '==', weekKey)
+                .limit(1)
+                .get();
+            
+            if (!currentShiftSnap.empty) {
+                const currentShiftData = currentShiftSnap.docs[0].data();
+                const currentShiftHash = generateShiftHash(currentShiftData, date);
+                
+                // Shift değişmediyse kayıtlı atamayı kullan
+                if (savedShiftHash === currentShiftHash) {
+                    console.log('[Temizlik] Kayıtlı atama kullanılıyor:', assignmentDocId);
+                    return savedData.distribution;
+                } else {
+                    console.log('[Temizlik] Shift değişti, yeni atama yapılacak');
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('[Temizlik] Kayıtlı atama kontrol hatası:', e);
+    }
+    
+    // ═══════════════════════════════════════════════════════════
+    // 2️⃣ YENİ ATAMA YAP
+    // ═══════════════════════════════════════════════════════════
     
     // Shift verilerini al
     const shiftSnap = await db.collection('shifts')
@@ -35564,15 +35604,61 @@ async function distributeTemizlikItems(branch, date) {
         });
     });
     
-    return {
+    const distribution = {
         branch,
-        date,
+        date: dateStr,
         weekKey,
         personnel,
         itemsByShift,
         assignments,
         totalItems: allItems.length
     };
+    
+    // ═══════════════════════════════════════════════════════════
+    // 3️⃣ ATAMAYI FIREBASE'E KAYDET
+    // ═══════════════════════════════════════════════════════════
+    try {
+        const shiftHash = generateShiftHash(shiftData, date);
+        await db.collection('temizlikAssignments').doc(assignmentDocId).set({
+            branch,
+            date: dateStr,
+            weekKey,
+            shiftHash,
+            distribution,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log('[Temizlik] Atama kaydedildi:', assignmentDocId);
+    } catch (e) {
+        console.warn('[Temizlik] Atama kaydetme hatası:', e);
+    }
+    
+    return distribution;
+}
+
+// Shift verisi hash'i oluştur - değişiklik tespiti için
+function generateShiftHash(shiftData, date) {
+    const personelShifts = shiftData?.personelShifts || {};
+    const personelFullNames = shiftData?.personelFullNames || {};
+    
+    // Gün indeksini hesapla
+    const d = new Date(date);
+    let dayIndex = d.getDay() - 1;
+    if (dayIndex < 0) dayIndex = 6;
+    const dayKey = String(dayIndex);
+    
+    // Bugünkü shift'leri topla
+    const todayShifts = [];
+    Object.entries(personelShifts).forEach(([personId, shifts]) => {
+        const todayShift = shifts[dayKey];
+        if (todayShift) {
+            todayShifts.push(`${personId}:${todayShift}`);
+        }
+    });
+    
+    // Sıralı string oluştur ve basit hash yap
+    todayShifts.sort();
+    return todayShifts.join('|');
 }
 
 // Temizlik maddesi için 48 saat cooldown kontrolü
@@ -35959,25 +36045,20 @@ async function renderTemizlikChecklist(container, branch, date) {
 // Temizlik maddesi tıklama handler
 async function handleTemizlikItemClick(branch, itemId, itemText, personId, personName, shiftType) {
     // ═══════════════════════════════════════════════════════════
-    // YETKİ KONTROLÜ - Sadece kendine atanan maddeyi veya müdür tamamlayabilir
+    // KENDİNE ATANMIŞ MI KONTROLÜ
+    // Herkes (müdür dahil) sadece kendine atanan maddeyi tamamlayabilir
     // ═══════════════════════════════════════════════════════════
-    const isManager = currentUser?.role === 'magaza_muduru' || 
-                      currentUser?.role === 'mudur_yardimcisi' || 
-                      currentUser?.role === 'magaza_mudur_yardimcisi' ||
-                      currentUser?.role === 'bolge_muduru' ||
-                      currentUser?.role === 'yonetici';
-    
     const isSamePerson = currentUser?.name === personName ||
                          normalizePersonelId(currentUser?.name) === normalizePersonelId(personName) ||
                          formatDisplayName(currentUser?.name) === formatDisplayName(personName);
     
-    if (!isManager && !isSamePerson) {
-        toast('Sadece size atanan maddeleri tamamlayabilirsiniz', 'error');
+    if (!isSamePerson) {
+        toast(`Bu madde ${personName} adına atanmış. Sadece kendi maddelerinizi tamamlayabilirsiniz.`, 'error');
         return;
     }
     
     // Onay iste
-    const confirmed = confirm(`"${itemText}" maddesini tamamlamak istiyor musunuz?\n\nSorumlu: ${personName}`);
+    const confirmed = confirm(`"${itemText}" maddesini tamamlamak istiyor musunuz?`);
     if (!confirmed) return;
     
     // Tamamla
@@ -35997,17 +36078,38 @@ async function completeTemizlikItem(branch, itemId, itemText, personId, personNa
     
     try {
         // ═══════════════════════════════════════════════════════════
-        // 1️⃣ SHIFT KONTROLÜ - Kişi bugün bu şubede çalışıyor mu?
+        // 1️⃣ GİRİŞ YAPAN KİŞİ SHIFT KONTROLÜ
+        // Herkes (müdür dahil) sadece KENDİ shift'inde doldurabilir
         // ═══════════════════════════════════════════════════════════
-        const shiftCheck = await checkPersonShiftToday(branch, personName, now);
+        const currentUserName = currentUser?.name;
+        if (!currentUserName) {
+            toast('Oturum bilgisi alınamadı. Lütfen sayfayı yenileyin.', 'error');
+            return false;
+        }
+        
+        const shiftCheck = await checkPersonShiftToday(branch, currentUserName, now);
         if (!shiftCheck.isWorking) {
-            console.log(`[Temizlik] ❌ ${personName} bugün shiftte değil`);
-            toast(`Bugün shift'inizde değilsiniz. Sadece shift'inizdeyken tamamlayabilirsiniz.`, 'error');
+            console.log(`[Temizlik] ❌ ${currentUserName} şu an shift'te değil:`, shiftCheck.reason);
+            toast(`Şu an shift'inizde değilsiniz. ${shiftCheck.reason || ''}`, 'error');
             return false;
         }
         
         // ═══════════════════════════════════════════════════════════
-        // 2️⃣ SAAT KONTROLÜ - Vardiya penceresi içinde mi?
+        // 2️⃣ KENDİNE ATANMIŞ MI KONTROLÜ
+        // Sadece kendine atanan maddeyi tamamlayabilir
+        // ═══════════════════════════════════════════════════════════
+        const isSamePerson = currentUserName === personName ||
+                             normalizePersonelId(currentUserName) === normalizePersonelId(personName) ||
+                             formatDisplayName(currentUserName) === formatDisplayName(personName);
+        
+        if (!isSamePerson) {
+            console.log(`[Temizlik] ❌ ${currentUserName} başkasının (${personName}) maddesini dolduramaz`);
+            toast(`Bu madde ${personName} adına atanmış. Sadece kendi maddelerinizi tamamlayabilirsiniz.`, 'error');
+            return false;
+        }
+        
+        // ═══════════════════════════════════════════════════════════
+        // 3️⃣ PENCERE KONTROLÜ - Vardiya penceresi içinde mi?
         // ═══════════════════════════════════════════════════════════
         const personShiftType = shiftType || shiftCheck.shiftType || 'araci';
         const windowCheck = checkTemizlikWindow(personShiftType, now);
@@ -36019,7 +36121,7 @@ async function completeTemizlikItem(branch, itemId, itemText, personId, personNa
         }
         
         // ═══════════════════════════════════════════════════════════
-        // 3️⃣ COOLDOWN KONTROLÜ
+        // 4️⃣ COOLDOWN KONTROLÜ
         // ═══════════════════════════════════════════════════════════
         const cooldown = await checkTemizlikCooldown(branch, itemId, now);
         if (!cooldown.canComplete) {
@@ -36028,7 +36130,7 @@ async function completeTemizlikItem(branch, itemId, itemText, personId, personNa
         }
         
         // ═══════════════════════════════════════════════════════════
-        // 4️⃣ TAMAMLAMA KAYDI
+        // 5️⃣ TAMAMLAMA KAYDI
         // ═══════════════════════════════════════════════════════════
         await db.collection('temizlikCompletions').doc(docId).set({
             branch,
