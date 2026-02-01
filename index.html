@@ -35846,9 +35846,15 @@ async function renderTemizlikChecklist(container, branch, date) {
                         const cooldown = await checkTemizlikCooldown(branch, item.id, new Date());
                         const isCompleted = !cooldown.canComplete;
                         
+                        // ═══════════════════════════════════════════════════════════
+                        // PENCERE KONTROLÜ - Vardiya saati geçti mi?
+                        // ═══════════════════════════════════════════════════════════
+                        const windowCheck = checkTemizlikWindow(shiftType, new Date());
+                        const isWindowClosed = !windowCheck.isOpen;
+                        
                         // Puanı CHECK_RULES'dan veya item'dan al
                         const temizlikRules = CHECK_RULES.aylik || {};
-                        const defaultPoints = temizlikRules.points?.done ?? temizlikRules.points?.onTime ?? 0.2;
+                        const defaultPoints = temizlikRules.points?.done ?? temizlikRules.points?.onTime ?? 0.1;
                         const points = item.points?.done ?? item.points?.onTime ?? defaultPoints;
                         
                         // Türkçe virgül formatı
@@ -35868,12 +35874,29 @@ async function renderTemizlikChecklist(container, branch, date) {
                             categoryInfo += ` (Ayın ${item.dates.join(', ')}. günleri)`;
                         }
                         
-                        // Sadece kendi maddesini görebilir - Düzenleyebilirsin badge'i kaldırıldı
-                        const canComplete = canEdit && !isCompleted;
+                        // Tamamlanabilir mi? (canEdit + tamamlanmamış + pencere açık)
+                        const canComplete = canEdit && !isCompleted && !isWindowClosed;
+                        
+                        // Durum ve renk belirleme
+                        let borderColor = 'var(--bg4)';
+                        let bgColor = 'var(--bg2)';
+                        let itemOpacity = '1';
+                        let statusClass = '';
+                        
+                        if (isCompleted) {
+                            borderColor = '#008c95';
+                            itemOpacity = '.8';
+                            statusClass = 'completed';
+                        } else if (isWindowClosed) {
+                            borderColor = '#e74c3c';
+                            bgColor = 'rgba(231,76,60,.05)';
+                            itemOpacity = '.8';
+                            statusClass = 'missed';
+                        }
                         
                         html += `
-                            <div class="temizlik-item ${isCompleted ? 'completed' : ''}" 
-                                 style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg2);border-radius:8px;border:1px solid ${isCompleted ? '#008c95' : 'var(--bg4)'};${isCompleted ? 'opacity:.8' : ''}">
+                            <div class="temizlik-item ${statusClass}" 
+                                 style="display:flex;align-items:center;gap:12px;padding:12px;background:${bgColor};border-radius:8px;border:1px solid ${borderColor};opacity:${itemOpacity}">
                                 
                                 <div style="flex:1">
                                     <div style="font-size:.9rem;color:var(--tx);${isCompleted ? 'text-decoration:line-through;opacity:.7' : ''}">${item.text}</div>
@@ -35881,19 +35904,29 @@ async function renderTemizlikChecklist(container, branch, date) {
                                         ${categoryInfo ? `<span>${categoryInfo}</span><span>•</span>` : ''}
                                         <span style="color:${points > 0 ? '#27ae60' : '#e74c3c'}">${points > 0 ? '+' : ''}${pointsDisplay} puan</span>
                                         ${isCompleted && cooldown.lastCompletedBy ? `<span>•</span><span style="display:inline-flex;align-items:center;gap:2px;color:#008c95"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg> ${cooldown.lastCompletedBy}</span>` : ''}
+                                        ${isWindowClosed && !isCompleted ? `<span>•</span><span style="color:#e74c3c">Süre geçti</span>` : ''}
                                     </div>
                                 </div>
                                 
                                 ${canEdit ? `
-                                    <button class="btn btn-sm" 
-                                            onclick="handleTemizlikItemClick('${branch}', '${item.id}', '${safeItemText}', '${safePersonId}', '${safePersonName}')"
-                                            ${isCompleted ? 'disabled' : ''}
-                                            style="min-width:100px;font-size:.75rem;display:flex;align-items:center;justify-content:center;gap:6px;background:${isCompleted ? '#008c95' : '#ff8674'};color:#fff;border:none;opacity:${isCompleted ? '.7' : '1'}">
-                                        ${isCompleted ? '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg> Yapıldı' : '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg> Tamamla'}
-                                    </button>
+                                    ${isCompleted ? `
+                                        <div style="min-width:100px;font-size:.75rem;display:flex;align-items:center;justify-content:center;gap:6px;background:#008c95;color:#fff;border-radius:6px;padding:8px 12px;opacity:.7">
+                                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg> Yapıldı
+                                        </div>
+                                    ` : isWindowClosed ? `
+                                        <div style="min-width:100px;font-size:.75rem;display:flex;align-items:center;justify-content:center;gap:6px;background:#e74c3c;color:#fff;border-radius:6px;padding:8px 12px;opacity:.7">
+                                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> Süre Geçti
+                                        </div>
+                                    ` : `
+                                        <button class="btn btn-sm" 
+                                                onclick="handleTemizlikItemClick('${branch}', '${item.id}', '${safeItemText}', '${safePersonId}', '${safePersonName}', '${shiftType}')"
+                                                style="min-width:100px;font-size:.75rem;display:flex;align-items:center;justify-content:center;gap:6px;background:#ff8674;color:#fff;border:none">
+                                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg> Tamamla
+                                        </button>
+                                    `}
                                 ` : `
-                                    <div style="min-width:80px;text-align:center;font-size:.75rem;display:flex;align-items:center;justify-content:center;gap:4px;color:${isCompleted ? '#008c95' : 'var(--tx3)'}">
-                                        ${isCompleted ? '<svg width="14" height="14" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg> Yapıldı' : '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg> Bekliyor'}
+                                    <div style="min-width:80px;text-align:center;font-size:.75rem;display:flex;align-items:center;justify-content:center;gap:4px;color:${isCompleted ? '#008c95' : isWindowClosed ? '#e74c3c' : 'var(--tx3)'}">
+                                        ${isCompleted ? '<svg width="14" height="14" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg> Yapıldı' : isWindowClosed ? '<svg width="14" height="14" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> Kaçırıldı' : '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg> Bekliyor'}
                                     </div>
                                 `}
                             </div>
@@ -35924,13 +35957,31 @@ async function renderTemizlikChecklist(container, branch, date) {
 }
 
 // Temizlik maddesi tıklama handler
-async function handleTemizlikItemClick(branch, itemId, itemText, personId, personName) {
+async function handleTemizlikItemClick(branch, itemId, itemText, personId, personName, shiftType) {
+    // ═══════════════════════════════════════════════════════════
+    // YETKİ KONTROLÜ - Sadece kendine atanan maddeyi veya müdür tamamlayabilir
+    // ═══════════════════════════════════════════════════════════
+    const isManager = currentUser?.role === 'magaza_muduru' || 
+                      currentUser?.role === 'mudur_yardimcisi' || 
+                      currentUser?.role === 'magaza_mudur_yardimcisi' ||
+                      currentUser?.role === 'bolge_muduru' ||
+                      currentUser?.role === 'yonetici';
+    
+    const isSamePerson = currentUser?.name === personName ||
+                         normalizePersonelId(currentUser?.name) === normalizePersonelId(personName) ||
+                         formatDisplayName(currentUser?.name) === formatDisplayName(personName);
+    
+    if (!isManager && !isSamePerson) {
+        toast('Sadece size atanan maddeleri tamamlayabilirsiniz', 'error');
+        return;
+    }
+    
     // Onay iste
     const confirmed = confirm(`"${itemText}" maddesini tamamlamak istiyor musunuz?\n\nSorumlu: ${personName}`);
     if (!confirmed) return;
     
     // Tamamla
-    const success = await completeTemizlikItem(branch, itemId, itemText, personId, personName);
+    const success = await completeTemizlikItem(branch, itemId, itemText, personId, personName, shiftType);
     
     if (success) {
         // Sayfayı yenile
@@ -35939,46 +35990,75 @@ async function handleTemizlikItemClick(branch, itemId, itemText, personId, perso
 }
 
 // Temizlik maddesini tamamla
-async function completeTemizlikItem(branch, itemId, itemText, personId, personName) {
+async function completeTemizlikItem(branch, itemId, itemText, personId, personName, shiftType) {
     const now = new Date();
-    const docId = `${branchToKey(branch)}_${itemId}_${formatDateLocal(now)}_${Date.now()}`;
+    const todayStr = formatDateLocal(now);
+    const docId = `${branchToKey(branch)}_${itemId}_${todayStr}_${Date.now()}`;
     
     try {
-        // Cooldown kontrolü
+        // ═══════════════════════════════════════════════════════════
+        // 1️⃣ SHIFT KONTROLÜ - Kişi bugün bu şubede çalışıyor mu?
+        // ═══════════════════════════════════════════════════════════
+        const shiftCheck = await checkPersonShiftToday(branch, personName, now);
+        if (!shiftCheck.isWorking) {
+            console.log(`[Temizlik] ❌ ${personName} bugün shiftte değil`);
+            toast(`Bugün shift'inizde değilsiniz. Sadece shift'inizdeyken tamamlayabilirsiniz.`, 'error');
+            return false;
+        }
+        
+        // ═══════════════════════════════════════════════════════════
+        // 2️⃣ SAAT KONTROLÜ - Vardiya penceresi içinde mi?
+        // ═══════════════════════════════════════════════════════════
+        const personShiftType = shiftType || shiftCheck.shiftType || 'araci';
+        const windowCheck = checkTemizlikWindow(personShiftType, now);
+        
+        if (!windowCheck.isOpen) {
+            console.log(`[Temizlik] ❌ ${personShiftType} penceresi kapalı:`, windowCheck.message);
+            toast(windowCheck.message, 'error');
+            return false;
+        }
+        
+        // ═══════════════════════════════════════════════════════════
+        // 3️⃣ COOLDOWN KONTROLÜ
+        // ═══════════════════════════════════════════════════════════
         const cooldown = await checkTemizlikCooldown(branch, itemId, now);
         if (!cooldown.canComplete) {
             toast(`Bu madde ${cooldown.remainingHours} saat sonra tekrar yapılabilir`, 'warning');
             return false;
         }
         
-        // Tamamlama kaydı
+        // ═══════════════════════════════════════════════════════════
+        // 4️⃣ TAMAMLAMA KAYDI
+        // ═══════════════════════════════════════════════════════════
         await db.collection('temizlikCompletions').doc(docId).set({
             branch,
             itemId,
             itemText,
             completedBy: personId,
             completedByName: personName,
+            shiftType: personShiftType,
             completedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            date: formatDateLocal(now)
+            date: todayStr
         });
         
         // Puanı CHECK_RULES'dan al (dinamik)
         const temizlikRules = CHECK_RULES.aylik || {};
-        const points = temizlikRules.points?.done ?? temizlikRules.points?.onTime ?? 0.2;
+        const points = temizlikRules.points?.done ?? temizlikRules.points?.onTime ?? 0.1;
         
         // Türkçe virgül formatı (gösterim için)
         const pointsDisplay = points.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
         
-        const noteId = `temizlik_${normalizePersonelId(personName)}_${formatDateLocal(now)}_${itemId}`;
+        const noteId = `temizlik_${normalizePersonelId(personName)}_${todayStr}_${itemId}`;
         await db.collection('puantajNotes').doc(noteId).set({
             personelId: normalizePersonelId(personName),
             personelName: personName,
             branch,
-            date: formatDateLocal(now),
+            date: todayStr,
             checkType: 'temizlik',
             itemId,
+            shiftType: personShiftType,
             status: 'done',
-            points,  // Nokta formatında kaydedilir (0.2)
+            points,  // Nokta formatında kaydedilir (0.1)
             note: `Temizlik: ${itemText}`,
             autoGenerated: true,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -35991,6 +36071,240 @@ async function completeTemizlikItem(branch, itemId, itemText, personId, personNa
         console.error('[Temizlik] Tamamlama hatası:', e);
         toast('Hata oluştu: ' + e.message, 'error');
         return false;
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// YARDIMCI FONKSİYONLAR - TEMİZLİK KONTROL
+// ═══════════════════════════════════════════════════════════
+
+// Kişinin bugün shiftte olup olmadığını kontrol et
+async function checkPersonShiftToday(branch, personName, date = new Date()) {
+    try {
+        const weekKey = getWeekKey(date);
+        const shiftSnap = await db.collection('shifts')
+            .where('branch', '==', branch)
+            .where('weekStart', '==', weekKey)
+            .limit(1)
+            .get();
+        
+        if (shiftSnap.empty) {
+            console.warn('[Temizlik] Shift verisi bulunamadı');
+            return { isWorking: false, shiftType: null, reason: 'Shift verisi bulunamadı' };
+        }
+        
+        const shiftData = shiftSnap.docs[0].data();
+        const personelShifts = shiftData.personelShifts || {};
+        const personelFullNames = shiftData.personelFullNames || {};
+        
+        // Gün indeksini hesapla (0=Pazartesi)
+        let dayIndex = date.getDay() - 1;
+        if (dayIndex < 0) dayIndex = 6;
+        const dayKey = String(dayIndex);
+        
+        // Kişiyi bul
+        let personShift = null;
+        let foundPersonId = null;
+        
+        for (const [personId, shifts] of Object.entries(personelShifts)) {
+            const fullName = personelFullNames[personId] || personId;
+            if (fullName === personName || 
+                normalizePersonelId(fullName) === normalizePersonelId(personName) ||
+                formatDisplayName(fullName) === formatDisplayName(personName)) {
+                personShift = shifts[dayKey];
+                foundPersonId = personId;
+                break;
+            }
+        }
+        
+        if (!personShift) {
+            return { isWorking: false, shiftType: null, reason: 'Shift verisi bulunamadı' };
+        }
+        
+        // OFF/İzin kontrolü
+        const cleanShift = personShift.replace(/\*/g, '').trim().toUpperCase();
+        const offValues = ['OFF', 'İ', 'Y.İ', 'X', '-', 'RAPORLU', 'RAPOR', 'İZİN', 'İZİNLİ', 'HASTA', 'YILLIK'];
+        if (offValues.includes(cleanShift) || cleanShift.startsWith('RAPOR') || cleanShift.startsWith('İZİN')) {
+            return { isWorking: false, shiftType: null, reason: 'Bugün izinli' };
+        }
+        
+        // Shift tipini belirle
+        const shiftType = categorizeShiftType(personShift, branch);
+        
+        // Şu an shift saatleri içinde mi?
+        const nowMinutes = date.getHours() * 60 + date.getMinutes();
+        const shiftHours = getShiftHours(personShift, branch, date);
+        
+        if (shiftHours) {
+            let isInShift = false;
+            if (shiftHours.end < shiftHours.start) {
+                // Gece geçişi (örn: 16:00-02:00)
+                isInShift = nowMinutes >= shiftHours.start || nowMinutes <= shiftHours.end;
+            } else {
+                isInShift = nowMinutes >= shiftHours.start && nowMinutes <= shiftHours.end;
+            }
+            
+            if (!isInShift) {
+                return { isWorking: false, shiftType, reason: 'Şu an shift saatleriniz dışında' };
+            }
+        }
+        
+        return { isWorking: true, shiftType, shift: personShift };
+        
+    } catch (e) {
+        console.error('[Temizlik] Shift kontrol hatası:', e);
+        // Hata durumunda REDDET - güvenlik öncelikli
+        return { isWorking: false, shiftType: null, reason: 'Shift verisi kontrol edilemedi' };
+    }
+}
+
+// Shift string'inden kategori belirle
+function categorizeShiftType(shiftStr, branch) {
+    if (!shiftStr) return 'araci';
+    
+    const cleanShift = shiftStr.replace(/\*/g, '').trim().toUpperCase();
+    
+    if (cleanShift.includes('AÇILIŞ') || cleanShift.includes('ACILIS')) return 'acilisci';
+    if (cleanShift.includes('KAPANIŞ') || cleanShift.includes('KAPANIS')) return 'kapanisci';
+    
+    // Saat formatı kontrolü
+    const timeMatch = shiftStr.match(/(\d{1,2}):(\d{2})\s*[-–\/]\s*(\d{1,2}):(\d{2})/);
+    if (timeMatch) {
+        const startHour = parseInt(timeMatch[1]);
+        const endHour = parseInt(timeMatch[3]);
+        
+        // Mağaza saatlerini al
+        const branchHours = BRANCH_HOURS[branch] || { open: '10:00', close: '23:00' };
+        const openH = parseInt(branchHours.open?.split(':')[0]) || 10;
+        let closeH = parseInt(branchHours.close?.split(':')[0]) || 23;
+        if (closeH < 6) closeH += 24;
+        const endHNorm = endHour < 6 ? endHour + 24 : endHour;
+        
+        if (Math.abs(startHour - openH) <= 1) return 'acilisci';
+        if (Math.abs(endHNorm - closeH) <= 1) return 'kapanisci';
+        return 'araci';
+    }
+    
+    if (cleanShift.includes('ARA') || cleanShift === 'ORTA') return 'araci';
+    
+    return 'araci';
+}
+
+// Temizlik doldurma penceresi kontrolü
+function checkTemizlikWindow(shiftType, now = new Date()) {
+    const rules = CHECK_RULES.aylik?.shifts || {};
+    const shiftRules = rules[shiftType] || rules.araci || { window: { start: '10:00', end: '23:00' } };
+    
+    const windowStart = shiftRules.window?.start || '10:00';
+    const windowEnd = shiftRules.window?.end || shiftRules.deadline || '23:00';
+    
+    const [startH, startM] = windowStart.split(':').map(Number);
+    const [endH, endM] = windowEnd.split(':').map(Number);
+    
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    let startMinutes = startH * 60 + startM;
+    let endMinutes = endH * 60 + endM;
+    
+    // Gece geçişi kontrolü (örn: 16:00-02:00)
+    if (endH < startH) {
+        endMinutes += 24 * 60;
+        // Şu an gece yarısından sonraysa
+        if (now.getHours() < 6) {
+            // Gece yarısından sonra - pencere içindeyiz
+            const adjustedNow = nowMinutes + 24 * 60;
+            if (adjustedNow <= endMinutes) {
+                return { isOpen: true };
+            }
+        } else if (nowMinutes >= startMinutes) {
+            // Başlangıçtan sonra
+            return { isOpen: true };
+        }
+        
+        const shiftLabels = { acilisci: 'Açılış', araci: 'Ara Vardiya', kapanisci: 'Kapanış' };
+        return { 
+            isOpen: false, 
+            message: `${shiftLabels[shiftType] || 'Bu vardiya'} doldurma süresi geçti (${windowStart}-${windowEnd})`
+        };
+    }
+    
+    // Normal aralık
+    if (nowMinutes < startMinutes) {
+        const shiftLabels = { acilisci: 'Açılış', araci: 'Ara Vardiya', kapanisci: 'Kapanış' };
+        return { 
+            isOpen: false, 
+            message: `${shiftLabels[shiftType] || 'Bu vardiya'} henüz başlamadı (${windowStart}'de aktif)`
+        };
+    }
+    
+    if (nowMinutes > endMinutes) {
+        const shiftLabels = { acilisci: 'Açılış', araci: 'Ara Vardiya', kapanisci: 'Kapanış' };
+        return { 
+            isOpen: false, 
+            message: `${shiftLabels[shiftType] || 'Bu vardiya'} doldurma süresi geçti (${windowEnd}'e kadardı)`
+        };
+    }
+    
+    return { isOpen: true };
+}
+
+// ============================================
+// ESKİ +1 PUAN KAYITLARINI TEMİZLE
+// ============================================
+// Bu fonksiyon sadece yönetici tarafından manuel çağrılabilir
+async function cleanupOldTemizlikPoints(dryRun = true) {
+    console.log('═'.repeat(50));
+    console.log('🔧 ESKİ TEMİZLİK PUANLARI TEMİZLEME');
+    console.log('   Mode:', dryRun ? 'DRY RUN (sadece göster)' : '⚠️ GERÇEK DÜZELTME');
+    console.log('═'.repeat(50));
+    
+    try {
+        // Doğru puan değerini al (dinamik)
+        const correctPoints = CHECK_RULES.aylik?.points?.done ?? CHECK_RULES.aylik?.points?.onTime ?? 0.1;
+        console.log('   Doğru puan değeri:', correctPoints);
+        
+        // +1 olan temizlik kayıtlarını bul
+        const snapshot = await db.collection('puantajNotes')
+            .where('checkType', '==', 'temizlik')
+            .where('points', '==', 1)
+            .get();
+        
+        console.log(`   Bulunan +1 puan kayıtları: ${snapshot.size}`);
+        
+        if (snapshot.empty) {
+            console.log('✅ Temizlenecek kayıt yok!');
+            return { updated: 0, total: 0 };
+        }
+        
+        let updated = 0;
+        const batch = db.batch();
+        
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            console.log(`   - ${data.personelName}: ${data.itemId} (${data.date})`);
+            
+            if (!dryRun) {
+                batch.update(doc.ref, { 
+                    points: correctPoints,
+                    _correctedFrom: 1,
+                    _correctedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                updated++;
+            }
+        });
+        
+        if (!dryRun && updated > 0) {
+            await batch.commit();
+            console.log(`\n✅ ${updated} kayıt düzeltildi (${correctPoints} puan olarak)`);
+        } else if (dryRun) {
+            console.log(`\n📋 DRY RUN: ${snapshot.size} kayıt düzeltilecek`);
+            console.log('   Gerçek düzeltme için: cleanupOldTemizlikPoints(false)');
+        }
+        
+        return { updated, total: snapshot.size };
+        
+    } catch (e) {
+        console.error('❌ Hata:', e);
+        return { error: e.message };
     }
 }
 
