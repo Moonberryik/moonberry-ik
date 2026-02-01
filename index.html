@@ -35248,6 +35248,12 @@ async function getAssignmentPool(branch) {
             // Aktif olmayan personeli atla
             if (d.aktif === false || d.active === false || d.isActive === false) return;
             
+            // Checklist muafiyeti olan personeli atla (part-time)
+            if (d.checklistExempt === true) {
+                console.log('[Haftalık] Muaf personel, atlanıyor:', d.codeName || d.name);
+                return;
+            }
+            
             // Yöneticileri hariç tut (bölge müdürü, genel yönetici)
             if (['yonetici', 'bolge_muduru'].includes(d.role)) return;
             
