@@ -31222,6 +31222,93 @@ function renderChecklistForm(items, branch, type, date, timeSlot, submittedData,
     console.log('Zaman kontrolü:', { type, isInTimeWindow, timeWindowMessage, canFillForm });
     // ==================== ZAMAN KONTROLÜ SONU ====================
     
+    // ==================== ERİŞİM ENGELİ - SADECE UYARI GÖSTER ====================
+    // Eğer checklist doldurulamıyorsa (atanmamış veya zaman dışı), sadece uyarı göster
+    // Yöneticiler hariç - onlar her zaman görebilir
+    if (!canFillForm && !isSubmitted && !isManager) {
+        const currentUserDisplayNameShort = getPersonelDisplayName(currentUser) || currentUser?.name || '';
+        
+        let blockReasons = [];
+        
+        // Atanmamış uyarısı
+        if (!isAssignedToMe) {
+            blockReasons.push({
+                icon: `<svg width="24" height="24" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>`,
+                title: 'Bu Checklist Size Atanmamış',
+                message: `Bu görevi <strong>${shiftPersonnel.join(', ')}</strong> dolduracak. Yalnızca size atanan checklisti doldurabilirsiniz.`,
+                detail: `Giriş yapan: ${currentUserDisplayNameShort}`,
+                color: '#e74c3c',
+                bgColor: 'rgba(231,76,60,.1)'
+            });
+        }
+        
+        // Zaman dışı uyarısı
+        if (!isInTimeWindow) {
+            blockReasons.push({
+                icon: `<svg width="24" height="24" fill="none" stroke="#f39c12" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`,
+                title: 'Zaman Aralığı Dışında',
+                message: timeWindowMessage || 'Bu checklist şu anda aktif değil.',
+                detail: `Şu anki saat: ${new Date().toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})}`,
+                color: '#f39c12',
+                bgColor: 'rgba(243,156,18,.1)'
+            });
+        }
+        
+        // Checklist tipi bilgisi
+        let typeInfo = CHECKLIST_TYPES[branch]?.find(t => t.id === type);
+        const iconSvg = getIcon(typeInfo?.icon || 'clipboard-check');
+        
+        container.innerHTML = `
+            <div class="form-section">
+                <!-- HEADER -->
+                <div style="margin-bottom:24px">
+                    <div style="font-size:1.3rem;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:10px">
+                        <span style="opacity:.7">${iconSvg}</span>
+                        ${typeInfo?.name || type}
+                    </div>
+                    <div style="font-size:.85rem;color:var(--tx2);margin-top:4px">${branch} • ${new Date(date).toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})}${timeSlot ? ' • ' + timeSlot : ''}</div>
+                </div>
+                
+                <!-- ERİŞİM ENGELİ UYARILARI -->
+                ${blockReasons.map(reason => `
+                    <div style="margin-bottom:16px;padding:20px;background:linear-gradient(135deg,${reason.bgColor},${reason.bgColor.replace('.1', '.05')});border:2px solid ${reason.color}33;border-radius:14px">
+                        <div style="display:flex;align-items:flex-start;gap:14px">
+                            <div style="width:48px;height:48px;background:${reason.color}20;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                ${reason.icon}
+                            </div>
+                            <div style="flex:1">
+                                <div style="font-weight:700;color:${reason.color};font-size:1.05rem;margin-bottom:8px">${reason.title}</div>
+                                <div style="font-size:.9rem;color:var(--tx2);line-height:1.6">${reason.message}</div>
+                                <div style="margin-top:10px;font-size:.85rem;color:var(--tx3)">${reason.detail}</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+                
+                <!-- BİLGİLENDİRME -->
+                <div style="margin-top:24px;padding:20px;background:var(--bg3);border-radius:14px;text-align:center">
+                    <div style="width:64px;height:64px;margin:0 auto 16px;background:linear-gradient(135deg,rgba(0,140,149,.1),rgba(0,140,149,.2));border-radius:50%;display:flex;align-items:center;justify-content:center">
+                        <svg width="32" height="32" fill="none" stroke="#008c95" stroke-width="1.5" viewBox="0 0 24 24">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                    </div>
+                    <div style="font-size:1.1rem;font-weight:600;color:var(--tx);margin-bottom:8px">Bu Checklist Şu Anda Doldurulamaz</div>
+                    <div style="font-size:.9rem;color:var(--tx2);max-width:400px;margin:0 auto;line-height:1.6">
+                        ${!isAssignedToMe && !isInTimeWindow 
+                            ? 'Bu checklist size atanmamış ve şu an aktif saatleri dışında.' 
+                            : !isAssignedToMe 
+                                ? 'Bu checklist size atanmamış. Sadece sorumlu personel doldurabilir.' 
+                                : 'Bu checklist şu an aktif saatleri dışında. Lütfen belirtilen zaman aralığında tekrar deneyin.'}
+                    </div>
+                    <button onclick="showPage('home')" style="margin-top:20px;background:linear-gradient(135deg,#008c95,#008c95dd);color:white;border:none;padding:12px 28px;border-radius:10px;font-weight:600;cursor:pointer;font-size:.95rem">
+                        Ana Sayfaya Dön
+                    </button>
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
     // ==================== ERİŞİM KONTROLÜ SONU ====================
     
     // Temizlik ve Bakım için tarih filtreleme
