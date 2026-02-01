@@ -24537,11 +24537,30 @@ async function loadTodayChecks() {
             
             const temizlikSubmissionId = `${branchToKey(branch)}_aylik_${todayStr}_${currentShiftType}`;
             let temizlikCompleted = false;
+            let temizlikPartiallyCompleted = false;
             
             try {
+                // Önce eski checklistSubmissions kontrolü
                 const doc = await db.collection('checklistSubmissions').doc(temizlikSubmissionId).get();
-                temizlikCompleted = doc.exists;
-            } catch (e) {}
+                if (doc.exists) {
+                    temizlikCompleted = true;
+                } else {
+                    // temizlikCompletions'dan bugün bu şube için tamamlanan maddeleri say
+                    const completionsSnap = await db.collection('temizlikCompletions')
+                        .where('branch', '==', branch)
+                        .where('date', '==', todayStr)
+                        .get();
+                    
+                    if (!completionsSnap.empty) {
+                        const completedCount = completionsSnap.size;
+                        // 3+ madde tamamlandıysa "tamamlandı" say (makul bir eşik)
+                        temizlikCompleted = completedCount >= 3;
+                        temizlikPartiallyCompleted = completedCount > 0 && completedCount < 3;
+                    }
+                }
+            } catch (e) {
+                console.warn('[Dashboard] Temizlik kontrol hatası:', e);
+            }
             
             // Aktiflik ve kaçırılma kontrolü
             const [tafH, tafM] = temizlikActiveFrom.split(':').map(Number);
@@ -35769,36 +35788,13 @@ async function renderTemizlikChecklist(container, branch, date) {
             `;
             
             if (people.length === 0) {
-                // Saat geçti mi kontrol et
-                const shiftRules = TEMIZLIK_SHIFT_RULES || {};
-                const shiftTypeKey = shiftType === 'acilis' ? 'acilisci' : shiftType === 'kapanis' ? 'kapanisci' : 'araci';
-                const deadline = shiftRules[shiftTypeKey]?.window?.end || shiftRules[shiftTypeKey]?.deadline || '23:59';
-                
-                const now = new Date();
-                const [dH, dM] = deadline.split(':').map(Number);
-                let deadlineDate = new Date(now);
-                deadlineDate.setHours(dH, dM, 0, 0);
-                
-                // Gece geçişi kontrolü (01:00, 02:00 gibi)
-                if (dH < 6) {
-                    deadlineDate.setDate(deadlineDate.getDate() + 1);
-                }
-                
-                const isDeadlinePassed = now > deadlineDate;
-                const shiftLabel = shiftConfig.label.toLowerCase();
-                
-                const message = isDeadlinePassed 
-                    ? `${shiftConfig.label} doldurma saati (${deadline}) geçti. Maddeler diğer vardiyalara aktarıldı.`
-                    : `Bu vardiyada personel yok. Maddeler diğer vardiyalara dağıtıldı.`;
-                
+                // Personel yok - maddeler doldurulmamış sayılacak
                 html += `
-                    <div style="padding:20px;background:var(--bg3);border-radius:10px;text-align:center;color:var(--tx2);display:flex;align-items:center;justify-content:center;gap:8px">
-                        <svg width="18" height="18" fill="none" stroke="${isDeadlinePassed ? '#e74c3c' : '#f39c12'}" stroke-width="2" viewBox="0 0 24 24">
-                            ${isDeadlinePassed 
-                                ? '<circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>' 
-                                : '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'}
+                    <div style="padding:20px;background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.2);border-radius:10px;text-align:center;color:#c0392b;display:flex;align-items:center;justify-content:center;gap:8px">
+                        <svg width="18" height="18" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                         </svg>
-                        ${message}
+                        Bu vardiyada atanmış personel yok. Doldurulmayan maddeler eksi puan olarak yansır.
                     </div>
                 `;
             } else {
