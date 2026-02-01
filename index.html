@@ -24110,10 +24110,13 @@ async function loadTodayChecks() {
         
         // Müdür Kontrol: sadece mağaza müdürü veya yardımcı
         if (checkType === 'mudur') {
+            // Önce müdürü ara
             const mudur = allActiveList.find(p => p.role === 'magaza_muduru');
             if (mudur) return [mudur.name];
+            // Müdür yoksa yardımcı
             const yardimci = allActiveList.find(p => p.role === 'mudur_yardimcisi' || p.role === 'magaza_mudur_yardimcisi');
             if (yardimci) return [yardimci.name];
+            // Bölge müdürü
             const bolge = allActiveList.find(p => p.role === 'bolge_muduru');
             if (bolge) return [bolge.name];
             return [];
@@ -24126,10 +24129,26 @@ async function loadTodayChecks() {
             if (shiftFiltered.length > 0) {
                 filteredList = shiftFiltered;
             }
-            // Shift tipine uygun kimse yoksa tüm aktif personelden seç
         }
         
-        // Müdür yardımcısı muafsa diğer checklerden hariç tut
+        // AÇILIŞ ve KAPANIŞ kartları için: O shift'teki HERKES dahil (muafiyet uygulanmaz)
+        // Çünkü shift'te tek kişi varsa o kişi dolduracak
+        if (checkType === 'acilis' || checkType === 'kapanis') {
+            // Sadece mağaza müdürünü hariç tut (müdür ayrı check var)
+            const shiftPersonnel = filteredList.filter(p => p.role !== 'magaza_muduru' && p.role !== 'bolge_muduru');
+            if (shiftPersonnel.length > 0) {
+                return shiftPersonnel.map(p => p.name);
+            }
+            // Shift'te sadece müdür varsa müdür dolduracak
+            const mudur = filteredList.find(p => p.role === 'magaza_muduru');
+            if (mudur) return [mudur.name];
+            return [];
+        }
+        
+        // DİĞER KARTLAR (temizlik, günlük, platform): Müdür yardımcısı muafiyeti uygulanır
+        // AMA sadece birden fazla kişi çalışıyorsa
+        
+        // Muaf yardımcı bilgisi
         const exemptYardimciIds = new Set();
         if (branchName && mudurYardimcisiExemptMap[branchName]?.exempt) {
             const yardimciInfo = mudurYardimcisiExemptMap[branchName];
@@ -24138,17 +24157,27 @@ async function loadTodayChecks() {
             if (yardimciInfo.yardimciCodeName) exemptYardimciIds.add(yardimciInfo.yardimciCodeName);
         }
         
-        // Diğer checkler: Baristalar (müdür ve muaf yardımcı HARİÇ)
+        // Baristalar (müdür ve bölge müdürü hariç)
         const baristalar = filteredList.filter(p => {
-            // Müdürü hariç tut
             if (p.role === 'magaza_muduru') return false;
             if (p.role === 'bolge_muduru') return false;
             
-            // Müdür yardımcısı muafsa hariç tut
+            // Müdür yardımcısı muafsa VE birden fazla kişi varsa hariç tut
             if ((p.role === 'mudur_yardimcisi' || p.role === 'magaza_mudur_yardimcisi')) {
-                if (exemptYardimciIds.has(p.id) || exemptYardimciIds.has(p.name)) {
+                // Muafiyet sadece başka barista varsa geçerli
+                const otherBaristas = filteredList.filter(x => 
+                    x.id !== p.id && 
+                    x.role !== 'magaza_muduru' && 
+                    x.role !== 'bolge_muduru' &&
+                    x.role !== 'mudur_yardimcisi' &&
+                    x.role !== 'magaza_mudur_yardimcisi'
+                );
+                
+                if (otherBaristas.length > 0 && (exemptYardimciIds.has(p.id) || exemptYardimciIds.has(p.name))) {
+                    console.log('[Filter] Müdür yardımcısı muaf, başka barista var:', otherBaristas.map(x => x.name));
                     return false;
                 }
+                // Tek başına veya muaf değilse dahil et
             }
             
             return true;
@@ -24158,21 +24187,20 @@ async function loadTodayChecks() {
             return baristalar.map(p => p.name);
         }
         
-        // Barista yok - müdür yardımcısı (muaf değilse)
+        // Barista yok - müdür yardımcısı (muaf olsa bile tek ise dahil)
         const yardimcilar = filteredList.filter(p => 
-            (p.role === 'mudur_yardimcisi' || p.role === 'magaza_mudur_yardimcisi') &&
-            !exemptYardimciIds.has(p.id) && !exemptYardimciIds.has(p.name)
+            p.role === 'mudur_yardimcisi' || p.role === 'magaza_mudur_yardimcisi'
         );
         
         if (yardimcilar.length > 0) {
             return yardimcilar.map(p => p.name);
         }
         
-        // Barista ve yardımcı yok: mağaza müdürü (TEK BAŞINA)
+        // Mağaza müdürü (TEK BAŞINA)
         const mudur = filteredList.find(p => p.role === 'magaza_muduru');
         if (mudur) return [mudur.name];
         
-        // En son bölge müdürü
+        // Bölge müdürü
         const bolge = filteredList.find(p => p.role === 'bolge_muduru');
         if (bolge) return [bolge.name];
         
