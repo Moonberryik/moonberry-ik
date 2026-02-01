@@ -30482,8 +30482,10 @@ async function loadChecklist() {
                             if (!shift) return false;
                             const dayIdx = new Date(date).getDay() - 1 < 0 ? 6 : new Date(date).getDay() - 1;
                             const todayShift = shift[dayIdx] || '';
-                            const cleanShift = todayShift.replace(/\*/g, '').trim().toUpperCase();
-                            return cleanShift === 'OFF' || cleanShift === 'İ' || cleanShift === 'Y.İ' || cleanShift === '-' || cleanShift === 'X';
+                            // * işaretlerini baştan ve sondan temizle
+                            const cleanShift = todayShift.replace(/^\*+/, '').replace(/\*+$/, '').trim().toUpperCase();
+                            // OFF durumları genişletildi
+                            return OFF_STATUSES.includes(cleanShift);
                         };
                         
                         // Müdürleri öncelik sırasına göre ekle (OFF olmayanlar)
@@ -30492,28 +30494,35 @@ async function loadChecklist() {
                             const data = doc.data();
                             const role = (data.role || data.pozisyon || '').toLowerCase();
                             if (role === 'magaza_muduru' && data.branch === branch) mudur = data;
-                            if (role === 'magaza_mudur_yardimcisi' && data.branch === branch) yardimci = data;
+                            // Her iki yardımcı rol formatını da destekle
+                            if ((role === 'magaza_mudur_yardimcisi' || role === 'mudur_yardimcisi') && data.branch === branch) yardimci = data;
                             if (role === 'bolge_muduru') bolgeMuduru = data;
                         });
                         
                         // Sırayla ekle: Müdür → Yardımcı → Bölge Müdürü
-                        if (mudur && !isPersonOff(mudur)) {
+                        // NOT: Müdür OFF ise sadece yardımcı eklenir (bölge müdürü değil)
+                        const mudurIsOff = isPersonOff(mudur);
+                        const yardimciIsOff = isPersonOff(yardimci);
+                        
+                        if (mudur && !mudurIsOff) {
                             const displayName = getPersonelDisplayName(mudur);
                             if (displayName && !shiftPersonnel.includes(displayName)) {
                                 shiftPersonnel.push(displayName);
                             }
-                        }
-                        if (yardimci && !isPersonOff(yardimci)) {
+                        } else if (yardimci && !yardimciIsOff) {
+                            // Müdür OFF, yardımcı aktif - yardımcı sorumlu
                             const displayName = getPersonelDisplayName(yardimci);
                             if (displayName && !shiftPersonnel.includes(displayName)) {
                                 shiftPersonnel.push(displayName);
                             }
-                        }
-                        if (bolgeMuduru) {
+                            console.log('[Müdür Check] Müdür OFF, yardımcı sorumlu:', displayName);
+                        } else if (bolgeMuduru) {
+                            // Hem müdür hem yardımcı OFF - bölge müdürüne düşer
                             const displayName = getPersonelDisplayName(bolgeMuduru);
                             if (displayName && !shiftPersonnel.includes(displayName)) {
                                 shiftPersonnel.push(displayName);
                             }
+                            console.log('[Müdür Check] Müdür ve yardımcı OFF, bölge müdürüne düşüyor');
                         }
                         
                         if (shiftPersonnel.length === 0) {
@@ -30764,7 +30773,9 @@ let showAllAylikItems = false;
 function renderChecklistForm(items, branch, type, date, timeSlot, submittedData, shiftPersonnel = [], weeklyAssignments = null, dailyAssignments = null) {
     const container = document.getElementById('checklistFormContainer');
     const isAdmin = currentUser?.role === 'yonetici' || currentUser?.role === 'bolge_muduru';
-    const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
+    // Müdür yardımcısı da manager sayılır (müdür checklisti için)
+    const isMudurYardimcisi = currentUser?.role === 'mudur_yardimcisi' || currentUser?.role === 'magaza_mudur_yardimcisi';
+    const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru' || (isMudurYardimcisi && type === 'mudur');
     const isSubmitted = !!submittedData;
     const isAylik = type === 'aylik';
     const isHaftalik = type === 'haftalik';
