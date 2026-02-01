@@ -29888,7 +29888,10 @@ async function loadChecklistTypes() {
     }
     
     const types = CHECKLIST_TYPES[branch] || [];
-    const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru';
+    
+    // Müdür yardımcısı da müdür checklistini görebilir
+    const isMudurYardimcisiRole = ['mudur_yardimcisi', 'magaza_mudur_yardimcisi'].includes(currentUser?.role);
+    const isManager = currentUser?.role === 'yonetici' || currentUser?.role === 'magaza_muduru' || currentUser?.role === 'bolge_muduru' || isMudurYardimcisiRole;
     
     // Debug log
     console.log('Checklist türleri:', branch, types.length, 'adet');
