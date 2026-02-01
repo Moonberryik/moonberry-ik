@@ -2393,7 +2393,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                         </div>
                     </div>
                     
-                    <!-- SHIFT DIŞI ERİŞİM AYARLARI -->
+                    <!-- SHIFT DIŞI ERİŞİM BİLGİ KARTI -->
                     <div class="admin-card" style="margin-top:20px">
                         <div class="admin-card-header">
                             <div class="admin-card-title">
@@ -2401,103 +2401,49 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.
                                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                                     <path d="M7 11V7a5 5 0 0110 0v4"/>
                                 </svg>
-                                Shift Dışı Erişim Ayarları
-                            </div>
-                            <button class="btn btn-sm btn-primary" onclick="saveShiftAccessSettings()">Kaydet</button>
-                        </div>
-                        <p style="color:var(--tx2);font-size:.85rem;margin-bottom:16px">
-                            Personelin shift saati dışında hangi bölümlere erişebileceğini ayarlayın. 
-                            Kapalı olan bölümler shift saatinden 1 saat önce ve 1 saat sonra erişilebilir.
-                            <strong>Yönetici</strong> bu kısıtlamalardan her zaman muaftır.
-                        </p>
-                        
-                        <div id="shiftAccessSettingsContainer" style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px">
-                            <!-- Dashboard -->
-                            <div style="background:var(--bg3);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between">
-                                <div style="display:flex;align-items:center;gap:12px">
-                                    <div style="width:40px;height:40px;background:linear-gradient(135deg,#008c95,#00b4a0);border-radius:10px;display:flex;align-items:center;justify-content:center">
-                                        <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24">
-                                            <rect x="3" y="3" width="7" height="7"/>
-                                            <rect x="14" y="3" width="7" height="7"/>
-                                            <rect x="14" y="14" width="7" height="7"/>
-                                            <rect x="3" y="14" width="7" height="7"/>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <div style="font-weight:600;color:var(--tx)">Dashboard Görevler</div>
-                                        <div style="font-size:.75rem;color:var(--tx2)">Bugünkü görevler kartları</div>
-                                    </div>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="shiftAccess_dashboard" data-area="dashboard">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            
-                            <!-- Checklistler -->
-                            <div style="background:var(--bg3);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between">
-                                <div style="display:flex;align-items:center;gap:12px">
-                                    <div style="width:40px;height:40px;background:linear-gradient(135deg,#27ae60,#2ecc71);border-radius:10px;display:flex;align-items:center;justify-content:center">
-                                        <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24">
-                                            <path d="M9 11l3 3L22 4"/>
-                                            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <div style="font-weight:600;color:var(--tx)">Checklistler</div>
-                                        <div style="font-size:.75rem;color:var(--tx2)">Tüm checklist formları</div>
-                                    </div>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="shiftAccess_checklist" data-area="checklist">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            
-                            <!-- Prim Sistemi -->
-                            <div style="background:var(--bg3);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between">
-                                <div style="display:flex;align-items:center;gap:12px">
-                                    <div style="width:40px;height:40px;background:linear-gradient(135deg,#f1c40f,#f39c12);border-radius:10px;display:flex;align-items:center;justify-content:center">
-                                        <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24">
-                                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <div style="font-weight:600;color:var(--tx)">Prim Sistemi</div>
-                                        <div style="font-size:.75rem;color:var(--tx2)">Aylık puan ve prim görüntüleme</div>
-                                    </div>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="shiftAccess_prim" data-area="prim" checked>
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            
-                            <!-- Performans -->
-                            <div style="background:var(--bg3);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between">
-                                <div style="display:flex;align-items:center;gap:12px">
-                                    <div style="width:40px;height:40px;background:linear-gradient(135deg,#9b59b6,#8e44ad);border-radius:10px;display:flex;align-items:center;justify-content:center">
-                                        <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24">
-                                            <line x1="18" y1="20" x2="18" y2="10"/>
-                                            <line x1="12" y1="20" x2="12" y2="4"/>
-                                            <line x1="6" y1="20" x2="6" y2="14"/>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <div style="font-weight:600;color:var(--tx)">Performans</div>
-                                        <div style="font-size:.75rem;color:var(--tx2)">Performans ve istatistikler</div>
-                                    </div>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="shiftAccess_performans" data-area="performans" checked>
-                                    <span class="toggle-slider"></span>
-                                </label>
+                                Shift Dışı Erişim Kontrolü
                             </div>
                         </div>
-                        
-                        <div style="margin-top:16px;padding:12px 16px;background:rgba(0,140,149,.08);border-radius:10px;font-size:.8rem;color:var(--tx2)">
-                            <strong style="color:#008c95">Not:</strong> Switch kapalıysa, personel sadece shift saatinde (±1 saat) erişebilir. 
-                            Switch açıksa, personel her zaman erişebilir.
+                        <div style="padding:20px;background:var(--bg3);border-radius:12px">
+                            <p style="color:var(--tx);font-size:.9rem;margin-bottom:16px">
+                                Personelin shift saati dışında hangi bölümlere erişebileceği 
+                                <strong>Pozisyon ve Yetkiler</strong> sekmesinden her rol için ayrı ayrı ayarlanır.
+                            </p>
+                            
+                            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px">
+                                <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg2);border-radius:8px">
+                                    <svg width="16" height="16" fill="none" stroke="#008c95" stroke-width="2" viewBox="0 0 24 24">
+                                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                                        <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                                    </svg>
+                                    <span style="font-size:.85rem;color:var(--tx)">Dashboard'a erişim</span>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg2);border-radius:8px">
+                                    <svg width="16" height="16" fill="none" stroke="#27ae60" stroke-width="2" viewBox="0 0 24 24">
+                                        <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                                    </svg>
+                                    <span style="font-size:.85rem;color:var(--tx)">Checklist'e erişim</span>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg2);border-radius:8px">
+                                    <svg width="16" height="16" fill="none" stroke="#f1c40f" stroke-width="2" viewBox="0 0 24 24">
+                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                    </svg>
+                                    <span style="font-size:.85rem;color:var(--tx)">Prim Sistemi'ne erişim</span>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg2);border-radius:8px">
+                                    <svg width="16" height="16" fill="none" stroke="#9b59b6" stroke-width="2" viewBox="0 0 24 24">
+                                        <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+                                    </svg>
+                                    <span style="font-size:.85rem;color:var(--tx)">Performans'a erişim</span>
+                                </div>
+                            </div>
+                            
+                            <div style="padding:12px 16px;background:rgba(0,140,149,.08);border-radius:10px;font-size:.8rem;color:var(--tx2)">
+                                <strong style="color:#008c95">Nasıl Çalışır:</strong> 
+                                Her pozisyon için "Özel Yetkiler" bölümünde "Shift dışında ... erişebilir" seçeneklerini işaretleyin.
+                                İşaretli olmayan alanlar sadece shift saatinde (±1 saat tolerans) erişilebilir.
+                                <strong>Yönetici</strong> her zaman tüm alanlara erişebilir.
+                            </div>
                         </div>
                     </div>
                     
@@ -6389,7 +6335,6 @@ function switchAdminTab(tab, btn) {
     }
     if (tab === 'checkKurallari') {
         renderCheckRulesSettings();
-        loadShiftAccessSettings();
     }
     if (tab === 'checklistTurleri') loadChecklistTypesConfig();
     if (tab === 'tumCheckler') {
@@ -17023,7 +16968,12 @@ const PERMISSION_STRUCTURE = {
         { id: 'change_others_password', label: 'Başkasının şifresini değiştirebilir' },
         { id: 'add_announcement', label: 'Duyuru ekleyebilir' },
         { id: 'manage_branches', label: 'Şube ekleyebilir/silebilir' },
-        { id: 'run_autopuan', label: 'Otomatik puanlama çalıştırabilir' }
+        { id: 'run_autopuan', label: 'Otomatik puanlama çalıştırabilir' },
+        // Shift dışı erişim yetkileri
+        { id: 'shift_bypass_dashboard', label: 'Shift dışında Dashboard\'a erişebilir' },
+        { id: 'shift_bypass_checklist', label: 'Shift dışında Checklist\'e erişebilir' },
+        { id: 'shift_bypass_prim', label: 'Shift dışında Prim Sistemi\'ne erişebilir' },
+        { id: 'shift_bypass_performans', label: 'Shift dışında Performans\'a erişebilir' }
     ],
     limits: [
         { id: 'shift_history_weeks', label: 'Shift geçmiş limiti (hafta)', type: 'number', options: [1, 2, 3, 4, 5, 12, 999] }
@@ -17036,7 +16986,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: false, edit: false }, tutanak: { view: false, edit: false }, savunma: { view: false, edit: false }, fesih: { view: false, edit: false }, istifa: { view: false, edit: false }, ibraname: { view: false, edit: false } },
         forms: { borc: { view: false, edit: false }, avans: { view: false, edit: false }, zimmet: { view: false, edit: false } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: false, admin_sablonlar: false, admin_oturumlar: false, admin_yedekler: false },
-        special: { add_personel: false, view_analiz: false, view_archive: false, print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false, manage_branches: false, run_autopuan: true },
+        special: { add_personel: false, view_analiz: false, view_archive: false, print_shift: true, create_shift_week: false, view_checklist_history: false, fill_others_checklist: false, view_salary: false, export_data: false, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false, manage_branches: false, run_autopuan: true, shift_bypass_dashboard: false, shift_bypass_checklist: false, shift_bypass_prim: true, shift_bypass_performans: true },
         limits: { shift_history_weeks: 1 }
     },
     magaza_mudur_yardimcisi: {
@@ -17044,7 +16994,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false, admin_yedekler: false },
-        special: { add_personel: true, view_analiz: true, view_archive: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false, manage_branches: false, run_autopuan: true },
+        special: { add_personel: true, view_analiz: true, view_archive: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false, manage_branches: false, run_autopuan: true, shift_bypass_dashboard: true, shift_bypass_checklist: true, shift_bypass_prim: true, shift_bypass_performans: true },
         limits: { shift_history_weeks: 5 }
     },
     magaza_muduru: {
@@ -17052,7 +17002,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: false }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: false, admin_kullanicilar: false, admin_puantaj: false, admin_subeler: false, admin_pozisyonlar: false, admin_ihlaller: true, admin_sablonlar: false, admin_oturumlar: false, admin_yedekler: false },
-        special: { add_personel: true, view_analiz: true, view_archive: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false, manage_branches: false, run_autopuan: true },
+        special: { add_personel: true, view_analiz: true, view_archive: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: false, export_data: true, delete_records: false, assign_password: false, view_password: false, change_others_password: false, add_announcement: false, manage_branches: false, run_autopuan: true, shift_bypass_dashboard: true, shift_bypass_checklist: true, shift_bypass_prim: true, shift_bypass_performans: true },
         limits: { shift_history_weeks: 5 }
     },
     bolge_muduru: {
@@ -17060,7 +17010,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         documents: { sozlesme: { view: true, edit: true }, tutanak: { view: true, edit: true }, savunma: { view: true, edit: true }, fesih: { view: true, edit: true }, istifa: { view: true, edit: true }, ibraname: { view: true, edit: true } },
         forms: { borc: { view: true, edit: true }, avans: { view: true, edit: true }, zimmet: { view: true, edit: true } },
         admin: { admin_genel: true, admin_kullanicilar: false, admin_puantaj: true, admin_subeler: true, admin_pozisyonlar: true, admin_ihlaller: true, admin_sablonlar: true, admin_oturumlar: true, admin_yedekler: false },
-        special: { add_personel: true, view_analiz: true, view_archive: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true, view_password: true, change_others_password: true, add_announcement: true, manage_branches: false, run_autopuan: true },
+        special: { add_personel: true, view_analiz: true, view_archive: true, print_shift: true, create_shift_week: true, view_checklist_history: true, fill_others_checklist: true, view_salary: true, export_data: true, delete_records: true, assign_password: true, view_password: true, change_others_password: true, add_announcement: true, manage_branches: false, run_autopuan: true, shift_bypass_dashboard: true, shift_bypass_checklist: true, shift_bypass_prim: true, shift_bypass_performans: true },
         limits: { shift_history_weeks: 999 }
     },
     yonetici: {
@@ -18990,60 +18940,6 @@ function loadPlatformCheckTimeSlots() {
 // Eski fonksiyonlar (geriye uyumluluk)
 function addPlatformCheckTime() {
     addPlatformCheckTimeSlot('14:00', '15:00');
-}
-
-// ==================== SHIFT DIŞI ERİŞİM AYARLARI ====================
-
-// Varsayılan shift erişim ayarları
-const DEFAULT_SHIFT_ACCESS_SETTINGS = {
-    dashboard: false,   // Kapalı - shift saatinde erişim
-    checklist: false,   // Kapalı - shift saatinde erişim
-    prim: true,         // Açık - her zaman erişim
-    performans: true    // Açık - her zaman erişim
-};
-
-// Global değişken
-let SHIFT_ACCESS_SETTINGS = { ...DEFAULT_SHIFT_ACCESS_SETTINGS };
-
-// Shift erişim ayarlarını kaydet
-async function saveShiftAccessSettings() {
-    const settings = {};
-    const areas = ['dashboard', 'checklist', 'prim', 'performans'];
-    
-    areas.forEach(area => {
-        const checkbox = document.getElementById(`shiftAccess_${area}`);
-        settings[area] = checkbox?.checked || false;
-    });
-    
-    try {
-        await db.collection('config').doc('system').update({
-            shiftAccessSettings: settings,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        
-        SHIFT_ACCESS_SETTINGS = settings;
-        toast('Shift erişim ayarları kaydedildi', 'success');
-        console.log('[Config] shiftAccessSettings kaydedildi:', settings);
-    } catch (e) {
-        console.error('Kayıt hatası:', e);
-        toast('Kayıt hatası!', 'error');
-    }
-}
-
-// Shift erişim ayarlarını yükle
-function loadShiftAccessSettings() {
-    const settings = SYSTEM_CONFIG?.shiftAccessSettings || SHIFT_ACCESS_SETTINGS || DEFAULT_SHIFT_ACCESS_SETTINGS;
-    SHIFT_ACCESS_SETTINGS = settings;
-    
-    const areas = ['dashboard', 'checklist', 'prim', 'performans'];
-    areas.forEach(area => {
-        const checkbox = document.getElementById(`shiftAccess_${area}`);
-        if (checkbox) {
-            checkbox.checked = settings[area] !== false; // undefined veya true ise checked
-        }
-    });
-    
-    console.log('[Config] shiftAccessSettings yüklendi:', settings);
 }
 
 function removePlatformCheckTime() {
@@ -22483,17 +22379,21 @@ async function checkShiftAccess(branch = null, date = null, area = null) {
         };
     }
     
-    // Alan için shift dışı erişim açık mı kontrol et
-    const accessSettings = SHIFT_ACCESS_SETTINGS || DEFAULT_SHIFT_ACCESS_SETTINGS || {};
-    if (area && accessSettings[area] === true) {
-        // Bu alan için shift dışı erişim açık - her zaman erişim var
-        return {
-            hasAccess: true,
-            isExempt: false,
-            bypassedBySettings: true,
-            shiftInfo: null,
-            message: null
-        };
+    // Kullanıcının pozisyon yetkilerini kontrol et
+    if (area) {
+        const perms = await getPositionPermissions(currentUser?.positionId, currentUser?.role);
+        const bypassKey = `shift_bypass_${area}`;
+        
+        if (perms?.special?.[bypassKey] === true) {
+            // Bu alan için shift dışı erişim yetkisi var
+            return {
+                hasAccess: true,
+                isExempt: false,
+                bypassedByPermission: true,
+                shiftInfo: null,
+                message: null
+            };
+        }
     }
     
     // Şube "all" ise veya tanımsızsa erişim yok
@@ -28856,12 +28756,6 @@ async function loadSystemConfig() {
             PLATFORMS = SYSTEM_CONFIG.platforms || PLATFORMS;
             BRANCH_HOURS = SYSTEM_CONFIG.branchHours || {};
             SHIFT_DURATION = SYSTEM_CONFIG.shiftDuration || 9;
-            
-            // Shift erişim ayarlarını yükle
-            if (SYSTEM_CONFIG.shiftAccessSettings) {
-                SHIFT_ACCESS_SETTINGS = SYSTEM_CONFIG.shiftAccessSettings;
-                console.log('[Config] SHIFT_ACCESS_SETTINGS yüklendi:', SHIFT_ACCESS_SETTINGS);
-            }
             
             // CHECK_RULES merge - Firebase'den gelen kuralları mevcut default'larla birleştir
             // supervisorPenalty gibi yeni alanlar korunur
