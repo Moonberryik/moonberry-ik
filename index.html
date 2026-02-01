@@ -26463,13 +26463,14 @@ function renderBranchHoursSettings() {
     let html = '';
     
     branches.forEach(branch => {
+        const branchKey = branchToKey(branch); // Türkçe karakter ve parantez sorununu çöz
         const hours = BRANCH_HOURS[branch] || { opening: '10:00', closing: { default: '01:00' } };
         const isMoonberry = true; // Tüm şubeler Moonberry teal rengi
         const brandColor = isMoonberry ? '#008c95' : '#ff8674';
         const brandName = isMoonberry ? 'MOONBERRY' : 'SUNBERRY';
         
         html += `
-            <div style="background:var(--bg3);border-radius:12px;padding:20px;border-left:4px solid ${brandColor}">
+            <div style="background:var(--bg3);border-radius:12px;padding:20px;border-left:4px solid ${brandColor}" data-branch="${branch}">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
                     <div style="width:32px;height:32px;background:${brandColor};border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.75rem">${brandName.charAt(0)}</div>
                     <div>
@@ -26481,35 +26482,35 @@ function renderBranchHoursSettings() {
                 <div class="form-grid" style="margin-bottom:16px">
                     <div class="form-group">
                         <label class="form-label">Açılış Saati</label>
-                        <input type="time" class="form-input" id="hours_${branch.replace(/\s/g, '_')}_opening" value="${hours.opening || '10:00'}">
+                        <input type="time" class="form-input branch-opening" data-branch="${branch}" value="${hours.opening || '10:00'}">
                     </div>
                 </div>
                 
                 <div style="margin-bottom:12px">
                     <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-                        <input type="checkbox" id="hours_${branch.replace(/\s/g, '_')}_sameClosing" 
-                            ${!hours.closing.monday ? 'checked' : ''} 
-                            onchange="toggleDailyClosing('${branch.replace(/\s/g, '_')}', this.checked)">
+                        <input type="checkbox" class="branch-same-closing" data-branch="${branch}"
+                            ${!hours.closing?.monday ? 'checked' : ''} 
+                            onchange="toggleDailyClosing('${branchKey}', this.checked)">
                         <span style="font-size:.85rem;color:var(--tx2)">Tüm günler aynı kapanış saati</span>
                     </label>
                 </div>
                 
-                <div id="sameClosing_${branch.replace(/\s/g, '_')}" style="${hours.closing.monday ? 'display:none' : ''}">
+                <div id="sameClosing_${branchKey}" style="${hours.closing?.monday ? 'display:none' : ''}">
                     <div class="form-group">
                         <label class="form-label">Kapanış Saati (Tüm Günler)</label>
-                        <input type="time" class="form-input" id="hours_${branch.replace(/\s/g, '_')}_closing_default" value="${hours.closing.default || '01:00'}">
+                        <input type="time" class="form-input branch-closing-default" data-branch="${branch}" value="${hours.closing?.default || '01:00'}">
                     </div>
                 </div>
                 
-                <div id="dailyClosing_${branch.replace(/\s/g, '_')}" style="${!hours.closing.monday ? 'display:none' : ''}">
+                <div id="dailyClosing_${branchKey}" style="${!hours.closing?.monday ? 'display:none' : ''}">
                     <label class="form-label" style="margin-bottom:8px">Günlük Kapanış Saatleri</label>
                     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">
                         ${dayKeys.map((key, i) => `
                             <div>
                                 <label style="font-size:.7rem;color:var(--tx3);display:block;margin-bottom:2px">${days[i]}</label>
-                                <input type="time" class="form-input" style="font-size:.8rem;padding:6px 8px" 
-                                    id="hours_${branch.replace(/\s/g, '_')}_closing_${key}" 
-                                    value="${hours.closing[key] || hours.closing.default || '01:00'}">
+                                <input type="time" class="form-input branch-closing-day" data-branch="${branch}" data-day="${key}"
+                                    style="font-size:.8rem;padding:6px 8px" 
+                                    value="${hours.closing?.[key] || hours.closing?.default || '01:00'}">
                             </div>
                         `).join('')}
                     </div>
@@ -26527,29 +26528,56 @@ function toggleDailyClosing(branchKey, sameForAll) {
 }
 
 async function saveBranchHours() {
-    const branches = STATE.branches || [];
-    const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const container = document.getElementById('branchHoursContainer');
+    if (!container) {
+        toast('Mağaza saatleri bölümü bulunamadı', 'error');
+        return;
+    }
     
+    const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     const branchHours = {};
     
-    branches.forEach(branch => {
-        const branchKey = branch.replace(/\s/g, '_');
-        const opening = document.getElementById(`hours_${branchKey}_opening`)?.value || '10:00';
-        const sameClosing = document.getElementById(`hours_${branchKey}_sameClosing`)?.checked;
+    // Her şube kartını bul
+    const branchCards = container.querySelectorAll('[data-branch]');
+    const processedBranches = new Set();
+    
+    branchCards.forEach(card => {
+        const branch = card.dataset.branch;
+        if (!branch || processedBranches.has(branch)) return;
+        processedBranches.add(branch);
+        
+        // Bu şubenin input'larını bul
+        const openingInput = card.querySelector('.branch-opening');
+        const sameClosingCheck = card.querySelector('.branch-same-closing');
+        const closingDefaultInput = card.querySelector('.branch-closing-default');
+        const closingDayInputs = card.querySelectorAll('.branch-closing-day');
+        
+        const opening = openingInput?.value || '10:00';
+        const sameClosing = sameClosingCheck?.checked !== false;
         
         const closing = {};
         if (sameClosing) {
-            closing.default = document.getElementById(`hours_${branchKey}_closing_default`)?.value || '01:00';
+            closing.default = closingDefaultInput?.value || '01:00';
         } else {
-            closing.default = document.getElementById(`hours_${branchKey}_closing_monday`)?.value || '01:00';
-            dayKeys.forEach(day => {
-                const val = document.getElementById(`hours_${branchKey}_closing_${day}`)?.value;
-                if (val) closing[day] = val;
+            // İlk günü default olarak al
+            const firstDayInput = card.querySelector('.branch-closing-day[data-day="monday"]');
+            closing.default = firstDayInput?.value || '01:00';
+            
+            closingDayInputs.forEach(input => {
+                const day = input.dataset.day;
+                if (day && input.value) {
+                    closing[day] = input.value;
+                }
             });
         }
         
         branchHours[branch] = { opening, closing };
     });
+    
+    if (Object.keys(branchHours).length === 0) {
+        toast('Kaydedilecek şube bulunamadı', 'error');
+        return;
+    }
     
     try {
         await db.collection('config').doc('system').update({
@@ -26558,6 +26586,7 @@ async function saveBranchHours() {
         });
         BRANCH_HOURS = branchHours;
         toast('Mağaza saatleri kaydedildi', 'success');
+        console.log('[Config] branchHours kaydedildi:', branchHours);
     } catch (e) {
         console.error('Kayıt hatası:', e);
         toast('Kayıt hatası!', 'error');
