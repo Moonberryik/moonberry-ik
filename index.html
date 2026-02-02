@@ -24312,18 +24312,13 @@ async function loadTodayChecks() {
         }
         
         if (checkType === 'temizlik') {
-            // Temizlik 20:00-01:30 - kapanış personeli veya o saatte çalışanlar
-            const kapanisPersonel = filteredList.filter(p => p.type === 'kapanis');
-            if (kapanisPersonel.length > 0) {
-                return kapanisPersonel.map(p => p.name);
+            // Temizlik maddeleri açılış/ara/kapanış hepsine atanıyor
+            // Dashboard'da TÜM aktif personeli göster
+            const allPersonnel = filteredList.map(p => p.name);
+            if (allPersonnel.length > 0) {
+                return allPersonnel;
             }
-            // Kapanış yoksa geç saatte çalışanları seç (shiftEnd >= 20)
-            const lateWorkers = filteredList.filter(p => (p.shiftEnd || 19) >= 20 || (p.shiftEnd || 19) <= 6);
-            if (lateWorkers.length > 0) {
-                return lateWorkers.map(p => p.name);
-            }
-            // Hiç yoksa tüm personeli döndür
-            return filteredList.map(p => p.name);
+            return [];
         }
         
         // Diğer checkler: Önce baristalar (müdür HARİÇ)
