@@ -23837,8 +23837,59 @@ async function processMissedChecks(branch, checkType, timeSlot, date, shiftPerso
     
     const missedPoints = rules.points.missed;
     
-    // Her sorumlu personel için puan notu oluştur
+    // ═══════════════════════════════════════════════════════════
+    // ROL FİLTRESİ: Mağaza müdürü ve bölge müdürüne penalty yazılmaz
+    // Müdürler sadece Müdür Kontrolleri'nden sorumludur
+    // ═══════════════════════════════════════════════════════════
+    
+    // Muaf rol listesi oluştur (bölge müdürü + mağaza müdürü)
+    const exemptNames = new Set();
+    try {
+        const exemptRolesSnap = await db.collection('personel')
+            .where('role', 'in', ['bolge_muduru', 'magaza_muduru'])
+            .get();
+        
+        exemptRolesSnap.docs.forEach(doc => {
+            const d = doc.data();
+            // Tüm isim varyasyonlarını ekle
+            if (d.name) exemptNames.add(d.name);
+            if (d.name) exemptNames.add(formatDisplayName(d.name));
+            if (d.codeName) exemptNames.add(d.codeName);
+            if (d.displayName) exemptNames.add(d.displayName);
+            if (d.uniqueId) exemptNames.add(d.uniqueId);
+        });
+        
+        console.log('[processMissedChecks] Muaf müdürler:', [...exemptNames]);
+    } catch (e) {
+        console.warn('[processMissedChecks] Muaf rol kontrolü hatası:', e);
+    }
+    
+    // Checklist muaf personeli de ekle
+    try {
+        const exemptPersonelSnap = await db.collection('personel')
+            .where('branch', '==', branch)
+            .where('checklistExempt', '==', true)
+            .get();
+        
+        exemptPersonelSnap.docs.forEach(doc => {
+            const d = doc.data();
+            if (d.name) exemptNames.add(d.name);
+            if (d.name) exemptNames.add(formatDisplayName(d.name));
+            if (d.codeName) exemptNames.add(d.codeName);
+            if (d.displayName) exemptNames.add(d.displayName);
+        });
+    } catch (e) {
+        console.warn('[processMissedChecks] Muaf personel kontrolü hatası:', e);
+    }
+    
+    // Her sorumlu personel için puan notu oluştur (muaflar hariç)
     for (const personName of shiftPersonnel) {
+        // Muaf mı kontrol et
+        if (exemptNames.has(personName)) {
+            console.log(`[processMissedChecks] Muaf personel atlanıyor: ${personName}`);
+            continue;
+        }
+        
         // TAM İSİM'den normalize edilmiş ID oluştur
         const personId = normalizePersonelId(personName);
         
