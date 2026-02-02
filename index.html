@@ -31268,6 +31268,53 @@ async function loadChecklist() {
             }
         }
         
+        // ==================== MAĞAZA MÜDÜRLERİNİ HARİÇ TUT (HAFTALIK) ====================
+        // Haftalık görevler için: Yanında barista varsa müdür görevlerden hariç tutulur
+        // KURALLAR:
+        // - Mağaza müdürü yanında barista varsa sadece müdür checklistinden sorumlu
+        // - Şubede sadece müdür varsa müdür tüm görevleri yapar
+        if (shiftPersonnel.length > 1 && type === 'haftalik') {
+            try {
+                const magazaMudurleri = [];
+                const personelSnap = await db.collection('personel')
+                    .where('branch', '==', branch)
+                    .where('role', '==', 'magaza_muduru')
+                    .get();
+                
+                personelSnap.forEach(doc => {
+                    const data = doc.data();
+                    // Tüm isim varyasyonlarını ekle
+                    magazaMudurleri.push(data.name);                        // Tam isim
+                    magazaMudurleri.push(formatDisplayName(data.name));     // Ad S.
+                    if (data.codeName) magazaMudurleri.push(data.codeName); // Shift Kod Adı
+                    magazaMudurleri.push(data.name?.split(' ')[0]);         // Sadece ad
+                    if (data.uniqueId) magazaMudurleri.push(data.uniqueId); // UniqueId
+                });
+                
+                if (magazaMudurleri.length > 0) {
+                    const filteredPersonnel = shiftPersonnel.filter(p => {
+                        if (!p) return false;
+                        const pLower = p.toLowerCase();
+                        const pNorm = normalizeTurkishChars(p);
+                        return !magazaMudurleri.some(mm => {
+                            if (!mm) return false;
+                            const mmLower = mm.toLowerCase();
+                            const mmNorm = normalizeTurkishChars(mm);
+                            return mmLower === pLower || mmNorm === pNorm;
+                        });
+                    });
+                    
+                    // Sadece barista kaldıysa müdürü çıkar, yoksa tümünü tut (müdür tek değilse)
+                    if (filteredPersonnel.length > 0 && filteredPersonnel.length !== shiftPersonnel.length) {
+                        console.log('[Haftalık] Mağaza müdürü hariç tutuldu (yanında', filteredPersonnel.length, 'barista var)');
+                        shiftPersonnel = filteredPersonnel;
+                    }
+                }
+            } catch (e) {
+                console.warn('Mağaza müdürü filtreleme hatası:', e);
+            }
+        }
+        
         // ==================== MÜDÜR YARDIMCISI MUAFİYETİ ====================
         // Müdür OFF ise ve yardımcı tek değilse, yardımcıyı diğer checklistlerden hariç tut
         // (Yardımcı sadece müdür checklistinden sorumlu olur)
