@@ -35704,32 +35704,43 @@ async function distributeTemizlikItems(branch, date) {
     
     // ═══════════════════════════════════════════════════════════
     // MAĞAZA MÜDÜRÜ KONTROLÜ
-    // Kural: Yanında barista varsa müdür temizlik yapmaz
+    // Kural: Şubede o gün başka çalışan varsa müdür temizlik yapmaz
+    // Tek çalışan müdürse, müdür temizlik yapar
     // ═══════════════════════════════════════════════════════════
     if (mudurPersonelIds.size > 0) {
+        // Toplam personel sayısını hesapla (tüm kategoriler)
+        const totalPersonnel = personnel.acilis.length + personnel.araci.length + personnel.kapanis.length;
+        
+        // Müdür dışında başka çalışan var mı?
+        let mudurCount = 0;
         ['acilis', 'araci', 'kapanis'].forEach(cat => {
-            // Kategoride birden fazla kişi varsa müdürü çıkar
-            if (personnel[cat].length > 1) {
+            personnel[cat].forEach(p => {
+                if (mudurPersonelIds.has(p.id) || mudurPersonelIds.has(p.name) || mudurPersonelIds.has(normalizePersonelId(p.name))) {
+                    mudurCount++;
+                }
+            });
+        });
+        
+        const hasOtherWorkers = (totalPersonnel - mudurCount) > 0;
+        
+        if (hasOtherWorkers) {
+            // Başka çalışan var - müdürü TÜM kategorilerden çıkar
+            ['acilis', 'araci', 'kapanis'].forEach(cat => {
                 const beforeCount = personnel[cat].length;
                 personnel[cat] = personnel[cat].filter(p => {
                     const isMudur = mudurPersonelIds.has(p.id) || 
                                    mudurPersonelIds.has(p.name) ||
                                    mudurPersonelIds.has(normalizePersonelId(p.name));
                     if (isMudur) {
-                        console.log(`[Temizlik] Mağaza müdürü ${cat} kategorisinden çıkarıldı (yanında ${beforeCount - 1} kişi var):`, p.name);
+                        console.log(`[Temizlik] Mağaza müdürü ${cat} kategorisinden çıkarıldı (şubede ${totalPersonnel - mudurCount} başka çalışan var):`, p.name);
                     }
                     return !isMudur;
                 });
-            } else if (personnel[cat].length === 1) {
-                // Tek kişi - müdür olsa bile temizlik yapacak
-                const isMudur = mudurPersonelIds.has(personnel[cat][0].id) || 
-                               mudurPersonelIds.has(personnel[cat][0].name) ||
-                               mudurPersonelIds.has(normalizePersonelId(personnel[cat][0].name));
-                if (isMudur) {
-                    console.log(`[Temizlik] Mağaza müdürü ${cat} kategorisinde TEK kişi, temizlik yapacak:`, personnel[cat][0].name);
-                }
-            }
-        });
+            });
+        } else {
+            // Şubede sadece müdür var - temizlik yapacak
+            console.log('[Temizlik] Şubede sadece mağaza müdürü var, temizlik yapacak');
+        }
     }
     
     // Müdür yardımcısı kontrolü - Müdür OFF ise ve KATEGORİDE birden fazla kişi varsa yardımcı muaf
@@ -35996,8 +36007,8 @@ function generateShiftHash(shiftData, date) {
     // Sıralı string oluştur ve basit hash yap
     todayShifts.sort();
     // VERSION: Bu değeri artırarak eski atamaları geçersiz kılabilirsiniz
-    // v2: Mağaza müdürü filtrelemesi eklendi
-    const hashVersion = 'v2';
+    // v3: Mağaza müdürü şubede başka çalışan varsa hariç tutulur
+    const hashVersion = 'v3';
     return `${hashVersion}|${todayShifts.join('|')}`;
 }
 
