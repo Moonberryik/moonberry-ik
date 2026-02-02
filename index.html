@@ -24065,7 +24065,9 @@ async function loadTodayChecks() {
             const role = p.role || 'barista';
             
             // Muaf personeli kaydet
-            if (p.checklistExempt === true) {
+            // checklistExempt: true VEYA bolge_muduru/yonetici rolü = muaf
+            const isExemptRole = ['bolge_muduru', 'yonetici'].includes(role);
+            if (p.checklistExempt === true || isExemptRole) {
                 if (p.uniqueId) checklistExemptSet.add(p.uniqueId);
                 if (p.codeName) checklistExemptSet.add(p.codeName);
                 if (p.name) {
@@ -24075,6 +24077,9 @@ async function loadTodayChecks() {
                     const lastName = p.name.split(' ').slice(1).join(' ');
                     const lastInitial = lastName?.charAt(0) || '';
                     checklistExemptSet.add(`${firstName} ${lastInitial}.`);
+                }
+                if (isExemptRole) {
+                    console.log(`[Dashboard] ${role} rolü muaf: ${p.codeName || p.name}`);
                 }
             }
             
@@ -24241,9 +24246,17 @@ async function loadTodayChecks() {
         if (!allActiveList || allActiveList.length === 0) return [];
         
         // ==================== PART-TIME MUAF KONTROLÜ ====================
-        // checklistExempt: true olan personeli baştan hariç tut
+        // checklistExempt: true olan veya muaf rolündeki personeli baştan hariç tut
         let filteredList = allActiveList.filter(p => {
             if (!p || !p.name) return false;
+            
+            // Rol bazlı muafiyet (bolge_muduru, yonetici her zaman muaf)
+            const exemptRoles = ['bolge_muduru', 'yonetici'];
+            if (exemptRoles.includes(p.role)) {
+                console.log('[filterPersonnel] Muaf rol hariç tutuldu:', p.name, p.role);
+                return false;
+            }
+            
             // checklistExemptSet içinde varsa hariç tut
             const isExempt = checklistExemptSet.has(p.name) || 
                              checklistExemptSet.has(p.codeName) ||
