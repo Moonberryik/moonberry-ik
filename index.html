@@ -2712,6 +2712,21 @@ function formatPoints(val) {
     return rounded.toFixed(2).replace(/\.?0+$/, '');
 }
 
+// Puan formatla - floating point düzeltmesi + sign (+/-) gösterimi
+// TÜM PUAN GÖSTERİMLERİNDE BU FONKSİYON KULLANILMALI!
+function formatPuan(val, showSign = true) {
+    if (val === null || val === undefined || isNaN(val)) return '0';
+    // Floating point düzeltmesi: 10 ondalık basamağa yuvarla sonra 1'e
+    const rounded = Math.round(val * 10) / 10;
+    // Tam sayı kontrolü
+    const isInteger = rounded % 1 === 0;
+    // Değeri formatla
+    const formatted = isInteger ? Math.round(rounded).toString() : rounded.toFixed(1);
+    // Sign ekle
+    if (showSign && rounded > 0) return '+' + formatted;
+    return formatted;
+}
+
 // Tam isimden kısa görüntü formatı: "BÜŞRA SÖĞÜT" → "Büşra S."
 function formatDisplayName(fullName) {
     if (!fullName) return '';
@@ -13607,7 +13622,7 @@ async function loadPuantaj() {
                                     </div>
                                     <div style="font-size:.7rem;color:var(--tx2);margin-bottom:4px">En Yüksek Puan</div>
                                     <div style="font-weight:700;color:var(--tx);font-size:.9rem">${topPerformer.displayName}</div>
-                                    <div style="font-size:.8rem;color:#27ae60;font-weight:600">+${topPerformer.toplamPuan} puan</div>
+                                    <div style="font-size:.8rem;color:#27ae60;font-weight:600">${formatPuan(topPerformer.toplamPuan)} puan</div>
                                 </div>
                             ` : ''}
                             ${mostImproved && mostImproved.pozitifOlay >= 1 ? `
@@ -13746,9 +13761,9 @@ async function loadPuantaj() {
             const isDanger = p.primDurumu === 'prim_yok';
             const puanColor = p.toplamPuan < 0 ? '#e74c3c' : (p.toplamPuan > 0 ? '#27ae60' : 'var(--tx)');
             const puanSign = p.toplamPuan > 0 ? '+' : '';
-            const displayToplamPuan = formatPoints(p.toplamPuan);
-            const displayOtomatikPuan = formatPoints(p.otomatikPuan || 0);
-            const displayManuelPuan = formatPoints(p.manuelPuan || 0);
+            const displayToplamPuan = formatPuan(p.toplamPuan, false);
+            const displayOtomatikPuan = formatPuan(p.otomatikPuan || 0, false);
+            const displayManuelPuan = formatPuan(p.manuelPuan || 0, false);
             const displayPersonelEksiPuan = formatPoints(p.personelEksiPuan || 0);
             
             // === SOL KENARLIK RENKLERİ ===
@@ -13850,7 +13865,7 @@ async function loadPuantaj() {
                             </div>
                         </div>
                         <div style="text-align:right">
-                            <div style="font-size:1.4rem;font-weight:800;color:${puanColor};line-height:1">${puanSign}${displayToplamPuan}</div>
+                            <div style="font-size:1.4rem;font-weight:800;color:${puanColor};line-height:1">${formatPuan(p.toplamPuan)}</div>
                             <div style="font-size:.65rem;color:var(--tx3);text-transform:uppercase">toplam</div>
                         </div>
                     </div>
@@ -13860,26 +13875,26 @@ async function loadPuantaj() {
                         <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
                             <div style="font-size:.6rem;color:var(--tx3);margin-bottom:2px">Otomatik</div>
                             <div style="font-size:.85rem;font-weight:700;color:${p.otomatikPuan > 0 ? '#27ae60' : p.otomatikPuan < 0 ? '#e74c3c' : 'var(--tx2)'}">
-                                ${p.otomatikPuan > 0 ? '+' : ''}${displayOtomatikPuan}
+                                ${formatPuan(p.otomatikPuan)}
                             </div>
                         </div>
                         <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
                             <div style="font-size:.6rem;color:var(--tx3);margin-bottom:2px">Manuel</div>
                             <div style="font-size:.85rem;font-weight:700;color:${p.manuelPuan > 0 ? '#27ae60' : p.manuelPuan < 0 ? '#e74c3c' : 'var(--tx2)'}">
-                                ${p.manuelPuan > 0 ? '+' : ''}${displayManuelPuan}
+                                ${formatPuan(p.manuelPuan)}
                             </div>
                         </div>
                         ${isMudurRole ? `
                         <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
                             <div style="font-size:.6rem;color:#9b59b6;margin-bottom:2px">Personel</div>
                             <div style="font-size:.85rem;font-weight:700;color:${p.personelEksiPuan < 0 ? '#9b59b6' : 'var(--tx2)'}">
-                                ${displayPersonelEksiPuan}
+                                ${formatPuan(p.personelEksiPuan, false)}
                             </div>
                         </div>` : ''}
                         <div style="flex:1;text-align:center">
                             <div style="font-size:.6rem;color:var(--tx3);margin-bottom:2px">Toplam</div>
                             <div style="font-size:.85rem;font-weight:700;color:${puanColor}">
-                                ${puanSign}${displayToplamPuan}
+                                ${formatPuan(p.toplamPuan)}
                             </div>
                         </div>
                     </div>
@@ -14266,7 +14281,7 @@ function showPersonelPuanDetay(personelId, personName) {
                         </div>
                     </div>
                     <div style="text-align:right">
-                        <div style="font-size:1.8rem;font-weight:800;color:${toplamPuan >= 0 ? '#27ae60' : '#e74c3c'}">${toplamPuan >= 0 ? '+' : ''}${toplamPuan}</div>
+                        <div style="font-size:1.8rem;font-weight:800;color:${toplamPuan >= 0 ? '#27ae60' : '#e74c3c'}">${formatPuan(toplamPuan)}</div>
                         <div style="font-size:.7rem;color:var(--tx3)">TOPLAM PUAN</div>
                     </div>
                 </div>
@@ -14368,7 +14383,7 @@ function showPersonelPuanDetay(personelId, personName) {
                     <span style="flex:1;color:var(--tx)">${checkTip}${checkSaat ? ' · ' + checkSaat : ''}</span>
                     ${yazilmaSaati ? `<span style="color:var(--tx3);font-size:.65rem">${yazilmaSaati}</span>` : ''}
                     <span style="background:rgba(0,140,149,.12);color:#008c95;padding:2px 6px;border-radius:4px;font-size:.65rem;font-weight:600">CF</span>
-                    <span style="font-weight:700;color:${noteColor};min-width:32px;text-align:right">${points > 0 ? '+' : ''}${points}</span>
+                    <span style="font-weight:700;color:${noteColor};min-width:32px;text-align:right">${formatPuan(points)}</span>
                 </div>
             `;
         });
@@ -14422,7 +14437,7 @@ function showPersonelPuanDetay(personelId, personName) {
                     <span style="color:var(--tx3);min-width:40px">${tarih}</span>
                     <span style="flex:1;color:var(--tx)">${ikonHtml}${puan.note || '-'}</span>
                     ${yazilmaSaati ? `<span style="color:var(--tx3);font-size:.65rem">${yazilmaSaati}</span>` : ''}
-                    <span style="font-weight:700;color:${puanColor};min-width:32px;text-align:right">${puanEtki > 0 ? '+' : ''}${puanEtki}</span>
+                    <span style="font-weight:700;color:${puanColor};min-width:32px;text-align:right">${formatPuan(puanEtki)}</span>
                 </div>
             `;
         });
@@ -14448,7 +14463,7 @@ function showPersonelPuanDetay(personelId, personName) {
                     <svg width="14" height="14" fill="none" stroke="#9b59b6" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
                     <span style="color:#9b59b6">Personel Checklist Doldurmaması</span>
                     <span style="color:var(--tx3);font-weight:400">(${personelEksiKayitlar.length})</span>
-                    ${personelEksiTotal !== 0 ? `<span style="margin-left:auto;font-size:.75rem;font-weight:700;color:#9b59b6">${personelEksiTotal}</span>` : ''}
+                    ${personelEksiTotal !== 0 ? `<span style="margin-left:auto;font-size:.75rem;font-weight:700;color:#9b59b6">${formatPuan(personelEksiTotal, false)}</span>` : ''}
                 </div>
         `;
         
@@ -15133,11 +15148,11 @@ async function resetPersonelPrim(personelId, name) {
             <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:16px">
                 <div style="display:flex;justify-content:space-between;margin-bottom:8px">
                     <span style="color:var(--tx2)">Mevcut Puan:</span>
-                    <span style="font-weight:700;color:#e74c3c">${mevcutPuan}</span>
+                    <span style="font-weight:700;color:#e74c3c">${formatPuan(mevcutPuan, false)}</span>
                 </div>
                 <div style="display:flex;justify-content:space-between;margin-bottom:8px">
                     <span style="color:var(--tx2)">Telafi Puanı:</span>
-                    <span style="font-weight:700;color:${telafiPuani >= 0 ? '#27ae60' : '#e74c3c'}">${telafiPuani > 0 ? '+' : ''}${telafiPuani}</span>
+                    <span style="font-weight:700;color:${telafiPuani >= 0 ? '#27ae60' : '#e74c3c'}">${formatPuan(telafiPuani)}</span>
                 </div>
                 <div style="border-top:1px solid var(--bg4);padding-top:8px;display:flex;justify-content:space-between">
                     <span style="color:var(--tx);font-weight:600">Yeni Puan:</span>
@@ -15156,7 +15171,7 @@ async function resetPersonelPrim(personelId, name) {
                     branch: sube,
                     score: telafiPuani,
                     type: 'prim_reset',
-                    note: `Prim sıfırlama (${mevcutPuan} → 0) - ${currentUser?.name || 'Yönetici'}`,
+                    note: `Prim sıfırlama (${formatPuan(mevcutPuan, false)} → 0) - ${currentUser?.name || 'Yönetici'}`,
                     eventDate: new Date().toISOString().split('T')[0],
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                     createdBy: currentUser?.email || currentUser?.username || 'admin'
@@ -15260,7 +15275,7 @@ async function loadPuantajAnaliz() {
                 <div style="margin-bottom:8px"><svg width="32" height="32" fill="none" stroke="#f1c40f" stroke-width="2" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7.8 17h8.4c1.68 0 2.52 0 3.162-.327a3 3 0 001.311-1.311C21 14.72 21 13.88 21 12.2V7.8c0-1.68 0-2.52-.327-3.162a3 3 0 00-1.311-1.311C18.72 3 17.88 3 16.2 3H7.8c-1.68 0-2.52 0-3.162.327a3 3 0 00-1.311 1.311C3 5.28 3 6.12 3 7.8v4.4c0 1.68 0 2.52.327 3.162a3 3 0 001.311 1.311C5.28 17 6.12 17 7.8 17z"/></svg></div>
                 <div style="font-size:.75rem;color:var(--tx2);text-transform:uppercase;margin-bottom:4px">Ayın En İyisi</div>
                 <div style="font-size:1.1rem;font-weight:700;color:#27ae60">${enIyi?.name || '-'}</div>
-                <div style="font-size:.85rem;color:var(--tx2)">${enIyi ? (enIyi.toplamPuan > 0 ? '+' : '') + enIyi.toplamPuan + ' Puan' : ''}</div>
+                <div style="font-size:.85rem;color:var(--tx2)">${enIyi ? formatPuan(enIyi.toplamPuan) + ' Puan' : ''}</div>
             </div>
         `;
         
@@ -15271,7 +15286,7 @@ async function loadPuantajAnaliz() {
                 <div style="margin-bottom:8px"><svg width="32" height="32" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
                 <div style="font-size:.75rem;color:var(--tx2);text-transform:uppercase;margin-bottom:4px">Düşük Performans</div>
                 <div style="font-size:1.1rem;font-weight:700;color:#e74c3c">${dikkat?.name || '-'}</div>
-                <div style="font-size:.85rem;color:var(--tx2)">${dikkat ? (dikkat.toplamPuan > 0 ? '+' : '') + dikkat.toplamPuan + ' Puan' : ''}</div>
+                <div style="font-size:.85rem;color:var(--tx2)">${dikkat ? formatPuan(dikkat.toplamPuan) + ' Puan' : ''}</div>
             </div>
         `;
         
@@ -15320,7 +15335,7 @@ async function loadPuantajAnaliz() {
                                 <div style="font-weight:600;color:#27ae60">${p.pozitif}</div>
                             </div>
                             <div style="min-width:60px;text-align:right">
-                                <div style="font-size:1.2rem;font-weight:700;color:${puanColor}">${p.toplamPuan > 0 ? '+' : ''}${p.toplamPuan}</div>
+                                <div style="font-size:1.2rem;font-weight:700;color:${puanColor}">${formatPuan(p.toplamPuan)}</div>
                                 ${primStatus ? '<div style="font-size:.65rem;color:#e74c3c">PRİM YOK</div>' : ''}
                             </div>
                         </div>
@@ -15512,7 +15527,7 @@ async function loadPuantajArsiv() {
                 trendChart.innerHTML = `
                     <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center">
                         <div style="font-size:.75rem;color:var(--tx3);margin-bottom:8px">${ayAdilar[d.ayIdx]} ${yil}</div>
-                        <div style="font-size:2.5rem;font-weight:800;color:${puanColor};line-height:1">${d.total >= 0 ? '+' : ''}${d.total}</div>
+                        <div style="font-size:2.5rem;font-weight:800;color:${puanColor};line-height:1">${formatPuan(d.total)}</div>
                         <div style="font-size:.7rem;color:var(--tx3);margin-top:4px">Toplam Puan</div>
                         <div style="display:flex;gap:16px;margin-top:16px">
                             <div style="text-align:center">
@@ -15524,7 +15539,7 @@ async function loadPuantajArsiv() {
                                 <div style="font-size:.6rem;color:var(--tx3)">Manuel</div>
                             </div>
                             <div style="text-align:center">
-                                <div style="font-size:1rem;font-weight:700;color:#9b59b6">${d.personelEksi}</div>
+                                <div style="font-size:1rem;font-weight:700;color:#9b59b6">${formatPuan(d.personelEksi, false)}</div>
                                 <div style="font-size:.6rem;color:var(--tx3)">P.Eksi</div>
                             </div>
                         </div>
@@ -15563,12 +15578,12 @@ async function loadPuantajArsiv() {
                             <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" fill="${color}" rx="4" style="cursor:pointer;transition:opacity .2s" 
                                 onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'" opacity="0.85"
                                 onclick="showArsivDetail('${yil}-${aylar[data.ayIdx]}')">
-                                <title>${ayAdilar[data.ayIdx]}: ${data.total > 0 ? '+' : ''}${data.total} (${data.personelCount} kişi)</title>
+                                <title>${ayAdilar[data.ayIdx]}: ${formatPuan(data.total)} (${data.personelCount} kişi)</title>
                             </rect>`;
                         
                         // Puan değeri
                         const textY = data.total >= 0 ? y - 6 : y + barHeight + 14;
-                        barHtml += `<text x="${x + barWidth/2}" y="${textY}" text-anchor="middle" font-size="10" fill="${color}" font-weight="700">${data.total > 0 ? '+' : ''}${data.total}</text>`;
+                        barHtml += `<text x="${x + barWidth/2}" y="${textY}" text-anchor="middle" font-size="10" fill="${color}" font-weight="700">${formatPuan(data.total)}</text>`;
                     }
                     
                     // Çizgi noktası
@@ -15664,7 +15679,7 @@ async function loadPuantajArsiv() {
                 const toplamPuan = toplamOtomatik + toplamManuel + toplamPersonelEksi;
                 const toplamColor = toplamPuan >= 0 ? '#27ae60' : '#e74c3c';
                 pieHtml += `
-                    <text x="${cx}" y="${cy - 4}" text-anchor="middle" font-size="18" font-weight="800" fill="${toplamColor}">${toplamPuan >= 0 ? '+' : ''}${toplamPuan}</text>
+                    <text x="${cx}" y="${cy - 4}" text-anchor="middle" font-size="18" font-weight="800" fill="${toplamColor}">${formatPuan(toplamPuan)}</text>
                     <text x="${cx}" y="${cy + 12}" text-anchor="middle" font-size="9" fill="var(--tx3)">TOPLAM</text>
                 `;
                 
@@ -15735,25 +15750,25 @@ async function loadPuantajArsiv() {
                                 <div style="font-size:.75rem;color:var(--tx3)">${personelSayisi} personel · Arşiv: ${archivedDate}</div>
                             </div>
                             <div style="text-align:right">
-                                <div style="font-size:1.3rem;font-weight:800;color:${parseFloat(avgPuan) < 0 ? '#e74c3c' : '#27ae60'}">${avgPuan > 0 ? '+' : ''}${avgPuan}</div>
+                                <div style="font-size:1.3rem;font-weight:800;color:${parseFloat(avgPuan) < 0 ? '#e74c3c' : '#27ae60'}">${formatPuan(parseFloat(avgPuan))}</div>
                                 <div style="font-size:.65rem;color:var(--tx3)">Ort. Puan</div>
                             </div>
                         </div>
                         <div style="display:flex;gap:8px">
                             <div style="flex:1;background:rgba(0,140,149,.1);border-radius:8px;padding:8px;text-align:center">
-                                <div style="font-size:.9rem;font-weight:700;color:#008c95">${data.toplamOtomatik}</div>
+                                <div style="font-size:.9rem;font-weight:700;color:#008c95">${formatPuan(data.toplamOtomatik, false)}</div>
                                 <div style="font-size:.6rem;color:var(--tx3)">CF Puan</div>
                             </div>
                             <div style="flex:1;background:rgba(52,152,219,.1);border-radius:8px;padding:8px;text-align:center">
-                                <div style="font-size:.9rem;font-weight:700;color:#3498db">${data.toplamManuel}</div>
+                                <div style="font-size:.9rem;font-weight:700;color:#3498db">${formatPuan(data.toplamManuel, false)}</div>
                                 <div style="font-size:.6rem;color:var(--tx3)">Manuel</div>
                             </div>
                             <div style="flex:1;background:rgba(155,89,182,.1);border-radius:8px;padding:8px;text-align:center">
-                                <div style="font-size:.9rem;font-weight:700;color:#9b59b6">${data.toplamPersonelEksi}</div>
+                                <div style="font-size:.9rem;font-weight:700;color:#9b59b6">${formatPuan(data.toplamPersonelEksi, false)}</div>
                                 <div style="font-size:.6rem;color:var(--tx3)">P. Eksi</div>
                             </div>
                             <div style="flex:1;background:${toplamPuan >= 0 ? 'rgba(39,174,96,.1)' : 'rgba(231,76,60,.1)'};border-radius:8px;padding:8px;text-align:center">
-                                <div style="font-size:.9rem;font-weight:700;color:${toplamPuan >= 0 ? '#27ae60' : '#e74c3c'}">${toplamPuan >= 0 ? '+' : ''}${toplamPuan}</div>
+                                <div style="font-size:.9rem;font-weight:700;color:${toplamPuan >= 0 ? '#27ae60' : '#e74c3c'}">${formatPuan(toplamPuan)}</div>
                                 <div style="font-size:.6rem;color:var(--tx3)">Toplam</div>
                             </div>
                         </div>
@@ -15810,7 +15825,7 @@ function showArsivDetail(period) {
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
             <div>
                 <div style="font-size:1.2rem;font-weight:700;color:var(--tx)">${ayAdi} ${yil} Detayı</div>
-                <div style="font-size:.85rem;color:var(--tx2)">${personelList.length} personel · ${kayitSayisi} kayıt · Toplam: ${toplam >= 0 ? '+' : ''}${toplam} puan</div>
+                <div style="font-size:.85rem;color:var(--tx2)">${personelList.length} personel · ${kayitSayisi} kayıt · Toplam: ${formatPuan(toplam)} puan</div>
             </div>
             <button onclick="document.getElementById('arsivDetailPanel').style.display='none'" style="padding:8px 16px;background:var(--bg3);border:none;border-radius:8px;color:var(--tx);cursor:pointer;font-weight:500">Kapat</button>
         </div>
@@ -15878,7 +15893,7 @@ function showArsivDetail(period) {
                         </div>
                     </div>
                     <div style="text-align:right">
-                        <div style="font-size:1.4rem;font-weight:800;color:${puanColor};line-height:1">${puanSign}${p.toplamPuan}</div>
+                        <div style="font-size:1.4rem;font-weight:800;color:${puanColor};line-height:1">${formatPuan(p.toplamPuan)}</div>
                         <div style="font-size:.65rem;color:var(--tx3);text-transform:uppercase">toplam</div>
                     </div>
                 </div>
@@ -15887,20 +15902,20 @@ function showArsivDetail(period) {
                 <div style="display:flex;gap:6px;margin-bottom:12px;background:var(--bg3);padding:10px;border-radius:8px">
                     <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
                         <div style="font-size:.6rem;color:var(--tx3);margin-bottom:2px">Otomatik</div>
-                        <div style="font-size:.85rem;font-weight:700;color:${p.otomatikPuan > 0 ? '#27ae60' : p.otomatikPuan < 0 ? '#e74c3c' : 'var(--tx2)'}">${p.otomatikPuan > 0 ? '+' : ''}${p.otomatikPuan || 0}</div>
+                        <div style="font-size:.85rem;font-weight:700;color:${p.otomatikPuan > 0 ? '#27ae60' : p.otomatikPuan < 0 ? '#e74c3c' : 'var(--tx2)'}">${formatPuan(p.otomatikPuan || 0)}</div>
                     </div>
                     <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
                         <div style="font-size:.6rem;color:var(--tx3);margin-bottom:2px">Manuel</div>
-                        <div style="font-size:.85rem;font-weight:700;color:${p.manuelPuan > 0 ? '#27ae60' : p.manuelPuan < 0 ? '#e74c3c' : 'var(--tx2)'}">${p.manuelPuan > 0 ? '+' : ''}${p.manuelPuan || 0}</div>
+                        <div style="font-size:.85rem;font-weight:700;color:${p.manuelPuan > 0 ? '#27ae60' : p.manuelPuan < 0 ? '#e74c3c' : 'var(--tx2)'}">${formatPuan(p.manuelPuan || 0)}</div>
                     </div>
                     ${isMudurRole ? `
                     <div style="flex:1;text-align:center;border-right:1px solid var(--bg4)">
                         <div style="font-size:.6rem;color:#9b59b6;margin-bottom:2px">Personel</div>
-                        <div style="font-size:.85rem;font-weight:700;color:${p.personelEksiPuan < 0 ? '#9b59b6' : 'var(--tx2)'}">${p.personelEksiPuan || 0}</div>
+                        <div style="font-size:.85rem;font-weight:700;color:${p.personelEksiPuan < 0 ? '#9b59b6' : 'var(--tx2)'}">${formatPuan(p.personelEksiPuan || 0, false)}</div>
                     </div>` : ''}
                     <div style="flex:1;text-align:center">
                         <div style="font-size:.6rem;color:var(--tx3);margin-bottom:2px">Toplam</div>
-                        <div style="font-size:.85rem;font-weight:700;color:${puanColor}">${puanSign}${p.toplamPuan}</div>
+                        <div style="font-size:.85rem;font-weight:700;color:${puanColor}">${formatPuan(p.toplamPuan)}</div>
                     </div>
                 </div>
                 
@@ -15985,17 +16000,17 @@ function showPersonelArsivDetail(period, personelId) {
                         </div>
                     </div>
                     <div style="text-align:right">
-                        <div style="font-size:1.8rem;font-weight:800;color:${toplamPuan >= 0 ? '#27ae60' : '#e74c3c'}">${toplamPuan >= 0 ? '+' : ''}${toplamPuan}</div>
+                        <div style="font-size:1.8rem;font-weight:800;color:${toplamPuan >= 0 ? '#27ae60' : '#e74c3c'}">${formatPuan(toplamPuan)}</div>
                         <div style="font-size:.7rem;color:var(--tx3)">TOPLAM PUAN</div>
                     </div>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
                     <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
-                        <div style="font-size:1rem;font-weight:700;color:${otomatikPuan >= 0 ? '#27ae60' : '#e74c3c'}">${otomatikPuan >= 0 ? '+' : ''}${otomatikPuan}</div>
+                        <div style="font-size:1rem;font-weight:700;color:${otomatikPuan >= 0 ? '#27ae60' : '#e74c3c'}">${formatPuan(otomatikPuan)}</div>
                         <div style="font-size:.65rem;color:var(--tx3)">CF Puan</div>
                     </div>
                     <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
-                        <div style="font-size:1rem;font-weight:700;color:${manuelPuan >= 0 ? '#27ae60' : '#e74c3c'}">${manuelPuan >= 0 ? '+' : ''}${manuelPuan}</div>
+                        <div style="font-size:1rem;font-weight:700;color:${manuelPuan >= 0 ? '#27ae60' : '#e74c3c'}">${formatPuan(manuelPuan)}</div>
                         <div style="font-size:.65rem;color:var(--tx3)">Manuel</div>
                     </div>
                     <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
@@ -16046,7 +16061,7 @@ function showPersonelArsivDetail(period, personelId) {
                     <span style="color:var(--tx3);min-width:40px">${tarih}</span>
                     <span style="flex:1;color:var(--tx)">${checkTip}${checkSaat ? ' · ' + checkSaat : ''}</span>
                     <span style="background:rgba(0,140,149,.12);color:#008c95;padding:2px 6px;border-radius:4px;font-size:.65rem;font-weight:600">CF</span>
-                    <span style="font-weight:700;color:${noteColor};min-width:32px;text-align:right">${points > 0 ? '+' : ''}${points}</span>
+                    <span style="font-weight:700;color:${noteColor};min-width:32px;text-align:right">${formatPuan(points)}</span>
                 </div>
             `;
         });
@@ -16086,7 +16101,7 @@ function showPersonelArsivDetail(period, personelId) {
                     <span style="color:${starColor};font-size:.7rem;letter-spacing:-1px;min-width:50px">${yildizStr}</span>
                     <span style="color:var(--tx3);min-width:40px">${tarih}</span>
                     <span style="flex:1;color:var(--tx)">${k.note || '-'}</span>
-                    <span style="font-weight:700;color:${puanColor};min-width:32px;text-align:right">${points > 0 ? '+' : ''}${points}</span>
+                    <span style="font-weight:700;color:${puanColor};min-width:32px;text-align:right">${formatPuan(points)}</span>
                 </div>
             `;
         });
@@ -16104,7 +16119,7 @@ function showPersonelArsivDetail(period, personelId) {
                     <svg width="14" height="14" fill="none" stroke="#9b59b6" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
                     <span style="color:#9b59b6">Personel Checklist Doldurmaması</span>
                     <span style="color:var(--tx3);font-weight:400">(${personelEksiKayitlar.length})</span>
-                    ${personelEksiTotal !== 0 ? `<span style="margin-left:auto;font-size:.75rem;font-weight:700;color:#9b59b6">${personelEksiTotal}</span>` : ''}
+                    ${personelEksiTotal !== 0 ? `<span style="margin-left:auto;font-size:.75rem;font-weight:700;color:#9b59b6">${formatPuan(personelEksiTotal, false)}</span>` : ''}
                 </div>
         `;
         
@@ -16504,7 +16519,7 @@ function updateComparisonRanking() {
                     <div style="font-size:.8rem;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.codeName || p.name}</div>
                     <div style="font-size:.65rem;color:var(--tx3)">${p.role || '-'}</div>
                 </div>
-                <div style="font-size:.9rem;font-weight:700;color:${color}">${p.total >= 0 ? '+' : ''}${p.total}</div>
+                <div style="font-size:.9rem;font-weight:700;color:${color}">${formatPuan(p.total)}</div>
             </div>
         `;
     }).join('');
@@ -26442,7 +26457,7 @@ async function loadLeaderboard() {
                             <div style="font-size:.65rem;color:var(--tx3)">${person.completed} check • %${successRate} başarı</div>
                         </div>
                         <div style="text-align:right">
-                            <div style="font-size:1rem;font-weight:700;color:${pointColor}">${person.total > 0 ? '+' : ''}${person.total}</div>
+                            <div style="font-size:1rem;font-weight:700;color:${pointColor}">${formatPuan(person.total)}</div>
                             <div style="font-size:.6rem;color:var(--tx3)">puan</div>
                         </div>
                     </div>
@@ -26462,7 +26477,7 @@ async function loadLeaderboard() {
                                     <div style="flex:1">
                                         <div style="font-weight:500;color:var(--tx);font-size:.8rem">${person.name}</div>
                                     </div>
-                                    <div style="font-size:.9rem;font-weight:600;color:${pointColor}">${person.total > 0 ? '+' : ''}${person.total}</div>
+                                    <div style="font-size:.9rem;font-weight:600;color:${pointColor}">${formatPuan(person.total)}</div>
                                 </div>
                             `;
                         }).join('')}
@@ -27020,7 +27035,7 @@ async function loadAllChecksOverview() {
             }
             
             const points = submission?.points || 0;
-            const pointsDisplay = `<span style="color:${points > 0 ? '#27ae60' : points < 0 ? '#e74c3c' : '#95a5a6'};font-weight:600">${points > 0 ? '+' : ''}${points}</span>`;
+            const pointsDisplay = `<span style="color:${points > 0 ? '#27ae60' : points < 0 ? '#e74c3c' : '#95a5a6'};font-weight:600">${formatPuan(points)}</span>`;
             
             html += `
                 <tr style="border-bottom:1px solid var(--bg3)">
@@ -28003,7 +28018,7 @@ async function viewArchiveDetail(branch, month) {
                         <div style="font-size:.75rem;color:var(--tx3)">${p.role || '-'}</div>
                     </div>
                     <div style="text-align:right">
-                        <div style="font-size:1.1rem;font-weight:700;color:${puanColor}">${p.toplamPuan >= 0 ? '+' : ''}${p.toplamPuan}</div>
+                        <div style="font-size:1.1rem;font-weight:700;color:${puanColor}">${formatPuan(p.toplamPuan)}</div>
                         <div style="font-size:.65rem;color:var(--tx3)">
                             CF: ${p.otomatikPuan} | Manuel: ${p.manuelPuan} ${p.personelEksiPuan ? `| P: ${p.personelEksiPuan}` : ''}
                         </div>
@@ -34713,7 +34728,7 @@ function showChecklistCompleteModal(branch, type, date, timeSlot, personName, ac
                 <span style="font-size:1.5rem">${pointIcon}</span>
                 <div>
                     <div style="font-size:.85rem;color:var(--tx2)">${pointLabel} dolduruldu</div>
-                    <div style="font-size:1.3rem;font-weight:700;color:${pointColor}">${points > 0 ? '+' : ''}${points} Puan</div>
+                    <div style="font-size:1.3rem;font-weight:700;color:${pointColor}">${formatPuan(points)} Puan</div>
                 </div>
             </div>
         `;
@@ -38119,7 +38134,7 @@ async function addWeeklyPoints(branch, personnelId, personnelName, itemId, point
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        console.log(`[Haftalık] Puan eklendi: ${personnelName} ${points > 0 ? '+' : ''}${points}`);
+        console.log(`[Haftalık] Puan eklendi: ${personnelName} ${formatPuan(points)}`);
     } catch (e) {
         console.error('[Haftalık] Puan ekleme hatası:', e);
     }
