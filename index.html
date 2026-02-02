@@ -14076,7 +14076,7 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
             if (!notesByPerson[note.personelId]) notesByPerson[note.personelId] = [];
             notesByPerson[note.personelId].push(note);
             
-            totalAutoPoints += note.points || 0;
+            totalAutoPoints += note.points ?? note.score ?? 0;
         });
         
         // Cache'e kaydet (detay modal için)
@@ -14154,7 +14154,9 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
             notes.forEach(note => {
                 const person = personelList.find(p => p.id === note.personelId || p.uniqueId === note.personelId);
                 const personName = person?.name || note.personelName || 'Bilinmeyen';
-                const noteColor = note.points > 0 ? '#27ae60' : (note.points < 0 ? '#e74c3c' : 'var(--tx3)');
+                // score vs points alan adı uyumsuzluğu düzeltmesi
+                const notePoints = note.points ?? note.score ?? 0;
+                const noteColor = notePoints > 0 ? '#27ae60' : (notePoints < 0 ? '#e74c3c' : 'var(--tx3)');
                 
                 // Checklist türü adları
                 const checkTypeNames = {
@@ -14169,7 +14171,9 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
                 };
                 
                 const checkSaat = note.checkTime || note.eventTime || '';
-                const checkTip = checkTypeNames[note.checkType] || note.checkType || 'Check';
+                // checkType vs checklistType alan adı uyumsuzluğu düzeltmesi
+                const rawCheckType = note.checkType || note.checklistType || 'gunluk';
+                const checkTip = checkTypeNames[rawCheckType] || rawCheckType || 'Check';
                 const source = note.source || (note.createdBy === 'system_auto' ? 'CF' : 'AP');
                 
                 // Detaylı açıklama
@@ -14188,7 +14192,7 @@ async function loadAutoCheckNotes(sube, ay, yil, personelList) {
                 html += `
                     <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${statusBg};border-radius:8px;margin-bottom:6px">
                         <div style="width:28px;height:28px;min-width:28px;background:${noteColor}15;border-radius:50%;display:flex;align-items:center;justify-content:center">
-                            <span style="font-size:.75rem;font-weight:700;color:${noteColor}">${note.points > 0 ? '+' : ''}${note.points}</span>
+                            <span style="font-size:.75rem;font-weight:700;color:${noteColor}">${notePoints > 0 ? '+' : ''}${notePoints}</span>
                         </div>
                         <div style="flex:1;min-width:0">
                             <div style="display:flex;align-items:center;gap:6px">
@@ -14335,13 +14339,15 @@ function showPersonelPuanDetay(personelId, personName) {
             
             // Status'a göre doğru puanı hesapla
             const status = note.status || 'missed';
-            const checkType = note.checkType || note.type || 'gunluk';
+            // checkType: checkType > checklistType > type > 'gunluk' (alan adı uyumsuzluğu düzeltmesi)
+            const checkType = note.checkType || note.checklistType || (note.type !== 'checklist_auto' ? note.type : null) || 'gunluk';
             const canonicalType = canonicalChecklistTypeId?.(checkType) || checkType.toLowerCase().replace(/[^a-z]/g, '');
             const rules = CHECK_RULES[canonicalType] || CHECK_RULES['gunluk'] || {};
             
-            // Önce note.points kullan (sayı ise), değilse status'a göre hesapla
+            // Önce note.points veya note.score kullan (sayı ise), değilse status'a göre hesapla
             // Number.isFinite hem tam sayı hem ondalıklı sayıları kabul eder
-            let points = note.points;
+            // score vs points alan adı uyumsuzluğu düzeltmesi
+            let points = note.points ?? note.score;
             if (points === undefined || points === null || !Number.isFinite(points)) {
                 if (status === 'onTime') points = rules.points?.onTime ?? 0;
                 else if (status === 'late') points = rules.points?.late ?? 0;
@@ -14355,7 +14361,8 @@ function showPersonelPuanDetay(personelId, personName) {
             const starColor = status === 'onTime' ? '#f1c40f' : (status === 'late' ? '#f39c12' : '#e74c3c');
             
             // checkType'dan "Zamanında", "Geç", "Doldurulmadı" ve parantez içi saati temizle
-            let rawCheckTip = note.checkType || note.note || 'Check';
+            // checkType vs checklistType alan adı uyumsuzluğu düzeltmesi
+            let rawCheckTip = note.checkType || note.checklistType || note.note || 'Check';
             let checkTip = rawCheckTip
                 .replace(/\s*-\s*(Zamanında|Geç|Doldurulmadı|Yapılmadı|Kaçırıldı)/gi, '')
                 .replace(/\s*\(\d{1,2}:\d{2}\)/g, '')
@@ -14481,7 +14488,7 @@ function showPersonelPuanDetay(personelId, personName) {
                 const tarih = isNaN(dateObj) ? '-' : `${String(dateObj.getDate()).padStart(2,'0')}.${String(dateObj.getMonth()+1).padStart(2,'0')}`;
                 const penalty = record.penalty || 0;
                 const personelName = record.personelName || 'Personel';
-                const checkTypeName = record.checkTypeName || record.checkType || 'Check';
+                const checkTypeName = record.checkTypeName || record.checkType || record.checklistType || 'Check';
                 const checkTime = record.checkTime || '';
                 
                 // Yazılma saati (createdAt'ten)
@@ -15813,8 +15820,8 @@ function showArsivDetail(period) {
             const manuelPuan = parseFloat((p.manuelPuan || 0).toFixed(2));
             const personelEksiPuan = parseFloat((p.personelEksiPuan || 0).toFixed(2));
             const toplamPuan = parseFloat((otomatikPuan + manuelPuan + personelEksiPuan).toFixed(2));
-            const autoMissed = (p.otomatikKayitlar || []).filter(k => k.points < 0).length;
-            const autoOnTime = (p.otomatikKayitlar || []).filter(k => k.points > 0).length;
+            const autoMissed = (p.otomatikKayitlar || []).filter(k => (k.points ?? k.score ?? 0) < 0).length;
+            const autoOnTime = (p.otomatikKayitlar || []).filter(k => (k.points ?? k.score ?? 0) > 0).length;
             const kayitSayisi = (p.manuelKayitlar || []).length;
             return { id, ...p, otomatikPuan, manuelPuan, personelEksiPuan, toplamPuan, autoMissed, autoOnTime, kayitSayisi };
         })
@@ -15964,9 +15971,9 @@ function showPersonelArsivDetail(period, personelId) {
     const manuelKayitlar = p.manuelKayitlar || [];
     const personelEksiKayitlar = p.personelEksiKayitlar || [];
     
-    // Eksik/Tam sayıları
-    const missed = cfKayitlar.filter(k => k.points < 0).length;
-    const onTime = cfKayitlar.filter(k => k.points > 0).length;
+    // Eksik/Tam sayıları - score vs points alan adı uyumsuzluğu düzeltmesi
+    const missed = cfKayitlar.filter(k => (k.points ?? k.score ?? 0) < 0).length;
+    const onTime = cfKayitlar.filter(k => (k.points ?? k.score ?? 0) > 0).length;
     
     const [yil, ay] = period.split('-');
     const ayAdi = getMonthName(ay);
@@ -16046,7 +16053,8 @@ function showPersonelArsivDetail(period, personelId) {
         sortedCF.forEach(k => {
             const dateStr = k.date || '';
             const tarih = dateStr ? dateStr.substring(5).split('-').reverse().join('.') : '-';
-            const points = k.points || 0;
+            // score vs points alan adı uyumsuzluğu düzeltmesi
+            const points = k.points ?? k.score ?? 0;
             const noteColor = points > 0 ? '#27ae60' : (points < 0 ? '#e74c3c' : 'var(--tx3)');
             
             // Status'a göre yıldız
@@ -16054,8 +16062,8 @@ function showPersonelArsivDetail(period, personelId) {
             const starStr = '★'.repeat(starCount) + '☆'.repeat(5 - starCount);
             const starColor = points > 0 ? '#f1c40f' : '#e74c3c';
             
-            // Check tipi ve saat
-            const checkTip = k.checkTypeName || k.checkType || 'Check';
+            // Check tipi ve saat - checkType vs checklistType alan adı uyumsuzluğu düzeltmesi
+            const checkTip = k.checkTypeName || k.checkType || k.checklistType || 'Check';
             const checkSaat = k.checkTime || '';
             
             html += `
@@ -16090,11 +16098,18 @@ function showPersonelArsivDetail(period, personelId) {
         manuelKayitlar.slice(0, 15).forEach(k => {
             const dateStr = k.date || '';
             const tarih = dateStr ? dateStr.substring(5).split('-').reverse().join('.') : '-';
-            const points = k.points || 0;
+            // Manuel kayıtlarda points hesaplanmış değer, score yıldız değeri
+            // Eğer points yoksa score'dan hesapla
+            const score = k.score || 3;
+            let points = k.points;
+            if (points === undefined || points === null) {
+                // getPointsFromStar simülasyonu (varsayılan değerler)
+                const starPoints = { 1: -3, 2: -2, 3: -1, 4: 1, 5: 2 };
+                points = starPoints[score] || 0;
+            }
             const puanColor = points < 0 ? '#e74c3c' : (points > 0 ? '#27ae60' : 'var(--tx3)');
             
             // Yıldız (score'dan)
-            const score = k.score || 3;
             const yildiz = Math.max(1, Math.min(5, score));
             const yildizStr = '★'.repeat(yildiz) + '☆'.repeat(5-yildiz);
             const starColor = yildiz >= 4 ? '#f1c40f' : (yildiz >= 3 ? '#95a5a6' : '#e74c3c');
@@ -16136,7 +16151,8 @@ function showPersonelArsivDetail(period, personelId) {
                 const tarih = dateStr ? dateStr.substring(5).split('-').reverse().join('.') : '-';
                 const penalty = k.penalty || 0;
                 const personelName = k.personelName || 'Personel';
-                const checkTypeName = k.checkTypeName || k.checkType || 'Check';
+                // checkType vs checklistType alan adı uyumsuzluğu düzeltmesi
+                const checkTypeName = k.checkTypeName || k.checkType || k.checklistType || 'Check';
                 const checkTime = k.checkTime || '';
                 
                 html += `
