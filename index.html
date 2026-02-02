@@ -35561,6 +35561,7 @@ async function distributeTemizlikItems(branch, date) {
     
     // Checklist muaf personeli filtrele - şubedeki tüm personeli çek
     let exemptPersonelIds = new Set();
+    let mudurPersonelIds = new Set(); // Mağaza müdürleri için ayrı set
     try {
         const personelSnap = await db.collection('personel').where('branch', '==', branch).get();
         personelSnap.docs.forEach(doc => {
@@ -35569,6 +35570,16 @@ async function distributeTemizlikItems(branch, date) {
                 exemptPersonelIds.add(p.uniqueId);
                 exemptPersonelIds.add(normalizePersonelId(p.name));
                 console.log('[Temizlik] Muaf personel:', p.name);
+            }
+            // Mağaza müdürünü kaydet
+            if (p.role === 'magaza_muduru') {
+                mudurPersonelIds.add(p.uniqueId);
+                mudurPersonelIds.add(normalizePersonelId(p.name));
+                if (p.name) {
+                    mudurPersonelIds.add(p.name);
+                    mudurPersonelIds.add(formatDisplayName(p.name));
+                }
+                console.log('[Temizlik] Mağaza müdürü tespit edildi:', p.name);
             }
         });
     } catch (e) {
@@ -35690,6 +35701,36 @@ async function distributeTemizlikItems(branch, date) {
         araci: personnel.araci.map(p => p.name),
         kapanis: personnel.kapanis.map(p => p.name)
     });
+    
+    // ═══════════════════════════════════════════════════════════
+    // MAĞAZA MÜDÜRÜ KONTROLÜ
+    // Kural: Yanında barista varsa müdür temizlik yapmaz
+    // ═══════════════════════════════════════════════════════════
+    if (mudurPersonelIds.size > 0) {
+        ['acilis', 'araci', 'kapanis'].forEach(cat => {
+            // Kategoride birden fazla kişi varsa müdürü çıkar
+            if (personnel[cat].length > 1) {
+                const beforeCount = personnel[cat].length;
+                personnel[cat] = personnel[cat].filter(p => {
+                    const isMudur = mudurPersonelIds.has(p.id) || 
+                                   mudurPersonelIds.has(p.name) ||
+                                   mudurPersonelIds.has(normalizePersonelId(p.name));
+                    if (isMudur) {
+                        console.log(`[Temizlik] Mağaza müdürü ${cat} kategorisinden çıkarıldı (yanında ${beforeCount - 1} kişi var):`, p.name);
+                    }
+                    return !isMudur;
+                });
+            } else if (personnel[cat].length === 1) {
+                // Tek kişi - müdür olsa bile temizlik yapacak
+                const isMudur = mudurPersonelIds.has(personnel[cat][0].id) || 
+                               mudurPersonelIds.has(personnel[cat][0].name) ||
+                               mudurPersonelIds.has(normalizePersonelId(personnel[cat][0].name));
+                if (isMudur) {
+                    console.log(`[Temizlik] Mağaza müdürü ${cat} kategorisinde TEK kişi, temizlik yapacak:`, personnel[cat][0].name);
+                }
+            }
+        });
+    }
     
     // Müdür yardımcısı kontrolü - Müdür OFF ise ve KATEGORİDE birden fazla kişi varsa yardımcı muaf
     // ÖNEMLİ: Yardımcı kategoride TEK kişiyse muaf OLMAZ, temizlik yapar
@@ -35954,7 +35995,10 @@ function generateShiftHash(shiftData, date) {
     
     // Sıralı string oluştur ve basit hash yap
     todayShifts.sort();
-    return todayShifts.join('|');
+    // VERSION: Bu değeri artırarak eski atamaları geçersiz kılabilirsiniz
+    // v2: Mağaza müdürü filtrelemesi eklendi
+    const hashVersion = 'v2';
+    return `${hashVersion}|${todayShifts.join('|')}`;
 }
 
 // Temizlik maddesi için 48 saat cooldown kontrolü
