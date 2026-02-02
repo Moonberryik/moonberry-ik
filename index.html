@@ -23485,6 +23485,15 @@ async function createAutoPuantajNote(personelId, personelName, checkType, checkT
             console.log(`[AutoPuan] ⏭️ ${finalPersonelName} MUAF personel. Puan yazılmıyor.`);
             return;
         }
+        
+        // === ROL BAZLI MUAFİYET ===
+        // Bölge müdürü ve mağaza müdürü checklist puanı almaz
+        // (Sadece Müdür Kontrolleri'nden sorumludurlar)
+        const exemptRoles = ['bolge_muduru', 'magaza_muduru', 'yonetici'];
+        if (exemptRoles.includes(personelInfo.role)) {
+            console.log(`[AutoPuan] ⏭️ ${finalPersonelName} ${personelInfo.role} rolünde. Puan yazılmıyor.`);
+            return;
+        }
     } else {
         // Bulunamadı, gelen değerleri kullan
         finalPersonelId = personelId;
