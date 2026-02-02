@@ -24292,33 +24292,74 @@ async function loadTodayChecks() {
         // ==================== SHIFT TİPİNE GÖRE FİLTRELEME ====================
         // acilis, kapanis, temizlik için ilgili shift tipindeki personeli döndür
         if (checkType === 'acilis') {
-            const acilisPersonel = filteredList.filter(p => p.type === 'acilis');
+            let acilisPersonel = filteredList.filter(p => p.type === 'acilis');
+            
+            // Mağaza müdürü yanında barista varsa müdür hariç tutulur
+            const nonManagerAcilis = acilisPersonel.filter(p => 
+                p.role !== 'magaza_muduru' && p.role !== 'bolge_muduru'
+            );
+            if (nonManagerAcilis.length > 0) {
+                acilisPersonel = nonManagerAcilis;
+            }
+            
             if (acilisPersonel.length > 0) {
                 return acilisPersonel.map(p => p.name);
             }
-            // Açılış personeli yoksa en erken gelen 2 kişiyi seç
+            // Açılış personeli yoksa en erken gelen 2 kişiyi seç (müdür hariç)
+            const nonManagers = filteredList.filter(p => 
+                p.role !== 'magaza_muduru' && p.role !== 'bolge_muduru'
+            );
+            if (nonManagers.length > 0) {
+                const sorted = [...nonManagers].sort((a, b) => (a.shiftStart || 10) - (b.shiftStart || 10));
+                return sorted.slice(0, 2).map(p => p.name);
+            }
+            // Sadece müdür varsa müdürü göster
             const sorted = [...filteredList].sort((a, b) => (a.shiftStart || 10) - (b.shiftStart || 10));
             return sorted.slice(0, 2).map(p => p.name);
         }
         
         if (checkType === 'kapanis') {
-            const kapanisPersonel = filteredList.filter(p => p.type === 'kapanis');
+            let kapanisPersonel = filteredList.filter(p => p.type === 'kapanis');
+            
+            // Mağaza müdürü yanında barista varsa müdür hariç tutulur
+            const nonManagerKapanis = kapanisPersonel.filter(p => 
+                p.role !== 'magaza_muduru' && p.role !== 'bolge_muduru'
+            );
+            if (nonManagerKapanis.length > 0) {
+                kapanisPersonel = nonManagerKapanis;
+            }
+            
             if (kapanisPersonel.length > 0) {
                 return kapanisPersonel.map(p => p.name);
             }
-            // Kapanış personeli yoksa en geç çıkan 2 kişiyi seç
+            // Kapanış personeli yoksa en geç çıkan 2 kişiyi seç (müdür hariç)
+            const nonManagers = filteredList.filter(p => 
+                p.role !== 'magaza_muduru' && p.role !== 'bolge_muduru'
+            );
+            if (nonManagers.length > 0) {
+                const sorted = [...nonManagers].sort((a, b) => (b.shiftEnd || 19) - (a.shiftEnd || 19));
+                return sorted.slice(0, 2).map(p => p.name);
+            }
+            // Sadece müdür varsa müdürü göster
             const sorted = [...filteredList].sort((a, b) => (b.shiftEnd || 19) - (a.shiftEnd || 19));
             return sorted.slice(0, 2).map(p => p.name);
         }
         
         if (checkType === 'temizlik') {
             // Temizlik maddeleri açılış/ara/kapanış hepsine atanıyor
-            // Dashboard'da TÜM aktif personeli göster
-            const allPersonnel = filteredList.map(p => p.name);
-            if (allPersonnel.length > 0) {
-                return allPersonnel;
+            // Mağaza müdürü yanında barista varsa müdür hariç tutulur
+            const nonManagers = filteredList.filter(p => 
+                p.role !== 'magaza_muduru' && 
+                p.role !== 'bolge_muduru'
+            );
+            
+            // Barista/yardımcı varsa onları göster (müdür hariç)
+            if (nonManagers.length > 0) {
+                return nonManagers.map(p => p.name);
             }
-            return [];
+            
+            // Sadece müdür varsa müdürü göster
+            return filteredList.map(p => p.name);
         }
         
         // Diğer checkler: Önce baristalar (müdür HARİÇ)
