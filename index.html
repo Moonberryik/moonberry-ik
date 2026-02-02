@@ -24346,20 +24346,61 @@ async function loadTodayChecks() {
         }
         
         if (checkType === 'temizlik') {
-            // Temizlik maddeleri açılış/ara/kapanış hepsine atanıyor
+            // Temizlik maddeleri açılış/ara/kapanış ayrı vakitlerde aktif
+            // Shift verisinden dinamik saat hesaplaması
+            const now = new Date();
+            const nowMinutes = now.getHours() * 60 + now.getMinutes();
+            
             // Mağaza müdürü yanında barista varsa müdür hariç tutulur
-            const nonManagers = filteredList.filter(p => 
+            let workingList = filteredList.filter(p => 
                 p.role !== 'magaza_muduru' && 
                 p.role !== 'bolge_muduru'
             );
             
-            // Barista/yardımcı varsa onları göster (müdür hariç)
-            if (nonManagers.length > 0) {
-                return nonManagers.map(p => p.name);
+            // Sadece müdür varsa müdürü kullan
+            if (workingList.length === 0) {
+                workingList = filteredList;
             }
             
-            // Sadece müdür varsa müdürü göster
-            return filteredList.map(p => p.name);
+            // Açılış personelinin en geç bitiş saati
+            const acilisPersonel = workingList.filter(p => p.type === 'acilis');
+            const acilisEndMax = acilisPersonel.length > 0 
+                ? Math.max(...acilisPersonel.map(p => (p.shiftEnd || 14) * 60))
+                : 14 * 60; // Varsayılan 14:00
+            
+            // Kapanış personelinin en erken başlangıç saati
+            const kapanisPersonel = workingList.filter(p => p.type === 'kapanis');
+            const kapanisStartMin = kapanisPersonel.length > 0
+                ? Math.min(...kapanisPersonel.map(p => (p.shiftStart || 16) * 60))
+                : 16 * 60; // Varsayılan 16:00
+            
+            // Ara personeli (ne açılış ne kapanış)
+            const araPersonel = workingList.filter(p => p.type === 'ara');
+            
+            let timeBasedList = [];
+            
+            // Saat bazlı filtreleme (shift verilerine göre dinamik)
+            // Açılışçının vardiyası bitene kadar → açılışçı
+            // Kapanışçının vardiyası başladıktan sonra → kapanışçı
+            // Arada → aracı
+            
+            if (nowMinutes < acilisEndMax && acilisPersonel.length > 0) {
+                // Açılış vardiyası aktif
+                timeBasedList = acilisPersonel;
+            } else if (nowMinutes >= kapanisStartMin && kapanisPersonel.length > 0) {
+                // Kapanış vardiyası aktif
+                timeBasedList = kapanisPersonel;
+            } else if (araPersonel.length > 0) {
+                // Ara vardiya aktif
+                timeBasedList = araPersonel;
+            }
+            
+            // Saat bazlı liste boşsa tüm çalışanları göster
+            if (timeBasedList.length > 0) {
+                return timeBasedList.map(p => p.name);
+            }
+            
+            return workingList.map(p => p.name);
         }
         
         // Diğer checkler: Önce baristalar (müdür HARİÇ)
