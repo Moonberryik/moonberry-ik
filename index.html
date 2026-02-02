@@ -23388,7 +23388,9 @@ async function getPersonelCache() {
                 name: data.name,
                 codeName: data.codeName,
                 uniqueId: data.uniqueId || normalizePersonelId(data.name),
-                branch: data.branch
+                branch: data.branch,
+                checklistExempt: data.checklistExempt || false,  // ← MUAF BİLGİSİ
+                role: data.role || 'barista'  // ← ROL BİLGİSİ
             });
         });
         _personelCacheTime = now;
