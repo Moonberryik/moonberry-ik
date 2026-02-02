@@ -10585,6 +10585,8 @@ async function savePersonel() {
             toast('Personel güncellendi ✓', 'success');
         } else {
             data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            data.active = true;  // ← YENİ: Aktif olarak başlat
+            data.status = 'active';  // ← YENİ: Status da ayarla
             await db.collection('personel').add(data);
             toast('Personel eklendi ✓', 'success');
         }
@@ -15405,7 +15407,7 @@ async function loadPuantajArsiv() {
             // Personel verilerini ekle
             Object.entries(d.personnel || {}).forEach(([pid, p]) => {
                 // toplamPuan hesapla
-                const pToplamPuan = (p.otomatikPuan || 0) + (p.manuelPuan || 0) + (p.personelEksiPuan || 0);
+                const pToplamPuan = parseFloat(((p.otomatikPuan || 0) + (p.manuelPuan || 0) + (p.personelEksiPuan || 0)).toFixed(2));
                 
                 donemler[period].personnel[pid] = { ...p, toplamPuan: pToplamPuan };
                 donemler[period].personnelCount++;
@@ -15429,6 +15431,11 @@ async function loadPuantajArsiv() {
                     toplamPozitif++;
                 }
             });
+            
+            // Float precision düzeltmesi - dönem toplamları için
+            donemler[period].toplamOtomatik = parseFloat(donemler[period].toplamOtomatik.toFixed(2));
+            donemler[period].toplamManuel = parseFloat(donemler[period].toplamManuel.toFixed(2));
+            donemler[period].toplamPersonelEksi = parseFloat(donemler[period].toplamPersonelEksi.toFixed(2));
         });
         
         // Özet İstatistikler
@@ -15453,6 +15460,11 @@ async function loadPuantajArsiv() {
             `;
         }
         
+        // Float precision düzeltmesi - global toplamlar için
+        toplamOtomatik = parseFloat(toplamOtomatik.toFixed(2));
+        toplamManuel = parseFloat(toplamManuel.toFixed(2));
+        toplamPersonelEksi = parseFloat(toplamPersonelEksi.toFixed(2));
+        
         // Trend Chart - Aylık toplam puan bar + çizgi grafik
         if (trendChart) {
             const aylar = ['01','02','03','04','05','06','07','08','09','10','11','12'];
@@ -15472,6 +15484,12 @@ async function loadPuantajArsiv() {
                     manuel += p.manuelPuan || 0;
                     personelEksi += p.personelEksiPuan || 0;
                 });
+                
+                // Float precision düzeltmesi
+                total = parseFloat(total.toFixed(2));
+                otomatik = parseFloat(otomatik.toFixed(2));
+                manuel = parseFloat(manuel.toFixed(2));
+                personelEksi = parseFloat(personelEksi.toFixed(2));
                 
                 return { ayIdx: idx, total, otomatik, manuel, personelEksi, personelCount: d.personnelCount, hasData: true };
             });
@@ -15703,6 +15721,7 @@ async function loadPuantajArsiv() {
                 
                 let toplamPuan = 0;
                 Object.values(data.personnel).forEach(p => toplamPuan += p.toplamPuan || 0);
+                toplamPuan = parseFloat(toplamPuan.toFixed(2));  // Float precision düzeltmesi
                 const avgPuan = personelSayisi > 0 ? (toplamPuan / personelSayisi).toFixed(1) : 0;
                 
                 const brandColor = '#9b59b6'; // Arşiv için mor tema
@@ -15771,15 +15790,19 @@ function showArsivDetail(period) {
     // Personel listesi - toplamPuan hesapla
     const personelList = Object.entries(data.personnel || data.personeller || {})
         .map(([id, p]) => {
-            const toplamPuan = (p.otomatikPuan || 0) + (p.manuelPuan || 0) + (p.personelEksiPuan || 0);
+            // Float precision düzeltmesi
+            const otomatikPuan = parseFloat((p.otomatikPuan || 0).toFixed(2));
+            const manuelPuan = parseFloat((p.manuelPuan || 0).toFixed(2));
+            const personelEksiPuan = parseFloat((p.personelEksiPuan || 0).toFixed(2));
+            const toplamPuan = parseFloat((otomatikPuan + manuelPuan + personelEksiPuan).toFixed(2));
             const autoMissed = (p.otomatikKayitlar || []).filter(k => k.points < 0).length;
             const autoOnTime = (p.otomatikKayitlar || []).filter(k => k.points > 0).length;
             const kayitSayisi = (p.manuelKayitlar || []).length;
-            return { id, ...p, toplamPuan, autoMissed, autoOnTime, kayitSayisi };
+            return { id, ...p, otomatikPuan, manuelPuan, personelEksiPuan, toplamPuan, autoMissed, autoOnTime, kayitSayisi };
         })
         .sort((a, b) => b.toplamPuan - a.toplamPuan);
     
-    const toplam = personelList.reduce((sum, p) => sum + p.toplamPuan, 0);
+    const toplam = parseFloat(personelList.reduce((sum, p) => sum + p.toplamPuan, 0).toFixed(2));
     const kayitSayisi = personelList.reduce((sum, p) => 
         sum + (p.otomatikKayitlar?.length || 0) + (p.manuelKayitlar?.length || 0), 0);
     
@@ -22022,6 +22045,7 @@ async function archivePuantajMonth(branch, month) {
         personelSnap.forEach(doc => {
             const p = doc.data();
             const docId = doc.id;
+            const primaryId = p.uniqueId || docId;  // ← uniqueId öncelikli
             
             // Bu personel için kullanılabilecek tüm ID'ler
             const possibleIds = [
@@ -22033,16 +22057,17 @@ async function archivePuantajMonth(branch, month) {
                 p.codeName?.toLowerCase().replace(/\s+/g, '_'),
             ].filter(k => k);
             
-            // Her olası ID'yi doc.id'ye map'le
+            // Her olası ID'yi uniqueId'ye map'le (docId yerine!)
             possibleIds.forEach(pid => {
-                personelIdMapping[pid] = docId;
+                personelIdMapping[pid] = primaryId;  // ← uniqueId kullan
             });
             
-            // Personel verisi başlat
-            personnelData[docId] = {
+            // Personel verisi başlat - uniqueId key olarak
+            personnelData[primaryId] = {
                 name: p.name,
                 codeName: p.codeName || p.name?.split(' ')[0],
                 role: p.role,
+                uniqueId: primaryId,  // ← uniqueId kaydet
                 otomatikPuan: 0,
                 manuelPuan: 0,
                 personelEksiPuan: 0,
@@ -22168,10 +22193,14 @@ async function archivePuantajMonth(branch, month) {
             });
         });
         
-        // 7. Toplamları hesapla
+        // 7. Toplamları hesapla - KÜSURAT DÜZELTMESİ
         Object.keys(personnelData).forEach(pid => {
             const p = personnelData[pid];
-            p.toplamPuan = p.otomatikPuan + p.manuelPuan + p.personelEksiPuan;
+            // Float precision düzeltmesi
+            p.otomatikPuan = parseFloat(p.otomatikPuan.toFixed(2));
+            p.manuelPuan = parseFloat(p.manuelPuan.toFixed(2));
+            p.personelEksiPuan = parseFloat(p.personelEksiPuan.toFixed(2));
+            p.toplamPuan = parseFloat((p.otomatikPuan + p.manuelPuan + p.personelEksiPuan).toFixed(2));
         });
         
         // Debug log
@@ -22181,6 +22210,13 @@ async function archivePuantajMonth(branch, month) {
             totalManuel += p.manuelPuan;
             totalPEksi += p.personelEksiPuan;
         });
+        
+        // Float precision düzeltmesi - summary için
+        totalOto = parseFloat(totalOto.toFixed(2));
+        totalManuel = parseFloat(totalManuel.toFixed(2));
+        totalPEksi = parseFloat(totalPEksi.toFixed(2));
+        const totalAll = parseFloat((totalOto + totalManuel + totalPEksi).toFixed(2));
+        
         console.log(`[Archive] Toplamlar - Otomatik: ${totalOto}, Manuel: ${totalManuel}, P.Eksi: ${totalPEksi}`);
         
         // 8. Arşiv dokümanı oluştur
@@ -22193,7 +22229,14 @@ async function archivePuantajMonth(branch, month) {
             archivedAt: firebase.firestore.FieldValue.serverTimestamp(),
             archivedBy: currentUser?.email || 'system',
             personnelCount: Object.keys(personnelData).length,
-            personnel: personnelData
+            personnel: personnelData,
+            // ← YENİ: Summary eklendi
+            summary: {
+                otomatik: totalOto,
+                manuel: totalManuel,
+                personelEksi: totalPEksi,
+                toplam: totalAll
+            }
         });
         
         // 9. lastArchived güncelle
